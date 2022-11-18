@@ -23,6 +23,50 @@
 <span id="23">23</span>
 <span id="24">24</span>
 <span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -46,6 +90,50 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>v1 {
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>light {
 		<span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/api.v1.light.rs&quot;</span>));
+	}
+}
+
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+	<span class="kw">use </span>prost::Message <span class="kw">as _</span>;
+
+	<span class="attribute">#[test]
+	</span><span class="kw">fn </span>empty_proof_encodes_correctly() {
+		<span class="kw">let </span>encoded = <span class="kw">super</span>::v1::light::Response {
+			response: <span class="prelude-val">Some</span>(<span class="kw">super</span>::v1::light::response::Response::RemoteReadResponse(
+				<span class="kw">super</span>::v1::light::RemoteReadResponse { proof: <span class="prelude-val">Some</span>(Vec::new()) },
+			)),
+		}
+		.encode_to_vec();
+
+		<span class="comment">// Make sure that the response contains one field of number 2 and wire type 2 (message),
+		// then another field of number 2 and wire type 2 (bytes), then a length of 0.
+		</span><span class="macro">assert_eq!</span>(encoded, <span class="macro">vec!</span>[(<span class="number">2 </span>&lt;&lt; <span class="number">3</span>) | <span class="number">2</span>, <span class="number">2</span>, (<span class="number">2 </span>&lt;&lt; <span class="number">3</span>) | <span class="number">2</span>, <span class="number">0</span>]);
+	}
+
+	<span class="attribute">#[test]
+	</span><span class="kw">fn </span>no_proof_encodes_correctly() {
+		<span class="kw">let </span>encoded = <span class="kw">super</span>::v1::light::Response {
+			response: <span class="prelude-val">Some</span>(<span class="kw">super</span>::v1::light::response::Response::RemoteReadResponse(
+				<span class="kw">super</span>::v1::light::RemoteReadResponse { proof: <span class="prelude-val">None </span>},
+			)),
+		}
+		.encode_to_vec();
+
+		<span class="comment">// Make sure that the response contains one field of number 2 and wire type 2 (message).
+		</span><span class="macro">assert_eq!</span>(encoded, <span class="macro">vec!</span>[(<span class="number">2 </span>&lt;&lt; <span class="number">3</span>) | <span class="number">2</span>, <span class="number">0</span>]);
+	}
+
+	<span class="attribute">#[test]
+	</span><span class="kw">fn </span>proof_encodes_correctly() {
+		<span class="kw">let </span>encoded = <span class="kw">super</span>::v1::light::Response {
+			response: <span class="prelude-val">Some</span>(<span class="kw">super</span>::v1::light::response::Response::RemoteReadResponse(
+				<span class="kw">super</span>::v1::light::RemoteReadResponse { proof: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]) },
+			)),
+		}
+		.encode_to_vec();
+
+		<span class="macro">assert_eq!</span>(encoded, <span class="macro">vec!</span>[(<span class="number">2 </span>&lt;&lt; <span class="number">3</span>) | <span class="number">2</span>, <span class="number">6</span>, (<span class="number">2 </span>&lt;&lt; <span class="number">3</span>) | <span class="number">2</span>, <span class="number">4</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
 	}
 }
 </code></pre></div>

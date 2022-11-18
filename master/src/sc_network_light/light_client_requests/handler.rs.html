@@ -309,9 +309,6 @@
 <span id="309">309</span>
 <span id="310">310</span>
 <span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -487,10 +484,7 @@
 		<span class="kw">let </span>block = Decode::decode(<span class="kw-2">&amp;mut </span>request.block.as_ref())<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>response = <span class="kw">match </span><span class="self">self</span>.client.execution_proof(block, <span class="kw-2">&amp;</span>request.method, <span class="kw-2">&amp;</span>request.data) {
-			<span class="prelude-val">Ok</span>((<span class="kw">_</span>, proof)) =&gt; {
-				<span class="kw">let </span>r = schema::v1::light::RemoteCallResponse { proof: proof.encode() };
-				<span class="prelude-val">Some</span>(schema::v1::light::response::Response::RemoteCallResponse(r))
-			},
+			<span class="prelude-val">Ok</span>((<span class="kw">_</span>, proof)) =&gt; schema::v1::light::RemoteCallResponse { proof: <span class="prelude-val">Some</span>(proof.encode()) },
 			<span class="prelude-val">Err</span>(e) =&gt; {
 				<span class="macro">trace!</span>(
 					<span class="string">&quot;remote call request from {} ({} at {:?}) failed with: {}&quot;</span>,
@@ -499,11 +493,13 @@
 					request.block,
 					e,
 				);
-				<span class="prelude-val">None
-			</span>},
+				schema::v1::light::RemoteCallResponse { proof: <span class="prelude-val">None </span>}
+			},
 		};
 
-		<span class="prelude-val">Ok</span>(schema::v1::light::Response { response })
+		<span class="prelude-val">Ok</span>(schema::v1::light::Response {
+			response: <span class="prelude-val">Some</span>(schema::v1::light::response::Response::RemoteCallResponse(response)),
+		})
 	}
 
 	<span class="kw">fn </span>on_remote_read_request(
@@ -527,10 +523,7 @@
 
 		<span class="kw">let </span>response =
 			<span class="kw">match </span><span class="self">self</span>.client.read_proof(block, <span class="kw-2">&amp;mut </span>request.keys.iter().map(AsRef::as_ref)) {
-				<span class="prelude-val">Ok</span>(proof) =&gt; {
-					<span class="kw">let </span>r = schema::v1::light::RemoteReadResponse { proof: proof.encode() };
-					<span class="prelude-val">Some</span>(schema::v1::light::response::Response::RemoteReadResponse(r))
-				},
+				<span class="prelude-val">Ok</span>(proof) =&gt; schema::v1::light::RemoteReadResponse { proof: <span class="prelude-val">Some</span>(proof.encode()) },
 				<span class="prelude-val">Err</span>(error) =&gt; {
 					<span class="macro">trace!</span>(
 						<span class="string">&quot;remote read request from {} ({} at {:?}) failed with: {}&quot;</span>,
@@ -539,11 +532,13 @@
 						request.block,
 						error,
 					);
-					<span class="prelude-val">None
-				</span>},
+					schema::v1::light::RemoteReadResponse { proof: <span class="prelude-val">None </span>}
+				},
 			};
 
-		<span class="prelude-val">Ok</span>(schema::v1::light::Response { response })
+		<span class="prelude-val">Ok</span>(schema::v1::light::Response {
+			response: <span class="prelude-val">Some</span>(schema::v1::light::response::Response::RemoteReadResponse(response)),
+		})
 	}
 
 	<span class="kw">fn </span>on_remote_read_child_request(
@@ -578,10 +573,7 @@
 				<span class="kw-2">&amp;mut </span>request.keys.iter().map(AsRef::as_ref),
 			)
 		}) {
-			<span class="prelude-val">Ok</span>(proof) =&gt; {
-				<span class="kw">let </span>r = schema::v1::light::RemoteReadResponse { proof: proof.encode() };
-				<span class="prelude-val">Some</span>(schema::v1::light::response::Response::RemoteReadResponse(r))
-			},
+			<span class="prelude-val">Ok</span>(proof) =&gt; schema::v1::light::RemoteReadResponse { proof: <span class="prelude-val">Some</span>(proof.encode()) },
 			<span class="prelude-val">Err</span>(error) =&gt; {
 				<span class="macro">trace!</span>(
 					<span class="string">&quot;remote read child request from {} ({} {} at {:?}) failed with: {}&quot;</span>,
@@ -591,11 +583,13 @@
 					request.block,
 					error,
 				);
-				<span class="prelude-val">None
-			</span>},
+				schema::v1::light::RemoteReadResponse { proof: <span class="prelude-val">None </span>}
+			},
 		};
 
-		<span class="prelude-val">Ok</span>(schema::v1::light::Response { response })
+		<span class="prelude-val">Ok</span>(schema::v1::light::Response {
+			response: <span class="prelude-val">Some</span>(schema::v1::light::response::Response::RemoteReadResponse(response)),
+		})
 	}
 }
 
