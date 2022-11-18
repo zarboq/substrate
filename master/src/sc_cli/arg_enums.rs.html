@@ -275,59 +275,6 @@
 <span id="275">275</span>
 <span id="276">276</span>
 <span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
-<span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -348,7 +295,7 @@
 
 </span><span class="doccomment">//! Definitions of [`ValueEnum`] types.
 
-</span><span class="kw">use </span>clap::{builder::PossibleValue, ValueEnum};
+</span><span class="kw">use </span>clap::ValueEnum;
 
 <span class="doccomment">/// The instantiation strategy to use in compiled mode.
 </span><span class="attribute">#[derive(Debug, Clone, Copy, ValueEnum)]
@@ -381,57 +328,14 @@
 	WasmtimeInstantiationStrategy::PoolingCopyOnWrite;
 
 <span class="doccomment">/// How to execute Wasm runtime code.
-</span><span class="attribute">#[derive(Debug, Clone, Copy)]
+</span><span class="attribute">#[derive(Debug, Clone, Copy, ValueEnum)]
+#[value(rename_all = <span class="string">&quot;kebab-case&quot;</span>)]
 </span><span class="kw">pub enum </span>WasmExecutionMethod {
 	<span class="doccomment">/// Uses an interpreter.
+	</span><span class="attribute">#[clap(name = <span class="string">&quot;interpreted-i-know-what-i-do&quot;</span>)]
 	</span>Interpreted,
 	<span class="doccomment">/// Uses a compiled runtime.
 	</span>Compiled,
-}
-
-<span class="kw">const </span>INTERPRETED_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;interpreted-i-know-what-i-do&quot;</span>;
-
-<span class="kw">impl </span>clap::ValueEnum <span class="kw">for </span>WasmExecutionMethod {
-	<span class="doccomment">/// All possible argument values, in display order.
-	</span><span class="kw">fn </span>value_variants&lt;<span class="lifetime">&#39;a</span>&gt;() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[<span class="self">Self</span>] {
-		<span class="kw">let </span>variants = <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Interpreted, <span class="self">Self</span>::Compiled];
-		<span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;wasmtime&quot;</span>) {
-			variants
-		} <span class="kw">else </span>{
-			<span class="kw-2">&amp;</span>variants[..<span class="number">1</span>]
-		}
-	}
-
-	<span class="doccomment">/// Parse an argument into `Self`.
-	</span><span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str, <span class="kw">_</span>: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, String&gt; {
-		<span class="kw">if </span>s.eq_ignore_ascii_case(INTERPRETED_NAME) {
-			<span class="prelude-val">Ok</span>(<span class="self">Self</span>::Interpreted)
-		} <span class="kw">else if </span>s.eq_ignore_ascii_case(<span class="string">&quot;compiled&quot;</span>) {
-			<span class="attribute">#[cfg(feature = <span class="string">&quot;wasmtime&quot;</span>)]
-			</span>{
-				<span class="prelude-val">Ok</span>(<span class="self">Self</span>::Compiled)
-			}
-			<span class="attribute">#[cfg(not(feature = <span class="string">&quot;wasmtime&quot;</span>))]
-			</span>{
-				<span class="prelude-val">Err</span>(<span class="string">&quot;`Compiled` variant requires the `wasmtime` feature to be enabled&quot;</span>.into())
-			}
-		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Unknown variant `{}`&quot;</span>, s))
-		}
-	}
-
-	<span class="doccomment">/// The canonical argument value.
-	///
-	/// The value is `None` for skipped variants.
-	</span><span class="kw">fn </span>to_possible_value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PossibleValue&gt; {
-		<span class="kw">match </span><span class="self">self </span>{
-			<span class="attribute">#[cfg(feature = <span class="string">&quot;wasmtime&quot;</span>)]
-			</span>WasmExecutionMethod::Compiled =&gt; <span class="prelude-val">Some</span>(PossibleValue::new(<span class="string">&quot;compiled&quot;</span>)),
-			<span class="attribute">#[cfg(not(feature = <span class="string">&quot;wasmtime&quot;</span>))]
-			</span>WasmExecutionMethod::Compiled =&gt; <span class="prelude-val">None</span>,
-			WasmExecutionMethod::Interpreted =&gt; <span class="prelude-val">Some</span>(PossibleValue::new(INTERPRETED_NAME)),
-		}
-	}
 }
 
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>WasmExecutionMethod {
@@ -451,8 +355,7 @@
 ) -&gt; sc_service::config::WasmExecutionMethod {
 	<span class="kw">match </span>execution_method {
 		WasmExecutionMethod::Interpreted =&gt; sc_service::config::WasmExecutionMethod::Interpreted,
-		<span class="attribute">#[cfg(feature = <span class="string">&quot;wasmtime&quot;</span>)]
-		</span>WasmExecutionMethod::Compiled =&gt; sc_service::config::WasmExecutionMethod::Compiled {
+		WasmExecutionMethod::Compiled =&gt; sc_service::config::WasmExecutionMethod::Compiled {
 			instantiation_strategy: <span class="kw">match </span>_instantiation_strategy {
 				WasmtimeInstantiationStrategy::PoolingCopyOnWrite =&gt;
 					sc_service::config::WasmtimeInstantiationStrategy::PoolingCopyOnWrite,
@@ -466,20 +369,11 @@
 					sc_service::config::WasmtimeInstantiationStrategy::LegacyInstanceReuse,
 			},
 		},
-		<span class="attribute">#[cfg(not(feature = <span class="string">&quot;wasmtime&quot;</span>))]
-		</span>WasmExecutionMethod::Compiled =&gt; <span class="macro">panic!</span>(
-			<span class="string">&quot;Substrate must be compiled with \&quot;wasmtime\&quot; feature for compiled Wasm execution&quot;
-		</span>),
 	}
 }
 
 <span class="doccomment">/// The default [`WasmExecutionMethod`].
-</span><span class="attribute">#[cfg(feature = <span class="string">&quot;wasmtime&quot;</span>)]
 </span><span class="kw">pub const </span>DEFAULT_WASM_EXECUTION_METHOD: WasmExecutionMethod = WasmExecutionMethod::Compiled;
-
-<span class="doccomment">/// The default [`WasmExecutionMethod`].
-</span><span class="attribute">#[cfg(not(feature = <span class="string">&quot;wasmtime&quot;</span>))]
-</span><span class="kw">pub const </span>DEFAULT_WASM_EXECUTION_METHOD: WasmExecutionMethod = WasmExecutionMethod::Interpreted;
 
 <span class="attribute">#[allow(missing_docs)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
