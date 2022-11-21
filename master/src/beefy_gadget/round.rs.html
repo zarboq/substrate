@@ -448,10 +448,6 @@
 <span id="448">448</span>
 <span id="449">449</span>
 <span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -470,27 +466,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>std::{
-	collections::{BTreeMap, HashMap},
-	hash::Hash,
-};
-
-<span class="kw">use </span>log::{debug, trace};
-
-<span class="kw">use </span>beefy_primitives::{
+</span><span class="kw">use </span>beefy_primitives::{
 	crypto::{Public, Signature},
 	ValidatorSet, ValidatorSetId,
 };
+<span class="kw">use </span>codec::{Decode, Encode};
+<span class="kw">use </span>log::{debug, trace};
 <span class="kw">use </span>sp_runtime::traits::{Block, NumberFor};
+<span class="kw">use </span>std::{collections::BTreeMap, hash::Hash};
 
 <span class="doccomment">/// Tracks for each round which validators have voted/signed and
 /// whether the local `self` validator has voted/signed.
 ///
 /// Does not do any validation on votes or signatures, layers above need to handle that (gossip).
-</span><span class="attribute">#[derive(Debug, Default)]
+</span><span class="attribute">#[derive(Debug, Decode, Default, Encode, PartialEq)]
 </span><span class="kw">struct </span>RoundTracker {
 	self_vote: bool,
-	votes: HashMap&lt;Public, Signature&gt;,
+	votes: BTreeMap&lt;Public, Signature&gt;,
 }
 
 <span class="kw">impl </span>RoundTracker {
@@ -523,7 +515,7 @@
 /// Only round numbers &gt; `best_done` are of interest, all others are considered stale.
 ///
 /// Does not do any validation on votes or signatures, layers above need to handle that (gossip).
-</span><span class="attribute">#[derive(Debug)]
+</span><span class="attribute">#[derive(Debug, Decode, Encode, PartialEq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Rounds&lt;Payload, B: Block&gt; {
 	rounds: BTreeMap&lt;(Payload, NumberFor&lt;B&gt;), RoundTracker&gt;,
 	session_start: NumberFor&lt;B&gt;,
