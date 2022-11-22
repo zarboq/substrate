@@ -1164,9 +1164,6 @@
 <span id="1164">1164</span>
 <span id="1165">1165</span>
 <span id="1166">1166</span>
-<span id="1167">1167</span>
-<span id="1168">1168</span>
-<span id="1169">1169</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1246,7 +1243,7 @@
 <span class="kw">use </span>sp_runtime::{
 	codec::{Decode, Encode},
 	generic::{BlockId, OpaqueDigestItemId},
-	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor, Zero},
+	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor},
 	Justification, Justifications,
 };
 <span class="kw">use </span>substrate_test_runtime_client::AccountKeyring;
@@ -2038,7 +2035,7 @@
 			.unwrap_or_else(|| Box::new(DefaultBlockAnnounceValidator));
 		<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) =
 			NetworkServiceProvider::new();
-		<span class="kw">let </span>(chain_sync, chain_sync_service) = ChainSync::new(
+		<span class="kw">let </span>(chain_sync, chain_sync_service, block_announce_config) = ChainSync::new(
 			<span class="kw">match </span>network_config.sync_mode {
 				SyncMode::Full =&gt; sc_network_common::sync::SyncMode::Full,
 				SyncMode::Fast { skip_proofs, storage_chain_mode } =&gt;
@@ -2049,24 +2046,18 @@
 				SyncMode::Warp =&gt; sc_network_common::sync::SyncMode::Warp,
 			},
 			client.clone(),
+			protocol_id.clone(),
+			<span class="kw-2">&amp;</span>fork_id,
+			Roles::from(<span class="kw">if </span>config.is_authority { <span class="kw-2">&amp;</span>Role::Authority } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>Role::Full }),
 			block_announce_validator,
 			network_config.max_parallel_downloads,
 			<span class="prelude-val">Some</span>(warp_sync),
 			chain_sync_network_handle,
+			block_request_protocol_config.name.clone(),
+			state_request_protocol_config.name.clone(),
+			<span class="prelude-val">Some</span>(warp_protocol_config.name.clone()),
 		)
 		.unwrap();
-		<span class="kw">let </span>block_announce_config = chain_sync.get_block_announce_proto_config(
-			protocol_id.clone(),
-			<span class="kw-2">&amp;</span>fork_id,
-			Roles::from(<span class="kw">if </span>config.is_authority { <span class="kw-2">&amp;</span>Role::Authority } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>Role::Full }),
-			client.info().best_number,
-			client.info().best_hash,
-			client
-				.block_hash(Zero::zero())
-				.ok()
-				.flatten()
-				.expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>),
-		);
 
 		<span class="kw">let </span>network = NetworkWorker::new(sc_network::config::Params {
 			role: <span class="kw">if </span>config.is_authority { Role::Authority } <span class="kw">else </span>{ Role::Full },
@@ -2080,11 +2071,13 @@
 			chain_sync_service,
 			metrics_registry: <span class="prelude-val">None</span>,
 			block_announce_config,
-			block_request_protocol_config,
-			state_request_protocol_config,
-			light_client_request_protocol_config,
-			warp_sync_protocol_config: <span class="prelude-val">Some</span>(warp_protocol_config),
-			request_response_protocol_configs: Vec::new(),
+			request_response_protocol_configs: [
+				block_request_protocol_config,
+				state_request_protocol_config,
+				light_client_request_protocol_config,
+				warp_protocol_config,
+			]
+			.to_vec(),
 		})
 		.unwrap();
 
@@ -2163,6 +2156,7 @@
 				<span class="kw">return </span>Poll::Pending
 			}
 		}
+
 		Poll::Ready(())
 	}
 

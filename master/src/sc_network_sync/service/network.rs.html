@@ -126,6 +126,35 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -144,17 +173,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>futures::StreamExt;
+</span><span class="kw">use </span>futures::{channel::oneshot, StreamExt};
 <span class="kw">use </span>libp2p::PeerId;
-<span class="kw">use </span>sc_network_common::{protocol::ProtocolName, service::NetworkPeers};
+<span class="kw">use </span>sc_network_common::{
+	protocol::ProtocolName,
+	request_responses::{IfDisconnected, RequestFailure},
+	service::{NetworkPeers, NetworkRequest},
+};
 <span class="kw">use </span>sc_peerset::ReputationChange;
 <span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="doccomment">/// Network-related services required by `sc-network-sync`
-</span><span class="kw">pub trait </span>Network: NetworkPeers {}
+</span><span class="kw">pub trait </span>Network: NetworkPeers + NetworkRequest {}
 
-<span class="kw">impl</span>&lt;T&gt; Network <span class="kw">for </span>T <span class="kw">where </span>T: NetworkPeers {}
+<span class="kw">impl</span>&lt;T&gt; Network <span class="kw">for </span>T <span class="kw">where </span>T: NetworkPeers + NetworkRequest {}
 
 <span class="doccomment">/// Network service provider for `ChainSync`
 ///
@@ -171,6 +204,15 @@
 
 	<span class="doccomment">/// Call `NetworkPeers::report_peer()`
 	</span>ReportPeer(PeerId, ReputationChange),
+
+	<span class="doccomment">/// Call `NetworkRequest::start_request()`
+	</span>StartRequest(
+		PeerId,
+		ProtocolName,
+		Vec&lt;u8&gt;,
+		oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, RequestFailure&gt;&gt;,
+		IfDisconnected,
+	),
 }
 
 <span class="doccomment">/// Handle that is (temporarily) passed to `ChainSync` so it can
@@ -195,6 +237,20 @@
 	</span><span class="kw">pub fn </span>disconnect_peer(<span class="kw-2">&amp;</span><span class="self">self</span>, who: PeerId, protocol: ProtocolName) {
 		<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(ToServiceCommand::DisconnectPeer(who, protocol));
 	}
+
+	<span class="doccomment">/// Send request to peer
+	</span><span class="kw">pub fn </span>start_request(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		who: PeerId,
+		protocol: ProtocolName,
+		request: Vec&lt;u8&gt;,
+		tx: oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, RequestFailure&gt;&gt;,
+		connect: IfDisconnected,
+	) {
+		<span class="kw">let _ </span>= <span class="self">self
+			</span>.tx
+			.unbounded_send(ToServiceCommand::StartRequest(who, protocol, request, tx, connect));
+	}
 }
 
 <span class="kw">impl </span>NetworkServiceProvider {
@@ -213,6 +269,8 @@
 					service.disconnect_peer(peer, protocol_name),
 				ToServiceCommand::ReportPeer(peer, reputation_change) =&gt;
 					service.report_peer(peer, reputation_change),
+				ToServiceCommand::StartRequest(peer, protocol, request, tx, connect) =&gt;
+					service.start_request(peer, protocol, request, tx, connect),
 			}
 		}
 	}

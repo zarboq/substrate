@@ -2031,106 +2031,6 @@
 <span id="2031">2031</span>
 <span id="2032">2032</span>
 <span id="2033">2033</span>
-<span id="2034">2034</span>
-<span id="2035">2035</span>
-<span id="2036">2036</span>
-<span id="2037">2037</span>
-<span id="2038">2038</span>
-<span id="2039">2039</span>
-<span id="2040">2040</span>
-<span id="2041">2041</span>
-<span id="2042">2042</span>
-<span id="2043">2043</span>
-<span id="2044">2044</span>
-<span id="2045">2045</span>
-<span id="2046">2046</span>
-<span id="2047">2047</span>
-<span id="2048">2048</span>
-<span id="2049">2049</span>
-<span id="2050">2050</span>
-<span id="2051">2051</span>
-<span id="2052">2052</span>
-<span id="2053">2053</span>
-<span id="2054">2054</span>
-<span id="2055">2055</span>
-<span id="2056">2056</span>
-<span id="2057">2057</span>
-<span id="2058">2058</span>
-<span id="2059">2059</span>
-<span id="2060">2060</span>
-<span id="2061">2061</span>
-<span id="2062">2062</span>
-<span id="2063">2063</span>
-<span id="2064">2064</span>
-<span id="2065">2065</span>
-<span id="2066">2066</span>
-<span id="2067">2067</span>
-<span id="2068">2068</span>
-<span id="2069">2069</span>
-<span id="2070">2070</span>
-<span id="2071">2071</span>
-<span id="2072">2072</span>
-<span id="2073">2073</span>
-<span id="2074">2074</span>
-<span id="2075">2075</span>
-<span id="2076">2076</span>
-<span id="2077">2077</span>
-<span id="2078">2078</span>
-<span id="2079">2079</span>
-<span id="2080">2080</span>
-<span id="2081">2081</span>
-<span id="2082">2082</span>
-<span id="2083">2083</span>
-<span id="2084">2084</span>
-<span id="2085">2085</span>
-<span id="2086">2086</span>
-<span id="2087">2087</span>
-<span id="2088">2088</span>
-<span id="2089">2089</span>
-<span id="2090">2090</span>
-<span id="2091">2091</span>
-<span id="2092">2092</span>
-<span id="2093">2093</span>
-<span id="2094">2094</span>
-<span id="2095">2095</span>
-<span id="2096">2096</span>
-<span id="2097">2097</span>
-<span id="2098">2098</span>
-<span id="2099">2099</span>
-<span id="2100">2100</span>
-<span id="2101">2101</span>
-<span id="2102">2102</span>
-<span id="2103">2103</span>
-<span id="2104">2104</span>
-<span id="2105">2105</span>
-<span id="2106">2106</span>
-<span id="2107">2107</span>
-<span id="2108">2108</span>
-<span id="2109">2109</span>
-<span id="2110">2110</span>
-<span id="2111">2111</span>
-<span id="2112">2112</span>
-<span id="2113">2113</span>
-<span id="2114">2114</span>
-<span id="2115">2115</span>
-<span id="2116">2116</span>
-<span id="2117">2117</span>
-<span id="2118">2118</span>
-<span id="2119">2119</span>
-<span id="2120">2120</span>
-<span id="2121">2121</span>
-<span id="2122">2122</span>
-<span id="2123">2123</span>
-<span id="2124">2124</span>
-<span id="2125">2125</span>
-<span id="2126">2126</span>
-<span id="2127">2127</span>
-<span id="2128">2128</span>
-<span id="2129">2129</span>
-<span id="2130">2130</span>
-<span id="2131">2131</span>
-<span id="2132">2132</span>
-<span id="2133">2133</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2171,7 +2071,6 @@
 	transport, ChainSyncInterface, ReputationChange,
 };
 
-<span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>futures::{channel::oneshot, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>libp2p::{
 	core::{either::EitherError, upgrade, ConnectedPoint, Executor},
@@ -2397,11 +2296,6 @@
 		<span class="kw">let </span>num_connected = Arc::new(AtomicUsize::new(<span class="number">0</span>));
 		<span class="kw">let </span>is_major_syncing = Arc::new(AtomicBool::new(<span class="bool-val">false</span>));
 
-		<span class="kw">let </span>block_request_protocol_name = params.block_request_protocol_config.name.clone();
-		<span class="kw">let </span>state_request_protocol_name = params.state_request_protocol_config.name.clone();
-		<span class="kw">let </span>warp_sync_protocol_name =
-			params.warp_sync_protocol_config.as_ref().map(|c| c.name.clone());
-
 		<span class="comment">// Build the swarm.
 		</span><span class="kw">let </span>(<span class="kw-2">mut </span>swarm, bandwidth): (Swarm&lt;Behaviour&lt;B, Client&gt;&gt;, <span class="kw">_</span>) = {
 			<span class="kw">let </span>user_agent = <span class="macro">format!</span>(
@@ -2499,10 +2393,6 @@
 					user_agent,
 					local_public,
 					discovery_config,
-					params.block_request_protocol_config,
-					params.state_request_protocol_config,
-					params.warp_sync_protocol_config,
-					params.light_client_request_protocol_config,
 					params.network_config.request_response_protocols,
 					peerset_handle.clone(),
 				);
@@ -2599,9 +2489,6 @@
 			peers_notifications_sinks,
 			metrics,
 			boot_node_ids,
-			block_request_protocol_name,
-			state_request_protocol_name,
-			warp_sync_protocol_name,
 			_marker: Default::default(),
 		})
 	}
@@ -3420,15 +3307,6 @@
 	<span class="doccomment">/// For each peer and protocol combination, an object that allows sending notifications to
 	/// that peer. Shared with the [`NetworkService`].
 	</span>peers_notifications_sinks: Arc&lt;Mutex&lt;HashMap&lt;(PeerId, ProtocolName), NotificationsSink&gt;&gt;&gt;,
-	<span class="doccomment">/// Protocol name used to send out block requests via
-	/// [`crate::request_responses::RequestResponsesBehaviour`].
-	</span>block_request_protocol_name: ProtocolName,
-	<span class="doccomment">/// Protocol name used to send out state requests via
-	/// [`crate::request_responses::RequestResponsesBehaviour`].
-	</span>state_request_protocol_name: ProtocolName,
-	<span class="doccomment">/// Protocol name used to send out warp sync requests via
-	/// [`crate::request_responses::RequestResponsesBehaviour`].
-	</span>warp_sync_protocol_name: <span class="prelude-ty">Option</span>&lt;ProtocolName&gt;,
 	<span class="doccomment">/// Marker to pin the `H` generic. Serves no purpose except to not break backwards
 	/// compatibility.
 	</span>_marker: PhantomData&lt;H&gt;,
@@ -3606,84 +3484,6 @@
 						metrics.import_queue_justifications_submitted.inc();
 					}
 					this.import_queue.import_justifications(origin, hash, nb, justifications);
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::BlockRequest {
-					target,
-					request,
-					pending_response,
-				})) =&gt; {
-					<span class="kw">match </span>this
-						.network_service
-						.behaviour()
-						.user_protocol()
-						.encode_block_request(<span class="kw-2">&amp;</span>request)
-					{
-						<span class="prelude-val">Ok</span>(data) =&gt; {
-							this.network_service.behaviour_mut().send_request(
-								<span class="kw-2">&amp;</span>target,
-								<span class="kw-2">&amp;</span>this.block_request_protocol_name,
-								data,
-								pending_response,
-								IfDisconnected::ImmediateError,
-							);
-						},
-						<span class="prelude-val">Err</span>(err) =&gt; {
-							<span class="macro">log::warn!</span>(
-								target: <span class="string">&quot;sync&quot;</span>,
-								<span class="string">&quot;Failed to encode block request {:?}: {:?}&quot;</span>,
-								request, err
-							);
-						},
-					}
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::StateRequest {
-					target,
-					request,
-					pending_response,
-				})) =&gt; {
-					<span class="kw">match </span>this
-						.network_service
-						.behaviour()
-						.user_protocol()
-						.encode_state_request(<span class="kw-2">&amp;</span>request)
-					{
-						<span class="prelude-val">Ok</span>(data) =&gt; {
-							this.network_service.behaviour_mut().send_request(
-								<span class="kw-2">&amp;</span>target,
-								<span class="kw-2">&amp;</span>this.state_request_protocol_name,
-								data,
-								pending_response,
-								IfDisconnected::ImmediateError,
-							);
-						},
-						<span class="prelude-val">Err</span>(err) =&gt; {
-							<span class="macro">log::warn!</span>(
-								target: <span class="string">&quot;sync&quot;</span>,
-								<span class="string">&quot;Failed to encode state request {:?}: {:?}&quot;</span>,
-								request, err
-							);
-						},
-					}
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::WarpSyncRequest {
-					target,
-					request,
-					pending_response,
-				})) =&gt; <span class="kw">match </span><span class="kw-2">&amp;</span>this.warp_sync_protocol_name {
-					<span class="prelude-val">Some</span>(name) =&gt; this.network_service.behaviour_mut().send_request(
-						<span class="kw-2">&amp;</span>target,
-						<span class="kw-2">&amp;</span>name,
-						request.encode(),
-						pending_response,
-						IfDisconnected::ImmediateError,
-					),
-					<span class="prelude-val">None </span>=&gt; {
-						<span class="macro">log::warn!</span>(
-							target: <span class="string">&quot;sync&quot;</span>,
-							<span class="string">&quot;Trying to send warp sync request when no protocol is configured {:?}&quot;</span>,
-							request,
-						);
-					},
 				},
 				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::InboundRequest {
 					protocol,

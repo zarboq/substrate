@@ -107,19 +107,6 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -146,10 +133,8 @@
 <span class="kw">use </span>sc_consensus::{BlockImportError, BlockImportStatus};
 <span class="kw">use </span>sc_network_common::sync::{
 	message::{BlockAnnounce, BlockData, BlockRequest, BlockResponse},
-	warp::{EncodedProof, WarpProofRequest},
-	BadPeer, ChainSync <span class="kw">as </span>ChainSyncT, Metrics, OnBlockData, OnBlockJustification, OnStateData,
-	OpaqueBlockRequest, OpaqueBlockResponse, OpaqueStateRequest, OpaqueStateResponse, PeerInfo,
-	PollBlockAnnounceValidation, SyncStatus,
+	BadPeer, ChainSync <span class="kw">as </span>ChainSyncT, Metrics, OnBlockData, OnBlockJustification,
+	OpaqueBlockResponse, PeerInfo, PollBlockAnnounceValidation, PollResult, SyncStatus,
 };
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
 
@@ -162,6 +147,7 @@
 		<span class="kw">fn </span>num_sync_requests(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 		<span class="kw">fn </span>num_downloaded_blocks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 		<span class="kw">fn </span>num_peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
+		<span class="kw">fn </span>num_active_peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 		<span class="kw">fn </span>new_peer(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			who: PeerId,
@@ -177,24 +163,12 @@
 			hash: <span class="kw-2">&amp;</span>Block::Hash,
 			number: NumberFor&lt;Block&gt;,
 		);
-		<span class="kw">fn </span>justification_requests&lt;<span class="lifetime">&#39;a</span>&gt;(
-			<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
-		) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = (PeerId, BlockRequest&lt;Block&gt;)&gt; + <span class="lifetime">&#39;a</span>&gt;;
-		<span class="kw">fn </span>block_requests&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = (PeerId, BlockRequest&lt;Block&gt;)&gt; + <span class="lifetime">&#39;a</span>&gt;;
-		<span class="kw">fn </span>state_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(PeerId, OpaqueStateRequest)&gt;;
-		<span class="kw">fn </span>warp_sync_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(PeerId, WarpProofRequest&lt;Block&gt;)&gt;;
 		<span class="kw">fn </span>on_block_data(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			who: <span class="kw-2">&amp;</span>PeerId,
 			request: <span class="prelude-ty">Option</span>&lt;BlockRequest&lt;Block&gt;&gt;,
 			response: BlockResponse&lt;Block&gt;,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;OnBlockData&lt;Block&gt;, BadPeer&gt;;
-		<span class="kw">fn </span>on_state_data(
-			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-			who: <span class="kw-2">&amp;</span>PeerId,
-			response: OpaqueStateResponse,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;OnStateData&lt;Block&gt;, BadPeer&gt;;
-		<span class="kw">fn </span>on_warp_sync_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, who: <span class="kw-2">&amp;</span>PeerId, response: EncodedProof) -&gt; <span class="prelude-ty">Result</span>&lt;(), BadPeer&gt;;
 		<span class="kw">fn </span>on_block_justification(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			who: PeerId,
@@ -226,20 +200,20 @@
 		) -&gt; Poll&lt;PollBlockAnnounceValidation&lt;Block::Header&gt;&gt;;
 		<span class="kw">fn </span>peer_disconnected(<span class="kw-2">&amp;mut </span><span class="self">self</span>, who: <span class="kw-2">&amp;</span>PeerId) -&gt; <span class="prelude-ty">Option</span>&lt;OnBlockData&lt;Block&gt;&gt;;
 		<span class="kw">fn </span>metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Metrics;
-		<span class="kw">fn </span>create_opaque_block_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>BlockRequest&lt;Block&gt;) -&gt; OpaqueBlockRequest;
-		<span class="kw">fn </span>encode_block_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>OpaqueBlockRequest) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt;;
-		<span class="kw">fn </span>decode_block_response(<span class="kw-2">&amp;</span><span class="self">self</span>, response: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;OpaqueBlockResponse, String&gt;;
 		<span class="kw">fn </span>block_response_into_blocks(
 			<span class="kw-2">&amp;</span><span class="self">self</span>,
 			request: <span class="kw-2">&amp;</span>BlockRequest&lt;Block&gt;,
 			response: OpaqueBlockResponse,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;BlockData&lt;Block&gt;&gt;, String&gt;;
-		<span class="kw">fn </span>encode_state_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>OpaqueStateRequest) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt;;
-		<span class="kw">fn </span>decode_state_response(<span class="kw-2">&amp;</span><span class="self">self</span>, response: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;OpaqueStateResponse, String&gt;;
 		<span class="kw">fn </span>poll&lt;<span class="lifetime">&#39;a</span>&gt;(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			cx: <span class="kw-2">&amp;mut </span>std::task::Context&lt;<span class="lifetime">&#39;a</span>&gt;,
-		) -&gt; Poll&lt;PollBlockAnnounceValidation&lt;Block::Header&gt;&gt;;
+		) -&gt; Poll&lt;PollResult&lt;Block&gt;&gt;;
+		<span class="kw">fn </span>send_block_request(
+			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+			who: PeerId,
+			request: BlockRequest&lt;Block&gt;,
+		);
 	}
 }
 </code></pre></div>

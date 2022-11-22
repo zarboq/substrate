@@ -1000,11 +1000,6 @@
 <span id="1000">1000</span>
 <span id="1001">1001</span>
 <span id="1002">1002</span>
-<span id="1003">1003</span>
-<span id="1004">1004</span>
-<span id="1005">1005</span>
-<span id="1006">1006</span>
-<span id="1007">1007</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1853,7 +1848,7 @@
 	};
 
 	<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) = NetworkServiceProvider::new();
-	<span class="kw">let </span>(chain_sync, chain_sync_service) = ChainSync::new(
+	<span class="kw">let </span>(chain_sync, chain_sync_service, block_announce_config) = ChainSync::new(
 		<span class="kw">match </span>config.network.sync_mode {
 			SyncMode::Full =&gt; sc_network_common::sync::SyncMode::Full,
 			SyncMode::Fast { skip_proofs, storage_chain_mode } =&gt;
@@ -1861,24 +1856,17 @@
 			SyncMode::Warp =&gt; sc_network_common::sync::SyncMode::Warp,
 		},
 		client.clone(),
+		protocol_id.clone(),
+		<span class="kw-2">&amp;</span>config.chain_spec.fork_id().map(ToOwned::to_owned),
+		Roles::from(<span class="kw-2">&amp;</span>config.role),
 		block_announce_validator,
 		config.network.max_parallel_downloads,
 		warp_sync_provider,
 		chain_sync_network_handle,
+		block_request_protocol_config.name.clone(),
+		state_request_protocol_config.name.clone(),
+		warp_sync_protocol_config.as_ref().map(|config| config.name.clone()),
 	)<span class="question-mark">?</span>;
-
-	<span class="kw">let </span>block_announce_config = chain_sync.get_block_announce_proto_config(
-		protocol_id.clone(),
-		<span class="kw-2">&amp;</span>config.chain_spec.fork_id().map(ToOwned::to_owned),
-		Roles::from(<span class="kw-2">&amp;</span>config.role.clone()),
-		client.info().best_number,
-		client.info().best_hash,
-		client
-			.block_hash(Zero::zero())
-			.ok()
-			.flatten()
-			.expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>),
-	);
 
 	request_response_protocol_configs.push(config.network.ipfs_server.then(|| {
 		<span class="kw">let </span>(handler, protocol_config) = BitswapRequestHandler::new(client.clone());
@@ -1903,12 +1891,14 @@
 		chain_sync_service,
 		metrics_registry: config.prometheus_config.as_ref().map(|config| config.registry.clone()),
 		block_announce_config,
-		block_request_protocol_config,
-		state_request_protocol_config,
-		warp_sync_protocol_config,
-		light_client_request_protocol_config,
 		request_response_protocol_configs: request_response_protocol_configs
 			.into_iter()
+			.chain([
+				<span class="prelude-val">Some</span>(block_request_protocol_config),
+				<span class="prelude-val">Some</span>(state_request_protocol_config),
+				<span class="prelude-val">Some</span>(light_client_request_protocol_config),
+				warp_sync_protocol_config,
+			])
 			.flatten()
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
 	};

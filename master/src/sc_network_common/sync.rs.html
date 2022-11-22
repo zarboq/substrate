@@ -400,21 +400,6 @@
 <span id="400">400</span>
 <span id="401">401</span>
 <span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -441,14 +426,16 @@
 
 <span class="kw">use </span>libp2p::PeerId;
 <span class="kw">use </span>message::{BlockAnnounce, BlockData, BlockRequest, BlockResponse};
-<span class="kw">use </span>sc_consensus::{BlockImportError, BlockImportStatus, IncomingBlock};
+<span class="kw">use </span>sc_consensus::{
+	import_queue::RuntimeOrigin, BlockImportError, BlockImportStatus, IncomingBlock,
+};
 <span class="kw">use </span>sp_consensus::BlockOrigin;
 <span class="kw">use </span>sp_runtime::{
 	traits::{Block <span class="kw">as </span>BlockT, NumberFor},
 	Justifications,
 };
 <span class="kw">use </span>std::{any::Any, fmt, fmt::Formatter, task::Poll};
-<span class="kw">use </span>warp::{EncodedProof, WarpProofRequest, WarpSyncProgress};
+<span class="kw">use </span>warp::WarpSyncProgress;
 
 <span class="doccomment">/// The sync status of a peer we are trying to sync with
 </span><span class="attribute">#[derive(Debug)]
@@ -540,13 +527,27 @@
 	},
 }
 
-<span class="doccomment">/// Result of [`ChainSync::on_state_data`].
+<span class="doccomment">/// Result of `ChainSync::on_state_data`.
 </span><span class="attribute">#[derive(Debug)]
 </span><span class="kw">pub enum </span>OnStateData&lt;Block: BlockT&gt; {
 	<span class="doccomment">/// The block and state that should be imported.
 	</span>Import(BlockOrigin, IncomingBlock&lt;Block&gt;),
 	<span class="doccomment">/// A new state request needs to be made to the given peer.
 	</span>Continue,
+}
+
+<span class="doccomment">/// Block or justification request polled from `ChainSync`
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub enum </span>ImportResult&lt;B: BlockT&gt; {
+	BlockImport(BlockOrigin, Vec&lt;IncomingBlock&lt;B&gt;&gt;),
+	JustificationImport(RuntimeOrigin, B::Hash, NumberFor&lt;B&gt;, Justifications),
+}
+
+<span class="doccomment">/// Value polled from `ChainSync`
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub enum </span>PollResult&lt;B: BlockT&gt; {
+	Import(ImportResult&lt;B&gt;),
+	Announce(PollBlockAnnounceValidation&lt;B::Header&gt;),
 }
 
 <span class="doccomment">/// Result of [`ChainSync::poll_block_announce_validation`].
@@ -601,6 +602,13 @@
 	<span class="kw">pub </span>queued_blocks: u32,
 	<span class="kw">pub </span>fork_targets: u32,
 	<span class="kw">pub </span>justifications: metrics::Metrics,
+}
+
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub enum </span>PeerRequest&lt;B: BlockT&gt; {
+	Block(BlockRequest&lt;B&gt;),
+	State,
+	WarpProof,
 }
 
 <span class="doccomment">/// Wrapper for implementation-specific state request.
@@ -667,6 +675,9 @@
 	<span class="doccomment">/// Returns the current number of peers stored within this state machine.
 	</span><span class="kw">fn </span>num_peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 
+	<span class="doccomment">/// Returns the number of peers we&#39;re connected to and that are being queried.
+	</span><span class="kw">fn </span>num_active_peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
+
 	<span class="doccomment">/// Handle a new connected peer.
 	///
 	/// Call this method whenever we connect to a new peer.
@@ -694,22 +705,6 @@
 		number: NumberFor&lt;Block&gt;,
 	);
 
-	<span class="doccomment">/// Get an iterator over all scheduled justification requests.
-	</span><span class="kw">fn </span>justification_requests&lt;<span class="lifetime">&#39;a</span>&gt;(
-		<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
-	) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = (PeerId, BlockRequest&lt;Block&gt;)&gt; + <span class="lifetime">&#39;a</span>&gt;;
-
-	<span class="doccomment">/// Get an iterator over all block requests of all peers.
-	</span><span class="kw">fn </span>block_requests&lt;<span class="lifetime">&#39;a</span>&gt;(
-		<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
-	) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = (PeerId, BlockRequest&lt;Block&gt;)&gt; + <span class="lifetime">&#39;a</span>&gt;;
-
-	<span class="doccomment">/// Get a state request, if any.
-	</span><span class="kw">fn </span>state_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(PeerId, OpaqueStateRequest)&gt;;
-
-	<span class="doccomment">/// Get a warp sync request, if any.
-	</span><span class="kw">fn </span>warp_sync_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(PeerId, WarpProofRequest&lt;Block&gt;)&gt;;
-
 	<span class="doccomment">/// Handle a response from the remote to a block request that we made.
 	///
 	/// `request` must be the original request that triggered `response`.
@@ -723,16 +718,6 @@
 		request: <span class="prelude-ty">Option</span>&lt;BlockRequest&lt;Block&gt;&gt;,
 		response: BlockResponse&lt;Block&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;OnBlockData&lt;Block&gt;, BadPeer&gt;;
-
-	<span class="doccomment">/// Handle a response from the remote to a state request that we made.
-	</span><span class="kw">fn </span>on_state_data(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		who: <span class="kw-2">&amp;</span>PeerId,
-		response: OpaqueStateResponse,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;OnStateData&lt;Block&gt;, BadPeer&gt;;
-
-	<span class="doccomment">/// Handle a response from the remote to a warp proof request that we made.
-	</span><span class="kw">fn </span>on_warp_sync_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, who: <span class="kw-2">&amp;</span>PeerId, response: EncodedProof) -&gt; <span class="prelude-ty">Result</span>&lt;(), BadPeer&gt;;
 
 	<span class="doccomment">/// Handle a response from the remote to a justification request that we made.
 	///
@@ -800,15 +785,6 @@
 	<span class="doccomment">/// Return some key metrics.
 	</span><span class="kw">fn </span>metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Metrics;
 
-	<span class="doccomment">/// Create implementation-specific block request.
-	</span><span class="kw">fn </span>create_opaque_block_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>BlockRequest&lt;Block&gt;) -&gt; OpaqueBlockRequest;
-
-	<span class="doccomment">/// Encode implementation-specific block request.
-	</span><span class="kw">fn </span>encode_block_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>OpaqueBlockRequest) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt;;
-
-	<span class="doccomment">/// Decode implementation-specific block response.
-	</span><span class="kw">fn </span>decode_block_response(<span class="kw-2">&amp;</span><span class="self">self</span>, response: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;OpaqueBlockResponse, String&gt;;
-
 	<span class="doccomment">/// Access blocks from implementation-specific block response.
 	</span><span class="kw">fn </span>block_response_into_blocks(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -816,21 +792,15 @@
 		response: OpaqueBlockResponse,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;BlockData&lt;Block&gt;&gt;, String&gt;;
 
-	<span class="doccomment">/// Encode implementation-specific state request.
-	</span><span class="kw">fn </span>encode_state_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>OpaqueStateRequest) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt;;
-
-	<span class="doccomment">/// Decode implementation-specific state response.
-	</span><span class="kw">fn </span>decode_state_response(<span class="kw-2">&amp;</span><span class="self">self</span>, response: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;OpaqueStateResponse, String&gt;;
-
 	<span class="doccomment">/// Advance the state of `ChainSync`
 	///
 	/// Internally calls [`ChainSync::poll_block_announce_validation()`] and
 	/// this function should be polled until it returns [`Poll::Pending`] to
 	/// consume all pending events.
-	</span><span class="kw">fn </span>poll(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		cx: <span class="kw-2">&amp;mut </span>std::task::Context,
-	) -&gt; Poll&lt;PollBlockAnnounceValidation&lt;Block::Header&gt;&gt;;
+	</span><span class="kw">fn </span>poll(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>std::task::Context) -&gt; Poll&lt;PollResult&lt;Block&gt;&gt;;
+
+	<span class="doccomment">/// Send block request to peer
+	</span><span class="kw">fn </span>send_block_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, who: PeerId, request: BlockRequest&lt;Block&gt;);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="sc_network_common" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
