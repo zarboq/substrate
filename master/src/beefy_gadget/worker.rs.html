@@ -1494,39 +1494,6 @@
 <span id="1494">1494</span>
 <span id="1495">1495</span>
 <span id="1496">1496</span>
-<span id="1497">1497</span>
-<span id="1498">1498</span>
-<span id="1499">1499</span>
-<span id="1500">1500</span>
-<span id="1501">1501</span>
-<span id="1502">1502</span>
-<span id="1503">1503</span>
-<span id="1504">1504</span>
-<span id="1505">1505</span>
-<span id="1506">1506</span>
-<span id="1507">1507</span>
-<span id="1508">1508</span>
-<span id="1509">1509</span>
-<span id="1510">1510</span>
-<span id="1511">1511</span>
-<span id="1512">1512</span>
-<span id="1513">1513</span>
-<span id="1514">1514</span>
-<span id="1515">1515</span>
-<span id="1516">1516</span>
-<span id="1517">1517</span>
-<span id="1518">1518</span>
-<span id="1519">1519</span>
-<span id="1520">1520</span>
-<span id="1521">1521</span>
-<span id="1522">1522</span>
-<span id="1523">1523</span>
-<span id="1524">1524</span>
-<span id="1525">1525</span>
-<span id="1526">1526</span>
-<span id="1527">1527</span>
-<span id="1528">1528</span>
-<span id="1529">1529</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -1545,43 +1512,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>std::{
-	collections::{BTreeMap, BTreeSet, VecDeque},
-	fmt::Debug,
-	marker::PhantomData,
-	sync::Arc,
-};
-
-<span class="kw">use </span>codec::{Codec, Decode, Encode};
-<span class="kw">use </span>futures::{stream::Fuse, FutureExt, StreamExt};
-<span class="kw">use </span>log::{debug, error, info, log_enabled, trace, warn};
-<span class="kw">use </span>parking_lot::Mutex;
-
-<span class="kw">use </span>sc_client_api::{Backend, FinalityNotification, FinalityNotifications, HeaderBackend};
-<span class="kw">use </span>sc_network_common::{
-	protocol::event::Event <span class="kw">as </span>NetEvent,
-	service::{NetworkEventStream, NetworkRequest},
-};
-<span class="kw">use </span>sc_network_gossip::GossipEngine;
-
-<span class="kw">use </span>sp_api::{BlockId, ProvideRuntimeApi};
-<span class="kw">use </span>sp_arithmetic::traits::{AtLeast32Bit, Saturating};
-<span class="kw">use </span>sp_consensus::SyncOracle;
-<span class="kw">use </span>sp_mmr_primitives::MmrApi;
-<span class="kw">use </span>sp_runtime::{
-	generic::OpaqueDigestItemId,
-	traits::{Block, Header, NumberFor, Zero},
-	SaturatedConversion,
-};
-
-<span class="kw">use </span>beefy_primitives::{
-	crypto::{AuthorityId, Signature},
-	BeefyApi, Commitment, ConsensusLog, MmrRootHash, Payload, PayloadProvider, SignedCommitment,
-	ValidatorSet, VersionedFinalityProof, VoteMessage, BEEFY_ENGINE_ID,
-};
-<span class="kw">use </span>sc_utils::notification::NotificationReceiver;
-
-<span class="kw">use crate</span>::{
+</span><span class="kw">use crate</span>::{
 	communication::{
 		gossip::{topic, GossipValidator},
 		request_response::outgoing_requests_engine::OnDemandJustificationsEngine,
@@ -1592,7 +1523,34 @@
 	metric_inc, metric_set,
 	metrics::Metrics,
 	round::Rounds,
-	BeefyVoterLinks, KnownPeers,
+	BeefyVoterLinks,
+};
+<span class="kw">use </span>beefy_primitives::{
+	crypto::{AuthorityId, Signature},
+	BeefyApi, Commitment, ConsensusLog, MmrRootHash, Payload, PayloadProvider, SignedCommitment,
+	ValidatorSet, VersionedFinalityProof, VoteMessage, BEEFY_ENGINE_ID,
+};
+<span class="kw">use </span>codec::{Codec, Decode, Encode};
+<span class="kw">use </span>futures::{stream::Fuse, FutureExt, StreamExt};
+<span class="kw">use </span>log::{debug, error, info, log_enabled, trace, warn};
+<span class="kw">use </span>sc_client_api::{Backend, FinalityNotification, FinalityNotifications, HeaderBackend};
+<span class="kw">use </span>sc_network_common::service::{NetworkEventStream, NetworkRequest};
+<span class="kw">use </span>sc_network_gossip::GossipEngine;
+<span class="kw">use </span>sc_utils::notification::NotificationReceiver;
+<span class="kw">use </span>sp_api::{BlockId, ProvideRuntimeApi};
+<span class="kw">use </span>sp_arithmetic::traits::{AtLeast32Bit, Saturating};
+<span class="kw">use </span>sp_consensus::SyncOracle;
+<span class="kw">use </span>sp_mmr_primitives::MmrApi;
+<span class="kw">use </span>sp_runtime::{
+	generic::OpaqueDigestItemId,
+	traits::{Block, Header, NumberFor, Zero},
+	SaturatedConversion,
+};
+<span class="kw">use </span>std::{
+	collections::{BTreeMap, BTreeSet, VecDeque},
+	fmt::Debug,
+	marker::PhantomData,
+	sync::Arc,
 };
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>RoundAction {
@@ -1782,7 +1740,6 @@
 	<span class="kw">pub </span>payload_provider: P,
 	<span class="kw">pub </span>network: N,
 	<span class="kw">pub </span>key_store: BeefyKeystore,
-	<span class="kw">pub </span>known_peers: Arc&lt;Mutex&lt;KnownPeers&lt;B&gt;&gt;&gt;,
 	<span class="kw">pub </span>gossip_engine: GossipEngine&lt;B&gt;,
 	<span class="kw">pub </span>gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
 	<span class="kw">pub </span>on_demand_justifications: OnDemandJustificationsEngine&lt;B, R&gt;,
@@ -1834,8 +1791,7 @@
 	key_store: BeefyKeystore,
 
 	<span class="comment">// communication
-	</span>known_peers: Arc&lt;Mutex&lt;KnownPeers&lt;B&gt;&gt;&gt;,
-	gossip_engine: GossipEngine&lt;B&gt;,
+	</span>gossip_engine: GossipEngine&lt;B&gt;,
 	gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
 	on_demand_justifications: OnDemandJustificationsEngine&lt;B, R&gt;,
 
@@ -1878,7 +1834,6 @@
 			gossip_engine,
 			gossip_validator,
 			on_demand_justifications,
-			known_peers,
 			links,
 			metrics,
 			persisted_state,
@@ -1888,7 +1843,6 @@
 			backend,
 			payload_provider,
 			network,
-			known_peers,
 			key_store,
 			gossip_engine,
 			gossip_validator,
@@ -2312,6 +2266,29 @@
 		<span class="prelude-val">Ok</span>(())
 	}
 
+	<span class="kw">fn </span>process_new_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+		<span class="comment">// Handle pending justifications and/or votes for now GRANDPA finalized blocks.
+		</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_pending_justif_and_votes() {
+			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
+		}
+
+		<span class="comment">// Don&#39;t bother voting or requesting justifications during major sync.
+		</span><span class="kw">if </span>!<span class="self">self</span>.network.is_major_syncing() {
+			<span class="comment">// There were external events, &#39;state&#39; is changed, author a vote if needed/possible.
+			</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_to_vote() {
+				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
+			}
+			<span class="comment">// If the current target is a mandatory block,
+			// make sure there&#39;s also an on-demand justification request out for it.
+			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(block) = <span class="self">self</span>.voting_oracle().mandatory_pending() {
+				<span class="comment">// This only starts new request if there isn&#39;t already an active one.
+				</span><span class="self">self</span>.on_demand_justifications.request(block);
+			}
+		} <span class="kw">else </span>{
+			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Skipping voting while major syncing.&quot;</span>);
+		}
+	}
+
 	<span class="doccomment">/// Main loop for BEEFY worker.
 	///
 	/// Wait for BEEFY runtime pallet to be available, then start the main async loop
@@ -2323,7 +2300,6 @@
 	) {
 		<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 run BEEFY worker, best grandpa: #{:?}.&quot;</span>, <span class="self">self</span>.best_grandpa_block());
 
-		<span class="kw">let </span><span class="kw-2">mut </span>network_events = <span class="self">self</span>.network.event_stream(<span class="string">&quot;network-gossip&quot;</span>).fuse();
 		<span class="kw">let </span><span class="kw-2">mut </span>votes = Box::pin(
 			<span class="self">self</span>.gossip_engine
 				.messages_for(topic::&lt;B&gt;())
@@ -2339,25 +2315,12 @@
 		);
 
 		<span class="kw">loop </span>{
-			<span class="comment">// Don&#39;t bother voting or requesting justifications during major sync.
-			</span><span class="kw">if </span>!<span class="self">self</span>.network.is_major_syncing() {
-				<span class="comment">// If the current target is a mandatory block,
-				// make sure there&#39;s also an on-demand justification request out for it.
-				</span><span class="kw">if let </span><span class="prelude-val">Some</span>(block) = <span class="self">self</span>.voting_oracle().mandatory_pending() {
-					<span class="comment">// This only starts new request if there isn&#39;t already an active one.
-					</span><span class="self">self</span>.on_demand_justifications.request(block);
-				}
-				<span class="comment">// There were external events, &#39;state&#39; is changed, author a vote if needed/possible.
-				</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_to_vote() {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
-				}
-			} <span class="kw">else </span>{
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Skipping voting while major syncing.&quot;</span>);
-			}
+			<span class="comment">// Act on changed &#39;state&#39;.
+			</span><span class="self">self</span>.process_new_state();
 
 			<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = <span class="kw-2">&amp;mut </span><span class="self">self</span>.gossip_engine;
 			<span class="comment">// Wait for, and handle external events.
-			// The branches below only change &#39;state&#39;, actual voting happen afterwards,
+			// The branches below only change &#39;state&#39;, actual voting happens afterwards,
 			// based on the new resulting &#39;state&#39;.
 			</span><span class="macro">futures::select_biased! </span>{
 				<span class="comment">// Use `select_biased!` to prioritize order below.
@@ -2365,15 +2328,6 @@
 				</span><span class="kw">_ </span>= gossip_engine =&gt; {
 					<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Gossip engine has terminated, closing worker.&quot;</span>);
 					<span class="kw">return</span>;
-				},
-				<span class="comment">// Keep track of connected peers.
-				</span>net_event = network_events.next() =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(net_event) = net_event {
-						<span class="self">self</span>.handle_network_event(net_event);
-					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Network events stream terminated, closing worker.&quot;</span>);
-						<span class="kw">return</span>;
-					}
 				},
 				<span class="comment">// Process finality notifications first since these drive the voter.
 				</span>notification = finality_notifications.next() =&gt; {
@@ -2417,25 +2371,6 @@
 					}
 				},
 			}
-
-			<span class="comment">// Handle pending justifications and/or votes for now GRANDPA finalized blocks.
-			</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_pending_justif_and_votes() {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
-			}
-		}
-	}
-
-	<span class="doccomment">/// Update known peers based on network events.
-	</span><span class="kw">fn </span>handle_network_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: NetEvent) {
-		<span class="kw">match </span>event {
-			NetEvent::SyncConnected { remote } =&gt; {
-				<span class="self">self</span>.known_peers.lock().add_new(remote);
-			},
-			NetEvent::SyncDisconnected { remote } =&gt; {
-				<span class="self">self</span>.known_peers.lock().remove(<span class="kw-2">&amp;</span>remote);
-			},
-			<span class="comment">// We don&#39;t care about other events.
-			</span><span class="kw">_ </span>=&gt; (),
 		}
 	}
 }
@@ -2505,11 +2440,11 @@
 			create_beefy_keystore, get_beefy_streams, make_beefy_ids, two_validators::TestApi,
 			BeefyPeer, BeefyTestNet,
 		},
-		BeefyRPCLinks,
+		BeefyRPCLinks, KnownPeers,
 	};
-
 	<span class="kw">use </span>beefy_primitives::{known_payloads, mmr::MmrRootProvider};
 	<span class="kw">use </span>futures::{executor::block_on, future::poll_fn, task::Poll};
+	<span class="kw">use </span>parking_lot::Mutex;
 	<span class="kw">use </span>sc_client_api::{Backend <span class="kw">as </span>BackendT, HeaderBackend};
 	<span class="kw">use </span>sc_network::NetworkService;
 	<span class="kw">use </span>sc_network_test::TestNetFactory;
@@ -2587,7 +2522,7 @@
 			network.clone(),
 			api.clone(),
 			<span class="string">&quot;/beefy/justifs/1&quot;</span>.into(),
-			known_peers.clone(),
+			known_peers,
 		);
 		<span class="kw">let </span>at = BlockId::number(Zero::zero());
 		<span class="kw">let </span>genesis_header = backend.blockchain().expect_header(at).unwrap();
@@ -2603,7 +2538,6 @@
 			backend,
 			payload_provider,
 			key_store: <span class="prelude-val">Some</span>(keystore).into(),
-			known_peers,
 			links,
 			gossip_engine,
 			gossip_validator,
