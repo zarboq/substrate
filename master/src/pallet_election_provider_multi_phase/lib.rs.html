@@ -2475,6 +2475,9 @@
 <span id="2475">2475</span>
 <span id="2476">2476</span>
 <span id="2477">2477</span>
+<span id="2478">2478</span>
+<span id="2479">2479</span>
+<span id="2480">2480</span>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -2714,7 +2717,7 @@
 <span class="kw">use </span>frame_support::{
 	dispatch::DispatchClass,
 	ensure,
-	traits::{Currency, Get, OnUnbalanced, ReservableCurrency},
+	traits::{Currency, DefensiveResult, Get, OnUnbalanced, ReservableCurrency},
 	weights::Weight,
 	DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
@@ -3024,6 +3027,10 @@
 	</span>UntrustedScoreTooLow,
 	<span class="doccomment">/// Data Provider returned too many desired targets
 	</span>TooManyDesiredTargets,
+	<span class="doccomment">/// Conversion into bounded types failed.
+	///
+	/// Should never happen under correct configurations.
+	</span>BoundedConversionFailed,
 }
 
 <span class="kw">impl </span>From&lt;sp_npos_elections::Error&gt; <span class="kw">for </span>FeasibilityError {
@@ -3037,10 +3044,7 @@
 </span><span class="kw">pub mod </span>pallet {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>frame_election_provider_support::{InstantElectionProvider, NposSolver};
-	<span class="kw">use </span>frame_support::{
-		pallet_prelude::<span class="kw-2">*</span>,
-		traits::{DefensiveResult, EstimateCallFee},
-	};
+	<span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, traits::EstimateCallFee};
 	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
 
 	<span class="attribute">#[pallet::config]
@@ -4026,7 +4030,9 @@
 		<span class="macro">ensure!</span>(known_score == score, FeasibilityError::InvalidScore);
 
 		<span class="comment">// Size of winners in miner solution is equal to `desired_targets` &lt;= `MaxWinners`.
-		</span><span class="kw">let </span>supports = supports.try_into().expect(<span class="string">&quot;checked desired_targets &lt;= MaxWinners; qed&quot;</span>);
+		</span><span class="kw">let </span>supports = supports
+			.try_into()
+			.defensive_map_err(|<span class="kw">_</span>| FeasibilityError::BoundedConversionFailed)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(ReadySolution { supports, compute, score })
 	}
 
