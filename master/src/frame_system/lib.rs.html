@@ -1697,6 +1697,36 @@
 <a href="#1697" id="1697">1697</a>
 <a href="#1698" id="1698">1698</a>
 <a href="#1699" id="1699">1699</a>
+<a href="#1700" id="1700">1700</a>
+<a href="#1701" id="1701">1701</a>
+<a href="#1702" id="1702">1702</a>
+<a href="#1703" id="1703">1703</a>
+<a href="#1704" id="1704">1704</a>
+<a href="#1705" id="1705">1705</a>
+<a href="#1706" id="1706">1706</a>
+<a href="#1707" id="1707">1707</a>
+<a href="#1708" id="1708">1708</a>
+<a href="#1709" id="1709">1709</a>
+<a href="#1710" id="1710">1710</a>
+<a href="#1711" id="1711">1711</a>
+<a href="#1712" id="1712">1712</a>
+<a href="#1713" id="1713">1713</a>
+<a href="#1714" id="1714">1714</a>
+<a href="#1715" id="1715">1715</a>
+<a href="#1716" id="1716">1716</a>
+<a href="#1717" id="1717">1717</a>
+<a href="#1718" id="1718">1718</a>
+<a href="#1719" id="1719">1719</a>
+<a href="#1720" id="1720">1720</a>
+<a href="#1721" id="1721">1721</a>
+<a href="#1722" id="1722">1722</a>
+<a href="#1723" id="1723">1723</a>
+<a href="#1724" id="1724">1724</a>
+<a href="#1725" id="1725">1725</a>
+<a href="#1726" id="1726">1726</a>
+<a href="#1727" id="1727">1727</a>
+<a href="#1728" id="1728">1728</a>
+<a href="#1729" id="1729">1729</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2474,7 +2504,8 @@
 	}
 }
 
-<span class="kw">pub struct </span>EnsureRoot&lt;AccountId&gt;(sp_std::marker::PhantomData&lt;AccountId&gt;);
+<span class="doccomment">/// Ensure the origin is Root.
+</span><span class="kw">pub struct </span>EnsureRoot&lt;AccountId&gt;(sp_std::marker::PhantomData&lt;AccountId&gt;);
 <span class="kw">impl</span>&lt;O: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;AccountId&gt;, O&gt;&gt; + From&lt;RawOrigin&lt;AccountId&gt;&gt;, AccountId&gt;
 	EnsureOrigin&lt;O&gt; <span class="kw">for </span>EnsureRoot&lt;AccountId&gt;
 {
@@ -2492,7 +2523,8 @@
 	}
 }
 
-<span class="kw">pub struct </span>EnsureRootWithSuccess&lt;AccountId, Success&gt;(
+<span class="doccomment">/// Ensure the origin is Root and return the provided `Success` value.
+</span><span class="kw">pub struct </span>EnsureRootWithSuccess&lt;AccountId, Success&gt;(
 	sp_std::marker::PhantomData&lt;(AccountId, Success)&gt;,
 );
 <span class="kw">impl</span>&lt;
@@ -2515,7 +2547,32 @@
 	}
 }
 
-<span class="kw">pub struct </span>EnsureSigned&lt;AccountId&gt;(sp_std::marker::PhantomData&lt;AccountId&gt;);
+<span class="doccomment">/// Ensure the origin is provided `Ensure` origin and return the provided `Success` value.
+</span><span class="kw">pub struct </span>EnsureWithSuccess&lt;Ensure, AccountId, Success&gt;(
+	sp_std::marker::PhantomData&lt;(Ensure, AccountId, Success)&gt;,
+);
+
+<span class="kw">impl</span>&lt;
+		O: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;AccountId&gt;, O&gt;&gt; + From&lt;RawOrigin&lt;AccountId&gt;&gt;,
+		Ensure: EnsureOrigin&lt;O&gt;,
+		AccountId,
+		Success: TypedGet,
+	&gt; EnsureOrigin&lt;O&gt; <span class="kw">for </span>EnsureWithSuccess&lt;Ensure, AccountId, Success&gt;
+{
+	<span class="kw">type </span>Success = Success::Type;
+
+	<span class="kw">fn </span>try_origin(o: O) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Success, O&gt; {
+		Ensure::try_origin(o).map(|<span class="kw">_</span>| Success::get())
+	}
+
+	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
+	</span><span class="kw">fn </span>try_successful_origin() -&gt; <span class="prelude-ty">Result</span>&lt;O, ()&gt; {
+		Ensure::try_successful_origin()
+	}
+}
+
+<span class="doccomment">/// Ensure the origin is any `Signed` origin.
+</span><span class="kw">pub struct </span>EnsureSigned&lt;AccountId&gt;(sp_std::marker::PhantomData&lt;AccountId&gt;);
 <span class="kw">impl</span>&lt;O: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;AccountId&gt;, O&gt;&gt; + From&lt;RawOrigin&lt;AccountId&gt;&gt;, AccountId: Decode&gt;
 	EnsureOrigin&lt;O&gt; <span class="kw">for </span>EnsureSigned&lt;AccountId&gt;
 {
@@ -2535,7 +2592,8 @@
 	}
 }
 
-<span class="kw">pub struct </span>EnsureSignedBy&lt;Who, AccountId&gt;(sp_std::marker::PhantomData&lt;(Who, AccountId)&gt;);
+<span class="doccomment">/// Ensure the origin is `Signed` origin from the given `AccountId`.
+</span><span class="kw">pub struct </span>EnsureSignedBy&lt;Who, AccountId&gt;(sp_std::marker::PhantomData&lt;(Who, AccountId)&gt;);
 <span class="kw">impl</span>&lt;
 		O: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;AccountId&gt;, O&gt;&gt; + From&lt;RawOrigin&lt;AccountId&gt;&gt;,
 		Who: SortedMembers&lt;AccountId&gt;,
@@ -2563,7 +2621,8 @@
 	}
 }
 
-<span class="kw">pub struct </span>EnsureNone&lt;AccountId&gt;(sp_std::marker::PhantomData&lt;AccountId&gt;);
+<span class="doccomment">/// Ensure the origin is `None`. i.e. unsigned transaction.
+</span><span class="kw">pub struct </span>EnsureNone&lt;AccountId&gt;(sp_std::marker::PhantomData&lt;AccountId&gt;);
 <span class="kw">impl</span>&lt;O: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;AccountId&gt;, O&gt;&gt; + From&lt;RawOrigin&lt;AccountId&gt;&gt;, AccountId&gt;
 	EnsureOrigin&lt;O&gt; <span class="kw">for </span>EnsureNone&lt;AccountId&gt;
 {
@@ -2581,7 +2640,8 @@
 	}
 }
 
-<span class="kw">pub struct </span>EnsureNever&lt;T&gt;(sp_std::marker::PhantomData&lt;T&gt;);
+<span class="doccomment">/// Always fail.
+</span><span class="kw">pub struct </span>EnsureNever&lt;T&gt;(sp_std::marker::PhantomData&lt;T&gt;);
 <span class="kw">impl</span>&lt;O, T&gt; EnsureOrigin&lt;O&gt; <span class="kw">for </span>EnsureNever&lt;T&gt; {
 	<span class="kw">type </span>Success = T;
 	<span class="kw">fn </span>try_origin(o: O) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Success, O&gt; {

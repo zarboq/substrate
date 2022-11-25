@@ -1769,6 +1769,7 @@
 <a href="#1769" id="1769">1769</a>
 <a href="#1770" id="1770">1770</a>
 <a href="#1771" id="1771">1771</a>
+<a href="#1772" id="1772">1772</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -3377,7 +3378,6 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>remote_tests {
 	<span class="kw">use crate</span>::{AutoLimits, MigrationLimits, Pallet <span class="kw">as </span>StateTrieMigration, LOG_TARGET};
 	<span class="kw">use </span>codec::Encode;
-	<span class="kw">use </span>frame_benchmarking::Zero;
 	<span class="kw">use </span>frame_support::{
 		traits::{Get, Hooks},
 		weights::Weight,
@@ -3385,7 +3385,7 @@
 	<span class="kw">use </span>frame_system::Pallet <span class="kw">as </span>System;
 	<span class="kw">use </span>remote_externalities::Mode;
 	<span class="kw">use </span>sp_core::H256;
-	<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, HashFor, Header <span class="kw">as _</span>, One};
+	<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, HashFor, Header <span class="kw">as _</span>, One, Zero};
 	<span class="kw">use </span>thousands::Separable;
 
 	<span class="attr">#[allow(dead_code)]
@@ -3434,18 +3434,20 @@
 		<span class="comment">// set the version to 1, as if the upgrade happened.
 		</span>ext.state_version = sp_core::storage::StateVersion::V1;
 
-		<span class="kw">let </span>(top_left, child_left) =
+		<span class="kw">let </span>status =
 			substrate_state_trie_migration_rpc::migration_status(<span class="kw-2">&amp;</span>ext.as_backend()).unwrap();
 		<span class="macro">assert!</span>(
-			top_left &gt; <span class="number">0</span>,
+			status.top_remaining_to_migrate &gt; <span class="number">0</span>,
 			<span class="string">&quot;no node needs migrating, this probably means that state was initialized with `StateVersion::V1`&quot;</span>,
 		);
 
 		<span class="macro">log::info!</span>(
 			target: LOG_TARGET,
-			<span class="string">&quot;initial check: top_left: {}, child_left: {}&quot;</span>,
-			top_left.separate_with_commas(),
-			child_left.separate_with_commas(),
+			<span class="string">&quot;initial check: top_left: {}, child_left: {}, total_top {}, total_child {}&quot;</span>,
+			status.top_remaining_to_migrate.separate_with_commas(),
+			status.child_remaining_to_migrate.separate_with_commas(),
+			status.total_top.separate_with_commas(),
+			status.total_child.separate_with_commas(),
 		);
 
 		<span class="kw">loop </span>{
@@ -3493,17 +3495,17 @@
 			)
 		});
 
-		<span class="kw">let </span>(top_left, child_left) =
+		<span class="kw">let </span>status =
 			substrate_state_trie_migration_rpc::migration_status(<span class="kw-2">&amp;</span>ext.as_backend()).unwrap();
-		<span class="macro">assert_eq!</span>(top_left, <span class="number">0</span>);
-		<span class="macro">assert_eq!</span>(child_left, <span class="number">0</span>);
+		<span class="macro">assert_eq!</span>(status.top_remaining_to_migrate, <span class="number">0</span>);
+		<span class="macro">assert_eq!</span>(status.child_remaining_to_migrate, <span class="number">0</span>);
 	}
 }
 
 <span class="attr">#[cfg(all(test, feature = <span class="string">&quot;remote-test&quot;</span>))]
 </span><span class="kw">mod </span>remote_tests_local {
 	<span class="kw">use super</span>::{
-		mock::{Call <span class="kw">as </span>MockCall, <span class="kw-2">*</span>},
+		mock::{RuntimeCall <span class="kw">as </span>MockCall, <span class="kw-2">*</span>},
 		remote_tests::run_with_limits,
 		<span class="kw-2">*</span>,
 	};

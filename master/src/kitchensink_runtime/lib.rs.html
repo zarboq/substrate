@@ -2283,7 +2283,6 @@
 <a href="#2283" id="2283">2283</a>
 <a href="#2284" id="2284">2284</a>
 <a href="#2285" id="2285">2285</a>
-<a href="#2286" id="2286">2286</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2330,7 +2329,7 @@
 };
 <span class="kw">use </span>frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot, EnsureRootWithSuccess, EnsureSigned,
+	EnsureRoot, EnsureRootWithSuccess, EnsureSigned, EnsureWithSuccess,
 };
 <span class="kw">pub use </span>node_primitives::{AccountId, Signature};
 <span class="kw">use </span>node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment};
@@ -3362,6 +3361,7 @@
 	<span class="kw">pub const </span>TreasuryPalletId: PalletId = PalletId(<span class="kw-2">*</span><span class="string">b&quot;py/trsry&quot;</span>);
 	<span class="kw">pub const </span>MaximumReasonLength: u32 = <span class="number">300</span>;
 	<span class="kw">pub const </span>MaxApprovals: u32 = <span class="number">100</span>;
+	<span class="kw">pub const </span>MaxBalance: Balance = Balance::max_value();
 }
 
 <span class="kw">impl </span>pallet_treasury::Config <span class="kw">for </span>Runtime {
@@ -3386,7 +3386,7 @@
 	<span class="kw">type </span>SpendFunds = Bounties;
 	<span class="kw">type </span>WeightInfo = pallet_treasury::weights::SubstrateWeight&lt;Runtime&gt;;
 	<span class="kw">type </span>MaxApprovals = MaxApprovals;
-	<span class="kw">type </span>SpendOrigin = frame_support::traits::NeverEnsureOrigin&lt;u128&gt;;
+	<span class="kw">type </span>SpendOrigin = EnsureWithSuccess&lt;EnsureRoot&lt;AccountId&gt;, AccountId, MaxBalance&gt;;
 }
 
 <span class="macro">parameter_types! </span>{
@@ -3860,8 +3860,7 @@
 }
 
 <span class="macro">parameter_types! </span>{
-	<span class="kw">pub const </span>MaxFounders: u32 = <span class="number">10</span>;
-	<span class="kw">pub const </span>MaxFellows: u32 = AllianceMaxMembers::get() - MaxFounders::get();
+	<span class="kw">pub const </span>MaxFellows: u32 = AllianceMaxMembers::get();
 	<span class="kw">pub const </span>MaxAllies: u32 = <span class="number">100</span>;
 	<span class="kw">pub const </span>AllyDeposit: Balance = <span class="number">10 </span>* DOLLARS;
 	<span class="kw">pub const </span>RetirementPeriod: BlockNumber = ALLIANCE_MOTION_DURATION_IN_BLOCKS + (<span class="number">1 </span>* DAYS);
@@ -3892,7 +3891,6 @@
 	</span><span class="kw">type </span>IdentityVerifier = ();
 	<span class="kw">type </span>ProposalProvider = AllianceProposalProvider;
 	<span class="kw">type </span>MaxProposals = AllianceMaxProposals;
-	<span class="kw">type </span>MaxFounders = MaxFounders;
 	<span class="kw">type </span>MaxFellows = MaxFellows;
 	<span class="kw">type </span>MaxAllies = MaxAllies;
 	<span class="kw">type </span>MaxUnscrupulousItems = ConstU32&lt;<span class="number">100</span>&gt;;

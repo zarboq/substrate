@@ -162,6 +162,19 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -208,30 +221,33 @@
 <span class="kw">fn </span>count_migrate&lt;<span class="lifetime">&#39;a</span>, H: Hasher&gt;(
 	storage: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>trie_db::HashDBRef&lt;H, Vec&lt;u8&gt;&gt;,
 	root: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>H::Out,
-) -&gt; std::result::Result&lt;(u64, TrieDB&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>, H&gt;), String&gt; {
+) -&gt; std::result::Result&lt;(u64, u64, TrieDB&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;a</span>, H&gt;), String&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>nb = <span class="number">0u64</span>;
+	<span class="kw">let </span><span class="kw-2">mut </span>total_nb = <span class="number">0u64</span>;
 	<span class="kw">let </span>trie = TrieDBBuilder::new(storage, root).build();
 	<span class="kw">let </span>iter_node =
 		TrieDBNodeIterator::new(<span class="kw-2">&amp;</span>trie).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;TrieDB node iterator error: {}&quot;</span>, e))<span class="question-mark">?</span>;
 	<span class="kw">for </span>node <span class="kw">in </span>iter_node {
 		<span class="kw">let </span>node = node.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;TrieDB node iterator error: {}&quot;</span>, e))<span class="question-mark">?</span>;
 		<span class="kw">match </span>node.<span class="number">2</span>.node_plan() {
-			NodePlan::Leaf { value, .. } | NodePlan::NibbledBranch { value: <span class="prelude-val">Some</span>(value), .. } =&gt;
+			NodePlan::Leaf { value, .. } | NodePlan::NibbledBranch { value: <span class="prelude-val">Some</span>(value), .. } =&gt; {
+				total_nb += <span class="number">1</span>;
 				<span class="kw">if let </span>ValuePlan::Inline(range) = value {
 					<span class="kw">if </span>(range.end - range.start) <span class="kw">as </span>u32 &gt;=
 						sp_core::storage::TRIE_VALUE_NODE_THRESHOLD
 					{
 						nb += <span class="number">1</span>;
 					}
-				},
+				}
+			},
 			<span class="kw">_ </span>=&gt; (),
 		}
 	}
-	<span class="prelude-val">Ok</span>((nb, trie))
+	<span class="prelude-val">Ok</span>((nb, total_nb, trie))
 }
 
 <span class="doccomment">/// Check trie migration status.
-</span><span class="kw">pub fn </span>migration_status&lt;H, B&gt;(backend: <span class="kw-2">&amp;</span>B) -&gt; std::result::Result&lt;(u64, u64), String&gt;
+</span><span class="kw">pub fn </span>migration_status&lt;H, B&gt;(backend: <span class="kw-2">&amp;</span>B) -&gt; std::result::Result&lt;MigrationStatusResult, String&gt;
 <span class="kw">where
 	</span>H: Hasher,
 	H::Out: codec::Codec,
@@ -239,9 +255,10 @@
 {
 	<span class="kw">let </span>trie_backend = backend.as_trie_backend();
 	<span class="kw">let </span>essence = trie_backend.essence();
-	<span class="kw">let </span>(nb_to_migrate, trie) = count_migrate(essence, essence.root())<span class="question-mark">?</span>;
+	<span class="kw">let </span>(top_remaining_to_migrate, total_top, trie) = count_migrate(essence, essence.root())<span class="question-mark">?</span>;
 
-	<span class="kw">let </span><span class="kw-2">mut </span>nb_to_migrate_child = <span class="number">0</span>;
+	<span class="kw">let </span><span class="kw-2">mut </span>child_remaining_to_migrate = <span class="number">0</span>;
+	<span class="kw">let </span><span class="kw-2">mut </span>total_child = <span class="number">0</span>;
 	<span class="kw">let </span><span class="kw-2">mut </span>child_roots: Vec&lt;(ChildInfo, Vec&lt;u8&gt;)&gt; = Vec::new();
 	<span class="comment">// get all child trie roots
 	</span><span class="kw">for </span>key_value <span class="kw">in </span>trie.iter().map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;TrieDB node iterator error: {}&quot;</span>, e))<span class="question-mark">? </span>{
@@ -258,18 +275,32 @@
 		<span class="kw">let </span>storage = KeySpacedDB::new(essence, child_info.keyspace());
 
 		child_root.as_mut()[..].copy_from_slice(<span class="kw-2">&amp;</span>root[..]);
-		nb_to_migrate_child += count_migrate(<span class="kw-2">&amp;</span>storage, <span class="kw-2">&amp;</span>child_root)<span class="question-mark">?</span>.<span class="number">0</span>;
+		<span class="kw">let </span>(nb, total_top, <span class="kw">_</span>) = count_migrate(<span class="kw-2">&amp;</span>storage, <span class="kw-2">&amp;</span>child_root)<span class="question-mark">?</span>;
+		child_remaining_to_migrate += nb;
+		total_child += total_top;
 	}
 
-	<span class="prelude-val">Ok</span>((nb_to_migrate, nb_to_migrate_child))
+	<span class="prelude-val">Ok</span>(MigrationStatusResult {
+		top_remaining_to_migrate,
+		child_remaining_to_migrate,
+		total_top,
+		total_child,
+	})
 }
 
-<span class="attr">#[derive(Serialize, Deserialize)]
+<span class="doccomment">/// Current state migration status.
+</span><span class="attr">#[derive(Serialize, Deserialize)]
 #[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
 #[serde(deny_unknown_fields)]
 </span><span class="kw">pub struct </span>MigrationStatusResult {
-	top_remaining_to_migrate: u64,
-	child_remaining_to_migrate: u64,
+	<span class="doccomment">/// Number of top items that should migrate.
+	</span><span class="kw">pub </span>top_remaining_to_migrate: u64,
+	<span class="doccomment">/// Number of child items that should migrate.
+	</span><span class="kw">pub </span>child_remaining_to_migrate: u64,
+	<span class="doccomment">/// Number of top items that we will iterate on.
+	</span><span class="kw">pub </span>total_top: u64,
+	<span class="doccomment">/// Number of child items that we will iterate on.
+	</span><span class="kw">pub </span>total_child: u64,
 }
 
 <span class="doccomment">/// Migration RPC methods.
@@ -310,12 +341,7 @@
 
 		<span class="kw">let </span>hash = at.unwrap_or_else(|| <span class="self">self</span>.client.info().best_hash);
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(hash).map_err(error_into_rpc_err)<span class="question-mark">?</span>;
-		<span class="kw">let </span>(top, child) = migration_status(<span class="kw-2">&amp;</span>state).map_err(error_into_rpc_err)<span class="question-mark">?</span>;
-
-		<span class="prelude-val">Ok</span>(MigrationStatusResult {
-			top_remaining_to_migrate: top,
-			child_remaining_to_migrate: child,
-		})
+		migration_status(<span class="kw-2">&amp;</span>state).map_err(error_into_rpc_err)
 	}
 }
 
