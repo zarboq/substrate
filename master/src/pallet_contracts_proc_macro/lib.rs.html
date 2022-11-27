@@ -576,6 +576,25 @@
 <a href="#576" id="576">576</a>
 <a href="#577" id="577">577</a>
 <a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -735,6 +754,7 @@
 	module: String,
 	name: String,
 	returns: HostFnReturn,
+	is_unstable: bool,
 }
 
 <span class="kw">enum </span>HostFnReturn {
@@ -769,27 +789,34 @@
 		};
 
 		<span class="comment">// process attributes
-		</span><span class="kw">let </span>msg = <span class="string">&quot;only #[version(&lt;u8&gt;)] or #[unstable] attribute is allowed.&quot;</span>;
+		</span><span class="kw">let </span>msg =
+			<span class="string">&quot;only #[version(&lt;u8&gt;)], #[unstable] and #[prefixed_alias] attributes are allowed.&quot;</span>;
 		<span class="kw">let </span>span = item.span();
 		<span class="kw">let </span><span class="kw-2">mut </span>attrs = item.attrs.clone();
 		attrs.retain(|a| !(a.path.is_ident(<span class="string">&quot;doc&quot;</span>) || a.path.is_ident(<span class="string">&quot;prefixed_alias&quot;</span>)));
 		<span class="kw">let </span>name = item.sig.ident.to_string();
-		<span class="kw">let </span>module = <span class="kw">match </span>attrs.len() {
-			<span class="number">0 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;seal0&quot;</span>.to_string()),
-			<span class="number">1 </span>=&gt; {
-				<span class="kw">let </span>attr = <span class="kw-2">&amp;</span>attrs[<span class="number">0</span>];
-				<span class="kw">let </span>ident = attr.path.get_ident().ok_or(err(span, msg))<span class="question-mark">?</span>.to_string();
-				<span class="kw">match </span>ident.as_str() {
-					<span class="string">&quot;version&quot; </span>=&gt; {
-						<span class="kw">let </span>ver: syn::LitInt = attr.parse_args()<span class="question-mark">?</span>;
-						<span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">&quot;seal{}&quot;</span>, ver.base10_parse::&lt;u8&gt;().map_err(|<span class="kw">_</span>| err(span, msg))<span class="question-mark">?</span>))
-					},
-					<span class="string">&quot;unstable&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="string">&quot;__unstable__&quot;</span>.to_string()),
-					<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err(span, msg)),
-				}
-			},
-			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err(span, msg)),
-		}<span class="question-mark">?</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>maybe_module = <span class="prelude-val">None</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>is_unstable = <span class="bool-val">false</span>;
+		<span class="kw">while let </span><span class="prelude-val">Some</span>(attr) = attrs.pop() {
+			<span class="kw">let </span>ident = attr.path.get_ident().ok_or(err(span, msg))<span class="question-mark">?</span>.to_string();
+			<span class="kw">match </span>ident.as_str() {
+				<span class="string">&quot;version&quot; </span>=&gt; {
+					<span class="kw">if </span>maybe_module.is_some() {
+						<span class="kw">return </span><span class="prelude-val">Err</span>(err(span, <span class="string">&quot;#[version] can only be specified once&quot;</span>))
+					}
+					<span class="kw">let </span>ver: u8 =
+						attr.parse_args::&lt;syn::LitInt&gt;().and_then(|lit| lit.base10_parse())<span class="question-mark">?</span>;
+					maybe_module = <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;seal{}&quot;</span>, ver));
+				},
+				<span class="string">&quot;unstable&quot; </span>=&gt; {
+					<span class="kw">if </span>is_unstable {
+						<span class="kw">return </span><span class="prelude-val">Err</span>(err(span, <span class="string">&quot;#[unstable] can only be specified once&quot;</span>))
+					}
+					is_unstable = <span class="bool-val">true</span>;
+				},
+				<span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(err(span, msg)),
+			}
+		}
 
 		<span class="comment">// process arguments: The first and second arg are treated differently (ctx, memory)
 		// they must exist and be `ctx: _` and `memory: _`.
@@ -877,7 +904,13 @@
 							<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err(arg1.span(), <span class="kw-2">&amp;</span>msg)),
 						}<span class="question-mark">?</span>;
 
-						<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ item, module, name, returns })
+						<span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+							item,
+							module: maybe_module.unwrap_or_else(|| <span class="string">&quot;seal0&quot;</span>.to_string()),
+							name,
+							returns,
+							is_unstable,
+						})
 					},
 					<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err(span, <span class="kw-2">&amp;</span>msg)),
 				}
@@ -1001,9 +1034,9 @@
 			f.returns.to_wasm_sig(),
 			<span class="kw-2">&amp;</span>f.item.sig.output
 		);
-		<span class="kw">let </span>unstable_feat = <span class="kw">match </span>module.as_str() {
-			<span class="string">&quot;__unstable__&quot; </span>=&gt; <span class="macro">quote! </span>{ <span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)] </span>},
-			<span class="kw">_ </span>=&gt; <span class="macro">quote! </span>{},
+		<span class="kw">let </span>unstable_feat = <span class="kw">match </span>f.is_unstable {
+			<span class="bool-val">true </span>=&gt; <span class="macro">quote! </span>{ <span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)] </span>},
+			<span class="bool-val">false </span>=&gt; <span class="macro">quote! </span>{},
 		};
 
 		<span class="comment">// If we don&#39;t expand blocks (implementing for `()`) we change a few things:
@@ -1074,13 +1107,15 @@
 /// ```nocompile
 /// #[define_env]
 /// pub mod some_env {
-/// 	fn some_host_fn(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;(), TrapReason&gt; {
+/// 	fn foo(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;(), TrapReason&gt; {
 /// 		ctx.some_host_fn(KeyType::Fix, key_ptr, value_ptr, value_len).map(|_| ())
 /// 	}
 /// }
 /// ```
-/// This example will expand to the `some_host_fn()` defined in the wasm module named `seal0`.
-/// To define a host function in `seal1` and `__unstable__` modules, it should be annotated with the
+/// This example will expand to the `foo()` defined in the wasm module named `seal0`. This is
+/// because the module `seal0` is the default when no module is specified.
+///
+/// To define a host function in `seal2` and `seal3` modules, it should be annotated with the
 /// appropriate attribute as follows:
 ///
 /// ## Example
@@ -1088,17 +1123,20 @@
 /// ```nocompile
 /// #[define_env]
 /// pub mod some_env {
-/// 	#[version(1)]
-/// 	fn some_host_fn(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;ReturnCode, TrapReason&gt; {
+/// 	#[version(2)]
+/// 	fn foo(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;ReturnCode, TrapReason&gt; {
 /// 		ctx.some_host_fn(KeyType::Fix, key_ptr, value_ptr, value_len).map(|_| ())
 /// 	}
 ///
+/// 	#[version(3)]
 /// 	#[unstable]
-/// 	fn some_host_fn(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;u32, TrapReason&gt; {
+/// 	fn bar(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;u32, TrapReason&gt; {
 /// 		ctx.some_host_fn(KeyType::Fix, key_ptr, value_ptr, value_len).map(|_| ())
 /// 	}
 /// }
 /// ```
+/// The function `bar` is additionally annotated with `unstable` which removes it from the stable
+/// interface. Check out the README to learn about unstable functions.
 ///
 /// In legacy versions of pallet_contracts, it was a naming convention that all host functions had
 /// to be named with the `seal_` prefix. For the sake of backwards compatibility, each host function
@@ -1112,21 +1150,21 @@
 /// pub mod some_env {
 /// 	#[version(1)]
 /// 	#[prefixed_alias]
-/// 	fn some_host_fn(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;ReturnCode, TrapReason&gt; {
+/// 	fn foo(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;ReturnCode, TrapReason&gt; {
 /// 		ctx.some_host_fn(KeyType::Fix, key_ptr, value_ptr, value_len).map(|_| ())
 /// 	}
 ///
-/// 	#[unstable]
-/// 	fn some_host_fn(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;u32, TrapReason&gt; {
+/// 	#[version(42)]
+/// 	fn bar(ctx: _, memory: _, key_ptr: u32, value_ptr: u32, value_len: u32) -&gt; Result&lt;u32, TrapReason&gt; {
 /// 		ctx.some_host_fn(KeyType::Fix, key_ptr, value_ptr, value_len).map(|_| ())
 /// 	}
 /// }
 /// ```
 ///
 /// In this example, the following host functions will be generated by the macro:
-/// - `some_host_fn()` in module `seal1`,
-/// - `seal_some_host_fn()` in module `seal1`,
-/// - `some_host_fn()` in module `__unstable__`.
+/// - `foo()` in module `seal1`,
+/// - `seal_foo()` in module `seal1`,
+/// - `bar()` in module `seal42`.
 ///
 /// Only following return types are allowed for the host functions defined with the macro:
 /// - `Result&lt;(), TrapReason&gt;`,
