@@ -401,6 +401,27 @@
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
 <a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -420,15 +441,15 @@
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
 </span><span class="kw">use super</span>::{client::ClientConfig, wasm_override::WasmOverride, wasm_substitutes::WasmSubstitutes};
-<span class="kw">use </span>sc_client_api::{backend, call_executor::CallExecutor, HeaderBackend};
+<span class="kw">use </span>sc_client_api::{
+	backend, call_executor::CallExecutor, execution_extensions::ExecutionExtensions, HeaderBackend,
+};
 <span class="kw">use </span>sc_executor::{RuntimeVersion, RuntimeVersionOf};
-<span class="kw">use </span>sp_api::{ProofRecorder, StorageTransactionCache};
+<span class="kw">use </span>sp_api::{ExecutionContext, ProofRecorder, StorageTransactionCache};
 <span class="kw">use </span>sp_core::traits::{CodeExecutor, RuntimeCode, SpawnNamed};
-<span class="kw">use </span>sp_externalities::Extensions;
 <span class="kw">use </span>sp_runtime::{generic::BlockId, traits::Block <span class="kw">as </span>BlockT};
 <span class="kw">use </span>sp_state_machine::{
-	backend::AsTrieBackend, ExecutionManager, ExecutionStrategy, Ext, OverlayedChanges,
-	StateMachine, StorageProof,
+	backend::AsTrieBackend, ExecutionStrategy, Ext, OverlayedChanges, StateMachine, StorageProof,
 };
 <span class="kw">use </span>std::{cell::RefCell, sync::Arc};
 
@@ -441,6 +462,7 @@
 	wasm_substitutes: WasmSubstitutes&lt;Block, E, B&gt;,
 	spawn_handle: Box&lt;<span class="kw">dyn </span>SpawnNamed&gt;,
 	client_config: ClientConfig&lt;Block&gt;,
+	execution_extensions: Arc&lt;ExecutionExtensions&lt;Block&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;Block: BlockT, B, E&gt; LocalCallExecutor&lt;Block, B, E&gt;
@@ -454,6 +476,7 @@
 		executor: E,
 		spawn_handle: Box&lt;<span class="kw">dyn </span>SpawnNamed&gt;,
 		client_config: ClientConfig&lt;Block&gt;,
+		execution_extensions: ExecutionExtensions&lt;Block&gt;,
 	) -&gt; sp_blockchain::Result&lt;<span class="self">Self</span>&gt; {
 		<span class="kw">let </span>wasm_override = client_config
 			.wasm_runtime_overrides
@@ -474,6 +497,7 @@
 			spawn_handle,
 			client_config,
 			wasm_substitutes,
+			execution_extensions: Arc::new(execution_extensions),
 		})
 	}
 
@@ -527,6 +551,7 @@
 			spawn_handle: <span class="self">self</span>.spawn_handle.clone(),
 			client_config: <span class="self">self</span>.client_config.clone(),
 			wasm_substitutes: <span class="self">self</span>.wasm_substitutes.clone(),
+			execution_extensions: <span class="self">self</span>.execution_extensions.clone(),
 		}
 	}
 }
@@ -541,22 +566,33 @@
 
 	<span class="kw">type </span>Backend = B;
 
+	<span class="kw">fn </span>execution_extensions(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ExecutionExtensions&lt;Block&gt; {
+		<span class="kw-2">&amp;</span><span class="self">self</span>.execution_extensions
+	}
+
 	<span class="kw">fn </span>call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 		strategy: ExecutionStrategy,
-		extensions: <span class="prelude-ty">Option</span>&lt;Extensions&gt;,
 	) -&gt; sp_blockchain::Result&lt;Vec&lt;u8&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>changes = OverlayedChanges::default();
 		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
+		<span class="kw">let </span>at_number = <span class="self">self</span>.backend.blockchain().expect_block_number_from_id(at)<span class="question-mark">?</span>;
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
+
 		<span class="kw">let </span>state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(<span class="kw-2">&amp;</span>state);
 		<span class="kw">let </span>runtime_code =
 			state_runtime_code.runtime_code().map_err(sp_blockchain::Error::RuntimeCode)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>runtime_code = <span class="self">self</span>.check_override(runtime_code, at)<span class="question-mark">?</span>;
+
+		<span class="kw">let </span>extensions = <span class="self">self</span>.execution_extensions.extensions(
+			at_hash,
+			at_number,
+			ExecutionContext::OffchainCall(<span class="prelude-val">None</span>),
+		);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>sm = StateMachine::new(
 			<span class="kw-2">&amp;</span>state,
@@ -564,7 +600,7 @@
 			<span class="kw-2">&amp;</span><span class="self">self</span>.executor,
 			method,
 			call_data,
-			extensions.unwrap_or_default(),
+			extensions,
 			<span class="kw-2">&amp;</span>runtime_code,
 			<span class="self">self</span>.spawn_handle.clone(),
 		)
@@ -574,29 +610,24 @@
 			.map_err(Into::into)
 	}
 
-	<span class="kw">fn </span>contextual_call&lt;
-		EM: Fn(
-			<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt;,
-			<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt;,
-	&gt;(
+	<span class="kw">fn </span>contextual_call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 		changes: <span class="kw-2">&amp;</span>RefCell&lt;OverlayedChanges&gt;,
 		storage_transaction_cache: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RefCell&lt;StorageTransactionCache&lt;Block, B::State&gt;&gt;&gt;,
-		execution_manager: ExecutionManager&lt;EM&gt;,
 		recorder: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;ProofRecorder&lt;Block&gt;&gt;,
-		extensions: <span class="prelude-ty">Option</span>&lt;Extensions&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_blockchain::Error&gt;
-	<span class="kw">where
-		</span>ExecutionManager&lt;EM&gt;: Clone,
-	{
+		context: ExecutionContext,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_blockchain::Error&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>storage_transaction_cache = storage_transaction_cache.map(|c| c.borrow_mut());
 
 		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
+		<span class="kw">let </span>at_number = <span class="self">self</span>.backend.blockchain().expect_block_number_from_id(at)<span class="question-mark">?</span>;
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
+
+		<span class="kw">let </span>(execution_manager, extensions) =
+			<span class="self">self</span>.execution_extensions.manager_and_extensions(at_hash, at_number, context);
 
 		<span class="kw">let </span>changes = <span class="kw-2">&amp;mut *</span>changes.borrow_mut();
 
@@ -623,7 +654,7 @@
 					<span class="kw-2">&amp;</span><span class="self">self</span>.executor,
 					method,
 					call_data,
-					extensions.unwrap_or_default(),
+					extensions,
 					<span class="kw-2">&amp;</span>runtime_code,
 					<span class="self">self</span>.spawn_handle.clone(),
 				)
@@ -638,7 +669,7 @@
 					<span class="kw-2">&amp;</span><span class="self">self</span>.executor,
 					method,
 					call_data,
-					extensions.unwrap_or_default(),
+					extensions,
 					<span class="kw-2">&amp;</span>runtime_code,
 					<span class="self">self</span>.spawn_handle.clone(),
 				)
@@ -672,6 +703,7 @@
 		call_data: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; sp_blockchain::Result&lt;(Vec&lt;u8&gt;, StorageProof)&gt; {
 		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
+		<span class="kw">let </span>at_number = <span class="self">self</span>.backend.blockchain().expect_block_number_from_id(at)<span class="question-mark">?</span>;
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>trie_backend = state.as_trie_backend();
@@ -689,6 +721,11 @@
 			method,
 			call_data,
 			<span class="kw-2">&amp;</span>runtime_code,
+			<span class="self">self</span>.execution_extensions.extensions(
+				at_hash,
+				at_number,
+				ExecutionContext::OffchainCall(<span class="prelude-val">None</span>),
+			),
 		)
 		.map_err(Into::into)
 	}
@@ -795,6 +832,11 @@
 				backend.clone(),
 			)
 			.unwrap(),
+			execution_extensions: Arc::new(ExecutionExtensions::new(
+				Default::default(),
+				<span class="prelude-val">None</span>,
+				<span class="prelude-val">None</span>,
+			)),
 		};
 
 		<span class="kw">let </span>check = call_executor

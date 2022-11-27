@@ -95,13 +95,6 @@
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -123,13 +116,12 @@
 </span><span class="doccomment">//! A method call executor interface.
 
 </span><span class="kw">use </span>sc_executor::{RuntimeVersion, RuntimeVersionOf};
-<span class="kw">use </span>sp_externalities::Extensions;
 <span class="kw">use </span>sp_runtime::{generic::BlockId, traits::Block <span class="kw">as </span>BlockT};
-<span class="kw">use </span>sp_state_machine::{ExecutionManager, ExecutionStrategy, OverlayedChanges, StorageProof};
+<span class="kw">use </span>sp_state_machine::{ExecutionStrategy, OverlayedChanges, StorageProof};
 <span class="kw">use </span>std::cell::RefCell;
 
 <span class="kw">use </span><span class="kw">crate</span>::execution_extensions::ExecutionExtensions;
-<span class="kw">use </span>sp_api::{ProofRecorder, StorageTransactionCache};
+<span class="kw">use </span>sp_api::{ExecutionContext, ProofRecorder, StorageTransactionCache};
 
 <span class="doccomment">/// Executor Provider
 </span><span class="kw">pub trait </span>ExecutorProvider&lt;Block: BlockT&gt; {
@@ -151,6 +143,9 @@
 	<span class="doccomment">/// The backend used by the node.
 	</span><span class="kw">type </span>Backend: <span class="kw">crate</span>::backend::Backend&lt;B&gt;;
 
+	<span class="doccomment">/// Returns the [`ExecutionExtensions`].
+	</span><span class="kw">fn </span>execution_extensions(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ExecutionExtensions&lt;B&gt;;
+
 	<span class="doccomment">/// Execute a call to a contract on top of state in a block of given hash.
 	///
 	/// No changes are made.
@@ -160,7 +155,6 @@
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 		strategy: ExecutionStrategy,
-		extensions: <span class="prelude-ty">Option</span>&lt;Extensions&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_blockchain::Error&gt;;
 
 	<span class="doccomment">/// Execute a contextual call on top of state in a block of a given hash.
@@ -168,12 +162,7 @@
 	/// No changes are made.
 	/// Before executing the method, passed header is installed as the current header
 	/// of the execution context.
-	</span><span class="kw">fn </span>contextual_call&lt;
-		EM: Fn(
-			<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt;,
-			<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt;,
-	&gt;(
+	</span><span class="kw">fn </span>contextual_call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		at: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;,
 		method: <span class="kw-2">&amp;</span>str,
@@ -184,12 +173,9 @@
 				StorageTransactionCache&lt;B, &lt;<span class="self">Self</span>::Backend <span class="kw">as </span><span class="kw">crate</span>::backend::Backend&lt;B&gt;&gt;::State&gt;,
 			&gt;,
 		&gt;,
-		execution_manager: ExecutionManager&lt;EM&gt;,
 		proof_recorder: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;ProofRecorder&lt;B&gt;&gt;,
-		extensions: <span class="prelude-ty">Option</span>&lt;Extensions&gt;,
-	) -&gt; sp_blockchain::Result&lt;Vec&lt;u8&gt;&gt;
-	<span class="kw">where
-		</span>ExecutionManager&lt;EM&gt;: Clone;
+		context: ExecutionContext,
+	) -&gt; sp_blockchain::Result&lt;Vec&lt;u8&gt;&gt;;
 
 	<span class="doccomment">/// Extract RuntimeVersion of given block
 	///

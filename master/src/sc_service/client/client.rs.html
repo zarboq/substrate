@@ -2095,7 +2095,6 @@
 <a href="#2095" id="2095">2095</a>
 <a href="#2096" id="2096">2096</a>
 <a href="#2097" id="2097">2097</a>
-<a href="#2098" id="2098">2098</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2165,7 +2164,8 @@
 <span class="kw">use </span>sp_runtime::{
 	generic::{BlockId, SignedBlock},
 	traits::{
-		Block <span class="kw">as </span>BlockT, HashFor, Header <span class="kw">as </span>HeaderT, NumberFor, One, SaturatedConversion, Zero,
+		Block <span class="kw">as </span>BlockT, BlockIdTo, HashFor, Header <span class="kw">as </span>HeaderT, NumberFor, One,
+		SaturatedConversion, Zero,
 	},
 	BuildStorage, Digest, Justification, Justifications, StateVersion,
 };
@@ -2211,7 +2211,6 @@
 	<span class="comment">// Holds the block hash currently being imported. TODO: replace this with block queue.
 	</span>importing_block: RwLock&lt;<span class="prelude-ty">Option</span>&lt;Block::Hash&gt;&gt;,
 	block_rules: BlockRules&lt;Block&gt;,
-	execution_extensions: ExecutionExtensions&lt;Block&gt;,
 	config: ClientConfig&lt;Block&gt;,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
 	_phantom: PhantomData&lt;RA&gt;,
@@ -2328,20 +2327,26 @@
 	Block: BlockT,
 	B: backend::LocalBackend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 {
-	<span class="kw">let </span>call_executor =
-		LocalCallExecutor::new(backend.clone(), executor, spawn_handle, config.clone())<span class="question-mark">?</span>;
 	<span class="kw">let </span>extensions = ExecutionExtensions::new(
 		Default::default(),
 		keystore,
 		sc_offchain::OffchainDb::factory_from_backend(<span class="kw-2">&amp;*</span>backend),
 	);
+
+	<span class="kw">let </span>call_executor = LocalCallExecutor::new(
+		backend.clone(),
+		executor,
+		spawn_handle,
+		config.clone(),
+		extensions,
+	)<span class="question-mark">?</span>;
+
 	Client::new(
 		backend,
 		call_executor,
 		build_genesis_storage,
 		Default::default(),
 		Default::default(),
-		extensions,
 		prometheus_registry,
 		telemetry,
 		config,
@@ -2445,7 +2450,6 @@
 		build_genesis_storage: <span class="kw-2">&amp;</span><span class="kw">dyn </span>BuildStorage,
 		fork_blocks: ForkBlocks&lt;Block&gt;,
 		bad_blocks: BadBlocks&lt;Block&gt;,
-		execution_extensions: ExecutionExtensions&lt;Block&gt;,
 		prometheus_registry: <span class="prelude-ty">Option</span>&lt;Registry&gt;,
 		telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
 		config: ClientConfig&lt;Block&gt;,
@@ -2492,7 +2496,6 @@
 			finality_actions: Default::default(),
 			importing_block: Default::default(),
 			block_rules: BlockRules::new(fork_blocks, bad_blocks),
-			execution_extensions,
 			config,
 			telemetry,
 			_phantom: Default::default(),
@@ -3484,7 +3487,7 @@
 	}
 
 	<span class="kw">fn </span>execution_extensions(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ExecutionExtensions&lt;Block&gt; {
-		<span class="kw-2">&amp;</span><span class="self">self</span>.execution_extensions
+		<span class="self">self</span>.executor.execution_extensions()
 	}
 }
 
@@ -3678,7 +3681,7 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;B, E, Block, RA&gt; sp_runtime::traits::BlockIdTo&lt;Block&gt; <span class="kw">for </span>Client&lt;B, E, Block, RA&gt;
+<span class="kw">impl</span>&lt;B, E, Block, RA&gt; BlockIdTo&lt;Block&gt; <span class="kw">for </span>Client&lt;B, E, Block, RA&gt;
 <span class="kw">where
 	</span>B: backend::Backend&lt;Block&gt;,
 	E: CallExecutor&lt;Block&gt; + Send + Sync,
@@ -3735,7 +3738,7 @@
 	</span>B: backend::Backend&lt;Block&gt;,
 	E: CallExecutor&lt;Block, Backend = B&gt; + Send + Sync,
 	Block: BlockT,
-	RA: ConstructRuntimeApi&lt;Block, <span class="self">Self</span>&gt;,
+	RA: ConstructRuntimeApi&lt;Block, <span class="self">Self</span>&gt; + Send + Sync,
 {
 	<span class="kw">type </span>Api = &lt;RA <span class="kw">as </span>ConstructRuntimeApi&lt;Block, <span class="self">Self</span>&gt;&gt;::RuntimeApi;
 
@@ -3749,6 +3752,7 @@
 	</span>B: backend::Backend&lt;Block&gt;,
 	E: CallExecutor&lt;Block, Backend = B&gt; + Send + Sync,
 	Block: BlockT,
+	RA: Send + Sync,
 {
 	<span class="kw">type </span>StateBackend = B::State;
 
@@ -3756,21 +3760,15 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		params: CallApiAtParams&lt;Block, B::State&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_api::ApiError&gt; {
-		<span class="kw">let </span>at = params.at;
-
-		<span class="kw">let </span>(manager, extensions) =
-			<span class="self">self</span>.execution_extensions.manager_and_extensions(at, params.context);
-
 		<span class="self">self</span>.executor
 			.contextual_call(
-				at,
+				params.at,
 				params.function,
 				<span class="kw-2">&amp;</span>params.arguments,
 				params.overlayed_changes,
 				<span class="prelude-val">Some</span>(params.storage_transaction_cache),
-				manager,
 				params.recorder,
-				<span class="prelude-val">Some</span>(extensions),
+				params.context,
 			)
 			.map_err(Into::into)
 	}
