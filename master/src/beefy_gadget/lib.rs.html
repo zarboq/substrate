@@ -484,6 +484,9 @@
 <a href="#484" id="484">484</a>
 <a href="#485" id="485">485</a>
 <a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -730,7 +733,6 @@
 	<span class="comment">// The `GossipValidator` adds and removes known peers based on valid votes and network events.
 	</span><span class="kw">let </span>on_demand_justifications = OnDemandJustificationsEngine::new(
 		network.clone(),
-		runtime.clone(),
 		justifications_protocol_name,
 		known_peers,
 	);
@@ -781,7 +783,7 @@
 		persisted_state,
 	};
 
-	<span class="kw">let </span>worker = worker::BeefyWorker::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(worker_params);
+	<span class="kw">let </span>worker = worker::BeefyWorker::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(worker_params);
 
 	futures::future::join(
 		worker.run(block_import_justif, finality_notifications),
@@ -863,17 +865,8 @@
 			<span class="kw">break </span>state
 		}
 
-		<span class="comment">// Check if we should move up the chain.
-		</span><span class="kw">let </span>parent_hash = <span class="kw-2">*</span>header.parent_hash();
-		<span class="kw">if </span><span class="kw-2">*</span>header.number() == One::one() ||
-			runtime
-				.runtime_api()
-				.validator_set(<span class="kw-2">&amp;</span>BlockId::hash(parent_hash))
-				.ok()
-				.flatten()
-				.is_none()
-		{
-			<span class="comment">// We&#39;ve reached pallet genesis, initialize voter here.
+		<span class="kw">if </span><span class="kw-2">*</span>header.number() == One::one() {
+			<span class="comment">// We&#39;ve reached chain genesis, initialize voter here.
 			</span><span class="kw">let </span>genesis_num = <span class="kw-2">*</span>header.number();
 			<span class="kw">let </span>genesis_set = expect_validator_set(runtime, BlockId::hash(header.hash()))
 				.and_then(genesis_set_sanity_check)<span class="question-mark">?</span>;
@@ -893,6 +886,19 @@
 			<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Marking block {:?} as BEEFY Mandatory.&quot;</span>, <span class="kw-2">*</span>header.number());
 			sessions.push_front(Rounds::new(<span class="kw-2">*</span>header.number(), active));
 		}
+
+		<span class="comment">// Check if state is still available if we move up the chain.
+		</span><span class="kw">let </span>parent_hash = <span class="kw-2">*</span>header.parent_hash();
+		runtime
+			.runtime_api()
+			.validator_set(<span class="kw-2">&amp;</span>BlockId::hash(parent_hash))
+			.ok()
+			.flatten()
+			.ok_or_else(|| {
+				<span class="kw">let </span>msg = <span class="macro">format!</span>(<span class="string">&quot;{}. Could not initialize BEEFY voter.&quot;</span>, parent_hash);
+				<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, msg);
+				ClientError::Consensus(sp_consensus::Error::StateUnavailable(msg))
+			})<span class="question-mark">?</span>;
 
 		<span class="comment">// Move up the chain.
 		</span>header = blockchain.expect_header(BlockId::Hash(parent_hash))<span class="question-mark">?</span>;

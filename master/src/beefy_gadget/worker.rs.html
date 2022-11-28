@@ -1492,8 +1492,6 @@
 <a href="#1492" id="1492">1492</a>
 <a href="#1493" id="1493">1493</a>
 <a href="#1494" id="1494">1494</a>
-<a href="#1495" id="1495">1495</a>
-<a href="#1496" id="1496">1496</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -1527,8 +1525,8 @@
 };
 <span class="kw">use </span>beefy_primitives::{
 	crypto::{AuthorityId, Signature},
-	BeefyApi, Commitment, ConsensusLog, MmrRootHash, Payload, PayloadProvider, SignedCommitment,
-	ValidatorSet, VersionedFinalityProof, VoteMessage, BEEFY_ENGINE_ID,
+	Commitment, ConsensusLog, Payload, PayloadProvider, SignedCommitment, ValidatorSet,
+	VersionedFinalityProof, VoteMessage, BEEFY_ENGINE_ID,
 };
 <span class="kw">use </span>codec::{Codec, Decode, Encode};
 <span class="kw">use </span>futures::{stream::Fuse, FutureExt, StreamExt};
@@ -1537,10 +1535,9 @@
 <span class="kw">use </span>sc_network_common::service::{NetworkEventStream, NetworkRequest};
 <span class="kw">use </span>sc_network_gossip::GossipEngine;
 <span class="kw">use </span>sc_utils::notification::NotificationReceiver;
-<span class="kw">use </span>sp_api::{BlockId, ProvideRuntimeApi};
+<span class="kw">use </span>sp_api::BlockId;
 <span class="kw">use </span>sp_arithmetic::traits::{AtLeast32Bit, Saturating};
 <span class="kw">use </span>sp_consensus::SyncOracle;
-<span class="kw">use </span>sp_mmr_primitives::MmrApi;
 <span class="kw">use </span>sp_runtime::{
 	generic::OpaqueDigestItemId,
 	traits::{Block, Header, NumberFor, Zero},
@@ -1662,13 +1659,13 @@
 		<span class="prelude-val">Ok</span>(())
 	}
 
-	<span class="doccomment">/// Return current pending mandatory block, if any.
-	</span><span class="kw">pub fn </span>mandatory_pending(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt; {
+	<span class="doccomment">/// Return current pending mandatory block, if any, plus its active validator set.
+	</span><span class="kw">pub fn </span>mandatory_pending(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(NumberFor&lt;B&gt;, ValidatorSet&lt;AuthorityId&gt;)&gt; {
 		<span class="self">self</span>.sessions.front().and_then(|round| {
 			<span class="kw">if </span>round.mandatory_done() {
 				<span class="prelude-val">None
 			</span>} <span class="kw">else </span>{
-				<span class="prelude-val">Some</span>(round.session_start())
+				<span class="prelude-val">Some</span>((round.session_start(), round.validator_set().clone()))
 			}
 		})
 	}
@@ -1735,14 +1732,14 @@
 	}
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>WorkerParams&lt;B: Block, BE, P, R, N&gt; {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>WorkerParams&lt;B: Block, BE, P, N&gt; {
 	<span class="kw">pub </span>backend: Arc&lt;BE&gt;,
 	<span class="kw">pub </span>payload_provider: P,
 	<span class="kw">pub </span>network: N,
 	<span class="kw">pub </span>key_store: BeefyKeystore,
 	<span class="kw">pub </span>gossip_engine: GossipEngine&lt;B&gt;,
 	<span class="kw">pub </span>gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
-	<span class="kw">pub </span>on_demand_justifications: OnDemandJustificationsEngine&lt;B, R&gt;,
+	<span class="kw">pub </span>on_demand_justifications: OnDemandJustificationsEngine&lt;B&gt;,
 	<span class="kw">pub </span>links: BeefyVoterLinks&lt;B&gt;,
 	<span class="kw">pub </span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 	<span class="kw">pub </span>persisted_state: PersistedState&lt;B&gt;,
@@ -1783,7 +1780,7 @@
 }
 
 <span class="doccomment">/// A BEEFY worker plays the BEEFY protocol
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BeefyWorker&lt;B: Block, BE, P, R, N&gt; {
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BeefyWorker&lt;B: Block, BE, P, N&gt; {
 	<span class="comment">// utilities
 	</span>backend: Arc&lt;BE&gt;,
 	payload_provider: P,
@@ -1793,7 +1790,7 @@
 	<span class="comment">// communication
 	</span>gossip_engine: GossipEngine&lt;B&gt;,
 	gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
-	on_demand_justifications: OnDemandJustificationsEngine&lt;B, R&gt;,
+	on_demand_justifications: OnDemandJustificationsEngine&lt;B&gt;,
 
 	<span class="comment">// channels
 	</span><span class="doccomment">/// Links between the block importer, the background voter and the RPC layer.
@@ -1810,13 +1807,11 @@
 	</span>persisted_state: PersistedState&lt;B&gt;,
 }
 
-<span class="kw">impl</span>&lt;B, BE, P, R, N&gt; BeefyWorker&lt;B, BE, P, R, N&gt;
+<span class="kw">impl</span>&lt;B, BE, P, N&gt; BeefyWorker&lt;B, BE, P, N&gt;
 <span class="kw">where
 	</span>B: Block + Codec,
 	BE: Backend&lt;B&gt;,
 	P: PayloadProvider&lt;B&gt;,
-	R: ProvideRuntimeApi&lt;B&gt;,
-	R::Api: BeefyApi&lt;B&gt; + MmrApi&lt;B, MmrRootHash, NumberFor&lt;B&gt;&gt;,
 	N: NetworkEventStream + NetworkRequest + SyncOracle + Send + Sync + Clone + <span class="lifetime">&#39;static</span>,
 {
 	<span class="doccomment">/// Return a new BEEFY worker instance.
@@ -1825,7 +1820,7 @@
 	/// BEEFY pallet has been deployed on-chain.
 	///
 	/// The BEEFY pallet is needed in order to keep track of the BEEFY authority set.
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(worker_params: WorkerParams&lt;B, BE, P, R, N&gt;) -&gt; <span class="self">Self </span>{
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(worker_params: WorkerParams&lt;B, BE, P, N&gt;) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>WorkerParams {
 			backend,
 			payload_provider,
@@ -2047,11 +2042,16 @@
 				// New state is persisted after finalization.
 				</span><span class="self">self</span>.finalize(finality_proof)<span class="question-mark">?</span>;
 			} <span class="kw">else </span>{
-				<span class="kw">if </span>self_vote || <span class="self">self</span>.voting_oracle().mandatory_pending() == <span class="prelude-val">Some</span>(round.<span class="number">1</span>) {
-					<span class="comment">// Persist state after handling self vote to avoid double voting in case
-					// of voter restarts.
-					// Also persist state after handling mandatory block vote.
-					</span><span class="kw">crate</span>::aux_schema::write_voter_state(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, <span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state)
+				<span class="kw">let </span>mandatory_round = <span class="self">self
+					</span>.voting_oracle()
+					.mandatory_pending()
+					.map(|p| p.<span class="number">0 </span>== round.<span class="number">1</span>)
+					.unwrap_or(<span class="bool-val">false</span>);
+				<span class="comment">// Persist state after handling self vote to avoid double voting in case
+				// of voter restarts.
+				// Also persist state after handling mandatory block vote.
+				</span><span class="kw">if </span>self_vote || mandatory_round {
+					<span class="kw">crate</span>::aux_schema::write_voter_state(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, <span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state)
 						.map_err(|e| Error::Backend(e.to_string()))<span class="question-mark">?</span>;
 				}
 			}
@@ -2280,12 +2280,10 @@
 			}
 			<span class="comment">// If the current target is a mandatory block,
 			// make sure there&#39;s also an on-demand justification request out for it.
-			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(block) = <span class="self">self</span>.voting_oracle().mandatory_pending() {
+			</span><span class="kw">if let </span><span class="prelude-val">Some</span>((block, active)) = <span class="self">self</span>.voting_oracle().mandatory_pending() {
 				<span class="comment">// This only starts new request if there isn&#39;t already an active one.
-				</span><span class="self">self</span>.on_demand_justifications.request(block);
+				</span><span class="self">self</span>.on_demand_justifications.request(block, active);
 			}
-		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Skipping voting while major syncing.&quot;</span>);
 		}
 	}
 
@@ -2489,7 +2487,6 @@
 		Block,
 		Backend,
 		MmrRootProvider&lt;Block, TestApi&gt;,
-		TestApi,
 		Arc&lt;NetworkService&lt;Block, H256&gt;&gt;,
 	&gt; {
 		<span class="kw">let </span>keystore = create_beefy_keystore(<span class="kw-2">*</span>key);
@@ -2520,7 +2517,6 @@
 			GossipEngine::new(network.clone(), <span class="string">&quot;/beefy/1&quot;</span>, gossip_validator.clone(), <span class="prelude-val">None</span>);
 		<span class="kw">let </span>on_demand_justifications = OnDemandJustificationsEngine::new(
 			network.clone(),
-			api.clone(),
 			<span class="string">&quot;/beefy/justifs/1&quot;</span>.into(),
 			known_peers,
 		);
@@ -2546,7 +2542,7 @@
 			on_demand_justifications,
 			persisted_state,
 		};
-		BeefyWorker::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(worker_params)
+		BeefyWorker::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(worker_params)
 	}
 
 	<span class="attr">#[test]
