@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["LOG_TARGET","Logging target for the mmr gadget."]],"struct":[["MmrGadget","A MMR Gadget."]]};

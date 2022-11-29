@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["block_num_to_leaf_index","Convert a block number into a leaf index."],["first_mmr_block_num","Get the first block with MMR."]],"struct":[["NodesUtils","MMR nodes & size -related utilities."]]};

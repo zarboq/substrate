@@ -28,6 +28,7 @@ var sourcesIndex = JSON.parse('{\
 "frame_try_runtime":["",[],["lib.rs"]],\
 "generate_bags":["",[],["lib.rs"]],\
 "kitchensink_runtime":["",[],["constants.rs","impls.rs","lib.rs","voter_bags.rs"]],\
+"mmr_gadget":["",[],["lib.rs","offchain_mmr.rs"]],\
 "multiply_by_rational_with_rounding":["",[],["multiply_by_rational_with_rounding.rs"]],\
 "node_bench":["",[],["common.rs","construct.rs","core.rs","generator.rs","import.rs","main.rs","simple_trie.rs","state_sizes.rs","tempdb.rs","trie.rs","txpool.rs"]],\
 "node_cli":["",[],["benchmarking.rs","chain_spec.rs","cli.rs","command.rs","lib.rs","service.rs"]],\
@@ -74,7 +75,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_indices":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_lottery":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_membership":["",[["migrations",[],["mod.rs","v4.rs"]]],["lib.rs","weights.rs"]],\
-"pallet_mmr":["",[["mmr",[],["mmr.rs","mod.rs","storage.rs","utils.rs"]]],["benchmarking.rs","default_weights.rs","lib.rs"]],\
+"pallet_mmr":["",[["mmr",[],["mmr.rs","mod.rs","storage.rs"]]],["benchmarking.rs","default_weights.rs","lib.rs"]],\
 "pallet_mmr_rpc":["",[],["lib.rs"]],\
 "pallet_multisig":["",[],["benchmarking.rs","lib.rs","migrations.rs","weights.rs"]],\
 "pallet_nicks":["",[],["lib.rs"]],\
@@ -202,7 +203,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_keyring":["",[],["ed25519.rs","lib.rs","sr25519.rs"]],\
 "sp_keystore":["",[],["lib.rs","testing.rs","vrf.rs"]],\
 "sp_maybe_compressed_blob":["",[],["lib.rs"]],\
-"sp_mmr_primitives":["",[],["lib.rs"]],\
+"sp_mmr_primitives":["",[],["lib.rs","utils.rs"]],\
 "sp_npos_elections":["",[],["assignments.rs","balancing.rs","helpers.rs","lib.rs","node.rs","phragmen.rs","phragmms.rs","pjr.rs","reduce.rs","traits.rs"]],\
 "sp_offchain":["",[],["lib.rs"]],\
 "sp_panic_handler":["",[],["lib.rs"]],\

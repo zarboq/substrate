@@ -391,60 +391,6 @@
 <a href="#391" id="391">391</a>
 <a href="#392" id="392">392</a>
 <a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
-<a href="#443" id="443">443</a>
-<a href="#444" id="444">444</a>
-<a href="#445" id="445">445</a>
-<a href="#446" id="446">446</a>
-<a href="#447" id="447">447</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -471,7 +417,7 @@
 //!
 //! The MMR pallet constructs an MMR from leaf data obtained on every block from
 //! `LeafDataProvider`. MMR nodes are stored both in:
-//! - on-chain storage - hashes only; not full leaf content)
+//! - on-chain storage - hashes only; not full leaf content;
 //! - off-chain storage - via Indexing API we push full leaf content (and all internal nodes as
 //! well) to the Off-chain DB, so that the data is available for Off-chain workers.
 //! Hashing used for MMR is configurable independently from the rest of the runtime (i.e. not using
@@ -503,10 +449,9 @@
 //! NOTE This pallet is experimental and not proven to work in production.
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 
-</span><span class="kw">use </span>codec::Encode;
-<span class="kw">use </span>frame_support::{log, traits::Get, weights::Weight};
+</span><span class="kw">use </span>frame_support::{log, weights::Weight};
 <span class="kw">use </span>sp_runtime::{
-	traits::{<span class="self">self</span>, CheckedSub, One, Saturating, UniqueSaturatedInto},
+	traits::{<span class="self">self</span>, One, Saturating},
 	SaturatedConversion,
 };
 
@@ -520,7 +465,10 @@
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>sp_mmr_primitives::{<span class="self">self </span><span class="kw">as </span>primitives, Error, LeafDataProvider, LeafIndex, NodeIndex};
+<span class="kw">use </span>sp_mmr_primitives::utils;
+<span class="kw">pub use </span>sp_mmr_primitives::{
+	<span class="self">self </span><span class="kw">as </span>primitives, utils::NodesUtils, Error, LeafDataProvider, LeafIndex, NodeIndex,
+};
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// The most common use case for MMRs is to store historical block hashes,
@@ -666,7 +614,7 @@
 		<span class="kw">fn </span>on_initialize(_n: T::BlockNumber) -&gt; Weight {
 			<span class="kw">use </span>primitives::LeafDataProvider;
 			<span class="kw">let </span>leaves = <span class="self">Self</span>::mmr_leaves();
-			<span class="kw">let </span>peaks_before = mmr::utils::NodesUtils::new(leaves).number_of_peaks();
+			<span class="kw">let </span>peaks_before = sp_mmr_primitives::utils::NodesUtils::new(leaves).number_of_peaks();
 			<span class="kw">let </span>data = T::LeafData::leaf_data();
 
 			<span class="comment">// append new leaf to MMR
@@ -689,45 +637,9 @@
 			&lt;NumberOfLeaves&lt;T, I&gt;&gt;::put(leaves);
 			&lt;RootHash&lt;T, I&gt;&gt;::put(root);
 
-			<span class="kw">let </span>peaks_after = mmr::utils::NodesUtils::new(leaves).number_of_peaks();
+			<span class="kw">let </span>peaks_after = sp_mmr_primitives::utils::NodesUtils::new(leaves).number_of_peaks();
 
 			T::WeightInfo::on_initialize(peaks_before.max(peaks_after))
-		}
-
-		<span class="kw">fn </span>offchain_worker(n: T::BlockNumber) {
-			<span class="kw">use </span>mmr::storage::{OffchainStorage, Storage};
-			<span class="comment">// The MMR nodes can be found in offchain db under either:
-			//   - fork-unique keys `(prefix, pos, parent_hash)`, or,
-			//   - &quot;canonical&quot; keys `(prefix, pos)`,
-			//   depending on how many blocks in the past the node at position `pos` was
-			//   added to the MMR.
-			//
-			// For the fork-unique keys, the MMR pallet depends on
-			// `frame_system::block_hash(parent_num)` mappings to find the relevant parent block
-			// hashes, so it is limited by `frame_system::BlockHashCount` in terms of how many
-			// historical forks it can track. Nodes added to MMR by block `N` can be found in
-			// offchain db at:
-			//   - fork-unique keys `(prefix, pos, parent_hash)` when (`N` &gt;= `latest_block` -
-			//     `frame_system::BlockHashCount`);
-			//   - &quot;canonical&quot; keys `(prefix, pos)` when (`N` &lt; `latest_block` -
-			//     `frame_system::BlockHashCount`);
-			//
-			// The offchain worker is responsible for maintaining the nodes&#39; positions in
-			// offchain db as the chain progresses by moving a rolling window of the same size as
-			// `frame_system::block_hash` map, where nodes/leaves added by blocks that are just
-			// about to exit the window are &quot;canonicalized&quot; so that their offchain key no longer
-			// depends on `parent_hash`.
-			//
-			// This approach works to eliminate fork-induced leaf collisions in offchain db,
-			// under the assumption that no fork will be deeper than `frame_system::BlockHashCount`
-			// blocks:
-			//   entries pertaining to block `N` where `N &lt; current-BlockHashCount` are moved to a
-			//   key based solely on block number. The only way to have collisions is if two
-			//   competing forks are deeper than `frame_system::BlockHashCount` blocks and they
-			//   both &quot;canonicalize&quot; their view of block `N`
-			// Once a block is canonicalized, all MMR entries pertaining to sibling blocks from
-			// other forks are pruned from offchain db.
-			</span>Storage::&lt;OffchainStorage, T, I, LeafOf&lt;T, I&gt;&gt;::canonicalize_and_prune(n);
 		}
 	}
 }
@@ -760,11 +672,15 @@
 	<span class="doccomment">/// Build offchain key from `parent_hash` of block that originally added node `pos` to MMR.
 	///
 	/// This combination makes the offchain (key,value) entry resilient to chain forks.
-	</span><span class="kw">fn </span>node_offchain_key(
+	</span><span class="kw">fn </span>node_temp_offchain_key(
 		pos: NodeIndex,
 		parent_hash: &lt;T <span class="kw">as </span>frame_system::Config&gt;::Hash,
 	) -&gt; sp_std::prelude::Vec&lt;u8&gt; {
-		(T::INDEXING_PREFIX, pos, parent_hash).encode()
+		NodesUtils::node_temp_offchain_key::&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::Header&gt;(
+			<span class="kw-2">&amp;</span>T::INDEXING_PREFIX,
+			pos,
+			parent_hash,
+		)
 	}
 
 	<span class="doccomment">/// Build canonical offchain key for node `pos` in MMR.
@@ -773,18 +689,7 @@
 	/// Never read keys using `node_canon_offchain_key` unless you sure that
 	/// there&#39;s no `node_offchain_key` key in the storage.
 	</span><span class="kw">fn </span>node_canon_offchain_key(pos: NodeIndex) -&gt; sp_std::prelude::Vec&lt;u8&gt; {
-		(T::INDEXING_PREFIX, pos).encode()
-	}
-
-	<span class="doccomment">/// Return size of rolling window of leaves saved in offchain under fork-unique keys.
-	///
-	/// Leaves outside this window are canonicalized.
-	/// Window size is `frame_system::BlockHashCount - 1` to make sure fork-unique keys
-	/// can be built using `frame_system::block_hash` map.
-	</span><span class="kw">fn </span>offchain_canonicalization_window() -&gt; LeafIndex {
-		<span class="kw">let </span>window_size: LeafIndex =
-			&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockHashCount::get().unique_saturated_into();
-		window_size.saturating_sub(<span class="number">1</span>)
+		NodesUtils::node_canon_offchain_key(<span class="kw-2">&amp;</span>T::INDEXING_PREFIX, pos)
 	}
 
 	<span class="doccomment">/// Provide the parent number for the block that added `leaf_index` to the MMR.
@@ -802,30 +707,17 @@
 			.saturating_add(leaf_index.saturated_into())
 	}
 
-	<span class="doccomment">/// Convert a `block_num` into a leaf index.
-	</span><span class="kw">fn </span>block_num_to_leaf_index(block_num: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;LeafIndex, primitives::Error&gt;
+	<span class="doccomment">/// Convert a block number into a leaf index.
+	</span><span class="kw">fn </span>block_num_to_leaf_index(block_num: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;LeafIndex, Error&gt;
 	<span class="kw">where
 		</span>T: frame_system::Config,
 	{
-		<span class="comment">// leaf_idx = (leaves_count - 1) - (current_block_num - block_num);
-		</span><span class="kw">let </span>best_block_num = &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number();
-		<span class="kw">let </span>blocks_diff = best_block_num.checked_sub(<span class="kw-2">&amp;</span>block_num).ok_or_else(|| {
-			primitives::Error::BlockNumToLeafIndex
-				.log_debug(<span class="string">&quot;The provided block_number is greater than the best block number.&quot;</span>)
-		})<span class="question-mark">?</span>;
-		<span class="kw">let </span>blocks_diff_as_leaf_idx = blocks_diff.try_into().map_err(|<span class="kw">_</span>| {
-			primitives::Error::BlockNumToLeafIndex
-				.log_debug(<span class="string">&quot;The `blocks_diff` couldn&#39;t be converted to `LeafIndex`.&quot;</span>)
-		})<span class="question-mark">?</span>;
+		<span class="kw">let </span>first_mmr_block = utils::first_mmr_block_num::&lt;T::Header&gt;(
+			&lt;frame_system::Pallet&lt;T&gt;&gt;::block_number(),
+			<span class="self">Self</span>::mmr_leaves(),
+		)<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>leaf_idx = <span class="self">Self</span>::mmr_leaves()
-			.checked_sub(<span class="number">1</span>)
-			.and_then(|last_leaf_idx| last_leaf_idx.checked_sub(blocks_diff_as_leaf_idx))
-			.ok_or_else(|| {
-				primitives::Error::BlockNumToLeafIndex
-					.log_debug(<span class="string">&quot;There aren&#39;t enough leaves in the chain.&quot;</span>)
-			})<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(leaf_idx)
+		utils::block_num_to_leaf_index::&lt;T::Header&gt;(block_num, first_mmr_block)
 	}
 
 	<span class="doccomment">/// Generate an MMR proof for the given `block_numbers`.

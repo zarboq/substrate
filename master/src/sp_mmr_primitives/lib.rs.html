@@ -629,6 +629,16 @@
 <a href="#629" id="629">629</a>
 <a href="#630" id="630">630</a>
 <a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -651,12 +661,19 @@
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 #![warn(missing_docs)]
 
-</span><span class="kw">use </span>scale_info::TypeInfo;
+</span><span class="kw">pub use </span>mmr_lib;
+
+<span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_debug_derive::RuntimeDebug;
 <span class="kw">use </span>sp_runtime::traits;
 <span class="kw">use </span>sp_std::fmt;
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
 </span><span class="kw">use </span>sp_std::prelude::Vec;
+
+<span class="kw">pub mod </span>utils;
+
+<span class="doccomment">/// Prefix for elements stored in the Off-chain DB via Indexing API.
+</span><span class="kw">pub const </span>INDEXING_PREFIX: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8] = <span class="string">b&quot;mmr&quot;</span>;
 
 <span class="doccomment">/// A type to describe node position in the MMR (node index).
 </span><span class="kw">pub type </span>NodeIndex = u64;
@@ -988,8 +1005,8 @@
 #[derive(RuntimeDebug, codec::Encode, codec::Decode, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>Error {
 	<span class="doccomment">/// Error during translation of a block number into a leaf index.
-	</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, error(<span class="string">&quot;Error translation block number into leaf index&quot;</span>))]
-	</span>BlockNumToLeafIndex,
+	</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, error(<span class="string">&quot;Error performing numeric op&quot;</span>))]
+	</span>InvalidNumericOp,
 	<span class="doccomment">/// Error while pushing new node.
 	</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, error(<span class="string">&quot;Error pushing new node&quot;</span>))]
 	</span>Push,
@@ -1049,6 +1066,9 @@
 	</span><span class="kw">pub trait </span>MmrApi&lt;Hash: codec::Codec, BlockNumber: codec::Codec&gt; {
 		<span class="doccomment">/// Return the on-chain MMR root hash.
 		</span><span class="kw">fn </span>mmr_root() -&gt; <span class="prelude-ty">Result</span>&lt;Hash, Error&gt;;
+
+		<span class="doccomment">/// Return the number of MMR blocks in the chain.
+		</span><span class="kw">fn </span>mmr_leaf_count() -&gt; <span class="prelude-ty">Result</span>&lt;LeafIndex, Error&gt;;
 
 		<span class="doccomment">/// Generate MMR proof for a series of block numbers. If `best_known_block_number = Some(n)`,
 		/// use historical MMR state at given block height `n`. Else, use current MMR state.

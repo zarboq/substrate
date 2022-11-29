@@ -1844,29 +1844,6 @@
 <a href="#1844" id="1844">1844</a>
 <a href="#1845" id="1845">1845</a>
 <a href="#1846" id="1846">1846</a>
-<a href="#1847" id="1847">1847</a>
-<a href="#1848" id="1848">1848</a>
-<a href="#1849" id="1849">1849</a>
-<a href="#1850" id="1850">1850</a>
-<a href="#1851" id="1851">1851</a>
-<a href="#1852" id="1852">1852</a>
-<a href="#1853" id="1853">1853</a>
-<a href="#1854" id="1854">1854</a>
-<a href="#1855" id="1855">1855</a>
-<a href="#1856" id="1856">1856</a>
-<a href="#1857" id="1857">1857</a>
-<a href="#1858" id="1858">1858</a>
-<a href="#1859" id="1859">1859</a>
-<a href="#1860" id="1860">1860</a>
-<a href="#1861" id="1861">1861</a>
-<a href="#1862" id="1862">1862</a>
-<a href="#1863" id="1863">1863</a>
-<a href="#1864" id="1864">1864</a>
-<a href="#1865" id="1865">1865</a>
-<a href="#1866" id="1866">1866</a>
-<a href="#1867" id="1867">1867</a>
-<a href="#1868" id="1868">1868</a>
-<a href="#1869" id="1869">1869</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1980,7 +1957,8 @@
 <span class="kw">use </span>sp_application_crypto::AppKey;
 <span class="kw">use </span>sp_block_builder::BlockBuilder <span class="kw">as </span>BlockBuilderApi;
 <span class="kw">use </span>sp_blockchain::{
-	Backend <span class="kw">as _</span>, Error <span class="kw">as </span>ClientError, HeaderBackend, HeaderMetadata, <span class="prelude-ty">Result </span><span class="kw">as </span>ClientResult,
+	Backend <span class="kw">as _</span>, Error <span class="kw">as </span>ClientError, ForkBackend, HeaderBackend, HeaderMetadata,
+	<span class="prelude-ty">Result </span><span class="kw">as </span>ClientResult,
 };
 <span class="kw">use </span>sp_consensus::{
 	BlockOrigin, CacheKeyId, Environment, Error <span class="kw">as </span>ConsensusError, Proposer, SelectChain,
@@ -1992,7 +1970,7 @@
 <span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 <span class="kw">use </span>sp_runtime::{
 	generic::{BlockId, OpaqueDigestItemId},
-	traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, SaturatedConversion, Saturating, Zero},
+	traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, SaturatedConversion, Zero},
 	DigestItem,
 };
 
@@ -2384,12 +2362,12 @@
 	client: <span class="kw-2">&amp;</span>C,
 	notification: <span class="kw-2">&amp;</span>FinalityNotification&lt;Block&gt;,
 ) -&gt; AuxDataOperations {
-	<span class="kw">let </span><span class="kw-2">mut </span>aux_keys = HashSet::new();
+	<span class="kw">let </span><span class="kw-2">mut </span>hashes = HashSet::new();
 
 	<span class="kw">let </span>first = notification.tree_route.first().unwrap_or(<span class="kw-2">&amp;</span>notification.hash);
 	<span class="kw">match </span>client.header_metadata(<span class="kw-2">*</span>first) {
 		<span class="prelude-val">Ok</span>(meta) =&gt; {
-			aux_keys.insert(aux_schema::block_weight_key(meta.parent));
+			hashes.insert(meta.parent);
 		},
 		<span class="prelude-val">Err</span>(err) =&gt; <span class="macro">warn!</span>(
 			target: <span class="string">&quot;babe&quot;</span>,
@@ -2400,53 +2378,29 @@
 	}
 
 	<span class="comment">// Cleans data for finalized block&#39;s ancestors
-	</span>aux_keys.extend(
+	</span>hashes.extend(
 		notification
 			.tree_route
 			.iter()
 			<span class="comment">// Ensure we don&#39;t prune latest finalized block.
 			// This should not happen, but better be safe than sorry!
-			</span>.filter(|h| <span class="kw-2">**</span>h != notification.hash)
-			.map(aux_schema::block_weight_key),
+			</span>.filter(|h| <span class="kw-2">**</span>h != notification.hash),
 	);
 
-	<span class="comment">// Cleans data for stale branches.
+	<span class="comment">// Cleans data for stale forks.
+	</span><span class="kw">let </span>stale_forks = <span class="kw">match </span>client.expand_forks(<span class="kw-2">&amp;</span>notification.stale_heads) {
+		<span class="prelude-val">Ok</span>(stale_forks) =&gt; stale_forks,
+		<span class="prelude-val">Err</span>((stale_forks, e)) =&gt; {
+			<span class="macro">warn!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;{:?}&quot;</span>, e,);
+			stale_forks
+		},
+	};
+	hashes.extend(stale_forks.iter());
 
-	</span><span class="kw">for </span>head <span class="kw">in </span>notification.stale_heads.iter() {
-		<span class="kw">let </span><span class="kw-2">mut </span>hash = <span class="kw-2">*</span>head;
-		<span class="comment">// Insert stale blocks hashes until canonical chain is reached.
-		// If we reach a block that is already part of the `aux_keys` we can stop the processing the
-		// head.
-		</span><span class="kw">while </span>aux_keys.insert(aux_schema::block_weight_key(hash)) {
-			<span class="kw">match </span>client.header_metadata(hash) {
-				<span class="prelude-val">Ok</span>(meta) =&gt; {
-					hash = meta.parent;
-
-					<span class="comment">// If the parent is part of the canonical chain or there doesn&#39;t exist a block
-					// hash for the parent number (bug?!), we can abort adding blocks.
-					</span><span class="kw">if </span>client
-						.hash(meta.number.saturating_sub(<span class="number">1u32</span>.into()))
-						.ok()
-						.flatten()
-						.map_or(<span class="bool-val">true</span>, |h| h == hash)
-					{
-						<span class="kw">break
-					</span>}
-				},
-				<span class="prelude-val">Err</span>(err) =&gt; {
-					<span class="macro">warn!</span>(
-						target: <span class="string">&quot;babe&quot;</span>,
-						<span class="string">&quot;Header lookup fail while cleaning data for block {:?}: {}&quot;</span>,
-						hash,
-						err,
-					);
-					<span class="kw">break
-				</span>},
-			}
-		}
-	}
-
-	aux_keys.into_iter().map(|val| (val, <span class="prelude-val">None</span>)).collect()
+	hashes
+		.into_iter()
+		.map(|val| (aux_schema::block_weight_key(val), <span class="prelude-val">None</span>))
+		.collect()
 }
 
 <span class="kw">async fn </span>answer_requests&lt;B: BlockT, C&gt;(
