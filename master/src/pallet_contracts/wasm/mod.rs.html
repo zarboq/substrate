@@ -2959,6 +2959,38 @@
 <a href="#2959" id="2959">2959</a>
 <a href="#2960" id="2960">2960</a>
 <a href="#2961" id="2961">2961</a>
+<a href="#2962" id="2962">2962</a>
+<a href="#2963" id="2963">2963</a>
+<a href="#2964" id="2964">2964</a>
+<a href="#2965" id="2965">2965</a>
+<a href="#2966" id="2966">2966</a>
+<a href="#2967" id="2967">2967</a>
+<a href="#2968" id="2968">2968</a>
+<a href="#2969" id="2969">2969</a>
+<a href="#2970" id="2970">2970</a>
+<a href="#2971" id="2971">2971</a>
+<a href="#2972" id="2972">2972</a>
+<a href="#2973" id="2973">2973</a>
+<a href="#2974" id="2974">2974</a>
+<a href="#2975" id="2975">2975</a>
+<a href="#2976" id="2976">2976</a>
+<a href="#2977" id="2977">2977</a>
+<a href="#2978" id="2978">2978</a>
+<a href="#2979" id="2979">2979</a>
+<a href="#2980" id="2980">2980</a>
+<a href="#2981" id="2981">2981</a>
+<a href="#2982" id="2982">2982</a>
+<a href="#2983" id="2983">2983</a>
+<a href="#2984" id="2984">2984</a>
+<a href="#2985" id="2985">2985</a>
+<a href="#2986" id="2986">2986</a>
+<a href="#2987" id="2987">2987</a>
+<a href="#2988" id="2988">2988</a>
+<a href="#2989" id="2989">2989</a>
+<a href="#2990" id="2990">2990</a>
+<a href="#2991" id="2991">2991</a>
+<a href="#2992" id="2992">2992</a>
+<a href="#2993" id="2993">2993</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2997,7 +3029,7 @@
 };
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>frame_support::dispatch::{DispatchError, DispatchResult};
-<span class="kw">use </span>sp_core::crypto::UncheckedFrom;
+<span class="kw">use </span>sp_core::{crypto::UncheckedFrom, Get};
 <span class="kw">use </span>sp_runtime::RuntimeDebug;
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 <span class="attr">#[cfg(test)]
@@ -3179,7 +3211,7 @@
 		<span class="kw">let </span>module = Module::new(<span class="kw-2">&amp;</span>engine, code)<span class="question-mark">?</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>store = Store::new(<span class="kw-2">&amp;</span>engine, host_state);
 		<span class="kw">let </span><span class="kw-2">mut </span>linker = Linker::new();
-		E::define(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;mut </span>linker)<span class="question-mark">?</span>;
+		E::define(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;mut </span>linker, T::UnsafeUnstableInterface::get())<span class="question-mark">?</span>;
 		<span class="kw">let </span>memory = Memory::new(<span class="kw-2">&amp;mut </span>store, MemoryType::new(memory.<span class="number">0</span>, <span class="prelude-val">Some</span>(memory.<span class="number">1</span>))<span class="question-mark">?</span>).expect(
 			<span class="string">&quot;The limits defined in our `Schedule` limit the amount of memory well below u32::MAX; qed&quot;</span>,
 		);
@@ -3588,10 +3620,17 @@
 		</span>}
 	}
 
-	<span class="kw">fn </span>execute&lt;E: BorrowMut&lt;MockExt&gt;&gt;(wat: <span class="kw-2">&amp;</span>str, input_data: Vec&lt;u8&gt;, <span class="kw-2">mut </span>ext: E) -&gt; ExecResult {
+	<span class="kw">fn </span>execute_internal&lt;E: BorrowMut&lt;MockExt&gt;&gt;(
+		wat: <span class="kw-2">&amp;</span>str,
+		input_data: Vec&lt;u8&gt;,
+		<span class="kw-2">mut </span>ext: E,
+		unstable_interface: bool,
+	) -&gt; ExecResult {
+		<span class="kw">type </span>RuntimeConfig = &lt;MockExt <span class="kw">as </span>Ext&gt;::T;
+		RuntimeConfig::set_unstable_interface(unstable_interface);
 		<span class="kw">let </span>wasm = wat::parse_str(wat).unwrap();
 		<span class="kw">let </span>schedule = <span class="kw">crate</span>::Schedule::default();
-		<span class="kw">let </span>executable = PrefabWasmModule::&lt;&lt;MockExt <span class="kw">as </span>Ext&gt;::T&gt;::from_code(
+		<span class="kw">let </span>executable = PrefabWasmModule::&lt;RuntimeConfig&gt;::from_code(
 			wasm,
 			<span class="kw-2">&amp;</span>schedule,
 			ALICE,
@@ -3600,6 +3639,19 @@
 		)
 		.map_err(|err| err.<span class="number">0</span>)<span class="question-mark">?</span>;
 		executable.execute(ext.borrow_mut(), <span class="kw-2">&amp;</span>ExportedFunction::Call, input_data)
+	}
+
+	<span class="kw">fn </span>execute&lt;E: BorrowMut&lt;MockExt&gt;&gt;(wat: <span class="kw-2">&amp;</span>str, input_data: Vec&lt;u8&gt;, ext: E) -&gt; ExecResult {
+		execute_internal(wat, input_data, ext, <span class="bool-val">false</span>)
+	}
+
+	<span class="attr">#[cfg(not(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>))]
+	</span><span class="kw">fn </span>execute_with_unstable&lt;E: BorrowMut&lt;MockExt&gt;&gt;(
+		wat: <span class="kw-2">&amp;</span>str,
+		input_data: Vec&lt;u8&gt;,
+		ext: E,
+	) -&gt; ExecResult {
+		execute_internal(wat, input_data, ext, <span class="bool-val">true</span>)
 	}
 
 	<span class="kw">const </span>CODE_TRANSFER: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
@@ -3702,7 +3754,6 @@
 	}
 
 	<span class="attr">#[test]
-	#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span><span class="kw">fn </span>contract_delegate_call() {
 		<span class="kw">const </span>CODE: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
@@ -5235,8 +5286,7 @@
 		);
 	}
 
-	<span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
-	</span><span class="kw">const </span>CODE_CALL_RUNTIME: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
+	<span class="kw">const </span>CODE_CALL_RUNTIME: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
 	(import &quot;seal0&quot; &quot;call_runtime&quot; (func $call_runtime (param i32 i32) (result i32)))
 	(import &quot;seal0&quot; &quot;seal_input&quot; (func $seal_input (param i32 i32)))
@@ -5272,7 +5322,6 @@
 &quot;#</span>;
 
 	<span class="attr">#[test]
-	#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span><span class="kw">fn </span>call_runtime_works() {
 		<span class="kw">let </span>call =
 			RuntimeCall::System(frame_system::Call::remark { remark: <span class="string">b&quot;Hello World&quot;</span>.to_vec() });
@@ -5284,7 +5333,6 @@
 	}
 
 	<span class="attr">#[test]
-	#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span><span class="kw">fn </span>call_runtime_panics_on_invalid_call() {
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = MockExt::default();
 		<span class="kw">let </span>result = execute(CODE_CALL_RUNTIME, <span class="macro">vec!</span>[<span class="number">0x42</span>], <span class="kw-2">&amp;mut </span>ext);
@@ -5547,7 +5595,6 @@
 	}
 
 	<span class="attr">#[test]
-	#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span><span class="kw">fn </span>take_storage_works() {
 		<span class="kw">const </span>CODE: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
@@ -5783,7 +5830,6 @@
 	}
 
 	<span class="attr">#[test]
-	#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span><span class="kw">fn </span>caller_is_origin_works() {
 		<span class="kw">const </span>CODE_CALLER_IS_ORIGIN: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 ;; This runs `caller_is_origin` check on zero account address
@@ -5855,7 +5901,6 @@
 	}
 
 	<span class="attr">#[test]
-	#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span><span class="kw">fn </span>reentrance_count_works() {
 		<span class="kw">const </span>CODE: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
@@ -5888,7 +5933,6 @@
 	}
 
 	<span class="attr">#[test]
-	#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span><span class="kw">fn </span>account_reentrance_count_works() {
 		<span class="kw">const </span>CODE: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
@@ -5918,6 +5962,26 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>mock_ext = MockExt::default();
 		execute(CODE, <span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>mock_ext).unwrap();
+	}
+
+	<span class="doccomment">/// This test check that an unstable interface cannot be deployed. In case of runtime
+	/// benchmarks we always allow unstable interfaces. This is why this test does not
+	/// work when this feature is enabled.
+	</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>))]
+	#[test]
+	</span><span class="kw">fn </span>cannot_deploy_unstable() {
+		<span class="kw">const </span>CANNT_DEPLOY_UNSTABLE: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
+(module
+	(import &quot;seal0&quot; &quot;reentrance_count&quot; (func $reentrance_count (result i32)))
+	(func (export &quot;call&quot;))
+	(func (export &quot;deploy&quot;))
+)
+&quot;#</span>;
+		<span class="macro">assert_err!</span>(
+			execute(CANNT_DEPLOY_UNSTABLE, <span class="macro">vec!</span>[], MockExt::default()),
+			&lt;Error&lt;Test&gt;&gt;::CodeRejected,
+		);
+		<span class="macro">assert_ok!</span>(execute_with_unstable(CANNT_DEPLOY_UNSTABLE, <span class="macro">vec!</span>[], MockExt::default()));
 	}
 }
 </code></pre></div>

@@ -2615,14 +2615,6 @@
 <a href="#2615" id="2615">2615</a>
 <a href="#2616" id="2616">2616</a>
 <a href="#2617" id="2617">2617</a>
-<a href="#2618" id="2618">2618</a>
-<a href="#2619" id="2619">2619</a>
-<a href="#2620" id="2620">2620</a>
-<a href="#2621" id="2621">2621</a>
-<a href="#2622" id="2622">2622</a>
-<a href="#2623" id="2623">2623</a>
-<a href="#2624" id="2624">2624</a>
-<a href="#2625" id="2625">2625</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2671,6 +2663,7 @@
 	</span><span class="kw">fn </span>define(
 		store: <span class="kw-2">&amp;mut </span>Store&lt;HostState&gt;,
 		linker: <span class="kw-2">&amp;mut </span>Linker&lt;HostState&gt;,
+		allow_unstable: bool,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), LinkerError&gt;;
 }
 
@@ -2730,7 +2723,6 @@
 	/// recording was disabled.
 	</span>LoggingDisabled = <span class="number">9</span>,
 	<span class="doccomment">/// The call dispatched by `seal_call_runtime` was executed but returned an error.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span>CallRuntimeReturnedError = <span class="number">10</span>,
 	<span class="doccomment">/// ECDSA pubkey recovery failed (most probably wrong recovery id or signature), or
 	/// ECDSA compressed pubkey conversion into Ethereum address failed (most probably
@@ -2853,7 +2845,6 @@
 	<span class="doccomment">/// Weight of calling `seal_get_storage` with the specified size in storage.
 	</span>GetStorage(u32),
 	<span class="doccomment">/// Weight of calling `seal_take_storage` for the given size.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span>TakeStorage(u32),
 	<span class="doccomment">/// Weight of calling `seal_transfer`.
 	</span>Transfer,
@@ -2882,17 +2873,14 @@
 	<span class="doccomment">/// Weight charged by a chain extension through `seal_call_chain_extension`.
 	</span>ChainExtension(u64),
 	<span class="doccomment">/// Weight charged for calling into the runtime.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span>CallRuntime(Weight),
 	<span class="doccomment">/// Weight of calling `seal_set_code_hash`
 	</span>SetCodeHash,
 	<span class="doccomment">/// Weight of calling `ecdsa_to_eth_address`
 	</span>EcdsaToEthAddress,
 	<span class="doccomment">/// Weight of calling `reentrance_count`
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span>ReentrantCount,
 	<span class="doccomment">/// Weight of calling `account_reentrance_count`
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
 	</span>AccountEntranceCount,
 }
 
@@ -2941,8 +2929,7 @@
 				.saturating_add(s.contains_storage_per_byte.saturating_mul(len.into())),
 			GetStorage(len) =&gt;
 				s.get_storage.saturating_add(s.get_storage_per_byte.saturating_mul(len.into())),
-			<span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
-			</span>TakeStorage(len) =&gt; s
+			TakeStorage(len) =&gt; s
 				.take_storage
 				.saturating_add(s.take_storage_per_byte.saturating_mul(len.into())),
 			Transfer =&gt; s.transfer,
@@ -2969,14 +2956,11 @@
 				.saturating_add(s.hash_blake2_128_per_byte.saturating_mul(len.into())),
 			EcdsaRecovery =&gt; s.ecdsa_recover,
 			ChainExtension(amount) =&gt; amount,
-			<span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
-			</span>CallRuntime(weight) =&gt; weight.ref_time(),
+			CallRuntime(weight) =&gt; weight.ref_time(),
 			SetCodeHash =&gt; s.set_code_hash,
 			EcdsaToEthAddress =&gt; s.ecdsa_to_eth_address,
-			<span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
-			</span>ReentrantCount =&gt; s.reentrance_count,
-			<span class="attr">#[cfg(feature = <span class="string">&quot;unstable-interface&quot;</span>)]
-			</span>AccountEntranceCount =&gt; s.account_reentrance_count,
+			ReentrantCount =&gt; s.reentrance_count,
+			AccountEntranceCount =&gt; s.account_reentrance_count,
 		};
 		RuntimeToken {
 			<span class="attr">#[cfg(test)]
