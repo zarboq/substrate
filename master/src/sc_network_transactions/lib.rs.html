@@ -475,6 +475,8 @@
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
 <a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -649,11 +651,13 @@
 
 		<span class="kw">let </span>handler = TransactionsHandler {
 			protocol_name: <span class="self">self</span>.protocol_name,
-			propagate_timeout: Box::pin(interval(PROPAGATE_TIMEOUT)),
+			propagate_timeout: (Box::pin(interval(PROPAGATE_TIMEOUT))
+				<span class="kw">as </span>Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = ()&gt; + Send&gt;&gt;)
+				.fuse(),
 			pending_transactions: FuturesUnordered::new(),
 			pending_transactions_peers: HashMap::new(),
 			service,
-			event_stream,
+			event_stream: event_stream.fuse(),
 			peers: HashMap::new(),
 			transaction_pool,
 			from_controller,
@@ -706,7 +710,7 @@
 &gt; {
 	protocol_name: ProtocolName,
 	<span class="doccomment">/// Interval at which we call `propagate_transactions`.
-	</span>propagate_timeout: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = ()&gt; + Send&gt;&gt;,
+	</span>propagate_timeout: stream::Fuse&lt;Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = ()&gt; + Send&gt;&gt;&gt;,
 	<span class="doccomment">/// Pending transactions verification tasks.
 	</span>pending_transactions: FuturesUnordered&lt;PendingTransaction&lt;H&gt;&gt;,
 	<span class="doccomment">/// As multiple peers can send us the same transaction, we group
@@ -717,7 +721,7 @@
 	<span class="doccomment">/// Network service to use to send messages and manage peers.
 	</span>service: S,
 	<span class="doccomment">/// Stream of networking events.
-	</span>event_stream: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = Event&gt; + Send&gt;&gt;,
+	</span>event_stream: stream::Fuse&lt;Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = Event&gt; + Send&gt;&gt;&gt;,
 	<span class="comment">// All connected peers
 	</span>peers: HashMap&lt;PeerId, Peer&lt;H&gt;&gt;,
 	transaction_pool: Arc&lt;<span class="kw">dyn </span>TransactionPool&lt;H, B&gt;&gt;,
@@ -745,7 +749,7 @@
 	</span><span class="kw">pub async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>) {
 		<span class="kw">loop </span>{
 			<span class="macro">futures::select! </span>{
-				<span class="kw">_ </span>= <span class="self">self</span>.propagate_timeout.next().fuse() =&gt; {
+				<span class="kw">_ </span>= <span class="self">self</span>.propagate_timeout.next() =&gt; {
 					<span class="self">self</span>.propagate_transactions();
 				},
 				(tx_hash, result) = <span class="self">self</span>.pending_transactions.select_next_some() =&gt; {
@@ -755,7 +759,7 @@
 						<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Inconsistent state, no peers for pending transaction!&quot;</span>);
 					}
 				},
-				network_event = <span class="self">self</span>.event_stream.next().fuse() =&gt; {
+				network_event = <span class="self">self</span>.event_stream.next() =&gt; {
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(network_event) = network_event {
 						<span class="self">self</span>.handle_network_event(network_event).<span class="kw">await</span>;
 					} <span class="kw">else </span>{
@@ -763,7 +767,7 @@
 						</span><span class="kw">return</span>;
 					}
 				},
-				message = <span class="self">self</span>.from_controller.select_next_some().fuse() =&gt; {
+				message = <span class="self">self</span>.from_controller.select_next_some() =&gt; {
 					<span class="kw">match </span>message {
 						ToHandler::PropagateTransaction(hash) =&gt; <span class="self">self</span>.propagate_transaction(<span class="kw-2">&amp;</span>hash),
 						ToHandler::PropagateTransactions =&gt; <span class="self">self</span>.propagate_transactions(),
