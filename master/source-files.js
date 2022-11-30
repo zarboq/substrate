@@ -29,6 +29,7 @@ var sourcesIndex = JSON.parse('{\
 "generate_bags":["",[],["lib.rs"]],\
 "kitchensink_runtime":["",[],["constants.rs","impls.rs","lib.rs","voter_bags.rs"]],\
 "mmr_gadget":["",[],["lib.rs","offchain_mmr.rs"]],\
+"mmr_rpc":["",[],["lib.rs"]],\
 "multiply_by_rational_with_rounding":["",[],["multiply_by_rational_with_rounding.rs"]],\
 "node_bench":["",[],["common.rs","construct.rs","core.rs","generator.rs","import.rs","main.rs","simple_trie.rs","state_sizes.rs","tempdb.rs","trie.rs","txpool.rs"]],\
 "node_cli":["",[],["benchmarking.rs","chain_spec.rs","cli.rs","command.rs","lib.rs","service.rs"]],\
@@ -76,7 +77,6 @@ var sourcesIndex = JSON.parse('{\
 "pallet_lottery":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_membership":["",[["migrations",[],["mod.rs","v4.rs"]]],["lib.rs","weights.rs"]],\
 "pallet_mmr":["",[["mmr",[],["mmr.rs","mod.rs","storage.rs"]]],["benchmarking.rs","default_weights.rs","lib.rs"]],\
-"pallet_mmr_rpc":["",[],["lib.rs"]],\
 "pallet_multisig":["",[],["benchmarking.rs","lib.rs","migrations.rs","weights.rs"]],\
 "pallet_nicks":["",[],["lib.rs"]],\
 "pallet_node_authorization":["",[],["lib.rs","weights.rs"]],\

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["LeavesProof","Retrieved MMR leaves and their proof."],["Mmr","MMR RPC methods."]],"trait":[["MmrApiClient","Client implementation for the `MmrApi` RPC API."],["MmrApiServer","Server trait implementation for the `MmrApi` RPC API."],["MmrRuntimeApi","API to interact with MMR pallet."]]};

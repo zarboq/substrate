@@ -243,6 +243,9 @@
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -289,7 +292,7 @@
 <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
 <span class="kw">use </span>futures::StreamExt;
-<span class="kw">use </span>log::{debug, error, trace, warn};
+<span class="kw">use </span>log::{error, trace, warn};
 
 <span class="kw">use </span>sc_client_api::{Backend, BlockchainEvents, FinalityNotifications};
 <span class="kw">use </span>sc_offchain::OffchainDb;
@@ -355,13 +358,16 @@
 					}
 				},
 				<span class="kw">_ </span>=&gt; {
-					<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Finality notification: {:?}&quot;</span>, notification);
-					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Waiting for MMR pallet to become available ...&quot;</span>);
+					<span class="macro">trace!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Waiting for MMR pallet to become available... (best finalized {:?})&quot;</span>,
+						notification.header.number()
+					);
 				},
 			}
 		}
 
-		<span class="macro">warn!</span>(
+		<span class="macro">error!</span>(
 			target: LOG_TARGET,
 			<span class="string">&quot;Finality notifications stream closed unexpectedly. \
 			Couldn&#39;t build the canonicalization engine&quot;</span>,
