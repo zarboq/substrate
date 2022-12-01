@@ -562,7 +562,7 @@
 //!
 //! #[async_trait::async_trait]
 //! impl sp_inherents::InherentDataProvider for InherentDataProvider {
-//! 	fn provide_inherent_data(
+//! 	async fn provide_inherent_data(
 //! 		&amp;self,
 //! 		inherent_data: &amp;mut InherentData,
 //! 	) -&gt; Result&lt;(), sp_inherents::Error&gt; {
@@ -612,7 +612,7 @@
 //! # struct InherentDataProvider;
 //! # #[async_trait::async_trait]
 //! # impl sp_inherents::InherentDataProvider for InherentDataProvider {
-//! # 	fn provide_inherent_data(&amp;self, inherent_data: &amp;mut InherentData) -&gt; Result&lt;(), sp_inherents::Error&gt; {
+//! # 	async fn provide_inherent_data(&amp;self, inherent_data: &amp;mut InherentData) -&gt; Result&lt;(), sp_inherents::Error&gt; {
 //! # 		inherent_data.put_data(INHERENT_IDENTIFIER, &amp;&quot;hello&quot;)
 //! # 	}
 //! # 	async fn try_handle_error(
@@ -949,7 +949,7 @@
 
 	<span class="attr">#[async_trait::async_trait]
 	</span><span class="kw">impl </span>InherentDataProvider <span class="kw">for </span>TestInherentDataProvider {
-		<span class="kw">fn </span>provide_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>InherentData) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+		<span class="kw">async fn </span>provide_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>InherentData) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 			data.put_data(TEST_INHERENT_0, <span class="kw-2">&amp;</span><span class="number">42</span>)
 		}
 
@@ -966,7 +966,7 @@
 	</span><span class="kw">fn </span>create_inherent_data() {
 		<span class="kw">let </span>provider = TestInherentDataProvider;
 
-		<span class="kw">let </span>inherent_data = provider.create_inherent_data().unwrap();
+		<span class="kw">let </span>inherent_data = futures::executor::block_on(provider.create_inherent_data()).unwrap();
 
 		<span class="macro">assert_eq!</span>(inherent_data.get_data::&lt;u32&gt;(<span class="kw-2">&amp;</span>TEST_INHERENT_0).unwrap().unwrap(), <span class="number">42u32</span>);
 	}

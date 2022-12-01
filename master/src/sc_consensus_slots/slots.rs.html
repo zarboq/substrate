@@ -178,11 +178,6 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -207,7 +202,7 @@
 
 </span><span class="kw">use super</span>::{InherentDataProviderExt, Slot};
 <span class="kw">use </span>sp_consensus::{Error, SelectChain};
-<span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentData, InherentDataProvider};
+<span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentDataProvider};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT};
 
 <span class="kw">use </span>futures_timer::Delay;
@@ -237,8 +232,8 @@
 	</span><span class="kw">pub </span>slot: Slot,
 	<span class="doccomment">/// The instant at which the slot ends.
 	</span><span class="kw">pub </span>ends_at: Instant,
-	<span class="doccomment">/// The inherent data.
-	</span><span class="kw">pub </span>inherent_data: InherentData,
+	<span class="doccomment">/// The inherent data provider.
+	</span><span class="kw">pub </span>create_inherent_data: Box&lt;<span class="kw">dyn </span>InherentDataProvider&gt;,
 	<span class="doccomment">/// Slot duration.
 	</span><span class="kw">pub </span>duration: Duration,
 	<span class="doccomment">/// The chain header this slot is based on.
@@ -255,14 +250,14 @@
 	/// `ends_at` is calculated using `timestamp` and `duration`.
 	</span><span class="kw">pub fn </span>new(
 		slot: Slot,
-		inherent_data: InherentData,
+		create_inherent_data: Box&lt;<span class="kw">dyn </span>InherentDataProvider&gt;,
 		duration: Duration,
 		chain_head: B::Header,
 		block_size_limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 	) -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{
 			slot,
-			inherent_data,
+			create_inherent_data,
 			duration,
 			chain_head,
 			block_size_limit,
@@ -303,7 +298,7 @@
 <span class="kw">where
 	</span>Block: BlockT,
 	SC: SelectChain&lt;Block&gt;,
-	IDP: CreateInherentDataProviders&lt;Block, ()&gt;,
+	IDP: CreateInherentDataProviders&lt;Block, ()&gt; + <span class="lifetime">&#39;static</span>,
 	IDP::InherentDataProviders: <span class="kw">crate</span>::InherentDataProviderExt,
 {
 	<span class="doccomment">/// Returns a future that fires when the next slot starts.
@@ -327,9 +322,6 @@
 
 			<span class="comment">// reschedule delay for next slot.
 			</span><span class="self">self</span>.inner_delay = <span class="prelude-val">Some</span>(Delay::new(ends_in));
-
-			<span class="kw">let </span>ends_at = Instant::now() + ends_in;
-
 			<span class="kw">let </span>chain_head = <span class="kw">match </span><span class="self">self</span>.select_chain.best_chain().<span class="kw">await </span>{
 				<span class="prelude-val">Ok</span>(x) =&gt; x,
 				<span class="prelude-val">Err</span>(e) =&gt; {
@@ -349,21 +341,19 @@
 				.create_inherent_data_providers(chain_head.hash(), ())
 				.<span class="kw">await</span><span class="question-mark">?</span>;
 
-			<span class="kw">if </span>Instant::now() &gt; ends_at {
-				<span class="macro">log::warn!</span>(
-					target: <span class="string">&quot;slots&quot;</span>,
-					<span class="string">&quot;Creating inherent data providers took more time than we had left for the slot.&quot;</span>,
-				);
-			}
-
 			<span class="kw">let </span>slot = inherent_data_providers.slot();
-			<span class="kw">let </span>inherent_data = inherent_data_providers.create_inherent_data()<span class="question-mark">?</span>;
 
 			<span class="comment">// never yield the same slot twice.
 			</span><span class="kw">if </span>slot &gt; <span class="self">self</span>.last_slot {
 				<span class="self">self</span>.last_slot = slot;
 
-				<span class="kw">break </span><span class="prelude-val">Ok</span>(SlotInfo::new(slot, inherent_data, <span class="self">self</span>.slot_duration, chain_head, <span class="prelude-val">None</span>))
+				<span class="kw">break </span><span class="prelude-val">Ok</span>(SlotInfo::new(
+					slot,
+					Box::new(inherent_data_providers),
+					<span class="self">self</span>.slot_duration,
+					chain_head,
+					<span class="prelude-val">None</span>,
+				))
 			}
 		}
 	}

@@ -813,6 +813,8 @@
 <a href="#813" id="813">813</a>
 <a href="#814" id="814">814</a>
 <a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1507,14 +1509,16 @@
 					slot += <span class="number">1</span>;
 				};
 
-				<span class="kw">let </span>inherent_data = (
-					sp_timestamp::InherentDataProvider::new(
-						std::time::Duration::from_millis(SLOT_DURATION * slot).into(),
-					),
-					sp_consensus_babe::inherents::InherentDataProvider::new(slot.into()),
+				<span class="kw">let </span>inherent_data = futures::executor::block_on(
+					(
+						sp_timestamp::InherentDataProvider::new(
+							std::time::Duration::from_millis(SLOT_DURATION * slot).into(),
+						),
+						sp_consensus_babe::inherents::InherentDataProvider::new(slot.into()),
+					)
+						.create_inherent_data(),
 				)
-					.create_inherent_data()
-					.expect(<span class="string">&quot;Creates inherent data&quot;</span>);
+				.expect(<span class="string">&quot;Creates inherent data&quot;</span>);
 
 				digest.push(&lt;DigestItem <span class="kw">as </span>CompatibleDigestItem&gt;::babe_pre_digest(babe_pre_digest));
 

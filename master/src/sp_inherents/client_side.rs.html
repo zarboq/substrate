@@ -210,16 +210,16 @@
 	<span class="doccomment">/// Convenience function for creating [`InherentData`].
 	///
 	/// Basically maps around [`Self::provide_inherent_data`].
-	</span><span class="kw">fn </span>create_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;InherentData, Error&gt; {
+	</span><span class="kw">async fn </span>create_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;InherentData, Error&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>inherent_data = InherentData::new();
-		<span class="self">self</span>.provide_inherent_data(<span class="kw-2">&amp;mut </span>inherent_data)<span class="question-mark">?</span>;
+		<span class="self">self</span>.provide_inherent_data(<span class="kw-2">&amp;mut </span>inherent_data).<span class="kw">await</span><span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(inherent_data)
 	}
 
 	<span class="doccomment">/// Provide inherent data that should be included in a block.
 	///
 	/// The data should be stored in the given `InherentData` structure.
-	</span><span class="kw">fn </span>provide_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>, inherent_data: <span class="kw-2">&amp;mut </span>InherentData) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+	</span><span class="kw">async fn </span>provide_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>, inherent_data: <span class="kw-2">&amp;mut </span>InherentData) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
 	<span class="doccomment">/// Convert the given encoded error to a string.
 	///
@@ -235,8 +235,8 @@
 #[async_trait::async_trait]
 </span><span class="kw">impl </span>InherentDataProvider <span class="kw">for </span>Tuple {
 	<span class="macro">for_tuples!</span>( <span class="kw">where </span>#( Tuple: Send + Sync )* );
-	<span class="kw">fn </span>provide_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>, inherent_data: <span class="kw-2">&amp;mut </span>InherentData) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="macro">for_tuples!</span>( #( Tuple.provide_inherent_data(inherent_data)<span class="question-mark">?</span>; )* );
+	<span class="kw">async fn </span>provide_inherent_data(<span class="kw-2">&amp;</span><span class="self">self</span>, inherent_data: <span class="kw-2">&amp;mut </span>InherentData) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+		<span class="macro">for_tuples!</span>( #( Tuple.provide_inherent_data(inherent_data).<span class="kw">await</span><span class="question-mark">?</span>; )* );
 		<span class="prelude-val">Ok</span>(())
 	}
 

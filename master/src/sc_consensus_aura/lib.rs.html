@@ -1189,7 +1189,7 @@
 	PF::Proposer: Proposer&lt;B, Error = Error, Transaction = sp_api::TransactionFor&lt;C, B&gt;&gt;,
 	SO: SyncOracle + Send + Sync + Clone,
 	L: sc_consensus::JustificationSyncLink&lt;B&gt;,
-	CIDP: CreateInherentDataProviders&lt;B, ()&gt; + Send,
+	CIDP: CreateInherentDataProviders&lt;B, ()&gt; + Send + <span class="lifetime">&#39;static</span>,
 	CIDP::InherentDataProviders: InherentDataProviderExt + Send,
 	BS: BackoffAuthoringBlocksStrategy&lt;NumberFor&lt;B&gt;&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
 	Error: std::error::Error + Send + From&lt;sp_consensus::Error&gt; + <span class="lifetime">&#39;static</span>,
@@ -1933,7 +1933,7 @@
 		<span class="kw">let </span>res = executor::block_on(worker.on_slot(SlotInfo {
 			slot: <span class="number">0</span>.into(),
 			ends_at: Instant::now() + Duration::from_secs(<span class="number">100</span>),
-			inherent_data: InherentData::new(),
+			create_inherent_data: Box::new(()),
 			duration: Duration::from_millis(<span class="number">1000</span>),
 			chain_head: head,
 			block_size_limit: <span class="prelude-val">None</span>,
