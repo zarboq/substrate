@@ -1151,18 +1151,6 @@
 <a href="#1151" id="1151">1151</a>
 <a href="#1152" id="1152">1152</a>
 <a href="#1153" id="1153">1153</a>
-<a href="#1154" id="1154">1154</a>
-<a href="#1155" id="1155">1155</a>
-<a href="#1156" id="1156">1156</a>
-<a href="#1157" id="1157">1157</a>
-<a href="#1158" id="1158">1158</a>
-<a href="#1159" id="1159">1159</a>
-<a href="#1160" id="1160">1160</a>
-<a href="#1161" id="1161">1161</a>
-<a href="#1162" id="1162">1162</a>
-<a href="#1163" id="1163">1163</a>
-<a href="#1164" id="1164">1164</a>
-<a href="#1165" id="1165">1165</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1920,8 +1908,11 @@
 		when: T::BlockNumber,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;(T::BlockNumber, ScheduleAddressOf&lt;T, I&gt;)&gt; {
 		<span class="kw">let </span>alarm_interval = T::AlarmInterval::get().max(One::one());
-		<span class="kw">let </span>when = when.saturating_add(alarm_interval).saturating_sub(One::one()) /
-			(alarm_interval.saturating_mul(alarm_interval)).max(One::one());
+		<span class="comment">// Alarm must go off no earlier than `when`.
+		// This rounds `when` upwards to the next multiple of `alarm_interval`.
+		</span><span class="kw">let </span>when = (when.saturating_add(alarm_interval.saturating_sub(One::one())) /
+			alarm_interval)
+			.saturating_mul(alarm_interval);
 		<span class="kw">let </span>maybe_result = T::Scheduler::schedule(
 			DispatchTime::At(when),
 			<span class="prelude-val">None</span>,
@@ -2028,9 +2019,6 @@
 		<span class="comment">// Set an alarm call for the next block to nudge the track along.
 		</span><span class="kw">let </span>now = frame_system::Pallet::&lt;T&gt;::block_number();
 		<span class="kw">let </span>next_block = now + One::one();
-		<span class="kw">let </span>alarm_interval = T::AlarmInterval::get().max(One::one());
-		<span class="kw">let </span>when = (next_block + alarm_interval - One::one()) / alarm_interval * alarm_interval;
-
 		<span class="kw">let </span>call = <span class="kw">match </span>T::Preimages::bound(CallOf::&lt;T, I&gt;::from(Call::one_fewer_deciding {
 			track,
 		})) {
@@ -2040,19 +2028,7 @@
 				<span class="kw">return
 			</span>},
 		};
-		<span class="kw">let </span>maybe_result = T::Scheduler::schedule(
-			DispatchTime::At(when),
-			<span class="prelude-val">None</span>,
-			<span class="number">128u8</span>,
-			frame_system::RawOrigin::Root.into(),
-			call,
-		);
-		<span class="macro">debug_assert!</span>(
-			maybe_result.is_ok(),
-			<span class="string">&quot;Unable to schedule a new alarm at #{:?} (now: #{:?})?!&quot;</span>,
-			when,
-			now
-		);
+		<span class="self">Self</span>::set_alarm(call, next_block);
 	}
 
 	<span class="doccomment">/// Ensure that a `service_referendum` alarm happens for the referendum `index` at `alarm`.
