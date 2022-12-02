@@ -1905,6 +1905,32 @@
 <a href="#1905" id="1905">1905</a>
 <a href="#1906" id="1906">1906</a>
 <a href="#1907" id="1907">1907</a>
+<a href="#1908" id="1908">1908</a>
+<a href="#1909" id="1909">1909</a>
+<a href="#1910" id="1910">1910</a>
+<a href="#1911" id="1911">1911</a>
+<a href="#1912" id="1912">1912</a>
+<a href="#1913" id="1913">1913</a>
+<a href="#1914" id="1914">1914</a>
+<a href="#1915" id="1915">1915</a>
+<a href="#1916" id="1916">1916</a>
+<a href="#1917" id="1917">1917</a>
+<a href="#1918" id="1918">1918</a>
+<a href="#1919" id="1919">1919</a>
+<a href="#1920" id="1920">1920</a>
+<a href="#1921" id="1921">1921</a>
+<a href="#1922" id="1922">1922</a>
+<a href="#1923" id="1923">1923</a>
+<a href="#1924" id="1924">1924</a>
+<a href="#1925" id="1925">1925</a>
+<a href="#1926" id="1926">1926</a>
+<a href="#1927" id="1927">1927</a>
+<a href="#1928" id="1928">1928</a>
+<a href="#1929" id="1929">1929</a>
+<a href="#1930" id="1930">1930</a>
+<a href="#1931" id="1931">1931</a>
+<a href="#1932" id="1932">1932</a>
+<a href="#1933" id="1933">1933</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -2788,6 +2814,13 @@
 										<span class="string">&quot;WARNING: benchmark error skipped - {}&quot;</span>,
 										<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>),
 									);
+								},
+								<span class="macro-nonterminal">$crate::BenchmarkError::Weightless </span>=&gt; {
+									<span class="comment">// This is considered a success condition.
+									</span><span class="macro-nonterminal">$</span><span class="macro">crate::log::error!</span>(
+										<span class="string">&quot;WARNING: benchmark weightless skipped - {}&quot;</span>,
+										<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>),
+									);
 								}
 							}
 						},
@@ -3547,6 +3580,14 @@
 												.expect(<span class="string">&quot;benchmark name is always a valid string!&quot;</span>),
 										);
 									}
+									<span class="macro-nonterminal">$crate::BenchmarkError::Weightless </span>=&gt; {
+										<span class="comment">// This is considered a success condition.
+										</span><span class="macro-nonterminal">$</span><span class="macro">crate::log::error!</span>(
+											<span class="string">&quot;WARNING: benchmark weightless skipped - {}&quot;</span>,
+											<span class="macro-nonterminal">$crate::str::from_utf8</span>(benchmark_name)
+												.expect(<span class="string">&quot;benchmark name is always a valid string!&quot;</span>),
+										);
+									}
 								}
 							},
 							<span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(())) =&gt; (),
@@ -3699,7 +3740,18 @@
 							.expect(<span class="string">&quot;benchmark name is always a valid string!&quot;</span>)
 					);
 					<span class="prelude-val">None
-				</span>}
+				</span>},
+				<span class="prelude-val">Err</span>(<span class="macro-nonterminal">$crate::BenchmarkError::Weightless</span>) =&gt; {
+					<span class="macro-nonterminal">$</span><span class="macro">crate::log::error!</span>(
+						<span class="string">&quot;WARNING: benchmark weightless skipped - {}&quot;</span>,
+						<span class="macro-nonterminal">$crate::str::from_utf8</span>(benchmark)
+							.expect(<span class="string">&quot;benchmark name is always a valid string!&quot;</span>)
+					);
+					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro-nonterminal">$crate::BenchmarkResult </span>{
+						components: selected_components.clone(),
+						.. Default::default()
+					}])
+				}
 			};
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(final_results) = final_results {

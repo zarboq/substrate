@@ -306,6 +306,8 @@
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -329,7 +331,7 @@
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use </span>frame_benchmarking::{account, benchmarks, whitelisted_caller};
+<span class="kw">use </span>frame_benchmarking::{account, benchmarks, whitelisted_caller, BenchmarkError};
 <span class="kw">use </span>frame_system::RawOrigin;
 
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>ChildBounties;
@@ -402,7 +404,7 @@
 <span class="kw">fn </span>activate_bounty&lt;T: Config&gt;(
 	user: u32,
 	description: u32,
-) -&gt; <span class="prelude-ty">Result</span>&lt;BenchmarkChildBounty&lt;T&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;BenchmarkChildBounty&lt;T&gt;, BenchmarkError&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>child_bounty_setup = setup_child_bounty::&lt;T&gt;(user, description);
 	<span class="kw">let </span>curator_lookup = T::Lookup::unlookup(child_bounty_setup.curator.clone());
 	Bounties::&lt;T&gt;::propose_bounty(
@@ -413,7 +415,9 @@
 
 	child_bounty_setup.bounty_id = Bounties::&lt;T&gt;::bounty_count() - <span class="number">1</span>;
 
-	Bounties::&lt;T&gt;::approve_bounty(RawOrigin::Root.into(), child_bounty_setup.bounty_id)<span class="question-mark">?</span>;
+	<span class="kw">let </span>approve_origin =
+		T::SpendOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+	Bounties::&lt;T&gt;::approve_bounty(approve_origin, child_bounty_setup.bounty_id)<span class="question-mark">?</span>;
 	Treasury::&lt;T&gt;::on_initialize(T::BlockNumber::zero());
 	Bounties::&lt;T&gt;::propose_curator(
 		RawOrigin::Root.into(),
@@ -432,7 +436,7 @@
 <span class="kw">fn </span>activate_child_bounty&lt;T: Config&gt;(
 	user: u32,
 	description: u32,
-) -&gt; <span class="prelude-ty">Result</span>&lt;BenchmarkChildBounty&lt;T&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;BenchmarkChildBounty&lt;T&gt;, BenchmarkError&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>bounty_setup = activate_bounty::&lt;T&gt;(user, description)<span class="question-mark">?</span>;
 	<span class="kw">let </span>child_curator_lookup = T::Lookup::unlookup(bounty_setup.child_curator.clone());
 
