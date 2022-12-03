@@ -52,7 +52,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_babe":["",[],["benchmarking.rs","default_weights.rs","equivocation.rs","lib.rs","randomness.rs"]],\
 "pallet_bags_list":["",[["list",[],["mod.rs"]]],["benchmarks.rs","lib.rs","migrations.rs","mock.rs","weights.rs"]],\
 "pallet_bags_list_remote_tests":["",[],["lib.rs","migration.rs","snapshot.rs","try_state.rs"]],\
-"pallet_balances":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
+"pallet_balances":["",[],["benchmarking.rs","lib.rs","migration.rs","weights.rs"]],\
 "pallet_beefy":["",[],["lib.rs"]],\
 "pallet_beefy_mmr":["",[],["lib.rs"]],\
 "pallet_bounties":["",[["migrations",[],["mod.rs","v4.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
