@@ -3691,6 +3691,8 @@
 <a href="#3691" id="3691">3691</a>
 <a href="#3692" id="3692">3692</a>
 <a href="#3693" id="3693">3693</a>
+<a href="#3694" id="3694">3694</a>
+<a href="#3695" id="3695">3695</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -4052,13 +4054,15 @@
 
 <span class="doccomment">/// Implementation for test extrinsic.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">impl</span>&lt;Call: Encode, Extra: Encode&gt; GetDispatchInfo <span class="kw">for </span>sp_runtime::testing::TestXt&lt;Call, Extra&gt; {
+</span><span class="kw">impl</span>&lt;Call: Encode + GetDispatchInfo, Extra: Encode&gt; GetDispatchInfo
+	<span class="kw">for </span>sp_runtime::testing::TestXt&lt;Call, Extra&gt;
+{
 	<span class="kw">fn </span>get_dispatch_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DispatchInfo {
 		<span class="comment">// for testing: weight == size.
 		</span>DispatchInfo {
 			weight: Weight::from_ref_time(<span class="self">self</span>.encode().len() <span class="kw">as _</span>),
 			pays_fee: Pays::Yes,
-			..Default::default()
+			class: <span class="self">self</span>.call.get_dispatch_info().class,
 		}
 	}
 }
