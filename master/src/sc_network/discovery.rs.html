@@ -1191,7 +1191,7 @@
 		GetClosestPeersError, Kademlia, KademliaBucketInserts, KademliaConfig, KademliaEvent,
 		QueryId, QueryResult, Quorum, Record,
 	},
-	mdns::{Mdns, MdnsConfig, MdnsEvent},
+	mdns::{MdnsConfig, MdnsEvent, TokioMdns},
 	multiaddr::Protocol,
 	swarm::{
 		behaviour::toggle::{Toggle, ToggleIntoConnectionHandler},
@@ -1362,7 +1362,7 @@
 			allow_private_ipv4,
 			discovery_only_if_under_num,
 			mdns: <span class="kw">if </span>enable_mdns {
-				<span class="kw">match </span>Mdns::new(MdnsConfig::default()) {
+				<span class="kw">match </span>TokioMdns::new(MdnsConfig::default()) {
 					<span class="prelude-val">Ok</span>(mdns) =&gt; <span class="prelude-val">Some</span>(mdns),
 					<span class="prelude-val">Err</span>(err) =&gt; {
 						<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Failed to initialize mDNS: {:?}&quot;</span>, err);
@@ -1393,7 +1393,7 @@
 	/// it&#39;s always enabled in `NetworkWorker::new()`.
 	</span>kademlia: Toggle&lt;Kademlia&lt;MemoryStore&gt;&gt;,
 	<span class="doccomment">/// Discovers nodes on the local network.
-	</span>mdns: <span class="prelude-ty">Option</span>&lt;Mdns&gt;,
+	</span>mdns: <span class="prelude-ty">Option</span>&lt;TokioMdns&gt;,
 	<span class="doccomment">/// Stream that fires when we need to perform the next random Kademlia query. `None` if
 	/// random walking is disabled.
 	</span>next_kad_random_query: <span class="prelude-ty">Option</span>&lt;Delay&gt;,

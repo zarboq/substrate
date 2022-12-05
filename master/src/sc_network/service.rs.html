@@ -2416,15 +2416,15 @@
 				.notify_handler_buffer_size(NonZeroUsize::new(<span class="number">32</span>).expect(<span class="string">&quot;32 != 0; qed&quot;</span>))
 				.connection_event_buffer_size(<span class="number">1024</span>)
 				.max_negotiating_inbound_streams(<span class="number">2048</span>);
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(spawner) = params.executor {
-				<span class="kw">struct </span>SpawnImpl&lt;F&gt;(F);
-				<span class="kw">impl</span>&lt;F: Fn(Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;)&gt; Executor <span class="kw">for </span>SpawnImpl&lt;F&gt; {
-					<span class="kw">fn </span>exec(<span class="kw-2">&amp;</span><span class="self">self</span>, f: Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;) {
-						(<span class="self">self</span>.<span class="number">0</span>)(f)
-					}
+
+			<span class="kw">struct </span>SpawnImpl&lt;F&gt;(F);
+			<span class="kw">impl</span>&lt;F: Fn(Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;)&gt; Executor <span class="kw">for </span>SpawnImpl&lt;F&gt; {
+				<span class="kw">fn </span>exec(<span class="kw-2">&amp;</span><span class="self">self</span>, f: Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;) {
+					(<span class="self">self</span>.<span class="number">0</span>)(f)
 				}
-				builder = builder.executor(Box::new(SpawnImpl(spawner)));
 			}
+			builder = builder.executor(Box::new(SpawnImpl(params.executor)));
+
 			(builder.build(), bandwidth)
 		};
 

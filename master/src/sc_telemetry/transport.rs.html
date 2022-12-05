@@ -147,7 +147,6 @@
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -167,7 +166,6 @@
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
 </span><span class="kw">use </span>futures::{
-	executor::block_on,
 	prelude::<span class="kw-2">*</span>,
 	ready,
 	task::{Context, Poll},
@@ -181,8 +179,8 @@
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>initialize_transport() -&gt; <span class="prelude-ty">Result</span>&lt;WsTrans, io::Error&gt; {
 	<span class="kw">let </span>transport = {
-		<span class="kw">let </span>tcp_transport = libp2p::tcp::TcpTransport::new(libp2p::tcp::GenTcpConfig::new());
-		<span class="kw">let </span>inner = block_on(libp2p::dns::DnsConfig::system(tcp_transport))<span class="question-mark">?</span>;
+		<span class="kw">let </span>tcp_transport = libp2p::tcp::TokioTcpTransport::new(libp2p::tcp::GenTcpConfig::new());
+		<span class="kw">let </span>inner = libp2p::dns::TokioDnsConfig::system(tcp_transport)<span class="question-mark">?</span>;
 		libp2p::websocket::framed::WsConfig::new(inner).and_then(|connec, <span class="kw">_</span>| {
 			<span class="kw">let </span>connec = connec
 				.with(|item| {

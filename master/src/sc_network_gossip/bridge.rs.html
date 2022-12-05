@@ -762,6 +762,7 @@
 <a href="#762" id="762">762</a>
 <a href="#763" id="763">763</a>
 <a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1072,7 +1073,6 @@
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use crate</span>::{multiaddr::Multiaddr, ValidationResult, ValidatorContext};
-	<span class="kw">use </span>async_std::task::spawn;
 	<span class="kw">use </span>futures::{
 		channel::mpsc::{unbounded, UnboundedSender},
 		executor::{block_on, block_on_stream},
@@ -1254,8 +1254,8 @@
 		}))
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>keeps_multiple_subscribers_per_topic_updated_with_both_old_and_new_messages() {
+	<span class="attr">#[tokio::test(flavor = <span class="string">&quot;multi_thread&quot;</span>)]
+	</span><span class="kw">async fn </span>keeps_multiple_subscribers_per_topic_updated_with_both_old_and_new_messages() {
 		<span class="kw">let </span>topic = H256::default();
 		<span class="kw">let </span>protocol = ProtocolName::from(<span class="string">&quot;/my_protocol&quot;</span>);
 		<span class="kw">let </span>remote_peer = PeerId::random();
@@ -1305,9 +1305,11 @@
 			.start_send(events[<span class="number">1</span>].clone())
 			.expect(<span class="string">&quot;Event stream is unbounded; qed.&quot;</span>);
 
-		spawn(gossip_engine);
+		tokio::spawn(gossip_engine);
 
-		<span class="kw">let </span><span class="kw-2">mut </span>subscribers =
+		<span class="comment">// Note: `block_on_stream()`-derived iterator will block the current thread,
+		//       so we need a `multi_thread` `tokio::test` runtime flavor.
+		</span><span class="kw">let </span><span class="kw-2">mut </span>subscribers =
 			subscribers.into_iter().map(|s| block_on_stream(s)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
 		<span class="comment">// Expect each subscriber to receive both events.

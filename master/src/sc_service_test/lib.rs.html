@@ -564,6 +564,13 @@
 <a href="#564" id="564">564</a>
 <a href="#565" id="565">565</a>
 <a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -868,48 +875,55 @@
 		full: <span class="kw">impl </span>Iterator&lt;Item = <span class="kw">impl </span>FnOnce(Configuration) -&gt; <span class="prelude-ty">Result</span>&lt;(F, U), Error&gt;&gt;,
 		authorities: <span class="kw">impl </span>Iterator&lt;Item = (String, <span class="kw">impl </span>FnOnce(Configuration) -&gt; <span class="prelude-ty">Result</span>&lt;(F, U), Error&gt;)&gt;,
 	) {
-		<span class="kw">let </span>handle = <span class="self">self</span>.runtime.handle().clone();
+		<span class="self">self</span>.runtime.block_on(<span class="kw">async </span>{
+			<span class="kw">let </span>handle = <span class="self">self</span>.runtime.handle().clone();
 
-		<span class="kw">for </span>(key, authority) <span class="kw">in </span>authorities {
-			<span class="kw">let </span>node_config = node_config(
-				<span class="self">self</span>.nodes,
-				<span class="kw-2">&amp;</span><span class="self">self</span>.chain_spec,
-				Role::Authority,
-				handle.clone(),
-				<span class="prelude-val">Some</span>(key),
-				<span class="self">self</span>.base_port,
-				temp,
-			);
-			<span class="kw">let </span>addr = node_config.network.listen_addresses.first().unwrap().clone();
-			<span class="kw">let </span>(service, user_data) =
-				authority(node_config).expect(<span class="string">&quot;Error creating test node service&quot;</span>);
+			<span class="kw">for </span>(key, authority) <span class="kw">in </span>authorities {
+				<span class="kw">let </span>node_config = node_config(
+					<span class="self">self</span>.nodes,
+					<span class="kw-2">&amp;</span><span class="self">self</span>.chain_spec,
+					Role::Authority,
+					handle.clone(),
+					<span class="prelude-val">Some</span>(key),
+					<span class="self">self</span>.base_port,
+					temp,
+				);
+				<span class="kw">let </span>addr = node_config.network.listen_addresses.first().unwrap().clone();
+				<span class="kw">let </span>(service, user_data) =
+					authority(node_config).expect(<span class="string">&quot;Error creating test node service&quot;</span>);
 
-			handle.spawn(service.clone().map_err(|<span class="kw">_</span>| ()));
-			<span class="kw">let </span>addr =
-				MultiaddrWithPeerId { multiaddr: addr, peer_id: service.network().local_peer_id() };
-			<span class="self">self</span>.authority_nodes.push((<span class="self">self</span>.nodes, service, user_data, addr));
-			<span class="self">self</span>.nodes += <span class="number">1</span>;
-		}
+				handle.spawn(service.clone().map_err(|<span class="kw">_</span>| ()));
+				<span class="kw">let </span>addr = MultiaddrWithPeerId {
+					multiaddr: addr,
+					peer_id: service.network().local_peer_id(),
+				};
+				<span class="self">self</span>.authority_nodes.push((<span class="self">self</span>.nodes, service, user_data, addr));
+				<span class="self">self</span>.nodes += <span class="number">1</span>;
+			}
 
-		<span class="kw">for </span>full <span class="kw">in </span>full {
-			<span class="kw">let </span>node_config = node_config(
-				<span class="self">self</span>.nodes,
-				<span class="kw-2">&amp;</span><span class="self">self</span>.chain_spec,
-				Role::Full,
-				handle.clone(),
-				<span class="prelude-val">None</span>,
-				<span class="self">self</span>.base_port,
-				temp,
-			);
-			<span class="kw">let </span>addr = node_config.network.listen_addresses.first().unwrap().clone();
-			<span class="kw">let </span>(service, user_data) = full(node_config).expect(<span class="string">&quot;Error creating test node service&quot;</span>);
+			<span class="kw">for </span>full <span class="kw">in </span>full {
+				<span class="kw">let </span>node_config = node_config(
+					<span class="self">self</span>.nodes,
+					<span class="kw-2">&amp;</span><span class="self">self</span>.chain_spec,
+					Role::Full,
+					handle.clone(),
+					<span class="prelude-val">None</span>,
+					<span class="self">self</span>.base_port,
+					temp,
+				);
+				<span class="kw">let </span>addr = node_config.network.listen_addresses.first().unwrap().clone();
+				<span class="kw">let </span>(service, user_data) =
+					full(node_config).expect(<span class="string">&quot;Error creating test node service&quot;</span>);
 
-			handle.spawn(service.clone().map_err(|<span class="kw">_</span>| ()));
-			<span class="kw">let </span>addr =
-				MultiaddrWithPeerId { multiaddr: addr, peer_id: service.network().local_peer_id() };
-			<span class="self">self</span>.full_nodes.push((<span class="self">self</span>.nodes, service, user_data, addr));
-			<span class="self">self</span>.nodes += <span class="number">1</span>;
-		}
+				handle.spawn(service.clone().map_err(|<span class="kw">_</span>| ()));
+				<span class="kw">let </span>addr = MultiaddrWithPeerId {
+					multiaddr: addr,
+					peer_id: service.network().local_peer_id(),
+				};
+				<span class="self">self</span>.full_nodes.push((<span class="self">self</span>.nodes, service, user_data, addr));
+				<span class="self">self</span>.nodes += <span class="number">1</span>;
+			}
+		});
 	}
 }
 
