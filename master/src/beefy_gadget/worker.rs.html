@@ -1497,6 +1497,30 @@
 <a href="#1497" id="1497">1497</a>
 <a href="#1498" id="1498">1498</a>
 <a href="#1499" id="1499">1499</a>
+<a href="#1500" id="1500">1500</a>
+<a href="#1501" id="1501">1501</a>
+<a href="#1502" id="1502">1502</a>
+<a href="#1503" id="1503">1503</a>
+<a href="#1504" id="1504">1504</a>
+<a href="#1505" id="1505">1505</a>
+<a href="#1506" id="1506">1506</a>
+<a href="#1507" id="1507">1507</a>
+<a href="#1508" id="1508">1508</a>
+<a href="#1509" id="1509">1509</a>
+<a href="#1510" id="1510">1510</a>
+<a href="#1511" id="1511">1511</a>
+<a href="#1512" id="1512">1512</a>
+<a href="#1513" id="1513">1513</a>
+<a href="#1514" id="1514">1514</a>
+<a href="#1515" id="1515">1515</a>
+<a href="#1516" id="1516">1516</a>
+<a href="#1517" id="1517">1517</a>
+<a href="#1518" id="1518">1518</a>
+<a href="#1519" id="1519">1519</a>
+<a href="#1520" id="1520">1520</a>
+<a href="#1521" id="1521">1521</a>
+<a href="#1522" id="1522">1522</a>
+<a href="#1523" id="1523">1523</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -1545,8 +1569,8 @@
 <span class="kw">use </span>sp_consensus::SyncOracle;
 <span class="kw">use </span>sp_runtime::{
 	generic::OpaqueDigestItemId,
-	traits::{Block, Header, NumberFor, Zero},
-	SaturatedConversion,
+	traits::{Block, ConstU32, Header, NumberFor, Zero},
+	BoundedVec, SaturatedConversion,
 };
 <span class="kw">use </span>std::{
 	collections::{BTreeMap, BTreeSet, VecDeque},
@@ -1554,6 +1578,13 @@
 	marker::PhantomData,
 	sync::Arc,
 };
+<span class="doccomment">/// Bound for the number of buffered future voting rounds.
+</span><span class="kw">const </span>MAX_BUFFERED_VOTE_ROUNDS: usize = <span class="number">600</span>;
+<span class="doccomment">/// Bound for the number of buffered votes per round number.
+</span><span class="kw">const </span>MAX_BUFFERED_VOTES_PER_ROUND: u32 = <span class="number">1000</span>;
+<span class="doccomment">/// Bound for the number of pending justifications - use 2400 - the max number
+/// of justifications possible in a single session.
+</span><span class="kw">const </span>MAX_BUFFERED_JUSTIFICATIONS: usize = <span class="number">2400</span>;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>RoundAction {
 	Drop,
@@ -1805,7 +1836,13 @@
 	</span><span class="doccomment">/// BEEFY client metrics.
 	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 	<span class="doccomment">/// Buffer holding votes for future processing.
-	</span>pending_votes: BTreeMap&lt;NumberFor&lt;B&gt;, Vec&lt;VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;&gt;&gt;,
+	</span>pending_votes: BTreeMap&lt;
+		NumberFor&lt;B&gt;,
+		BoundedVec&lt;
+			VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;,
+			ConstU32&lt;MAX_BUFFERED_VOTES_PER_ROUND&gt;,
+		&gt;,
+	&gt;,
 	<span class="doccomment">/// Buffer holding justifications for future processing.
 	</span>pending_justifications: BTreeMap&lt;NumberFor&lt;B&gt;, BeefyVersionedFinalityProof&lt;B&gt;&gt;,
 	<span class="doccomment">/// Persisted voter state.
@@ -1978,7 +2015,14 @@
 			)<span class="question-mark">?</span>,
 			RoundAction::Enqueue =&gt; {
 				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer vote for round: {:?}.&quot;</span>, block_num);
-				<span class="self">self</span>.pending_votes.entry(block_num).or_default().push(vote)
+				<span class="kw">if </span><span class="self">self</span>.pending_votes.len() &lt; MAX_BUFFERED_VOTE_ROUNDS {
+					<span class="kw">let </span>votes_vec = <span class="self">self</span>.pending_votes.entry(block_num).or_default();
+					<span class="kw">if </span>votes_vec.try_push(vote).is_err() {
+						<span class="macro">warn!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer vote dropped for round: {:?}&quot;</span>, block_num)
+					}
+				} <span class="kw">else </span>{
+					<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer justification dropped for round: {:?}.&quot;</span>, block_num);
+				}
 			},
 			RoundAction::Drop =&gt; (),
 		};
@@ -2004,7 +2048,11 @@
 			</span>},
 			RoundAction::Enqueue =&gt; {
 				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer justification for round: {:?}.&quot;</span>, block_num);
-				<span class="self">self</span>.pending_justifications.entry(block_num).or_insert(justification);
+				<span class="kw">if </span><span class="self">self</span>.pending_justifications.len() &lt; MAX_BUFFERED_JUSTIFICATIONS {
+					<span class="self">self</span>.pending_justifications.entry(block_num).or_insert(justification);
+				} <span class="kw">else </span>{
+					<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer justification dropped for round: {:?}.&quot;</span>, block_num);
+				}
 			},
 			RoundAction::Drop =&gt; (),
 		};
