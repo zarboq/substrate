@@ -2199,25 +2199,6 @@
 <a href="#2199" id="2199">2199</a>
 <a href="#2200" id="2200">2200</a>
 <a href="#2201" id="2201">2201</a>
-<a href="#2202" id="2202">2202</a>
-<a href="#2203" id="2203">2203</a>
-<a href="#2204" id="2204">2204</a>
-<a href="#2205" id="2205">2205</a>
-<a href="#2206" id="2206">2206</a>
-<a href="#2207" id="2207">2207</a>
-<a href="#2208" id="2208">2208</a>
-<a href="#2209" id="2209">2209</a>
-<a href="#2210" id="2210">2210</a>
-<a href="#2211" id="2211">2211</a>
-<a href="#2212" id="2212">2212</a>
-<a href="#2213" id="2213">2213</a>
-<a href="#2214" id="2214">2214</a>
-<a href="#2215" id="2215">2215</a>
-<a href="#2216" id="2216">2216</a>
-<a href="#2217" id="2217">2217</a>
-<a href="#2218" id="2218">2218</a>
-<a href="#2219" id="2219">2219</a>
-<a href="#2220" id="2220">2220</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2466,8 +2447,13 @@
 		</span><span class="kw">type </span>ReserveIdentifier: Parameter + Member + MaxEncodedLen + Ord + Copy;
 	}
 
+	<span class="doccomment">/// The current storage version.
+	</span><span class="kw">const </span>STORAGE_VERSION: frame_support::traits::StorageVersion =
+		frame_support::traits::StorageVersion::new(<span class="number">1</span>);
+
 	<span class="attr">#[pallet::pallet]
 	#[pallet::generate_store(<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">trait </span>Store)]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	</span><span class="kw">pub struct </span>Pallet&lt;T, I = ()&gt;(PhantomData&lt;(T, I)&gt;);
 
 	<span class="attr">#[pallet::call]
@@ -2776,13 +2762,6 @@
 		ValueQuery,
 	&gt;;
 
-	<span class="doccomment">/// Storage version of the pallet.
-	///
-	/// This is set to v2.0.0 for new networks.
-	</span><span class="attr">#[pallet::storage]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>StorageVersion&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; =
-		StorageValue&lt;<span class="kw">_</span>, Releases, ValueQuery&gt;;
-
 	<span class="attr">#[pallet::genesis_config]
 	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; {
 		<span class="kw">pub </span>balances: Vec&lt;(T::AccountId, T::Balance)&gt;,
@@ -2800,8 +2779,6 @@
 		<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {
 			<span class="kw">let </span>total = <span class="self">self</span>.balances.iter().fold(Zero::zero(), |acc: T::Balance, <span class="kw-2">&amp;</span>(<span class="kw">_</span>, n)| acc + n);
 			&lt;TotalIssuance&lt;T, I&gt;&gt;::put(total);
-
-			&lt;StorageVersion&lt;T, I&gt;&gt;::put(Releases::V2_0_0);
 
 			<span class="kw">for </span>(<span class="kw">_</span>, balance) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.balances {
 				<span class="macro">assert!</span>(
@@ -2944,21 +2921,6 @@
 	<span class="doccomment">/// The total balance in this account including any that is reserved and ignoring any frozen.
 	</span><span class="kw">fn </span>total(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Balance {
 		<span class="self">self</span>.free.saturating_add(<span class="self">self</span>.reserved)
-	}
-}
-
-<span class="comment">// A value placed in storage that represents the current version of the Balances storage.
-// This value is used by the `on_runtime_upgrade` logic to determine whether we run
-// storage migration logic. This should match directly with the semantic versions of the Rust crate.
-</span><span class="attr">#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-</span><span class="kw">enum </span>Releases {
-	V1_0_0,
-	V2_0_0,
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>Releases {
-	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-		Releases::V1_0_0
 	}
 }
 

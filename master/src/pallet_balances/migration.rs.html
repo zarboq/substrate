@@ -62,6 +62,13 @@
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright 2017-2020 Parity Technologies (UK) Ltd.
 // This file is part of Polkadot.
 
@@ -79,51 +86,58 @@
 // along with Polkadot.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
-<span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, traits::OnRuntimeUpgrade, weights::Weight};
+<span class="kw">use </span>frame_support::{
+	pallet_prelude::<span class="kw-2">*</span>,
+	traits::{OnRuntimeUpgrade, PalletInfoAccess},
+	weights::Weight,
+};
 
-<span class="comment">// NOTE: This must be used alongside the account whose balance is expected to be inactive.
-// Generally this will be used for the XCM teleport checking account.
-</span><span class="kw">pub struct </span>MigrateToTrackInactive&lt;T, A&gt;(PhantomData&lt;(T, A)&gt;);
-<span class="kw">impl</span>&lt;T: Config, A: Get&lt;T::AccountId&gt;&gt; OnRuntimeUpgrade <span class="kw">for </span>MigrateToTrackInactive&lt;T, A&gt; {
-	<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight {
-		<span class="kw">let </span>current_version = Pallet::&lt;T&gt;::current_storage_version();
-		<span class="kw">let </span>onchain_version = Pallet::&lt;T&gt;::on_chain_storage_version();
+<span class="kw">fn </span>migrate_v0_to_v1&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt;(accounts: <span class="kw-2">&amp;</span>[T::AccountId]) -&gt; Weight {
+	<span class="kw">let </span>onchain_version = Pallet::&lt;T, I&gt;::on_chain_storage_version();
 
-		<span class="kw">if </span>onchain_version == <span class="number">0 </span>&amp;&amp; current_version == <span class="number">1 </span>{
-			<span class="kw">let </span>b = Pallet::&lt;T&gt;::total_balance(<span class="kw-2">&amp;</span>A::get());
-			Pallet::&lt;T&gt;::deactivate(b);
-			current_version.put::&lt;Pallet&lt;T&gt;&gt;();
-			<span class="macro">log::info!</span>(target: <span class="string">&quot;runtime::balances&quot;</span>, <span class="string">&quot;Storage to version {:?}&quot;</span>, current_version);
-			T::DbWeight::get().reads_writes(<span class="number">4</span>, <span class="number">3</span>)
-		} <span class="kw">else </span>{
-			<span class="macro">log::info!</span>(target: <span class="string">&quot;runtime::balances&quot;</span>,  <span class="string">&quot;Migration did not execute. This probably should be removed&quot;</span>);
-			T::DbWeight::get().reads(<span class="number">2</span>)
-		}
+	<span class="kw">if </span>onchain_version == <span class="number">0 </span>{
+		<span class="kw">let </span>total = accounts
+			.iter()
+			.map(|a| Pallet::&lt;T, I&gt;::total_balance(a))
+			.fold(T::Balance::zero(), |a, e| a.saturating_add(e));
+		Pallet::&lt;T, I&gt;::deactivate(total);
+
+		<span class="comment">// Remove the old `StorageVersion` type.
+		</span>frame_support::storage::unhashed::kill(<span class="kw-2">&amp;</span>frame_support::storage::storage_prefix(
+			Pallet::&lt;T, I&gt;::name().as_bytes(),
+			<span class="string">&quot;StorageVersion&quot;</span>.as_bytes(),
+		));
+
+		<span class="comment">// Set storage version to `1`.
+		</span>StorageVersion::new(<span class="number">1</span>).put::&lt;Pallet&lt;T, I&gt;&gt;();
+
+		<span class="macro">log::info!</span>(target: <span class="string">&quot;runtime::balances&quot;</span>, <span class="string">&quot;Storage to version 1&quot;</span>);
+		T::DbWeight::get().reads_writes(<span class="number">2 </span>+ accounts.len() <span class="kw">as </span>u64, <span class="number">3</span>)
+	} <span class="kw">else </span>{
+		<span class="macro">log::info!</span>(target: <span class="string">&quot;runtime::balances&quot;</span>,  <span class="string">&quot;Migration did not execute. This probably should be removed&quot;</span>);
+		T::DbWeight::get().reads(<span class="number">1</span>)
 	}
 }
 
 <span class="comment">// NOTE: This must be used alongside the account whose balance is expected to be inactive.
 // Generally this will be used for the XCM teleport checking account.
-</span><span class="kw">pub struct </span>MigrateManyToTrackInactive&lt;T, A&gt;(PhantomData&lt;(T, A)&gt;);
-<span class="kw">impl</span>&lt;T: Config, A: Get&lt;Vec&lt;T::AccountId&gt;&gt;&gt; OnRuntimeUpgrade <span class="kw">for </span>MigrateManyToTrackInactive&lt;T, A&gt; {
+</span><span class="kw">pub struct </span>MigrateToTrackInactive&lt;T, A, I = ()&gt;(PhantomData&lt;(T, A, I)&gt;);
+<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, A: Get&lt;T::AccountId&gt;, I: <span class="lifetime">&#39;static</span>&gt; OnRuntimeUpgrade
+	<span class="kw">for </span>MigrateToTrackInactive&lt;T, A, I&gt;
+{
 	<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight {
-		<span class="kw">let </span>current_version = Pallet::&lt;T&gt;::current_storage_version();
-		<span class="kw">let </span>onchain_version = Pallet::&lt;T&gt;::on_chain_storage_version();
+		migrate_v0_to_v1::&lt;T, I&gt;(<span class="kw-2">&amp;</span>[A::get()])
+	}
+}
 
-		<span class="kw">if </span>onchain_version == <span class="number">0 </span>&amp;&amp; current_version == <span class="number">1 </span>{
-			<span class="kw">let </span>accounts = A::get();
-			<span class="kw">let </span>total = accounts
-				.iter()
-				.map(|a| Pallet::&lt;T&gt;::total_balance(a))
-				.fold(T::Balance::zero(), |a, e| a.saturating_add(e));
-			Pallet::&lt;T&gt;::deactivate(total);
-			current_version.put::&lt;Pallet&lt;T&gt;&gt;();
-			<span class="macro">log::info!</span>(target: <span class="string">&quot;runtime::balances&quot;</span>, <span class="string">&quot;Storage to version {:?}&quot;</span>, current_version);
-			T::DbWeight::get().reads_writes(<span class="number">3 </span>+ accounts.len() <span class="kw">as </span>u64, <span class="number">3</span>)
-		} <span class="kw">else </span>{
-			<span class="macro">log::info!</span>(target: <span class="string">&quot;runtime::balances&quot;</span>,  <span class="string">&quot;Migration did not execute. This probably should be removed&quot;</span>);
-			T::DbWeight::get().reads(<span class="number">2</span>)
-		}
+<span class="comment">// NOTE: This must be used alongside the accounts whose balance is expected to be inactive.
+// Generally this will be used for the XCM teleport checking accounts.
+</span><span class="kw">pub struct </span>MigrateManyToTrackInactive&lt;T, A, I = ()&gt;(PhantomData&lt;(T, A, I)&gt;);
+<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, A: Get&lt;Vec&lt;T::AccountId&gt;&gt;, I: <span class="lifetime">&#39;static</span>&gt; OnRuntimeUpgrade
+	<span class="kw">for </span>MigrateManyToTrackInactive&lt;T, A, I&gt;
+{
+	<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight {
+		migrate_v0_to_v1::&lt;T, I&gt;(<span class="kw-2">&amp;</span>A::get())
 	}
 }
 </code></pre></div>
