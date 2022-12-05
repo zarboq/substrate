@@ -2291,6 +2291,17 @@
 <a href="#2291" id="2291">2291</a>
 <a href="#2292" id="2292">2292</a>
 <a href="#2293" id="2293">2293</a>
+<a href="#2294" id="2294">2294</a>
+<a href="#2295" id="2295">2295</a>
+<a href="#2296" id="2296">2296</a>
+<a href="#2297" id="2297">2297</a>
+<a href="#2298" id="2298">2298</a>
+<a href="#2299" id="2299">2299</a>
+<a href="#2300" id="2300">2300</a>
+<a href="#2301" id="2301">2301</a>
+<a href="#2302" id="2302">2302</a>
+<a href="#2303" id="2303">2303</a>
+<a href="#2304" id="2304">2304</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2325,9 +2336,10 @@
 	pallet_prelude::Get,
 	parameter_types,
 	traits::{
-		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU16, ConstU32, Currency, EitherOfDiverse,
-		EqualPrivilegeOnly, Everything, Imbalance, InstanceFilter, KeyOwnerProofSystem,
-		LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote, WithdrawReasons,
+		fungible::ItemOf, AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU16, ConstU32,
+		Currency, EitherOfDiverse, EqualPrivilegeOnly, Everything, Imbalance, InstanceFilter,
+		KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
+		WithdrawReasons,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -2346,6 +2358,7 @@
 	fg_primitives, AuthorityId <span class="kw">as </span>GrandpaId, AuthorityList <span class="kw">as </span>GrandpaAuthorityList,
 };
 <span class="kw">use </span>pallet_im_online::sr25519::AuthorityId <span class="kw">as </span>ImOnlineId;
+<span class="kw">use </span>pallet_nis::WithMaximumOf;
 <span class="kw">use </span>pallet_session::historical::{<span class="self">self </span><span class="kw">as </span>pallet_session_historical};
 <span class="kw">pub use </span>pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdjustment};
 <span class="kw">use </span>pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
@@ -3757,28 +3770,37 @@
 	<span class="kw">pub const </span>QueueCount: u32 = <span class="number">300</span>;
 	<span class="kw">pub const </span>MaxQueueLen: u32 = <span class="number">1000</span>;
 	<span class="kw">pub const </span>FifoQueueLen: u32 = <span class="number">500</span>;
-	<span class="kw">pub const </span>Period: BlockNumber = <span class="number">30 </span>* DAYS;
-	<span class="kw">pub const </span>MinFreeze: Balance = <span class="number">100 </span>* DOLLARS;
+	<span class="kw">pub const </span>NisBasePeriod: BlockNumber = <span class="number">30 </span>* DAYS;
+	<span class="kw">pub const </span>MinBid: Balance = <span class="number">100 </span>* DOLLARS;
+	<span class="kw">pub const </span>MinReceipt: Perquintill = Perquintill::from_percent(<span class="number">1</span>);
 	<span class="kw">pub const </span>IntakePeriod: BlockNumber = <span class="number">10</span>;
-	<span class="kw">pub const </span>MaxIntakeBids: u32 = <span class="number">10</span>;
+	<span class="kw">pub </span>MaxIntakeWeight: Weight = MAXIMUM_BLOCK_WEIGHT / <span class="number">10</span>;
+	<span class="kw">pub const </span>ThawThrottle: (Perquintill, BlockNumber) = (Perquintill::from_percent(<span class="number">25</span>), <span class="number">5</span>);
+	<span class="kw">pub </span>Target: Perquintill = Perquintill::zero();
+	<span class="kw">pub const </span>NisPalletId: PalletId = PalletId(<span class="kw-2">*</span><span class="string">b&quot;py/nis  &quot;</span>);
 }
 
-<span class="kw">impl </span>pallet_gilt::Config <span class="kw">for </span>Runtime {
+<span class="kw">impl </span>pallet_nis::Config <span class="kw">for </span>Runtime {
+	<span class="kw">type </span>WeightInfo = pallet_nis::weights::SubstrateWeight&lt;Runtime&gt;;
 	<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
 	<span class="kw">type </span>Currency = Balances;
 	<span class="kw">type </span>CurrencyBalance = Balance;
-	<span class="kw">type </span>AdminOrigin = frame_system::EnsureRoot&lt;AccountId&gt;;
+	<span class="kw">type </span>FundOrigin = frame_system::EnsureSigned&lt;AccountId&gt;;
+	<span class="kw">type </span>Counterpart = ItemOf&lt;Assets, ConstU32&lt;<span class="number">9u32</span>&gt;, AccountId&gt;;
+	<span class="kw">type </span>CounterpartAmount = WithMaximumOf&lt;ConstU128&lt;<span class="number">21_000_000_000_000_000_000u128</span>&gt;&gt;;
 	<span class="kw">type </span>Deficit = ();
-	<span class="kw">type </span>Surplus = ();
 	<span class="kw">type </span>IgnoredIssuance = IgnoredIssuance;
+	<span class="kw">type </span>Target = Target;
+	<span class="kw">type </span>PalletId = NisPalletId;
 	<span class="kw">type </span>QueueCount = QueueCount;
 	<span class="kw">type </span>MaxQueueLen = MaxQueueLen;
 	<span class="kw">type </span>FifoQueueLen = FifoQueueLen;
-	<span class="kw">type </span>Period = Period;
-	<span class="kw">type </span>MinFreeze = MinFreeze;
+	<span class="kw">type </span>BasePeriod = NisBasePeriod;
+	<span class="kw">type </span>MinBid = MinBid;
+	<span class="kw">type </span>MinReceipt = MinReceipt;
 	<span class="kw">type </span>IntakePeriod = IntakePeriod;
-	<span class="kw">type </span>MaxIntakeBids = MaxIntakeBids;
-	<span class="kw">type </span>WeightInfo = pallet_gilt::weights::SubstrateWeight&lt;Runtime&gt;;
+	<span class="kw">type </span>MaxIntakeWeight = MaxIntakeWeight;
+	<span class="kw">type </span>ThawThrottle = ThawThrottle;
 }
 
 <span class="macro">parameter_types! </span>{
@@ -3961,7 +3983,7 @@
 		Assets: pallet_assets,
 		Mmr: pallet_mmr,
 		Lottery: pallet_lottery,
-		Gilt: pallet_gilt,
+		Nis: pallet_nis,
 		Uniques: pallet_uniques,
 		TransactionStorage: pallet_transaction_storage,
 		VoterList: pallet_bags_list::&lt;Instance1&gt;,
@@ -4065,7 +4087,7 @@
 		[pallet_election_provider_support_benchmarking, EPSBench::&lt;Runtime&gt;]
 		[pallet_elections_phragmen, Elections]
 		[pallet_fast_unstake, FastUnstake]
-		[pallet_gilt, Gilt]
+		[pallet_nis, Nis]
 		[pallet_grandpa, Grandpa]
 		[pallet_identity, Identity]
 		[pallet_im_online, ImOnline]
