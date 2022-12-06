@@ -2615,6 +2615,19 @@
 <a href="#2615" id="2615">2615</a>
 <a href="#2616" id="2616">2616</a>
 <a href="#2617" id="2617">2617</a>
+<a href="#2618" id="2618">2618</a>
+<a href="#2619" id="2619">2619</a>
+<a href="#2620" id="2620">2620</a>
+<a href="#2621" id="2621">2621</a>
+<a href="#2622" id="2622">2622</a>
+<a href="#2623" id="2623">2623</a>
+<a href="#2624" id="2624">2624</a>
+<a href="#2625" id="2625">2625</a>
+<a href="#2626" id="2626">2626</a>
+<a href="#2627" id="2627">2627</a>
+<a href="#2628" id="2628">2628</a>
+<a href="#2629" id="2629">2629</a>
+<a href="#2630" id="2630">2630</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2882,6 +2895,8 @@
 	</span>ReentrantCount,
 	<span class="doccomment">/// Weight of calling `account_reentrance_count`
 	</span>AccountEntranceCount,
+	<span class="doccomment">/// Weight of calling `instantiation_nonce`
+	</span>InstantationNonce,
 }
 
 <span class="kw">impl </span>RuntimeCosts {
@@ -2961,6 +2976,7 @@
 			EcdsaToEthAddress =&gt; s.ecdsa_to_eth_address,
 			ReentrantCount =&gt; s.reentrance_count,
 			AccountEntranceCount =&gt; s.account_reentrance_count,
+			InstantationNonce =&gt; s.instantiation_nonce,
 		};
 		RuntimeToken {
 			<span class="attr">#[cfg(test)]
@@ -5230,6 +5246,16 @@
 		<span class="kw">let </span>account_id: &lt;&lt;E <span class="kw">as </span>Ext&gt;::T <span class="kw">as </span>frame_system::Config&gt;::AccountId =
 			ctx.read_sandbox_memory_as(memory, account_ptr)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(ctx.ext.account_reentrance_count(<span class="kw-2">&amp;</span>account_id))
+	}
+
+	<span class="doccomment">/// Returns a nonce that is unique per contract instantiation.
+	///
+	/// The nonce is incremented for each succesful contract instantiation. This is a
+	/// sensible default salt for contract instantiations.
+	</span><span class="attr">#[unstable]
+	</span><span class="kw">fn </span>instantiation_nonce(ctx: <span class="kw">_</span>, _memory: <span class="kw">_</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u64, TrapReason&gt; {
+		ctx.charge_gas(RuntimeCosts::InstantationNonce)<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(ctx.ext.nonce())
 	}
 }
 </code></pre></div>

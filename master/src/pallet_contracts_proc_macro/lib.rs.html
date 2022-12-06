@@ -594,6 +594,10 @@
 <a href="#594" id="594">594</a>
 <a href="#595" id="595">595</a>
 <a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -759,6 +763,7 @@
 <span class="kw">enum </span>HostFnReturn {
 	Unit,
 	U32,
+	U64,
 	ReturnCode,
 }
 
@@ -767,6 +772,7 @@
 		<span class="kw">let </span>ok = <span class="kw">match </span><span class="self">self </span>{
 			<span class="self">Self</span>::Unit =&gt; <span class="macro">quote! </span>{ () },
 			<span class="self">Self</span>::U32 | <span class="self">Self</span>::ReturnCode =&gt; <span class="macro">quote! </span>{ ::core::primitive::u32 },
+			<span class="self">Self</span>::U64 =&gt; <span class="macro">quote! </span>{ ::core::primitive::u64 },
 		};
 		<span class="macro">quote! </span>{
 			::core::result::Result&lt;#ok, ::wasmi::core::Trap&gt;
@@ -837,6 +843,7 @@
 		</span><span class="kw">let </span>msg = <span class="string">r#&quot;Should return one of the following:
 				- Result&lt;(), TrapReason&gt;,
 				- Result&lt;ReturnCode, TrapReason&gt;,
+				- Result&lt;u64, TrapReason&gt;,
 				- Result&lt;u32, TrapReason&gt;&quot;#</span>;
 		<span class="kw">let </span>ret_ty = <span class="kw">match </span>item.clone().sig.output {
 			syn::ReturnType::Type(<span class="kw">_</span>, ty) =&gt; <span class="prelude-val">Ok</span>(ty.clone()),
@@ -899,6 +906,7 @@
 						<span class="kw">let </span>returns = <span class="kw">match </span>ok_ty_str.as_str() {
 							<span class="string">&quot;()&quot; </span>=&gt; <span class="prelude-val">Ok</span>(HostFnReturn::Unit),
 							<span class="string">&quot;u32&quot; </span>=&gt; <span class="prelude-val">Ok</span>(HostFnReturn::U32),
+							<span class="string">&quot;u64&quot; </span>=&gt; <span class="prelude-val">Ok</span>(HostFnReturn::U64),
 							<span class="string">&quot;ReturnCode&quot; </span>=&gt; <span class="prelude-val">Ok</span>(HostFnReturn::ReturnCode),
 							<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err(arg1.span(), <span class="kw-2">&amp;</span>msg)),
 						}<span class="question-mark">?</span>;
