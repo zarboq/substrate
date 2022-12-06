@@ -3,7 +3,6 @@ var sourcesIndex = JSON.parse('{\
 "beefy_gadget":["",[["communication",[["request_response",[],["incoming_requests_handler.rs","mod.rs","outgoing_requests_engine.rs"]]],["gossip.rs","mod.rs","notification.rs","peers.rs"]]],["aux_schema.rs","error.rs","import.rs","justification.rs","keystore.rs","lib.rs","metrics.rs","round.rs","worker.rs"]],\
 "beefy_gadget_rpc":["",[],["lib.rs","notification.rs"]],\
 "beefy_merkle_tree":["",[],["lib.rs"]],\
-"beefy_primitives":["",[],["commitment.rs","lib.rs","mmr.rs","payload.rs","witness.rs"]],\
 "biguint":["",[],["biguint.rs"]],\
 "call":["",[],["call.rs"]],\
 "chain_spec_builder":["",[],["main.rs"]],\
@@ -15,6 +14,7 @@ var sourcesIndex = JSON.parse('{\
 "frame_election_provider_solution_type":["",[],["codec.rs","from_assignment_helpers.rs","index_assignment.rs","lib.rs","single_page.rs"]],\
 "frame_election_provider_support":["",[],["lib.rs","onchain.rs","traits.rs","weights.rs"]],\
 "frame_executive":["",[],["lib.rs"]],\
+"frame_remote_externalities":["",[],["lib.rs"]],\
 "frame_support":["",[["crypto",[],["ecdsa.rs"]],["storage",[["generator",[],["double_map.rs","map.rs","mod.rs","nmap.rs","value.rs"]],["types",[],["counted_map.rs","double_map.rs","key.rs","map.rs","mod.rs","nmap.rs","value.rs"]]],["bounded_btree_map.rs","bounded_btree_set.rs","bounded_vec.rs","child.rs","hashed.rs","migration.rs","mod.rs","storage_noop_guard.rs","transactional.rs","unhashed.rs","weak_bounded_vec.rs"]],["traits",[["tokens",[["currency",[],["lockable.rs","reservable.rs"]],["fungible",[],["balanced.rs","imbalance.rs"]],["fungibles",[],["approvals.rs","balanced.rs","enumerable.rs","imbalance.rs","metadata.rs","roles.rs"]],["imbalance",[],["on_unbalanced.rs","signed_imbalance.rs","split_two_ways.rs"]]],["currency.rs","fungible.rs","fungibles.rs","imbalance.rs","misc.rs","nonfungible.rs","nonfungibles.rs"]]],["dispatch.rs","error.rs","filter.rs","hooks.rs","members.rs","metadata.rs","misc.rs","preimages.rs","randomness.rs","schedule.rs","storage.rs","stored_map.rs","tokens.rs","try_runtime.rs","validation.rs","voting.rs"]],["weights",[],["block_weights.rs","extrinsic_weights.rs","paritydb_weights.rs","rocksdb_weights.rs"]]],["crypto.rs","dispatch.rs","error.rs","event.rs","hash.rs","inherent.rs","instances.rs","lib.rs","migrations.rs","traits.rs","weights.rs"]],\
 "frame_support_procedural":["",[["construct_runtime",[["expand",[],["call.rs","config.rs","event.rs","inherent.rs","metadata.rs","mod.rs","origin.rs","unsigned.rs"]]],["mod.rs","parse.rs"]],["pallet",[["expand",[],["call.rs","config.rs","constants.rs","error.rs","event.rs","genesis_build.rs","genesis_config.rs","hooks.rs","inherent.rs","instances.rs","mod.rs","origin.rs","pallet_struct.rs","storage.rs","store_trait.rs","tt_default_parts.rs","type_value.rs","validate_unsigned.rs"]],["parse",[],["call.rs","config.rs","error.rs","event.rs","extra_constants.rs","genesis_build.rs","genesis_config.rs","helper.rs","hooks.rs","inherent.rs","mod.rs","origin.rs","pallet_struct.rs","storage.rs","type_value.rs","validate_unsigned.rs"]]],["mod.rs"]],["storage",[["genesis_config",[],["builder_def.rs","genesis_config_def.rs","mod.rs"]]],["getters.rs","instance_trait.rs","metadata.rs","mod.rs","parse.rs","print_pallet_upgrade.rs","storage_info.rs","storage_struct.rs","store_trait.rs"]]],["clone_no_bound.rs","crate_version.rs","debug_no_bound.rs","default_no_bound.rs","dummy_part_checker.rs","key_prefix.rs","lib.rs","match_and_insert.rs","pallet_error.rs","partial_eq_no_bound.rs","storage_alias.rs","transactional.rs","tt_macro.rs"]],\
 "frame_support_procedural_tools":["",[],["lib.rs","syn_ext.rs"]],\
@@ -122,7 +122,6 @@ var sourcesIndex = JSON.parse('{\
 "phragmen_pjr":["",[],["common.rs","phragmen_pjr.rs"]],\
 "phragmms_balancing":["",[],["common.rs","phragmms_balancing.rs"]],\
 "reduce":["",[],["common.rs","reduce.rs"]],\
-"remote_externalities":["",[],["lib.rs"]],\
 "sc_allocator":["",[],["error.rs","freeing_bump.rs","lib.rs"]],\
 "sc_authority_discovery":["",[["worker",[],["addr_cache.rs"]]],["error.rs","interval.rs","lib.rs","service.rs","worker.rs"]],\
 "sc_basic_authorship":["",[],["basic_authorship.rs","lib.rs"]],\
@@ -183,6 +182,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_arithmetic":["",[],["biguint.rs","fixed_point.rs","helpers_128bit.rs","lib.rs","per_things.rs","rational.rs","traits.rs"]],\
 "sp_authority_discovery":["",[],["lib.rs"]],\
 "sp_authorship":["",[],["lib.rs"]],\
+"sp_beefy":["",[],["commitment.rs","lib.rs","mmr.rs","payload.rs","witness.rs"]],\
 "sp_block_builder":["",[],["lib.rs"]],\
 "sp_blockchain":["",[],["backend.rs","error.rs","header_metadata.rs","lib.rs"]],\
 "sp_consensus":["",[],["block_validation.rs","error.rs","lib.rs","select_chain.rs"]],\

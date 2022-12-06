@@ -1,4 +1,0 @@
-(function() {var implementors = {
-"beefy_primitives":[],
-"pallet_beefy_mmr":[["impl&lt;T&gt; <a class=\"trait\" href=\"beefy_primitives/trait.OnNewValidatorSet.html\" title=\"trait beefy_primitives::OnNewValidatorSet\">OnNewValidatorSet</a>&lt;&lt;T as Config&gt;::BeefyId&gt; for <a class=\"struct\" href=\"pallet_beefy_mmr/pallet/struct.Pallet.html\" title=\"struct pallet_beefy_mmr::pallet::Pallet\">Pallet</a>&lt;T&gt;<span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class=\"trait\" href=\"pallet_beefy_mmr/pallet/trait.Config.html\" title=\"trait pallet_beefy_mmr::pallet::Config\">Config</a>,</span>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
