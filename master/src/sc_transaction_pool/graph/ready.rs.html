@@ -791,25 +791,6 @@
 <a href="#791" id="791">791</a>
 <a href="#792" id="792">792</a>
 <a href="#793" id="793">793</a>
-<a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
-<a href="#796" id="796">796</a>
-<a href="#797" id="797">797</a>
-<a href="#798" id="798">798</a>
-<a href="#799" id="799">799</a>
-<a href="#800" id="800">800</a>
-<a href="#801" id="801">801</a>
-<a href="#802" id="802">802</a>
-<a href="#803" id="803">803</a>
-<a href="#804" id="804">804</a>
-<a href="#805" id="805">805</a>
-<a href="#806" id="806">806</a>
-<a href="#807" id="807">807</a>
-<a href="#808" id="808">808</a>
-<a href="#809" id="809">809</a>
-<a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -849,7 +830,7 @@
 <span class="doccomment">/// An in-pool transaction reference.
 ///
 /// Should be cheap to clone.
-</span><span class="attr">#[derive(Debug, parity_util_mem::MallocSizeOf)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>TransactionRef&lt;Hash, Ex&gt; {
 	<span class="doccomment">/// The actual transaction data.
 	</span><span class="kw">pub </span>transaction: Arc&lt;Transaction&lt;Hash, Ex&gt;&gt;,
@@ -886,7 +867,7 @@
 }
 <span class="kw">impl</span>&lt;Hash, Ex&gt; Eq <span class="kw">for </span>TransactionRef&lt;Hash, Ex&gt; {}
 
-<span class="attr">#[derive(Debug, parity_util_mem::MallocSizeOf)]
+<span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ReadyTx&lt;Hash, Ex&gt; {
 	<span class="doccomment">/// A reference to a transaction
 	</span><span class="kw">pub </span>transaction: TransactionRef&lt;Hash, Ex&gt;,
@@ -917,7 +898,7 @@ qed
 &quot;#</span>;
 
 <span class="doccomment">/// Validated transactions that are block ready with all their dependencies met.
-</span><span class="attr">#[derive(Debug, parity_util_mem::MallocSizeOf)]
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ReadyTransactions&lt;Hash: hash::Hash + Eq, Ex&gt; {
 	<span class="doccomment">/// Next free insertion id (used to indicate when a transaction was inserted into the pool).
 	</span>insertion_id: u64,
@@ -1552,25 +1533,6 @@ qed
 		<span class="macro">assert_eq!</span>(it.next(), <span class="prelude-val">Some</span>(<span class="number">6</span>));
 		<span class="macro">assert_eq!</span>(it.next(), <span class="prelude-val">Some</span>(<span class="number">7</span>));
 		<span class="macro">assert_eq!</span>(it.next(), <span class="prelude-val">None</span>);
-	}
-
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>can_report_heap_size() {
-		<span class="kw">let </span><span class="kw-2">mut </span>ready = ReadyTransactions::default();
-		<span class="kw">let </span>tx = Transaction {
-			data: <span class="macro">vec!</span>[<span class="number">5</span>],
-			bytes: <span class="number">1</span>,
-			hash: <span class="number">5</span>,
-			priority: <span class="number">1</span>,
-			valid_till: u64::MAX, <span class="comment">// use the max here for testing.
-			</span>requires: <span class="macro">vec!</span>[],
-			provides: <span class="macro">vec!</span>[],
-			propagate: <span class="bool-val">true</span>,
-			source: Source::External,
-		};
-		import(<span class="kw-2">&amp;mut </span>ready, tx).unwrap();
-
-		<span class="macro">assert!</span>(parity_util_mem::malloc_size(<span class="kw-2">&amp;</span>ready) &gt; <span class="number">200</span>);
 	}
 
 	<span class="attr">#[test]

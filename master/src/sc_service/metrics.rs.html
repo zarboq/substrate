@@ -288,26 +288,6 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -353,7 +333,6 @@
 	<span class="comment">// I/O
 	</span>database_cache: Gauge&lt;U64&gt;,
 	state_cache: Gauge&lt;U64&gt;,
-	state_db: GaugeVec&lt;U64&gt;,
 }
 
 <span class="kw">impl </span>PrometheusMetrics {
@@ -425,13 +404,6 @@
 			)<span class="question-mark">?</span>,
 			state_cache: register(
 				Gauge::new(<span class="string">&quot;substrate_state_cache_bytes&quot;</span>, <span class="string">&quot;State cache size in bytes&quot;</span>)<span class="question-mark">?</span>,
-				registry,
-			)<span class="question-mark">?</span>,
-			state_db: register(
-				GaugeVec::new(
-					Opts::new(<span class="string">&quot;substrate_state_db_cache_bytes&quot;</span>, <span class="string">&quot;State DB cache in bytes&quot;</span>),
-					<span class="kw-2">&amp;</span>[<span class="string">&quot;subtype&quot;</span>],
-				)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,
 		})
@@ -564,18 +536,6 @@
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(info) = info.usage.as_ref() {
 				metrics.database_cache.set(info.memory.database_cache.as_bytes() <span class="kw">as </span>u64);
 				metrics.state_cache.set(info.memory.state_cache.as_bytes() <span class="kw">as </span>u64);
-
-				metrics
-					.state_db
-					.with_label_values(<span class="kw-2">&amp;</span>[<span class="string">&quot;non_canonical&quot;</span>])
-					.set(info.memory.state_db.non_canonical.as_bytes() <span class="kw">as </span>u64);
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(pruning) = info.memory.state_db.pruning {
-					metrics.state_db.with_label_values(<span class="kw-2">&amp;</span>[<span class="string">&quot;pruning&quot;</span>]).set(pruning.as_bytes() <span class="kw">as </span>u64);
-				}
-				metrics
-					.state_db
-					.with_label_values(<span class="kw-2">&amp;</span>[<span class="string">&quot;pinned&quot;</span>])
-					.set(info.memory.state_db.pinned.as_bytes() <span class="kw">as </span>u64);
 			}
 		}
 

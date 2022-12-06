@@ -1005,13 +1005,6 @@
 <a href="#1005" id="1005">1005</a>
 <a href="#1006" id="1006">1006</a>
 <a href="#1007" id="1007">1007</a>
-<a href="#1008" id="1008">1008</a>
-<a href="#1009" id="1009">1009</a>
-<a href="#1010" id="1010">1010</a>
-<a href="#1011" id="1011">1011</a>
-<a href="#1012" id="1012">1012</a>
-<a href="#1013" id="1013">1013</a>
-<a href="#1014" id="1014">1014</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2015-2022 Parity Technologies (UK) Ltd.
@@ -1160,11 +1153,6 @@
 	}
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;memory-tracker&quot;</span>))]
-</span><span class="kw">type </span>MemTracker = memory_db::NoopTracker&lt;trie_db::DBValue&gt;;
-<span class="attr">#[cfg(feature = <span class="string">&quot;memory-tracker&quot;</span>)]
-</span><span class="kw">type </span>MemTracker = memory_db::MemCounter&lt;trie_db::DBValue&gt;;
-
 <span class="doccomment">/// TrieDB error over `TrieConfiguration` trait.
 </span><span class="kw">pub type </span>TrieError&lt;L&gt; = trie_db::TrieError&lt;TrieHash&lt;L&gt;, CError&lt;L&gt;&gt;;
 <span class="doccomment">/// Reexport from `hash_db`, with genericity set for `Hasher` trait.
@@ -1175,14 +1163,13 @@
 <span class="doccomment">/// Reexport from `hash_db`, with genericity set for `Hasher` trait.
 /// This uses a `KeyFunction` for prefixing keys internally (avoiding
 /// key conflict for non random keys).
-</span><span class="kw">pub type </span>PrefixedMemoryDB&lt;H&gt; =
-	memory_db::MemoryDB&lt;H, memory_db::PrefixedKey&lt;H&gt;, trie_db::DBValue, MemTracker&gt;;
+</span><span class="kw">pub type </span>PrefixedMemoryDB&lt;H&gt; = memory_db::MemoryDB&lt;H, memory_db::PrefixedKey&lt;H&gt;, trie_db::DBValue&gt;;
 <span class="doccomment">/// Reexport from `hash_db`, with genericity set for `Hasher` trait.
 /// This uses a noops `KeyFunction` (key addressing must be hashed or using
 /// an encoding scheme that avoid key conflict).
-</span><span class="kw">pub type </span>MemoryDB&lt;H&gt; = memory_db::MemoryDB&lt;H, memory_db::HashKey&lt;H&gt;, trie_db::DBValue, MemTracker&gt;;
+</span><span class="kw">pub type </span>MemoryDB&lt;H&gt; = memory_db::MemoryDB&lt;H, memory_db::HashKey&lt;H&gt;, trie_db::DBValue&gt;;
 <span class="doccomment">/// Reexport from `hash_db`, with genericity set for `Hasher` trait.
-</span><span class="kw">pub type </span>GenericMemoryDB&lt;H, KF&gt; = memory_db::MemoryDB&lt;H, KF, trie_db::DBValue, MemTracker&gt;;
+</span><span class="kw">pub type </span>GenericMemoryDB&lt;H, KF&gt; = memory_db::MemoryDB&lt;H, KF, trie_db::DBValue&gt;;
 
 <span class="doccomment">/// Persistent trie database read-access interface for the a given hasher.
 </span><span class="kw">pub type </span>TrieDB&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;cache</span>, L&gt; = trie_db::TrieDB&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;cache</span>, L&gt;;
@@ -1562,8 +1549,7 @@
 	<span class="kw">type </span>LayoutV0 = <span class="kw">super</span>::LayoutV0&lt;Blake2Hasher&gt;;
 	<span class="kw">type </span>LayoutV1 = <span class="kw">super</span>::LayoutV1&lt;Blake2Hasher&gt;;
 
-	<span class="kw">type </span>MemoryDBMeta&lt;H&gt; =
-		memory_db::MemoryDB&lt;H, memory_db::HashKey&lt;H&gt;, trie_db::DBValue, MemTracker&gt;;
+	<span class="kw">type </span>MemoryDBMeta&lt;H&gt; = memory_db::MemoryDB&lt;H, memory_db::HashKey&lt;H&gt;, trie_db::DBValue&gt;;
 
 	<span class="kw">fn </span>hashed_null_node&lt;T: TrieConfiguration&gt;() -&gt; TrieHash&lt;T&gt; {
 		&lt;T::Codec <span class="kw">as </span>NodeCodecT&gt;::hashed_null_node()

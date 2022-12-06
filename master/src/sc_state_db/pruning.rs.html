@@ -844,13 +844,6 @@
 <a href="#844" id="844">844</a>
 <a href="#845" id="845">845</a>
 <a href="#846" id="846">846</a>
-<a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a>
-<a href="#849" id="849">849</a>
-<a href="#850" id="850">850</a>
-<a href="#851" id="851">851</a>
-<a href="#852" id="852">852</a>
-<a href="#853" id="853">853</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -889,7 +882,6 @@
 <span class="kw">const </span>PRUNING_JOURNAL: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;pruning_journal&quot;</span>;
 
 <span class="doccomment">/// See module documentation.
-</span><span class="attr">#[derive(parity_util_mem_derive::MallocSizeOf)]
 </span><span class="kw">pub struct </span>RefWindow&lt;BlockHash: Hash, Key: Hash, D: MetaDb&gt; {
 	<span class="doccomment">/// A queue of blocks keep tracking keys that should be deleted for each block in the
 	/// pruning window.
@@ -903,7 +895,6 @@
 /// 	blocks in memory, and keep track of re-inserted keys to not delete them when pruning
 /// - `DbBacked`, used when the backend database supports reference counting, only keep
 /// 	a few number of blocks in memory and load more blocks on demand
-</span><span class="attr">#[derive(parity_util_mem_derive::MallocSizeOf)]
 </span><span class="kw">enum </span>DeathRowQueue&lt;BlockHash: Hash, Key: Hash, D: MetaDb&gt; {
 	Mem {
 		<span class="doccomment">/// A queue of keys that should be deleted for each block in the pruning window.
@@ -913,7 +904,6 @@
 	},
 	DbBacked {
 		<span class="comment">// The backend database
-		</span><span class="attr">#[ignore_malloc_size_of = <span class="string">&quot;Shared data&quot;</span>]
 		</span>db: D,
 		<span class="doccomment">/// A queue of keys that should be deleted for each block in the pruning window.
 		/// Only caching the first few blocks of the pruning window, blocks inside are
@@ -1104,7 +1094,7 @@
 	}
 }
 
-<span class="attr">#[derive(Clone, Debug, PartialEq, Eq, parity_util_mem_derive::MallocSizeOf)]
+<span class="attr">#[derive(Clone, Debug, PartialEq, Eq)]
 </span><span class="kw">struct </span>DeathRow&lt;BlockHash: Hash, Key: Hash&gt; {
 	hash: BlockHash,
 	deleted: HashSet&lt;Key&gt;,
@@ -1197,10 +1187,6 @@
 		};
 		<span class="prelude-val">Ok</span>(res)
 	}
-
-	<span class="kw">pub fn </span>mem_used(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-		<span class="number">0
-	</span>}
 
 	<span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
 		<span class="self">self</span>.window_size() == <span class="number">0

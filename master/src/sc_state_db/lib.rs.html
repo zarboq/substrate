@@ -905,43 +905,6 @@
 <a href="#905" id="905">905</a>
 <a href="#906" id="906">906</a>
 <a href="#907" id="907">907</a>
-<a href="#908" id="908">908</a>
-<a href="#909" id="909">909</a>
-<a href="#910" id="910">910</a>
-<a href="#911" id="911">911</a>
-<a href="#912" id="912">912</a>
-<a href="#913" id="913">913</a>
-<a href="#914" id="914">914</a>
-<a href="#915" id="915">915</a>
-<a href="#916" id="916">916</a>
-<a href="#917" id="917">917</a>
-<a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
-<a href="#924" id="924">924</a>
-<a href="#925" id="925">925</a>
-<a href="#926" id="926">926</a>
-<a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
-<a href="#931" id="931">931</a>
-<a href="#932" id="932">932</a>
-<a href="#933" id="933">933</a>
-<a href="#934" id="934">934</a>
-<a href="#935" id="935">935</a>
-<a href="#936" id="936">936</a>
-<a href="#937" id="937">937</a>
-<a href="#938" id="938">938</a>
-<a href="#939" id="939">939</a>
-<a href="#940" id="940">940</a>
-<a href="#941" id="941">941</a>
-<a href="#942" id="942">942</a>
-<a href="#943" id="943">943</a>
-<a href="#944" id="944">944</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -993,10 +956,8 @@
 <span class="kw">use </span>codec::Codec;
 <span class="kw">use </span>log::trace;
 <span class="kw">use </span>noncanonical::NonCanonicalOverlay;
-<span class="kw">use </span>parity_util_mem::{malloc_size, MallocSizeOf};
 <span class="kw">use </span>parking_lot::RwLock;
 <span class="kw">use </span>pruning::{HaveBlock, RefWindow};
-<span class="kw">use </span>sc_client_api::{MemorySize, StateDbMemoryInfo};
 <span class="kw">use </span>std::{
 	collections::{hash_map::Entry, HashMap},
 	fmt,
@@ -1164,8 +1125,6 @@
 	<span class="doccomment">/// Maximum blocks. Defaults to 0 when unspecified, effectively keeping only non-canonical
 	/// states.
 	</span><span class="kw">pub </span>max_blocks: <span class="prelude-ty">Option</span>&lt;u32&gt;,
-	<span class="doccomment">/// Maximum memory in the pruning overlay.
-	</span><span class="kw">pub </span>max_mem: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
 <span class="doccomment">/// Pruning mode.
@@ -1182,7 +1141,7 @@
 <span class="kw">impl </span>PruningMode {
 	<span class="doccomment">/// Create a mode that keeps given number of blocks.
 	</span><span class="kw">pub fn </span>blocks_pruning(n: u32) -&gt; PruningMode {
-		PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(n), max_mem: <span class="prelude-val">None </span>})
+		PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(n) })
 	}
 
 	<span class="doccomment">/// Is this an archive (either ArchiveAll or ArchiveCanonical) pruning mode?
@@ -1220,7 +1179,7 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Constraints {
 	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{ max_blocks: <span class="prelude-val">Some</span>(DEFAULT_MAX_BLOCK_CONSTRAINT), max_mem: <span class="prelude-val">None </span>}
+		<span class="self">Self </span>{ max_blocks: <span class="prelude-val">Some</span>(DEFAULT_MAX_BLOCK_CONSTRAINT) }
 	}
 }
 
@@ -1238,9 +1197,7 @@
 	ref_counting: bool,
 }
 
-<span class="kw">impl</span>&lt;BlockHash: Hash + MallocSizeOf, Key: Hash + MallocSizeOf, D: MetaDb&gt;
-	StateDbSync&lt;BlockHash, Key, D&gt;
-{
+<span class="kw">impl</span>&lt;BlockHash: Hash, Key: Hash, D: MetaDb&gt; StateDbSync&lt;BlockHash, Key, D&gt; {
 	<span class="kw">fn </span>new(
 		mode: PruningMode,
 		ref_counting: bool,
@@ -1250,8 +1207,7 @@
 
 		<span class="kw">let </span>non_canonical: NonCanonicalOverlay&lt;BlockHash, Key&gt; = NonCanonicalOverlay::new(<span class="kw-2">&amp;</span>db)<span class="question-mark">?</span>;
 		<span class="kw">let </span>pruning: <span class="prelude-ty">Option</span>&lt;RefWindow&lt;BlockHash, Key, D&gt;&gt; = <span class="kw">match </span>mode {
-			PruningMode::Constrained(Constraints { max_mem: <span class="prelude-val">Some</span>(<span class="kw">_</span>), .. }) =&gt; <span class="macro">unimplemented!</span>(),
-			PruningMode::Constrained(Constraints { max_blocks, .. }) =&gt;
+			PruningMode::Constrained(Constraints { max_blocks }) =&gt;
 				<span class="prelude-val">Some</span>(RefWindow::new(db, max_blocks.unwrap_or(<span class="number">0</span>), ref_counting)<span class="question-mark">?</span>),
 			PruningMode::ArchiveAll | PruningMode::ArchiveCanonical =&gt; <span class="prelude-val">None</span>,
 		};
@@ -1333,10 +1289,6 @@
 		{
 			<span class="kw">loop </span>{
 				<span class="kw">if </span>pruning.window_size() &lt;= constraints.max_blocks.unwrap_or(<span class="number">0</span>) <span class="kw">as </span>u64 {
-					<span class="kw">break
-				</span>}
-
-				<span class="kw">if </span>constraints.max_mem.map_or(<span class="bool-val">false</span>, |m| pruning.mem_used() &gt; m) {
 					<span class="kw">break
 				</span>}
 
@@ -1440,14 +1392,6 @@
 		}
 		db.get(key.as_ref()).map_err(Error::Db)
 	}
-
-	<span class="kw">fn </span>memory_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StateDbMemoryInfo {
-		StateDbMemoryInfo {
-			non_canonical: MemorySize::from_bytes(malloc_size(<span class="kw-2">&amp;</span><span class="self">self</span>.non_canonical)),
-			pruning: <span class="self">self</span>.pruning.as_ref().map(|p| MemorySize::from_bytes(malloc_size(<span class="kw-2">&amp;</span>p))),
-			pinned: MemorySize::from_bytes(malloc_size(<span class="kw-2">&amp;</span><span class="self">self</span>.pinned)),
-		}
-	}
 }
 
 <span class="doccomment">/// State DB maintenance. See module description.
@@ -1456,9 +1400,7 @@
 	db: RwLock&lt;StateDbSync&lt;BlockHash, Key, D&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;BlockHash: Hash + MallocSizeOf, Key: Hash + MallocSizeOf, D: MetaDb&gt;
-	StateDb&lt;BlockHash, Key, D&gt;
-{
+<span class="kw">impl</span>&lt;BlockHash: Hash, Key: Hash, D: MetaDb&gt; StateDb&lt;BlockHash, Key, D&gt; {
 	<span class="doccomment">/// Create an instance of [`StateDb`].
 	</span><span class="kw">pub fn </span>open(
 		db: D,
@@ -1580,11 +1522,6 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>state_db = <span class="self">self</span>.db.write();
 		<span class="kw-2">*</span>state_db = StateDbSync::new(state_db.mode.clone(), state_db.ref_counting, db)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
-	}
-
-	<span class="doccomment">/// Returns the current memory statistics of this instance.
-	</span><span class="kw">pub fn </span>memory_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StateDbMemoryInfo {
-		<span class="self">self</span>.db.read().memory_info()
 	}
 }
 
@@ -1716,10 +1653,8 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>block_record_unavailable() {
-		<span class="kw">let </span>(<span class="kw-2">mut </span>db, state_db) = make_test_db(PruningMode::Constrained(Constraints {
-			max_blocks: <span class="prelude-val">Some</span>(<span class="number">1</span>),
-			max_mem: <span class="prelude-val">None</span>,
-		}));
+		<span class="kw">let </span>(<span class="kw-2">mut </span>db, state_db) =
+			make_test_db(PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(<span class="number">1</span>) }));
 		<span class="comment">// import 2 blocks
 		</span><span class="kw">for </span>i <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="number">5</span>, <span class="number">6</span>] {
 			db.commit(
@@ -1753,19 +1688,13 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>prune_window_0() {
-		<span class="kw">let </span>(db, <span class="kw">_</span>) = make_test_db(PruningMode::Constrained(Constraints {
-			max_blocks: <span class="prelude-val">Some</span>(<span class="number">0</span>),
-			max_mem: <span class="prelude-val">None</span>,
-		}));
+		<span class="kw">let </span>(db, <span class="kw">_</span>) = make_test_db(PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(<span class="number">0</span>) }));
 		<span class="macro">assert!</span>(db.data_eq(<span class="kw-2">&amp;</span>make_db(<span class="kw-2">&amp;</span>[<span class="number">21</span>, <span class="number">3</span>, <span class="number">922</span>, <span class="number">94</span>])));
 	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>prune_window_1() {
-		<span class="kw">let </span>(db, sdb) = make_test_db(PruningMode::Constrained(Constraints {
-			max_blocks: <span class="prelude-val">Some</span>(<span class="number">1</span>),
-			max_mem: <span class="prelude-val">None</span>,
-		}));
+		<span class="kw">let </span>(db, sdb) = make_test_db(PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(<span class="number">1</span>) }));
 		<span class="macro">assert_eq!</span>(sdb.is_pruned(<span class="kw-2">&amp;</span>H256::from_low_u64_be(<span class="number">0</span>), <span class="number">0</span>), IsPruned::Pruned);
 		<span class="macro">assert_eq!</span>(sdb.is_pruned(<span class="kw-2">&amp;</span>H256::from_low_u64_be(<span class="number">1</span>), <span class="number">1</span>), IsPruned::Pruned);
 		<span class="macro">assert_eq!</span>(sdb.is_pruned(<span class="kw-2">&amp;</span>H256::from_low_u64_be(<span class="number">21</span>), <span class="number">2</span>), IsPruned::Pruned);
@@ -1775,10 +1704,7 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>prune_window_2() {
-		<span class="kw">let </span>(db, sdb) = make_test_db(PruningMode::Constrained(Constraints {
-			max_blocks: <span class="prelude-val">Some</span>(<span class="number">2</span>),
-			max_mem: <span class="prelude-val">None</span>,
-		}));
+		<span class="kw">let </span>(db, sdb) = make_test_db(PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(<span class="number">2</span>) }));
 		<span class="macro">assert_eq!</span>(sdb.is_pruned(<span class="kw-2">&amp;</span>H256::from_low_u64_be(<span class="number">0</span>), <span class="number">0</span>), IsPruned::Pruned);
 		<span class="macro">assert_eq!</span>(sdb.is_pruned(<span class="kw-2">&amp;</span>H256::from_low_u64_be(<span class="number">1</span>), <span class="number">1</span>), IsPruned::Pruned);
 		<span class="macro">assert_eq!</span>(sdb.is_pruned(<span class="kw-2">&amp;</span>H256::from_low_u64_be(<span class="number">21</span>), <span class="number">2</span>), IsPruned::NotPruned);
@@ -1802,7 +1728,7 @@
 				)
 				.unwrap(),
 		);
-		<span class="kw">let </span>new_mode = PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(<span class="number">2</span>), max_mem: <span class="prelude-val">None </span>});
+		<span class="kw">let </span>new_mode = PruningMode::Constrained(Constraints { max_blocks: <span class="prelude-val">Some</span>(<span class="number">2</span>) });
 		<span class="kw">let </span>state_db_open_result: <span class="prelude-ty">Result</span>&lt;(<span class="kw">_</span>, StateDb&lt;H256, H256, TestDb&gt;), <span class="kw">_</span>&gt; =
 			StateDb::open(db.clone(), <span class="prelude-val">Some</span>(new_mode), <span class="bool-val">false</span>, <span class="bool-val">false</span>);
 		<span class="macro">assert!</span>(state_db_open_result.is_err());

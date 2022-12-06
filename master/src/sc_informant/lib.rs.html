@@ -147,18 +147,6 @@
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -183,10 +171,8 @@
 <span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>futures_timer::Delay;
 <span class="kw">use </span>log::{debug, info, trace};
-<span class="kw">use </span>parity_util_mem::MallocSizeOf;
 <span class="kw">use </span>sc_client_api::{BlockchainEvents, UsageProvider};
 <span class="kw">use </span>sc_network_common::service::NetworkStatusProvider;
-<span class="kw">use </span>sc_transaction_pool_api::TransactionPool;
 <span class="kw">use </span>sp_blockchain::HeaderMetadata;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header};
 <span class="kw">use </span>std::{collections::VecDeque, fmt::Display, sync::Arc, time::Duration};
@@ -214,16 +200,11 @@
 }
 
 <span class="doccomment">/// Builds the informant and returns a `Future` that drives the informant.
-</span><span class="kw">pub async fn </span>build&lt;B: BlockT, C, N, P&gt;(
-	client: Arc&lt;C&gt;,
-	network: N,
-	pool: Arc&lt;P&gt;,
-	format: OutputFormat,
-) <span class="kw">where
+</span><span class="kw">pub async fn </span>build&lt;B: BlockT, C, N&gt;(client: Arc&lt;C&gt;, network: N, format: OutputFormat)
+<span class="kw">where
 	</span>N: NetworkStatusProvider&lt;B&gt;,
 	C: UsageProvider&lt;B&gt; + HeaderMetadata&lt;B&gt; + BlockchainEvents&lt;B&gt;,
 	&lt;C <span class="kw">as </span>HeaderMetadata&lt;B&gt;&gt;::Error: Display,
-	P: TransactionPool + MallocSizeOf,
 {
 	<span class="kw">let </span><span class="kw-2">mut </span>display = display::InformantDisplay::new(format.clone());
 
@@ -244,11 +225,6 @@
 					<span class="string">&quot;Usage statistics not displayed as backend does not provide it&quot;</span>,
 				)
 			}
-			<span class="macro">trace!</span>(
-				target: <span class="string">&quot;usage&quot;</span>,
-				<span class="string">&quot;Subsystems memory [txpool: {} kB]&quot;</span>,
-				parity_util_mem::malloc_size(<span class="kw-2">&amp;*</span>pool) / <span class="number">1024</span>,
-			);
 			display.display(<span class="kw-2">&amp;</span>info, net_status);
 			future::ready(())
 		});

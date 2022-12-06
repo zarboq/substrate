@@ -116,9 +116,6 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021 Parity Technologies (UK) Ltd.
@@ -142,10 +139,7 @@
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span>frame_benchmarking::benchmarks;
-<span class="kw">use </span>frame_support::{
-	ensure,
-	traits::{EnsureOrigin, Get, PreimageRecipient},
-};
+<span class="kw">use </span>frame_support::{ensure, traits::EnsureOrigin};
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>Whitelist;
@@ -161,7 +155,7 @@
 			<span class="string">&quot;call not whitelisted&quot;
 		</span>);
 		<span class="macro">ensure!</span>(
-			T::PreimageProvider::preimage_requested(<span class="kw-2">&amp;</span>call_hash),
+			T::Preimages::is_requested(<span class="kw-2">&amp;</span>call_hash),
 			<span class="string">&quot;preimage not requested&quot;
 		</span>);
 	}
@@ -178,7 +172,7 @@
 			<span class="string">&quot;whitelist not removed&quot;
 		</span>);
 		<span class="macro">ensure!</span>(
-			!T::PreimageProvider::preimage_requested(<span class="kw-2">&amp;</span>call_hash),
+			!T::Preimages::is_requested(<span class="kw-2">&amp;</span>call_hash),
 			<span class="string">&quot;preimage still requested&quot;
 		</span>);
 	}
@@ -187,30 +181,30 @@
 	// If the resulting weight is too big, maybe it worth having a weight which depends
 	// on the size of the call, with a new witness in parameter.
 	</span>dispatch_whitelisted_call {
-		<span class="kw">let </span>origin = T::DispatchWhitelistedOrigin::successful_origin();
 		<span class="comment">// NOTE: we remove `10` because we need some bytes to encode the variants and vec length
-		</span><span class="kw">let </span>remark_len = &lt;T::PreimageProvider <span class="kw">as </span>PreimageRecipient&lt;<span class="kw">_</span>&gt;&gt;::MaxSize::get() - <span class="number">10</span>;
-		<span class="kw">let </span>remark = <span class="macro">sp_std::vec!</span>[<span class="number">1u8</span>; remark_len <span class="kw">as </span>usize];
+		</span><span class="kw">let </span>n <span class="kw">in </span><span class="number">1 </span>.. T::Preimages::MAX_LENGTH <span class="kw">as </span>u32 - <span class="number">10</span>;
 
+		<span class="kw">let </span>origin = T::DispatchWhitelistedOrigin::successful_origin();
+		<span class="kw">let </span>remark = <span class="macro">sp_std::vec!</span>[<span class="number">1u8</span>; n <span class="kw">as </span>usize];
 		<span class="kw">let </span>call: &lt;T <span class="kw">as </span>Config&gt;::RuntimeCall = frame_system::Call::remark { remark }.into();
 		<span class="kw">let </span>call_weight = call.get_dispatch_info().weight;
 		<span class="kw">let </span>encoded_call = call.encode();
-		<span class="kw">let </span>call_hash = T::Hashing::hash(<span class="kw-2">&amp;</span>encoded_call[..]);
+		<span class="kw">let </span>call_encoded_len = encoded_call.len() <span class="kw">as </span>u32;
+		<span class="kw">let </span>call_hash = call.blake2_256().into();
 
 		Pallet::&lt;T&gt;::whitelist_call(origin.clone(), call_hash)
 			.expect(<span class="string">&quot;whitelisting call must be successful&quot;</span>);
 
-		<span class="kw">let </span>encoded_call = encoded_call.try_into().expect(<span class="string">&quot;encoded_call must be small enough&quot;</span>);
-		T::PreimageProvider::note_preimage(encoded_call);
+		T::Preimages::note(encoded_call.into()).unwrap();
 
-	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, call_hash, call_weight)
+	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, call_hash, call_encoded_len, call_weight)
 	verify {
 		<span class="macro">ensure!</span>(
 			!WhitelistedCall::&lt;T&gt;::contains_key(call_hash),
 			<span class="string">&quot;whitelist not removed&quot;
 		</span>);
 		<span class="macro">ensure!</span>(
-			!T::PreimageProvider::preimage_requested(<span class="kw-2">&amp;</span>call_hash),
+			!T::Preimages::is_requested(<span class="kw-2">&amp;</span>call_hash),
 			<span class="string">&quot;preimage still requested&quot;
 		</span>);
 	}
@@ -222,7 +216,7 @@
 		<span class="kw">let </span>remark = <span class="macro">sp_std::vec!</span>[<span class="number">1u8</span>; n <span class="kw">as </span>usize];
 
 		<span class="kw">let </span>call: &lt;T <span class="kw">as </span>Config&gt;::RuntimeCall = frame_system::Call::remark { remark }.into();
-		<span class="kw">let </span>call_hash = T::Hashing::hash_of(<span class="kw-2">&amp;</span>call);
+		<span class="kw">let </span>call_hash = call.blake2_256().into();
 
 		Pallet::&lt;T&gt;::whitelist_call(origin.clone(), call_hash)
 			.expect(<span class="string">&quot;whitelisting call must be successful&quot;</span>);
@@ -233,7 +227,7 @@
 			<span class="string">&quot;whitelist not removed&quot;
 		</span>);
 		<span class="macro">ensure!</span>(
-			!T::PreimageProvider::preimage_requested(<span class="kw-2">&amp;</span>call_hash),
+			!T::Preimages::is_requested(<span class="kw-2">&amp;</span>call_hash),
 			<span class="string">&quot;preimage still requested&quot;
 		</span>);
 	}
