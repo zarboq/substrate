@@ -551,6 +551,10 @@
 <a href="#551" id="551">551</a>
 <a href="#552" id="552">552</a>
 <a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -582,11 +586,14 @@
 <span class="kw">use </span>sp_core::crypto::UncheckedFrom;
 <span class="kw">use </span>sp_runtime::traits::Hash;
 <span class="kw">use </span>sp_std::{borrow::ToOwned, prelude::<span class="kw-2">*</span>};
-<span class="kw">use </span>wasm_instrument::parity_wasm::{
-	builder,
-	elements::{
-		<span class="self">self</span>, BlockType, CustomSection, External, FuncBody, Instruction, Instructions, Module,
-		Section, ValueType,
+<span class="kw">use </span>wasm_instrument::{
+	gas_metering,
+	parity_wasm::{
+		builder,
+		elements::{
+			<span class="self">self</span>, BlockType, CustomSection, External, FuncBody, Instruction, Instructions, Module,
+			Section, ValueType,
+		},
 	},
 };
 
@@ -1094,7 +1101,8 @@
 <span class="kw">fn </span>inject_gas_metering&lt;T: Config&gt;(module: Module) -&gt; Module {
 	<span class="kw">let </span>schedule = T::Schedule::get();
 	<span class="kw">let </span>gas_rules = schedule.rules(<span class="kw-2">&amp;</span>module, Determinism::Deterministic);
-	wasm_instrument::gas_metering::inject(module, <span class="kw-2">&amp;</span>gas_rules, <span class="string">&quot;seal0&quot;</span>).unwrap()
+	<span class="kw">let </span>backend = gas_metering::host_function::Injector::new(<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;gas&quot;</span>);
+	gas_metering::inject(module, backend, <span class="kw-2">&amp;</span>gas_rules).unwrap()
 }
 
 <span class="kw">fn </span>inject_stack_metering&lt;T: Config&gt;(module: Module) -&gt; Module {

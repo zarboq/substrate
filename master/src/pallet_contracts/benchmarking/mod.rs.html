@@ -3005,6 +3005,24 @@
 <a href="#3005" id="3005">3005</a>
 <a href="#3006" id="3006">3006</a>
 <a href="#3007" id="3007">3007</a>
+<a href="#3008" id="3008">3008</a>
+<a href="#3009" id="3009">3009</a>
+<a href="#3010" id="3010">3010</a>
+<a href="#3011" id="3011">3011</a>
+<a href="#3012" id="3012">3012</a>
+<a href="#3013" id="3013">3013</a>
+<a href="#3014" id="3014">3014</a>
+<a href="#3015" id="3015">3015</a>
+<a href="#3016" id="3016">3016</a>
+<a href="#3017" id="3017">3017</a>
+<a href="#3018" id="3018">3018</a>
+<a href="#3019" id="3019">3019</a>
+<a href="#3020" id="3020">3020</a>
+<a href="#3021" id="3021">3021</a>
+<a href="#3022" id="3022">3022</a>
+<a href="#3023" id="3023">3023</a>
+<a href="#3024" id="3024">3024</a>
+<a href="#3025" id="3025">3025</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -5436,10 +5454,28 @@
 		sbox.invoke();
 	}
 
+	<span class="comment">// w_per_local = w_bench
+	</span>instr_call_per_local {
+		<span class="kw">let </span>l <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.locals;
+		<span class="kw">let </span><span class="kw-2">mut </span>aux_body = body::plain(<span class="macro">vec!</span>[
+			Instruction::End,
+		]);
+		body::inject_locals(<span class="kw-2">&amp;mut </span>aux_body, l);
+		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
+			aux_body: <span class="prelude-val">Some</span>(aux_body),
+			call_body: <span class="prelude-val">Some</span>(body::repeated(INSTR_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+				Instruction::Call(<span class="number">2</span>), <span class="comment">// call aux
+			</span>])),
+			.. Default::default()
+		}));
+	}: {
+		sbox.invoke();
+	}
+
 	<span class="comment">// w_local_get = w_bench - 1 * w_param
 	</span>instr_local_get {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
-		<span class="kw">let </span>max_locals = T::Schedule::get().limits.stack_height.unwrap_or(<span class="number">512</span>);
+		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
 		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
 			RandomGetLocal(<span class="number">0</span>, max_locals),
 			Regular(Instruction::Drop),
@@ -5456,7 +5492,7 @@
 	<span class="comment">// w_local_set = w_bench - 1 * w_param
 	</span>instr_local_set {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
-		<span class="kw">let </span>max_locals = T::Schedule::get().limits.stack_height.unwrap_or(<span class="number">512</span>);
+		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
 		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
 			RandomI64Repeated(<span class="number">1</span>),
 			RandomSetLocal(<span class="number">0</span>, max_locals),
@@ -5473,7 +5509,7 @@
 	<span class="comment">// w_local_tee = w_bench - 2 * w_param
 	</span>instr_local_tee {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
-		<span class="kw">let </span>max_locals = T::Schedule::get().limits.stack_height.unwrap_or(<span class="number">512</span>);
+		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
 		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
 			RandomI64Repeated(<span class="number">1</span>),
 			RandomTeeLocal(<span class="number">0</span>, max_locals),

@@ -805,6 +805,19 @@
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -925,6 +938,12 @@
 	/// the linear memory limit `memory_pages` applies to them.
 	</span><span class="kw">pub </span>globals: u32,
 
+	<span class="doccomment">/// Maximum number of locals a function can have.
+	///
+	/// As wasm engine initializes each of the local, we need to limit their number to confine
+	/// execution costs.
+	</span><span class="kw">pub </span>locals: u32,
+
 	<span class="doccomment">/// Maximum numbers of parameters a function can have.
 	///
 	/// Those need to be limited to prevent a potentially exploitable interaction with
@@ -1019,6 +1038,7 @@
 	<span class="kw">pub </span>call: u32,
 	<span class="kw">pub </span>call_indirect: u32,
 	<span class="kw">pub </span>call_indirect_per_param: u32,
+	<span class="kw">pub </span>call_per_local: u32,
 	<span class="kw">pub </span>local_get: u32,
 	<span class="kw">pub </span>local_set: u32,
 	<span class="kw">pub </span>local_tee: u32,
@@ -1329,6 +1349,7 @@
 			<span class="comment">// No stack limit required because we use a runtime resident execution engine.
 			</span>stack_height: <span class="prelude-val">None</span>,
 			globals: <span class="number">256</span>,
+			locals: <span class="number">1024</span>,
 			parameters: <span class="number">128</span>,
 			memory_pages: <span class="number">16</span>,
 			<span class="comment">// 4k function pointers (This is in count not bytes).
@@ -1359,6 +1380,7 @@
 			call: <span class="macro">cost_instr!</span>(instr_call, <span class="number">2</span>),
 			call_indirect: <span class="macro">cost_instr!</span>(instr_call_indirect, <span class="number">3</span>),
 			call_indirect_per_param: <span class="macro">cost_instr!</span>(instr_call_indirect_per_param, <span class="number">1</span>),
+			call_per_local: <span class="macro">cost_instr!</span>(instr_call_per_local, <span class="number">1</span>),
 			local_get: <span class="macro">cost_instr!</span>(instr_local_get, <span class="number">1</span>),
 			local_set: <span class="macro">cost_instr!</span>(instr_local_set, <span class="number">1</span>),
 			local_tee: <span class="macro">cost_instr!</span>(instr_local_tee, <span class="number">2</span>),
@@ -1598,6 +1620,10 @@
 		<span class="comment">// We benchmarked the memory.grow instruction with the maximum allowed pages.
 		// The cost for growing is therefore already included in the instruction cost.
 		</span>gas_metering::MemoryGrowCost::Free
+	}
+
+	<span class="kw">fn </span>call_per_local_cost(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+		<span class="self">self</span>.schedule.instruction_weights.call_per_local
 	}
 }
 
