@@ -91,7 +91,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_randomness_collective_flip":["",[],["lib.rs"]],\
 "pallet_ranked_collective":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_recovery":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
-"pallet_referenda":["",[],["benchmarking.rs","branch.rs","lib.rs","types.rs","weights.rs"]],\
+"pallet_referenda":["",[],["benchmarking.rs","branch.rs","lib.rs","migration.rs","types.rs","weights.rs"]],\
 "pallet_remark":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_root_offences":["",[],["lib.rs"]],\
 "pallet_root_testing":["",[],["lib.rs"]],\
