@@ -28,7 +28,7 @@ var sourcesIndex = JSON.parse('{\
 "frame_try_runtime":["",[],["lib.rs"]],\
 "generate_bags":["",[],["lib.rs"]],\
 "kitchensink_runtime":["",[],["constants.rs","impls.rs","lib.rs","voter_bags.rs"]],\
-"mmr_gadget":["",[],["lib.rs","offchain_mmr.rs"]],\
+"mmr_gadget":["",[],["aux_schema.rs","lib.rs","offchain_mmr.rs"]],\
 "mmr_rpc":["",[],["lib.rs"]],\
 "multiply_by_rational_with_rounding":["",[],["multiply_by_rational_with_rounding.rs"]],\
 "node_bench":["",[],["common.rs","construct.rs","core.rs","generator.rs","import.rs","main.rs","simple_trie.rs","state_sizes.rs","tempdb.rs","trie.rs","txpool.rs"]],\
