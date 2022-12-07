@@ -621,63 +621,6 @@
 <a href="#621" id="621">621</a>
 <a href="#622" id="622">622</a>
 <a href="#623" id="623">623</a>
-<a href="#624" id="624">624</a>
-<a href="#625" id="625">625</a>
-<a href="#626" id="626">626</a>
-<a href="#627" id="627">627</a>
-<a href="#628" id="628">628</a>
-<a href="#629" id="629">629</a>
-<a href="#630" id="630">630</a>
-<a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
-<a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a>
-<a href="#640" id="640">640</a>
-<a href="#641" id="641">641</a>
-<a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
-<a href="#650" id="650">650</a>
-<a href="#651" id="651">651</a>
-<a href="#652" id="652">652</a>
-<a href="#653" id="653">653</a>
-<a href="#654" id="654">654</a>
-<a href="#655" id="655">655</a>
-<a href="#656" id="656">656</a>
-<a href="#657" id="657">657</a>
-<a href="#658" id="658">658</a>
-<a href="#659" id="659">659</a>
-<a href="#660" id="660">660</a>
-<a href="#661" id="661">661</a>
-<a href="#662" id="662">662</a>
-<a href="#663" id="663">663</a>
-<a href="#664" id="664">664</a>
-<a href="#665" id="665">665</a>
-<a href="#666" id="666">666</a>
-<a href="#667" id="667">667</a>
-<a href="#668" id="668">668</a>
-<a href="#669" id="669">669</a>
-<a href="#670" id="670">670</a>
-<a href="#671" id="671">671</a>
-<a href="#672" id="672">672</a>
-<a href="#673" id="673">673</a>
-<a href="#674" id="674">674</a>
-<a href="#675" id="675">675</a>
-<a href="#676" id="676">676</a>
-<a href="#677" id="677">677</a>
-<a href="#678" id="678">678</a>
-<a href="#679" id="679">679</a>
-<a href="#680" id="680">680</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -983,9 +926,6 @@
 	</span><span class="kw">fn </span>allocate_memory(<span class="kw-2">&amp;mut </span><span class="self">self</span>, size: WordSize) -&gt; <span class="prelude-ty">Result</span>&lt;Pointer&lt;u8&gt;&gt;;
 	<span class="doccomment">/// Deallocate a given memory instance.
 	</span><span class="kw">fn </span>deallocate_memory(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: Pointer&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
-	<span class="doccomment">/// Provides access to the sandbox.
-	</span><span class="kw">fn </span>sandbox(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Sandbox;
-
 	<span class="doccomment">/// Registers a panic error message within the executor.
 	///
 	/// This is meant to be used in situations where the runtime
@@ -1008,60 +948,6 @@
 	/// It should only be called once, however calling it more than once
 	/// is harmless and will overwrite the previously set error message.
 	</span><span class="kw">fn </span>register_panic_error_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str);
-}
-
-<span class="doccomment">/// Sandbox memory identifier.
-</span><span class="kw">pub type </span>MemoryId = u32;
-
-<span class="doccomment">/// Something that provides access to the sandbox.
-</span><span class="kw">pub trait </span>Sandbox {
-	<span class="doccomment">/// Get sandbox memory from the `memory_id` instance at `offset` into the given buffer.
-	</span><span class="kw">fn </span>memory_get(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		memory_id: MemoryId,
-		offset: WordSize,
-		buf_ptr: Pointer&lt;u8&gt;,
-		buf_len: WordSize,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt;;
-	<span class="doccomment">/// Set sandbox memory from the given value.
-	</span><span class="kw">fn </span>memory_set(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		memory_id: MemoryId,
-		offset: WordSize,
-		val_ptr: Pointer&lt;u8&gt;,
-		val_len: WordSize,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt;;
-	<span class="doccomment">/// Delete a memory instance.
-	</span><span class="kw">fn </span>memory_teardown(<span class="kw-2">&amp;mut </span><span class="self">self</span>, memory_id: MemoryId) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
-	<span class="doccomment">/// Create a new memory instance with the given `initial` size and the `maximum` size.
-	/// The size is given in wasm pages.
-	</span><span class="kw">fn </span>memory_new(<span class="kw-2">&amp;mut </span><span class="self">self</span>, initial: u32, maximum: u32) -&gt; <span class="prelude-ty">Result</span>&lt;MemoryId&gt;;
-	<span class="doccomment">/// Invoke an exported function by a name.
-	</span><span class="kw">fn </span>invoke(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		instance_id: u32,
-		export_name: <span class="kw-2">&amp;</span>str,
-		args: <span class="kw-2">&amp;</span>[u8],
-		return_val: Pointer&lt;u8&gt;,
-		return_val_len: WordSize,
-		state: u32,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt;;
-	<span class="doccomment">/// Delete a sandbox instance.
-	</span><span class="kw">fn </span>instance_teardown(<span class="kw-2">&amp;mut </span><span class="self">self</span>, instance_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
-	<span class="doccomment">/// Create a new sandbox instance.
-	</span><span class="kw">fn </span>instance_new(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		dispatch_thunk_id: u32,
-		wasm: <span class="kw-2">&amp;</span>[u8],
-		raw_env_def: <span class="kw-2">&amp;</span>[u8],
-		state: u32,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt;;
-
-	<span class="doccomment">/// Get the value from a global with the given `name`. The sandbox is determined by the
-	/// given `instance_idx` instance.
-	///
-	/// Returns `Some(_)` when the requested global variable could be found.
-	</span><span class="kw">fn </span>get_global_val(<span class="kw-2">&amp;</span><span class="self">self</span>, instance_idx: u32, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Value&gt;&gt;;
 }
 
 <span class="macro">if_wasmtime_is_enabled! </span>{

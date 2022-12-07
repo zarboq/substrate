@@ -141,7 +141,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_consensus_slots":["",[],["aux_schema.rs","lib.rs","slots.rs"]],\
 "sc_consensus_uncles":["",[],["lib.rs"]],\
 "sc_executor":["",[],["lib.rs","native_executor.rs","wasm_runtime.rs"]],\
-"sc_executor_common":["",[["runtime_blob",[],["data_segments_snapshot.rs","globals_snapshot.rs","mod.rs","runtime_blob.rs"]],["sandbox",[],["wasmer_backend.rs","wasmi_backend.rs"]]],["error.rs","lib.rs","sandbox.rs","util.rs","wasm_runtime.rs"]],\
+"sc_executor_common":["",[["runtime_blob",[],["data_segments_snapshot.rs","globals_snapshot.rs","mod.rs","runtime_blob.rs"]]],["error.rs","lib.rs","util.rs","wasm_runtime.rs"]],\
 "sc_executor_wasmi":["",[],["lib.rs"]],\
 "sc_executor_wasmtime":["",[],["host.rs","imports.rs","instance_wrapper.rs","lib.rs","runtime.rs","util.rs"]],\
 "sc_finality_grandpa":["",[["communication",[],["gossip.rs","mod.rs","periodic.rs"]]],["authorities.rs","aux_schema.rs","environment.rs","finality_proof.rs","import.rs","justification.rs","lib.rs","notification.rs","observer.rs","until_imported.rs","voting_rule.rs","warp_proof.rs"]],\
@@ -214,7 +214,6 @@ var sourcesIndex = JSON.parse('{\
 "sp_runtime_interface_test":["",[],["lib.rs"]],\
 "sp_runtime_interface_test_wasm":["",[],["lib.rs"]],\
 "sp_runtime_interface_test_wasm_deprecated":["",[],["lib.rs"]],\
-"sp_sandbox":["",[],["embedded_executor.rs","env.rs","lib.rs"]],\
 "sp_serializer":["",[],["lib.rs"]],\
 "sp_session":["",[],["lib.rs"]],\
 "sp_staking":["",[],["lib.rs","offence.rs"]],\
