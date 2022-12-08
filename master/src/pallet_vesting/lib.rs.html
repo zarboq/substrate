@@ -758,6 +758,7 @@
 <a href="#758" id="758">758</a>
 <a href="#759" id="759">759</a>
 <a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -822,7 +823,7 @@
 	ensure,
 	storage::bounded_vec::BoundedVec,
 	traits::{
-		Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, VestingSchedule,
+		fungibles, fungibles::Lockable, Currency, ExistenceRequirement, Get, VestingSchedule,
 		WithdrawReasons,
 	},
 	weights::Weight,
@@ -843,11 +844,12 @@
 
 <span class="kw">type </span>BalanceOf&lt;T&gt; =
 	&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>Currency&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::Balance;
-<span class="kw">type </span>MaxLocksOf&lt;T&gt; =
-	&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>LockableCurrency&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::MaxLocks;
+<span class="kw">type </span>MaxLocksOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>fungibles::Lockable&lt;
+	&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId,
+&gt;&gt;::MaxLocks;
 <span class="kw">type </span>AccountIdLookupOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::Lookup <span class="kw">as </span>StaticLookup&gt;::Source;
 
-<span class="kw">const </span>VESTING_ID: LockIdentifier = <span class="kw-2">*</span><span class="string">b&quot;vesting &quot;</span>;
+<span class="kw">const </span>VESTING_ID: fungibles::LockIdentifier = <span class="kw-2">*</span><span class="string">b&quot;vesting &quot;</span>;
 
 <span class="comment">// A value placed in storage that represents the current version of the Vesting storage.
 // This value is used by `on_runtime_upgrade` to determine whether we run storage migration logic.
@@ -919,7 +921,7 @@
 		</span><span class="kw">type </span>RuntimeEvent: From&lt;Event&lt;<span class="self">Self</span>&gt;&gt; + IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
 
 		<span class="doccomment">/// The currency trait.
-		</span><span class="kw">type </span>Currency: LockableCurrency&lt;<span class="self">Self</span>::AccountId&gt;;
+		</span><span class="kw">type </span>Currency: fungibles::Lockable&lt;<span class="self">Self</span>::AccountId&gt;;
 
 		<span class="doccomment">/// Convert the block number into a balance.
 		</span><span class="kw">type </span>BlockNumberToBalance: Convert&lt;<span class="self">Self</span>::BlockNumber, BalanceOf&lt;<span class="self">Self</span>&gt;&gt;;

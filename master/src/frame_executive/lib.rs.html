@@ -1578,9 +1578,6 @@
 <a href="#1578" id="1578">1578</a>
 <a href="#1579" id="1579">1579</a>
 <a href="#1580" id="1580">1580</a>
-<a href="#1581" id="1581">1581</a>
-<a href="#1582" id="1582">1582</a>
-<a href="#1583" id="1583">1583</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2203,10 +2200,7 @@
 
 	<span class="kw">use </span>frame_support::{
 		assert_err, parameter_types,
-		traits::{
-			ConstU32, ConstU64, ConstU8, Currency, LockIdentifier, LockableCurrency,
-			WithdrawReasons,
-		},
+		traits::{fungibles, ConstU32, ConstU64, ConstU8, Currency, WithdrawReasons},
 		weights::{ConstantMultiplier, IdentityFee, RuntimeDbWeight, Weight, WeightToFee},
 	};
 	<span class="kw">use </span>frame_system::{Call <span class="kw">as </span>SystemCall, ChainContext, LastRuntimeUpgradeInfo};
@@ -2768,11 +2762,11 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>can_pay_for_tx_fee_on_full_lock() {
-		<span class="kw">let </span>id: LockIdentifier = <span class="kw-2">*</span><span class="string">b&quot;0       &quot;</span>;
+		<span class="kw">let </span>id: fungibles::LockIdentifier = <span class="kw-2">*</span><span class="string">b&quot;0       &quot;</span>;
 		<span class="kw">let </span>execute_with_lock = |lock: WithdrawReasons| {
 			<span class="kw">let </span><span class="kw-2">mut </span>t = new_test_ext(<span class="number">1</span>);
 			t.execute_with(|| {
-				&lt;pallet_balances::Pallet&lt;Runtime&gt; <span class="kw">as </span>LockableCurrency&lt;Balance&gt;&gt;::set_lock(
+				&lt;pallet_balances::Pallet&lt;Runtime&gt; <span class="kw">as </span>fungibles::Lockable&lt;Balance&gt;&gt;::set_lock(
 					id, <span class="kw-2">&amp;</span><span class="number">1</span>, <span class="number">110</span>, lock,
 				);
 				<span class="kw">let </span>xt = TestXt::new(

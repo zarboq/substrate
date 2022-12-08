@@ -62,50 +62,6 @@
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -125,52 +81,8 @@
 
 </span><span class="doccomment">//! The lockable currency trait and some associated types.
 
-</span><span class="kw">use super</span>::{<span class="kw">super</span>::misc::WithdrawReasons, Currency};
-<span class="kw">use crate</span>::{dispatch::DispatchResult, traits::misc::Get};
-
-<span class="doccomment">/// An identifier for a lock. Used for disambiguating different locks so that
-/// they can be individually replaced or removed.
-</span><span class="kw">pub type </span>LockIdentifier = [u8; <span class="number">8</span>];
-
-<span class="doccomment">/// A currency whose accounts can have liquidity restrictions.
-</span><span class="kw">pub trait </span>LockableCurrency&lt;AccountId&gt;: Currency&lt;AccountId&gt; {
-	<span class="doccomment">/// The quantity used to denote time; usually just a `BlockNumber`.
-	</span><span class="kw">type </span>Moment;
-
-	<span class="doccomment">/// The maximum number of locks a user should have on their account.
-	</span><span class="kw">type </span>MaxLocks: Get&lt;u32&gt;;
-
-	<span class="doccomment">/// Create a new balance lock on account `who`.
-	///
-	/// If the new lock is valid (i.e. not already expired), it will push the struct to
-	/// the `Locks` vec in storage. Note that you can lock more funds than a user has.
-	///
-	/// If the lock `id` already exists, this will update it.
-	</span><span class="kw">fn </span>set_lock(
-		id: LockIdentifier,
-		who: <span class="kw-2">&amp;</span>AccountId,
-		amount: <span class="self">Self</span>::Balance,
-		reasons: WithdrawReasons,
-	);
-
-	<span class="doccomment">/// Changes a balance lock (selected by `id`) so that it becomes less liquid in all
-	/// parameters or creates a new one if it does not exist.
-	///
-	/// Calling `extend_lock` on an existing lock `id` differs from `set_lock` in that it
-	/// applies the most severe constraints of the two, while `set_lock` replaces the lock
-	/// with the new parameters. As in, `extend_lock` will set:
-	/// - maximum `amount`
-	/// - bitwise mask of all `reasons`
-	</span><span class="kw">fn </span>extend_lock(
-		id: LockIdentifier,
-		who: <span class="kw-2">&amp;</span>AccountId,
-		amount: <span class="self">Self</span>::Balance,
-		reasons: WithdrawReasons,
-	);
-
-	<span class="doccomment">/// Remove an existing lock.
-	</span><span class="kw">fn </span>remove_lock(id: LockIdentifier, who: <span class="kw-2">&amp;</span>AccountId);
-}
+</span><span class="kw">use </span><span class="kw">super</span>::Currency;
+<span class="kw">use </span><span class="kw">crate</span>::dispatch::DispatchResult;
 
 <span class="doccomment">/// A vesting schedule over a currency. This allows a particular currency to have vesting limits
 /// applied to it.
