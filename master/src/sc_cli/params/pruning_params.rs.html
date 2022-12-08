@@ -77,6 +77,42 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -102,57 +138,93 @@
 <span class="doccomment">/// Parameters to define the pruning mode
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Args)]
 </span><span class="kw">pub struct </span>PruningParams {
-	<span class="doccomment">/// Specify the state pruning mode, a number of blocks to keep or &#39;archive&#39;.
+	<span class="doccomment">/// Specify the state pruning mode.
 	///
-	/// Default is to keep only the last 256 blocks,
-	/// otherwise, the state can be kept for all of the blocks (i.e &#39;archive&#39;),
-	/// or for all of the canonical blocks (i.e &#39;archive-canonical&#39;).
-	</span><span class="attr">#[arg(alias = <span class="string">&quot;pruning&quot;</span>, long, value_name = <span class="string">&quot;PRUNING_MODE&quot;</span>)]
-	</span><span class="kw">pub </span>state_pruning: <span class="prelude-ty">Option</span>&lt;String&gt;,
-	<span class="doccomment">/// Specify the blocks pruning mode, a number of blocks to keep or &#39;archive&#39;.
+	/// This mode specifies when the block&#39;s state (ie, storage)
+	/// should be pruned (ie, removed) from the database.
 	///
-	/// Default is to keep all finalized blocks.
-	/// otherwise, all blocks can be kept (i.e &#39;archive&#39;),
-	/// or for all canonical blocks (i.e &#39;archive-canonical&#39;),
-	/// or for the last N blocks (i.e a number).
+	/// Possible values:
+	///  &#39;archive&#39;            Keep the state of all blocks.
+	///  &#39;archive-canonical&#39;  Keep only the state of finalized blocks.
+	///   number              Keep the state of the last number of finalized blocks.
+	</span><span class="attr">#[arg(alias = <span class="string">&quot;pruning&quot;</span>, long, value_name = <span class="string">&quot;PRUNING_MODE&quot;</span>, default_value = <span class="string">&quot;256&quot;</span>)]
+	</span><span class="kw">pub </span>state_pruning: DatabasePruningMode,
+	<span class="doccomment">/// Specify the blocks pruning mode.
 	///
-	/// NOTE: only finalized blocks are subject for removal!
-	</span><span class="attr">#[arg(alias = <span class="string">&quot;keep-blocks&quot;</span>, long, value_name = <span class="string">&quot;COUNT&quot;</span>)]
-	</span><span class="kw">pub </span>blocks_pruning: <span class="prelude-ty">Option</span>&lt;String&gt;,
+	/// This mode specifies when the block&#39;s body (including justifications)
+	/// should be pruned (ie, removed) from the database.
+	///
+	/// Possible values:
+	///  &#39;archive&#39;            Keep all blocks.
+	///  &#39;archive-canonical&#39;  Keep only finalized blocks.
+	///   number              Keep the last `number` of finalized blocks.
+	</span><span class="attr">#[arg(
+		alias = <span class="string">&quot;keep-blocks&quot;</span>,
+		long,
+		value_name = <span class="string">&quot;PRUNING_MODE&quot;</span>,
+		default_value = <span class="string">&quot;archive-canonical&quot;
+	</span>)]
+	</span><span class="kw">pub </span>blocks_pruning: DatabasePruningMode,
 }
 
 <span class="kw">impl </span>PruningParams {
 	<span class="doccomment">/// Get the pruning value from the parameters
 	</span><span class="kw">pub fn </span>state_pruning(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; error::Result&lt;<span class="prelude-ty">Option</span>&lt;PruningMode&gt;&gt; {
-		<span class="self">self</span>.state_pruning
-			.as_ref()
-			.map(|s| <span class="kw">match </span>s.as_str() {
-				<span class="string">&quot;archive&quot; </span>=&gt; <span class="prelude-val">Ok</span>(PruningMode::ArchiveAll),
-				<span class="string">&quot;archive-canonical&quot; </span>=&gt; <span class="prelude-val">Ok</span>(PruningMode::ArchiveCanonical),
-				bc =&gt; bc
-					.parse()
-					.map_err(|<span class="kw">_</span>| {
-						error::Error::Input(<span class="string">&quot;Invalid state pruning mode specified&quot;</span>.to_string())
-					})
-					.map(PruningMode::blocks_pruning),
-			})
-			.transpose()
+		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.state_pruning.into()))
 	}
 
 	<span class="doccomment">/// Get the block pruning value from the parameters
 	</span><span class="kw">pub fn </span>blocks_pruning(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; error::Result&lt;BlocksPruning&gt; {
-		<span class="kw">match </span><span class="self">self</span>.blocks_pruning.as_ref() {
-			<span class="prelude-val">Some</span>(bp) =&gt; <span class="kw">match </span>bp.as_str() {
-				<span class="string">&quot;archive&quot; </span>=&gt; <span class="prelude-val">Ok</span>(BlocksPruning::KeepAll),
-				<span class="string">&quot;archive-canonical&quot; </span>=&gt; <span class="prelude-val">Ok</span>(BlocksPruning::KeepFinalized),
-				bc =&gt; bc
-					.parse()
-					.map_err(|<span class="kw">_</span>| {
-						error::Error::Input(<span class="string">&quot;Invalid blocks pruning mode specified&quot;</span>.to_string())
-					})
-					.map(BlocksPruning::Some),
-			},
-			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(BlocksPruning::KeepFinalized),
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.blocks_pruning.into())
+	}
+}
+
+<span class="doccomment">/// Specifies the pruning mode of the database.
+///
+/// This specifies when the block&#39;s data (either state via `--state-pruning`
+/// or body via `--blocks-pruning`) should be pruned (ie, removed) from
+/// the database.
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq)]
+</span><span class="kw">pub enum </span>DatabasePruningMode {
+	<span class="doccomment">/// Keep the data of all blocks.
+	</span>Archive,
+	<span class="doccomment">/// Keep only the data of finalized blocks.
+	</span>ArchiveCanonical,
+	<span class="doccomment">/// Keep the data of the last number of finalized blocks.
+	</span>Custom(u32),
+}
+
+<span class="kw">impl </span>std::str::FromStr <span class="kw">for </span>DatabasePruningMode {
+	<span class="kw">type </span><span class="prelude-val">Err </span>= String;
+
+	<span class="kw">fn </span>from_str(input: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+		<span class="kw">match </span>input {
+			<span class="string">&quot;archive&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Archive),
+			<span class="string">&quot;archive-canonical&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::ArchiveCanonical),
+			bc =&gt; bc
+				.parse()
+				.map_err(|<span class="kw">_</span>| <span class="string">&quot;Invalid pruning mode specified&quot;</span>.to_string())
+				.map(<span class="self">Self</span>::Custom),
+		}
+	}
+}
+
+<span class="kw">impl </span>Into&lt;PruningMode&gt; <span class="kw">for </span>DatabasePruningMode {
+	<span class="kw">fn </span>into(<span class="self">self</span>) -&gt; PruningMode {
+		<span class="kw">match </span><span class="self">self </span>{
+			DatabasePruningMode::Archive =&gt; PruningMode::ArchiveAll,
+			DatabasePruningMode::ArchiveCanonical =&gt; PruningMode::ArchiveCanonical,
+			DatabasePruningMode::Custom(n) =&gt; PruningMode::blocks_pruning(n),
+		}
+	}
+}
+
+<span class="kw">impl </span>Into&lt;BlocksPruning&gt; <span class="kw">for </span>DatabasePruningMode {
+	<span class="kw">fn </span>into(<span class="self">self</span>) -&gt; BlocksPruning {
+		<span class="kw">match </span><span class="self">self </span>{
+			DatabasePruningMode::Archive =&gt; BlocksPruning::KeepAll,
+			DatabasePruningMode::ArchiveCanonical =&gt; BlocksPruning::KeepFinalized,
+			DatabasePruningMode::Custom(n) =&gt; BlocksPruning::Some(n),
 		}
 	}
 }
