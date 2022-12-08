@@ -593,6 +593,8 @@
 <a href="#593" id="593">593</a>
 <a href="#594" id="594">594</a>
 <a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
 </pre><pre class="rust"><code><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 </span><span class="comment">// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 </span><span class="attr">#![recursion_limit = <span class="string">&quot;256&quot;</span>]
@@ -627,7 +629,9 @@
 		ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem, Randomness, StorageInfo,
 	},
 	weights::{
-		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		constants::{
+			BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
+		},
 		IdentityFee, Weight,
 	},
 	StorageValue,
@@ -736,7 +740,7 @@
 	<span class="doccomment">/// We allow for 2 seconds of compute with a 6 second average block time.
 	</span><span class="kw">pub </span>BlockWeights: frame_system::limits::BlockWeights =
 		frame_system::limits::BlockWeights::with_sensible_defaults(
-			(<span class="number">2u64 </span>* WEIGHT_PER_SECOND).set_proof_size(u64::MAX),
+			Weight::from_parts(<span class="number">2u64 </span>* WEIGHT_REF_TIME_PER_SECOND, u64::MAX),
 			NORMAL_DISPATCH_RATIO,
 		);
 	<span class="kw">pub </span>BlockLength: frame_system::limits::BlockLength = frame_system::limits::BlockLength

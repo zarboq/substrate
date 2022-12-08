@@ -2302,6 +2302,9 @@
 <a href="#2302" id="2302">2302</a>
 <a href="#2303" id="2303">2303</a>
 <a href="#2304" id="2304">2304</a>
+<a href="#2305" id="2305">2305</a>
+<a href="#2306" id="2306">2306</a>
+<a href="#2307" id="2307">2307</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2342,7 +2345,9 @@
 		WithdrawReasons,
 	},
 	weights::{
-		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		constants::{
+			BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_REF_TIME_PER_SECOND,
+		},
 		ConstantMultiplier, IdentityFee, Weight,
 	},
 	PalletId, RuntimeDebug,
@@ -2477,7 +2482,8 @@
 /// by  Operational  extrinsics.
 </span><span class="kw">const </span>NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(<span class="number">75</span>);
 <span class="doccomment">/// We allow for 2 seconds of compute with a 6 second average block time, with maximum proof size.
-</span><span class="kw">const </span>MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_mul(<span class="number">2</span>).set_proof_size(u64::MAX);
+</span><span class="kw">const </span>MAXIMUM_BLOCK_WEIGHT: Weight =
+	Weight::from_parts(WEIGHT_REF_TIME_PER_SECOND.saturating_mul(<span class="number">2</span>), u64::MAX);
 
 <span class="macro">parameter_types! </span>{
 	<span class="kw">pub const </span>BlockHashCount: BlockNumber = <span class="number">2400</span>;
