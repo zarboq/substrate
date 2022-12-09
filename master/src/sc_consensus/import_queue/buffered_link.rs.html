@@ -167,6 +167,20 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -249,7 +263,7 @@
 }
 
 <span class="doccomment">/// Internal buffered message.
-</span><span class="kw">enum </span>BlockImportWorkerMsg&lt;B: BlockT&gt; {
+</span><span class="kw">pub enum </span>BlockImportWorkerMsg&lt;B: BlockT&gt; {
 	BlocksProcessed(usize, usize, Vec&lt;(BlockImportResult&lt;B&gt;, B::Hash)&gt;),
 	JustificationImported(RuntimeOrigin, B::Hash, NumberFor&lt;B&gt;, bool),
 	RequestJustification(B::Hash, NumberFor&lt;B&gt;),
@@ -291,6 +305,18 @@
 }
 
 <span class="kw">impl</span>&lt;B: BlockT&gt; BufferedLinkReceiver&lt;B&gt; {
+	<span class="doccomment">/// Send action for the synchronization to perform.
+	</span><span class="kw">pub fn </span>send_actions(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: BlockImportWorkerMsg&lt;B&gt;, link: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Link&lt;B&gt;) {
+		<span class="kw">match </span>msg {
+			BlockImportWorkerMsg::BlocksProcessed(imported, count, results) =&gt;
+				link.blocks_processed(imported, count, results),
+			BlockImportWorkerMsg::JustificationImported(who, hash, number, success) =&gt;
+				link.justification_imported(who, <span class="kw-2">&amp;</span>hash, number, success),
+			BlockImportWorkerMsg::RequestJustification(hash, number) =&gt;
+				link.request_justification(<span class="kw-2">&amp;</span>hash, number),
+		}
+	}
+
 	<span class="doccomment">/// Polls for the buffered link actions. Any enqueued action will be propagated to the link
 	/// passed as parameter.
 	///
@@ -307,15 +333,17 @@
 				Poll::Pending =&gt; <span class="kw">break </span><span class="prelude-val">Ok</span>(()),
 			};
 
-			<span class="kw">match </span>msg {
-				BlockImportWorkerMsg::BlocksProcessed(imported, count, results) =&gt;
-					link.blocks_processed(imported, count, results),
-				BlockImportWorkerMsg::JustificationImported(who, hash, number, success) =&gt;
-					link.justification_imported(who, <span class="kw-2">&amp;</span>hash, number, success),
-				BlockImportWorkerMsg::RequestJustification(hash, number) =&gt;
-					link.request_justification(<span class="kw-2">&amp;</span>hash, number),
-			}
+			<span class="self">self</span>.send_actions(msg, <span class="kw-2">&amp;mut *</span>link);
 		}
+	}
+
+	<span class="doccomment">/// Poll next element from import queue and send the corresponding action command over the link.
+	</span><span class="kw">pub async fn </span>next_action(<span class="kw-2">&amp;mut </span><span class="self">self</span>, link: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Link&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(msg) = <span class="self">self</span>.rx.next().<span class="kw">await </span>{
+			<span class="self">self</span>.send_actions(msg, link);
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+		}
+		<span class="prelude-val">Err</span>(())
 	}
 
 	<span class="doccomment">/// Close the channel.

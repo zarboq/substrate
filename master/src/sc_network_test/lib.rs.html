@@ -1192,6 +1192,10 @@
 <a href="#1192" id="1192">1192</a>
 <a href="#1193" id="1193">1193</a>
 <a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1237,8 +1241,8 @@
 };
 <span class="kw">use </span>sc_consensus::{
 	BasicQueue, BlockCheckParams, BlockImport, BlockImportParams, BoxJustificationImport,
-	ForkChoiceStrategy, ImportResult, JustificationImport, JustificationSyncLink, LongestChain,
-	Verifier,
+	ForkChoiceStrategy, ImportQueue, ImportResult, JustificationImport, JustificationSyncLink,
+	LongestChain, Verifier,
 };
 <span class="kw">use </span>sc_network::{
 	config::{NetworkConfiguration, RequestResponseConfig, Role, SyncMode},
@@ -2090,7 +2094,9 @@
 			block_announce_validator,
 			network_config.max_parallel_downloads,
 			<span class="prelude-val">Some</span>(warp_sync),
+			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
+			import_queue.service(),
 			block_request_protocol_config.name.clone(),
 			state_request_protocol_config.name.clone(),
 			<span class="prelude-val">Some</span>(warp_protocol_config.name.clone()),
@@ -2109,9 +2115,8 @@
 			chain: client.clone(),
 			protocol_id,
 			fork_id,
-			import_queue,
 			chain_sync: Box::new(chain_sync),
-			chain_sync_service,
+			chain_sync_service: Box::new(chain_sync_service.clone()),
 			metrics_registry: <span class="prelude-val">None</span>,
 			block_announce_config,
 			request_response_protocol_configs: [
@@ -2129,6 +2134,9 @@
 		<span class="kw">let </span>service = network.service().clone();
 		<span class="self">self</span>.rt_handle().spawn(<span class="kw">async move </span>{
 			chain_sync_network_provider.run(service).<span class="kw">await</span>;
+		});
+		<span class="self">self</span>.rt_handle().spawn(<span class="kw">async move </span>{
+			import_queue.run(Box::new(chain_sync_service)).<span class="kw">await</span>;
 		});
 
 		<span class="self">self</span>.mut_peers(<span class="kw">move </span>|peers| {

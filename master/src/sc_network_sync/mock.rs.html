@@ -101,12 +101,6 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -130,11 +124,10 @@
 
 </span><span class="kw">use </span>futures::task::Poll;
 <span class="kw">use </span>libp2p::PeerId;
-<span class="kw">use </span>sc_consensus::{BlockImportError, BlockImportStatus};
 <span class="kw">use </span>sc_network_common::sync::{
 	message::{BlockAnnounce, BlockData, BlockRequest, BlockResponse},
 	BadPeer, ChainSync <span class="kw">as </span>ChainSyncT, Metrics, OnBlockData, OnBlockJustification,
-	OpaqueBlockResponse, PeerInfo, PollBlockAnnounceValidation, PollResult, SyncStatus,
+	OpaqueBlockResponse, PeerInfo, PollBlockAnnounceValidation, SyncStatus,
 };
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
 
@@ -169,17 +162,12 @@
 			request: <span class="prelude-ty">Option</span>&lt;BlockRequest&lt;Block&gt;&gt;,
 			response: BlockResponse&lt;Block&gt;,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;OnBlockData&lt;Block&gt;, BadPeer&gt;;
+		<span class="kw">fn </span>process_block_response_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, blocks_to_import: <span class="prelude-ty">Result</span>&lt;OnBlockData&lt;Block&gt;, BadPeer&gt;);
 		<span class="kw">fn </span>on_block_justification(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			who: PeerId,
 			response: BlockResponse&lt;Block&gt;,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;OnBlockJustification&lt;Block&gt;, BadPeer&gt;;
-		<span class="kw">fn </span>on_blocks_processed(
-			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-			imported: usize,
-			count: usize,
-			results: Vec&lt;(<span class="prelude-ty">Result</span>&lt;BlockImportStatus&lt;NumberFor&lt;Block&gt;&gt;, BlockImportError&gt;, Block::Hash)&gt;,
-		) -&gt; Box&lt;<span class="kw">dyn </span>Iterator&lt;Item = <span class="prelude-ty">Result</span>&lt;(PeerId, BlockRequest&lt;Block&gt;), BadPeer&gt;&gt;&gt;;
 		<span class="kw">fn </span>on_justification_import(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			hash: Block::Hash,
@@ -198,7 +186,7 @@
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			cx: <span class="kw-2">&amp;mut </span>std::task::Context&lt;<span class="lifetime">&#39;a</span>&gt;,
 		) -&gt; Poll&lt;PollBlockAnnounceValidation&lt;Block::Header&gt;&gt;;
-		<span class="kw">fn </span>peer_disconnected(<span class="kw-2">&amp;mut </span><span class="self">self</span>, who: <span class="kw-2">&amp;</span>PeerId) -&gt; <span class="prelude-ty">Option</span>&lt;OnBlockData&lt;Block&gt;&gt;;
+		<span class="kw">fn </span>peer_disconnected(<span class="kw-2">&amp;mut </span><span class="self">self</span>, who: <span class="kw-2">&amp;</span>PeerId);
 		<span class="kw">fn </span>metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Metrics;
 		<span class="kw">fn </span>block_response_into_blocks(
 			<span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -208,7 +196,7 @@
 		<span class="kw">fn </span>poll&lt;<span class="lifetime">&#39;a</span>&gt;(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			cx: <span class="kw-2">&amp;mut </span>std::task::Context&lt;<span class="lifetime">&#39;a</span>&gt;,
-		) -&gt; Poll&lt;PollResult&lt;Block&gt;&gt;;
+		) -&gt; Poll&lt;PollBlockAnnounceValidation&lt;Block::Header&gt;&gt;;
 		<span class="kw">fn </span>send_block_request(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			who: PeerId,

@@ -993,6 +993,8 @@
 <a href="#993" id="993">993</a>
 <a href="#994" id="994">994</a>
 <a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1848,7 +1850,9 @@
 		block_announce_validator,
 		config.network.max_parallel_downloads,
 		warp_sync_provider,
+		config.prometheus_config.as_ref().map(|config| config.registry.clone()).as_ref(),
 		chain_sync_network_handle,
+		import_queue.service(),
 		block_request_protocol_config.name.clone(),
 		state_request_protocol_config.name.clone(),
 		warp_sync_protocol_config.as_ref().map(|config| config.name.clone()),
@@ -1872,9 +1876,8 @@
 		chain: client.clone(),
 		protocol_id: protocol_id.clone(),
 		fork_id: config.chain_spec.fork_id().map(ToOwned::to_owned),
-		import_queue: Box::new(import_queue),
 		chain_sync: Box::new(chain_sync),
-		chain_sync_service,
+		chain_sync_service: Box::new(chain_sync_service.clone()),
 		metrics_registry: config.prometheus_config.as_ref().map(|config| config.registry.clone()),
 		block_announce_config,
 		request_response_protocol_configs: request_response_protocol_configs
@@ -1920,6 +1923,7 @@
 		<span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>),
 		chain_sync_network_provider.run(network.clone()),
 	);
+	spawn_handle.spawn(<span class="string">&quot;import-queue&quot;</span>, <span class="prelude-val">None</span>, import_queue.run(Box::new(chain_sync_service)));
 
 	<span class="kw">let </span>(system_rpc_tx, system_rpc_rx) = tracing_unbounded(<span class="string">&quot;mpsc_system_rpc&quot;</span>);
 
