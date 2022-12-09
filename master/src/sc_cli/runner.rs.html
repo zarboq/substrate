@@ -204,6 +204,10 @@
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
 <a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -228,7 +232,7 @@
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>sc_service::{Configuration, Error <span class="kw">as </span>ServiceError, TaskManager};
 <span class="kw">use </span>sc_utils::metrics::{TOKIO_THREADS_ALIVE, TOKIO_THREADS_TOTAL};
-<span class="kw">use </span>std::marker::PhantomData;
+<span class="kw">use </span>std::{marker::PhantomData, time::Duration};
 
 <span class="attr">#[cfg(target_family = <span class="string">&quot;unix&quot;</span>)]
 </span><span class="kw">async fn </span>main&lt;F, E&gt;(func: F) -&gt; std::result::Result&lt;(), E&gt;
@@ -353,7 +357,11 @@
 		<span class="self">self</span>.print_node_infos();
 		<span class="kw">let </span><span class="kw-2">mut </span>task_manager = <span class="self">self</span>.tokio_runtime.block_on(initialize(<span class="self">self</span>.config))<span class="question-mark">?</span>;
 		<span class="kw">let </span>res = <span class="self">self</span>.tokio_runtime.block_on(main(task_manager.future().fuse()));
-		<span class="prelude-val">Ok</span>(res<span class="question-mark">?</span>)
+
+		<span class="comment">// Give all futures 60 seconds to shutdown, before tokio &quot;leaks&quot; them.
+		</span><span class="self">self</span>.tokio_runtime.shutdown_timeout(Duration::from_secs(<span class="number">60</span>));
+
+		res.map_err(Into::into)
 	}
 
 	<span class="doccomment">/// A helper function that runs a command with the configuration of this node.
