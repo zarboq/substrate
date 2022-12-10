@@ -3889,12 +3889,12 @@
 			<span class="kw">return </span><span class="prelude-val">Err</span>(ElectionError::DataProvider(<span class="string">&quot;Snapshot too big for submission.&quot;</span>))
 		}
 
-		<span class="kw">let </span><span class="kw-2">mut </span>desired_targets =
-			T::DataProvider::desired_targets().map_err(ElectionError::DataProvider)<span class="question-mark">?</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>desired_targets = &lt;Pallet&lt;T&gt; <span class="kw">as </span>ElectionProviderBase&gt;::desired_targets_checked()
+			.map_err(|e| ElectionError::DataProvider(e))<span class="question-mark">?</span>;
 
-		<span class="comment">// If `desired_targets` &gt; `targets.len()`, cap `desired_targets` to that
-		// level and emit a warning
-		</span><span class="kw">let </span>max_desired_targets: u32 = (targets.len() <span class="kw">as </span>u32).min(T::MaxWinners::get());
+		<span class="comment">// If `desired_targets` &gt; `targets.len()`, cap `desired_targets` to that level and emit a
+		// warning
+		</span><span class="kw">let </span>max_desired_targets: u32 = targets.len() <span class="kw">as </span>u32;
 		<span class="kw">if </span>desired_targets &gt; max_desired_targets {
 			<span class="macro">log!</span>(
 				warn,

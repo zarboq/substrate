@@ -671,8 +671,6 @@
 <a href="#671" id="671">671</a>
 <a href="#672" id="672">672</a>
 <a href="#673" id="673">673</a>
-<a href="#674" id="674">674</a>
-<a href="#675" id="675">675</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1061,15 +1059,13 @@
 	<span class="doccomment">/// checked call to `Self::DataProvider::desired_targets()` ensuring the value never exceeds
 	/// [`Self::MaxWinners`].
 	</span><span class="kw">fn </span>desired_targets_checked() -&gt; data_provider::Result&lt;u32&gt; {
-		<span class="kw">match </span><span class="self">Self</span>::DataProvider::desired_targets() {
-			<span class="prelude-val">Ok</span>(desired_targets) =&gt;
-				<span class="kw">if </span>desired_targets &lt;= <span class="self">Self</span>::MaxWinners::get() {
-					<span class="prelude-val">Ok</span>(desired_targets)
-				} <span class="kw">else </span>{
-					<span class="prelude-val">Err</span>(<span class="string">&quot;desired_targets should not be greater than MaxWinners&quot;</span>)
-				},
-			<span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
-		}
+		<span class="self">Self</span>::DataProvider::desired_targets().and_then(|desired_targets| {
+			<span class="kw">if </span>desired_targets &lt;= <span class="self">Self</span>::MaxWinners::get() {
+				<span class="prelude-val">Ok</span>(desired_targets)
+			} <span class="kw">else </span>{
+				<span class="prelude-val">Err</span>(<span class="string">&quot;desired_targets must not be greater than MaxWinners.&quot;</span>)
+			}
+		})
 	}
 }
 

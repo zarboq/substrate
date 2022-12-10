@@ -1310,6 +1310,8 @@
 <a href="#1310" id="1310">1310</a>
 <a href="#1311" id="1311">1311</a>
 <a href="#1312" id="1312">1312</a>
+<a href="#1313" id="1313">1313</a>
+<a href="#1314" id="1314">1314</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1906,10 +1908,12 @@
 			</span>DesiredTargets::set(<span class="number">4</span>);
 			MaxWinners::set(<span class="number">3</span>);
 
-			<span class="kw">let </span>(<span class="kw">_</span>, <span class="kw">_</span>, actual_desired_targets) = MultiPhase::create_snapshot_external().unwrap();
-
-			<span class="comment">// snapshot is created with min of desired_targets and MaxWinners
-			</span><span class="macro">assert_eq!</span>(actual_desired_targets, <span class="number">3</span>);
+			<span class="comment">// snapshot not created because data provider returned an unexpected number of
+			// desired_targets
+			</span><span class="macro">assert_noop!</span>(
+				MultiPhase::create_snapshot_external(),
+				ElectionError::DataProvider(<span class="string">&quot;desired_targets must not be greater than MaxWinners.&quot;</span>),
+			);
 		})
 	}
 
