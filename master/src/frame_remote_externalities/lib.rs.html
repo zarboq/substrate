@@ -1207,6 +1207,11 @@
 <a href="#1207" id="1207">1207</a>
 <a href="#1208" id="1208">1208</a>
 <a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
+<a href="#1213" id="1213">1213</a>
+<a href="#1214" id="1214">1214</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1985,6 +1990,8 @@
 
 	<span class="doccomment">/// Inject a hashed prefix. This is treated as-is, and should be pre-hashed.
 	///
+	/// Only relevant is `Mode::Online` is being used. Noop otherwise.
+	///
 	/// This should be used to inject a &quot;PREFIX&quot;, like a storage (double) map.
 	</span><span class="kw">pub fn </span>inject_hashed_prefix(<span class="kw-2">mut </span><span class="self">self</span>, hashed: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
 		<span class="self">self</span>.hashed_prefixes.push(hashed.to_vec());
@@ -1993,6 +2000,8 @@
 
 	<span class="doccomment">/// Just a utility wrapper of [`Self::inject_hashed_prefix`] that injects
 	/// [`DEFAULT_CHILD_STORAGE_KEY_PREFIX`] as a prefix.
+	///
+	/// Only relevant is `Mode::Online` is being used. Noop otherwise.
 	///
 	/// If set, this will guarantee that the child-tree data of ALL pallets will be downloaded.
 	///
@@ -2008,6 +2017,8 @@
 	}
 
 	<span class="doccomment">/// Inject a hashed key to scrape. This is treated as-is, and should be pre-hashed.
+	///
+	/// Only relevant is `Mode::Online` is being used. Noop otherwise.
 	///
 	/// This should be used to inject a &quot;KEY&quot;, like a storage value.
 	</span><span class="kw">pub fn </span>inject_hashed_key(<span class="kw-2">mut </span><span class="self">self</span>, hashed: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
@@ -2160,7 +2171,6 @@
 <span class="attr">#[cfg(all(test, feature = <span class="string">&quot;remote-test&quot;</span>))]
 </span><span class="kw">mod </span>remote_tests {
 	<span class="kw">use </span><span class="kw">super</span>::test_prelude::<span class="kw-2">*</span>;
-	<span class="kw">const </span>REMOTE_INACCESSIBLE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;Can&#39;t reach the remote node. Is it running?&quot;</span>;
 
 	<span class="attr">#[tokio::test]
 	</span><span class="kw">async fn </span>offline_else_online_works() {
@@ -2179,7 +2189,7 @@
 			))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 
 		<span class="comment">// this shows that in the second run, we are not using the remote
@@ -2197,7 +2207,7 @@
 			))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 
 		<span class="kw">let </span>to_delete = std::fs::read_dir(Path::new(<span class="string">&quot;.&quot;</span>))
@@ -2227,7 +2237,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 	}
 
@@ -2242,7 +2252,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 
 		Builder::&lt;Block&gt;::new()
@@ -2253,7 +2263,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 	}
 
@@ -2268,7 +2278,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 
 		Builder::&lt;Block&gt;::new()
@@ -2279,7 +2289,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 	}
 
@@ -2294,7 +2304,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 
 		<span class="kw">let </span>to_delete = std::fs::read_dir(Path::new(<span class="string">&quot;.&quot;</span>))
@@ -2335,7 +2345,7 @@
 			.inject_default_child_tree_prefix()
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 
 		<span class="kw">let </span>to_delete = std::fs::read_dir(Path::new(<span class="string">&quot;.&quot;</span>))
@@ -2373,7 +2383,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 
 		<span class="kw">let </span>to_delete = std::fs::read_dir(Path::new(<span class="string">&quot;.&quot;</span>))
@@ -2412,7 +2422,7 @@
 			}))
 			.build()
 			.<span class="kw">await
-			</span>.expect(REMOTE_INACCESSIBLE)
+			</span>.unwrap()
 			.execute_with(|| {});
 	}
 }

@@ -1730,15 +1730,6 @@
 <a href="#1730" id="1730">1730</a>
 <a href="#1731" id="1731">1731</a>
 <a href="#1732" id="1732">1732</a>
-<a href="#1733" id="1733">1733</a>
-<a href="#1734" id="1734">1734</a>
-<a href="#1735" id="1735">1735</a>
-<a href="#1736" id="1736">1736</a>
-<a href="#1737" id="1737">1737</a>
-<a href="#1738" id="1738">1738</a>
-<a href="#1739" id="1739">1739</a>
-<a href="#1740" id="1740">1740</a>
-<a href="#1741" id="1741">1741</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1781,7 +1772,7 @@
 	offence::{DisableStrategy, OffenceDetails, OnOffenceHandler},
 	EraIndex, SessionIndex, Stake, StakingInterface,
 };
-<span class="kw">use </span>sp_std::{collections::btree_map::BTreeMap, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use crate</span>::{
 	log, slashing, weights::WeightInfo, ActiveEraInfo, BalanceOf, EraPayout, Exposure, ExposureOf,
@@ -2092,7 +2083,8 @@
 		}
 	}
 
-	<span class="doccomment">///
+	<span class="doccomment">/// Start a new era. It does:
+	///
 	/// * Increment `active_era.index`,
 	/// * reset `active_era.start`,
 	/// * update `BondedEras` and apply slashes.
@@ -2445,11 +2437,6 @@
 	/// `maybe_max_len` can imposes a cap on the number of voters returned;
 	///
 	/// This function is self-weighing as [`DispatchClass::Mandatory`].
-	///
-	/// ### Slashing
-	///
-	/// All votes that have been submitted before the last non-zero slash of the corresponding
-	/// target are *auto-chilled*, but still count towards the limit imposed by `maybe_max_len`.
 	</span><span class="kw">pub fn </span>get_npos_voters(maybe_max_len: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; Vec&lt;VoterOf&lt;<span class="self">Self</span>&gt;&gt; {
 		<span class="kw">let </span>max_allowed_len = {
 			<span class="kw">let </span>all_voter_count = T::VoterList::count() <span class="kw">as </span>usize;
@@ -2460,7 +2447,6 @@
 
 		<span class="comment">// cache a few things.
 		</span><span class="kw">let </span>weight_of = <span class="self">Self</span>::weight_of_fn();
-		<span class="kw">let </span>slashing_spans = &lt;SlashingSpans&lt;T&gt;&gt;::iter().collect::&lt;BTreeMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;();
 
 		<span class="kw">let </span><span class="kw-2">mut </span>voters_seen = <span class="number">0u32</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>validators_taken = <span class="number">0u32</span>;
@@ -2478,19 +2464,13 @@
 				<span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
 			};
 
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(Nominations { submitted_in, <span class="kw-2">mut </span>targets, suppressed: <span class="kw">_ </span>}) =
-				&lt;Nominators&lt;T&gt;&gt;::get(<span class="kw-2">&amp;</span>voter)
-			{
-				<span class="comment">// if this voter is a nominator:
-				</span>targets.retain(|stash| {
-					slashing_spans
-						.get(stash)
-						.map_or(<span class="bool-val">true</span>, |spans| submitted_in &gt;= spans.last_nonzero_slash())
-				});
-				<span class="kw">if </span>!targets.len().is_zero() {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(Nominations { targets, .. }) = &lt;Nominators&lt;T&gt;&gt;::get(<span class="kw-2">&amp;</span>voter) {
+				<span class="kw">if </span>!targets.is_empty() {
 					all_voters.push((voter.clone(), weight_of(<span class="kw-2">&amp;</span>voter), targets));
 					nominators_taken.saturating_inc();
-				}
+				} <span class="kw">else </span>{
+					<span class="comment">// Technically should never happen, but not much we can do about it.
+				</span>}
 			} <span class="kw">else if </span>Validators::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>voter) {
 				<span class="comment">// if this voter is a validator:
 				</span><span class="kw">let </span>self_vote = (
@@ -2512,18 +2492,14 @@
 					warn,
 					<span class="string">&quot;DEFENSIVE: invalid item in `VoterList`: {:?}, this nominator probably has too many nominations now&quot;</span>,
 					voter
-				)
+				);
 			}
 		}
 
 		<span class="comment">// all_voters should have not re-allocated.
 		</span><span class="macro">debug_assert!</span>(all_voters.capacity() == max_allowed_len);
 
-		<span class="self">Self</span>::register_weight(T::WeightInfo::get_npos_voters(
-			validators_taken,
-			nominators_taken,
-			slashing_spans.len() <span class="kw">as </span>u32,
-		));
+		<span class="self">Self</span>::register_weight(T::WeightInfo::get_npos_voters(validators_taken, nominators_taken));
 
 		<span class="macro">log!</span>(
 			info,
@@ -3024,6 +3000,12 @@
 				now: active_era,
 				reward_proportion,
 				disable_strategy,
+			});
+
+			<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::SlashReported {
+				validator: stash.clone(),
+				fraction: <span class="kw-2">*</span>slash_fraction,
+				slash_era,
 			});
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>unapplied) = unapplied {

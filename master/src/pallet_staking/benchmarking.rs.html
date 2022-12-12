@@ -1045,9 +1045,6 @@
 <a href="#1045" id="1045">1045</a>
 <a href="#1046" id="1046">1046</a>
 <a href="#1047" id="1047">1047</a>
-<a href="#1048" id="1048">1048</a>
-<a href="#1049" id="1049">1049</a>
-<a href="#1050" id="1050">1050</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1842,12 +1839,10 @@
 	}
 
 	get_npos_voters {
-		<span class="comment">// number of validator intention.
+		<span class="comment">// number of validator intention. we will iterate all of them.
 		</span><span class="kw">let </span>v <span class="kw">in </span>(MaxValidators::&lt;T&gt;::get() / <span class="number">2</span>) .. MaxValidators::&lt;T&gt;::get();
-		<span class="comment">// number of nominator intention.
+		<span class="comment">// number of nominator intention. we will iterate all of them.
 		</span><span class="kw">let </span>n <span class="kw">in </span>(MaxNominators::&lt;T&gt;::get() / <span class="number">2</span>) .. MaxNominators::&lt;T&gt;::get();
-		<span class="comment">// total number of slashing spans. Assigned to validators randomly.
-		</span><span class="kw">let </span>s <span class="kw">in </span><span class="number">1 </span>.. <span class="number">20</span>;
 
 		<span class="kw">let </span>validators = create_validators_with_nominators_for_era::&lt;T&gt;(
 			v, n, T::MaxNominations::get() <span class="kw">as </span>usize, <span class="bool-val">false</span>, <span class="prelude-val">None
@@ -1856,9 +1851,8 @@
 		.map(|v| T::Lookup::lookup(v).unwrap())
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-		(<span class="number">0</span>..s).for_each(|index| {
-			add_slashing_spans::&lt;T&gt;(<span class="kw-2">&amp;</span>validators[index <span class="kw">as </span>usize], <span class="number">10</span>);
-		});
+		<span class="macro">assert_eq!</span>(Validators::&lt;T&gt;::count(), v);
+		<span class="macro">assert_eq!</span>(Nominators::&lt;T&gt;::count(), n);
 
 		<span class="kw">let </span>num_voters = (v + n) <span class="kw">as </span>usize;
 	}: {
