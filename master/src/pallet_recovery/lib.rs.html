@@ -709,6 +709,15 @@
 <a href="#709" id="709">709</a>
 <a href="#710" id="710">710</a>
 <a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1085,7 +1094,8 @@
 		/// Parameters:
 		/// - `account`: The recovered account you want to make a call on-behalf-of.
 		/// - `call`: The call you want to make with the recovered account.
-		</span><span class="attr">#[pallet::weight({
+		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
+		#[pallet::weight({
 			<span class="kw">let </span>dispatch_info = call.get_dispatch_info();
 			(
 				T::WeightInfo::as_recovered().saturating_add(dispatch_info.weight),
@@ -1114,7 +1124,8 @@
 		/// Parameters:
 		/// - `lost`: The &quot;lost account&quot; to be recovered.
 		/// - `rescuer`: The &quot;rescuer account&quot; which can call as the lost account.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::set_recovered())]
+		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
+		#[pallet::weight(T::WeightInfo::set_recovered())]
 		</span><span class="kw">pub fn </span>set_recovered(
 			origin: OriginFor&lt;T&gt;,
 			lost: AccountIdLookupOf&lt;T&gt;,
@@ -1148,7 +1159,8 @@
 		///   friends.
 		/// - `delay_period`: The number of blocks after a recovery attempt is initialized that
 		///   needs to pass before the account can be recovered.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::create_recovery(friends.len() <span class="kw">as </span>u32))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
+		#[pallet::weight(T::WeightInfo::create_recovery(friends.len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>create_recovery(
 			origin: OriginFor&lt;T&gt;,
 			friends: Vec&lt;T::AccountId&gt;,
@@ -1199,7 +1211,8 @@
 		/// Parameters:
 		/// - `account`: The lost account that you want to recover. This account needs to be
 		///   recoverable (i.e. have a recovery configuration).
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::initiate_recovery())]
+		</span><span class="attr">#[pallet::call_index(<span class="number">3</span>)]
+		#[pallet::weight(T::WeightInfo::initiate_recovery())]
 		</span><span class="kw">pub fn </span>initiate_recovery(
 			origin: OriginFor&lt;T&gt;,
 			account: AccountIdLookupOf&lt;T&gt;,
@@ -1243,7 +1256,8 @@
 		///
 		/// The combination of these two parameters must point to an active recovery
 		/// process.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::vouch_recovery(T::MaxFriends::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">4</span>)]
+		#[pallet::weight(T::WeightInfo::vouch_recovery(T::MaxFriends::get()))]
 		</span><span class="kw">pub fn </span>vouch_recovery(
 			origin: OriginFor&lt;T&gt;,
 			lost: AccountIdLookupOf&lt;T&gt;,
@@ -1286,7 +1300,8 @@
 		/// Parameters:
 		/// - `account`: The lost account that you want to claim has been successfully recovered by
 		///   you.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::claim_recovery(T::MaxFriends::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
+		#[pallet::weight(T::WeightInfo::claim_recovery(T::MaxFriends::get()))]
 		</span><span class="kw">pub fn </span>claim_recovery(
 			origin: OriginFor&lt;T&gt;,
 			account: AccountIdLookupOf&lt;T&gt;,
@@ -1333,7 +1348,8 @@
 		///
 		/// Parameters:
 		/// - `rescuer`: The account trying to rescue this recoverable account.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::close_recovery(T::MaxFriends::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">6</span>)]
+		#[pallet::weight(T::WeightInfo::close_recovery(T::MaxFriends::get()))]
 		</span><span class="kw">pub fn </span>close_recovery(
 			origin: OriginFor&lt;T&gt;,
 			rescuer: AccountIdLookupOf&lt;T&gt;,
@@ -1370,7 +1386,8 @@
 		///
 		/// The dispatch origin for this call must be _Signed_ and must be a
 		/// recoverable account (i.e. has a recovery configuration).
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::remove_recovery(T::MaxFriends::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">7</span>)]
+		#[pallet::weight(T::WeightInfo::remove_recovery(T::MaxFriends::get()))]
 		</span><span class="kw">pub fn </span>remove_recovery(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="comment">// Check there are no active recoveries
@@ -1392,7 +1409,8 @@
 		///
 		/// Parameters:
 		/// - `account`: The recovered account you are able to call on-behalf-of.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::cancel_recovered())]
+		</span><span class="attr">#[pallet::call_index(<span class="number">8</span>)]
+		#[pallet::weight(T::WeightInfo::cancel_recovered())]
 		</span><span class="kw">pub fn </span>cancel_recovered(
 			origin: OriginFor&lt;T&gt;,
 			account: AccountIdLookupOf&lt;T&gt;,

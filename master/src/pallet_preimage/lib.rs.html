@@ -454,6 +454,10 @@
 <a href="#454" id="454">454</a>
 <a href="#455" id="455">455</a>
 <a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -609,7 +613,8 @@
 		///
 		/// If the preimage was previously requested, no fees or deposits are taken for providing
 		/// the preimage. Otherwise, a deposit is taken proportional to the size of the preimage.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::note_preimage(bytes.len() <span class="kw">as </span>u32))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
+		#[pallet::weight(T::WeightInfo::note_preimage(bytes.len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>note_preimage(origin: OriginFor&lt;T&gt;, bytes: Vec&lt;u8&gt;) -&gt; DispatchResultWithPostInfo {
 			<span class="comment">// We accept a signed origin which will pay a deposit, or a root origin where a deposit
 			// is not taken.
@@ -628,7 +633,8 @@
 		///
 		/// - `hash`: The hash of the preimage to be removed from the store.
 		/// - `len`: The length of the preimage of `hash`.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::unnote_preimage())]
+		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
+		#[pallet::weight(T::WeightInfo::unnote_preimage())]
 		</span><span class="kw">pub fn </span>unnote_preimage(origin: OriginFor&lt;T&gt;, hash: T::Hash) -&gt; DispatchResult {
 			<span class="kw">let </span>maybe_sender = <span class="self">Self</span>::ensure_signed_or_manager(origin)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_unnote_preimage(<span class="kw-2">&amp;</span>hash, maybe_sender)
@@ -638,7 +644,8 @@
 		///
 		/// If the preimage requests has already been provided on-chain, we unreserve any deposit
 		/// a user may have paid, and take the control of the preimage out of their hands.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::request_preimage())]
+		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
+		#[pallet::weight(T::WeightInfo::request_preimage())]
 		</span><span class="kw">pub fn </span>request_preimage(origin: OriginFor&lt;T&gt;, hash: T::Hash) -&gt; DispatchResult {
 			T::ManagerOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_request_preimage(<span class="kw-2">&amp;</span>hash);
@@ -648,7 +655,8 @@
 		<span class="doccomment">/// Clear a previously made request for a preimage.
 		///
 		/// NOTE: THIS MUST NOT BE CALLED ON `hash` MORE TIMES THAN `request_preimage`.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::unrequest_preimage())]
+		</span><span class="attr">#[pallet::call_index(<span class="number">3</span>)]
+		#[pallet::weight(T::WeightInfo::unrequest_preimage())]
 		</span><span class="kw">pub fn </span>unrequest_preimage(origin: OriginFor&lt;T&gt;, hash: T::Hash) -&gt; DispatchResult {
 			T::ManagerOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_unrequest_preimage(<span class="kw-2">&amp;</span>hash)

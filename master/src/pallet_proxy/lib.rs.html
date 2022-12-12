@@ -793,6 +793,16 @@
 <a href="#793" id="793">793</a>
 <a href="#794" id="794">794</a>
 <a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -986,7 +996,8 @@
 		/// - `real`: The account that the proxy will make a call on behalf of.
 		/// - `force_proxy_type`: Specify the exact proxy type to be used and checked for this call.
 		/// - `call`: The call to be made by the `real` account.
-		</span><span class="attr">#[pallet::weight({
+		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
+		#[pallet::weight({
 			<span class="kw">let </span>di = call.get_dispatch_info();
 			(T::WeightInfo::proxy(T::MaxProxies::get())
 				 <span class="comment">// AccountData for inner call origin accountdata.
@@ -1019,7 +1030,8 @@
 		/// - `proxy_type`: The permissions allowed for this proxy account.
 		/// - `delay`: The announcement period required of the initial proxy. Will generally be
 		/// zero.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::add_proxy(T::MaxProxies::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
+		#[pallet::weight(T::WeightInfo::add_proxy(T::MaxProxies::get()))]
 		</span><span class="kw">pub fn </span>add_proxy(
 			origin: OriginFor&lt;T&gt;,
 			delegate: AccountIdLookupOf&lt;T&gt;,
@@ -1038,7 +1050,8 @@
 		/// Parameters:
 		/// - `proxy`: The account that the `caller` would like to remove as a proxy.
 		/// - `proxy_type`: The permissions currently enabled for the removed proxy account.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::remove_proxy(T::MaxProxies::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
+		#[pallet::weight(T::WeightInfo::remove_proxy(T::MaxProxies::get()))]
 		</span><span class="kw">pub fn </span>remove_proxy(
 			origin: OriginFor&lt;T&gt;,
 			delegate: AccountIdLookupOf&lt;T&gt;,
@@ -1056,7 +1069,8 @@
 		///
 		/// WARNING: This may be called on accounts created by `pure`, however if done, then
 		/// the unreserved fees will be inaccessible. **All access to this account will be lost.**
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::remove_proxies(T::MaxProxies::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">3</span>)]
+		#[pallet::weight(T::WeightInfo::remove_proxies(T::MaxProxies::get()))]
 		</span><span class="kw">pub fn </span>remove_proxies(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>(<span class="kw">_</span>, old_deposit) = Proxies::&lt;T&gt;::take(<span class="kw-2">&amp;</span>who);
@@ -1083,7 +1097,8 @@
 		/// same sender, with the same parameters.
 		///
 		/// Fails if there are insufficient funds to pay for deposit.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::create_pure(T::MaxProxies::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">4</span>)]
+		#[pallet::weight(T::WeightInfo::create_pure(T::MaxProxies::get()))]
 		</span><span class="kw">pub fn </span>create_pure(
 			origin: OriginFor&lt;T&gt;,
 			proxy_type: T::ProxyType,
@@ -1130,7 +1145,8 @@
 		///
 		/// Fails with `NoPermission` in case the caller is not a previously created pure
 		/// account whose `pure` call has corresponding parameters.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::kill_pure(T::MaxProxies::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
+		#[pallet::weight(T::WeightInfo::kill_pure(T::MaxProxies::get()))]
 		</span><span class="kw">pub fn </span>kill_pure(
 			origin: OriginFor&lt;T&gt;,
 			spawner: AccountIdLookupOf&lt;T&gt;,
@@ -1167,7 +1183,8 @@
 		/// Parameters:
 		/// - `real`: The account that the proxy will make a call on behalf of.
 		/// - `call_hash`: The hash of the call to be made by the `real` account.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::announce(T::MaxPending::get(), T::MaxProxies::get()))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">6</span>)]
+		#[pallet::weight(T::WeightInfo::announce(T::MaxPending::get(), T::MaxProxies::get()))]
 		</span><span class="kw">pub fn </span>announce(
 			origin: OriginFor&lt;T&gt;,
 			real: AccountIdLookupOf&lt;T&gt;,
@@ -1216,7 +1233,8 @@
 		/// Parameters:
 		/// - `real`: The account that the proxy will make a call on behalf of.
 		/// - `call_hash`: The hash of the call to be made by the `real` account.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::remove_announcement(
+		</span><span class="attr">#[pallet::call_index(<span class="number">7</span>)]
+		#[pallet::weight(T::WeightInfo::remove_announcement(
 			T::MaxPending::get(),
 			T::MaxProxies::get()
 		))]
@@ -1242,7 +1260,8 @@
 		/// Parameters:
 		/// - `delegate`: The account that previously announced the call.
 		/// - `call_hash`: The hash of the call to be made.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::reject_announcement(
+		</span><span class="attr">#[pallet::call_index(<span class="number">8</span>)]
+		#[pallet::weight(T::WeightInfo::reject_announcement(
 			T::MaxPending::get(),
 			T::MaxProxies::get()
 		))]
@@ -1271,7 +1290,8 @@
 		/// - `real`: The account that the proxy will make a call on behalf of.
 		/// - `force_proxy_type`: Specify the exact proxy type to be used and checked for this call.
 		/// - `call`: The call to be made by the `real` account.
-		</span><span class="attr">#[pallet::weight({
+		</span><span class="attr">#[pallet::call_index(<span class="number">9</span>)]
+		#[pallet::weight({
 			<span class="kw">let </span>di = call.get_dispatch_info();
 			(T::WeightInfo::proxy_announced(T::MaxPending::get(), T::MaxProxies::get())
 				 <span class="comment">// AccountData for inner call origin accountdata.

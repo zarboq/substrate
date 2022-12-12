@@ -3219,6 +3219,12 @@
 <a href="#3219" id="3219">3219</a>
 <a href="#3220" id="3220">3220</a>
 <a href="#3221" id="3221">3221</a>
+<a href="#3222" id="3222">3222</a>
+<a href="#3223" id="3223">3223</a>
+<a href="#3224" id="3224">3224</a>
+<a href="#3225" id="3225">3225</a>
+<a href="#3226" id="3226">3226</a>
+<a href="#3227" id="3227">3227</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -3530,7 +3536,8 @@
 		/// # &lt;weight&gt;
 		/// We assume the maximum weight among all 3 cases: vote_equal, vote_more and vote_less.
 		/// # &lt;/weight&gt;
-		</span><span class="attr">#[pallet::weight(
+		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
+		#[pallet::weight(
 			T::WeightInfo::vote_more(votes.len() <span class="kw">as </span>u32)
 			.max(T::WeightInfo::vote_less(votes.len() <span class="kw">as </span>u32))
 			.max(T::WeightInfo::vote_equal(votes.len() <span class="kw">as </span>u32))
@@ -3592,7 +3599,8 @@
 		/// This removes the lock and returns the deposit.
 		///
 		/// The dispatch origin of this call must be signed and be a voter.
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::remove_voter())]
+		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
+		#[pallet::weight(T::WeightInfo::remove_voter())]
 		</span><span class="kw">pub fn </span>remove_voter(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(<span class="self">Self</span>::is_voter(<span class="kw-2">&amp;</span>who), Error::&lt;T&gt;::MustBeVoter);
@@ -3615,7 +3623,8 @@
 		/// # &lt;weight&gt;
 		/// The number of current candidates must be provided as witness data.
 		/// # &lt;/weight&gt;
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::submit_candidacy(<span class="kw-2">*</span>candidate_count))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
+		#[pallet::weight(T::WeightInfo::submit_candidacy(<span class="kw-2">*</span>candidate_count))]
 		</span><span class="kw">pub fn </span>submit_candidacy(
 			origin: OriginFor&lt;T&gt;,
 			<span class="attr">#[pallet::compact] </span>candidate_count: u32,
@@ -3659,7 +3668,8 @@
 		/// # &lt;weight&gt;
 		/// The type of renouncing must be provided as witness data.
 		/// # &lt;/weight&gt;
-		</span><span class="attr">#[pallet::weight(<span class="kw">match </span><span class="kw-2">*</span>renouncing {
+		</span><span class="attr">#[pallet::call_index(<span class="number">3</span>)]
+		#[pallet::weight(<span class="kw">match </span><span class="kw-2">*</span>renouncing {
 			Renouncing::Candidate(count) =&gt; T::WeightInfo::renounce_candidacy_candidate(count),
 			Renouncing::Member =&gt; T::WeightInfo::renounce_candidacy_members(),
 			Renouncing::RunnerUp =&gt; T::WeightInfo::renounce_candidacy_runners_up(),
@@ -3721,7 +3731,8 @@
 		/// If we have a replacement, we use a small weight. Else, since this is a root call and
 		/// will go into phragmen, we assume full block for now.
 		/// # &lt;/weight&gt;
-		</span><span class="attr">#[pallet::weight(<span class="kw">if </span><span class="kw-2">*</span>rerun_election {
+		</span><span class="attr">#[pallet::call_index(<span class="number">4</span>)]
+		#[pallet::weight(<span class="kw">if </span><span class="kw-2">*</span>rerun_election {
 			T::WeightInfo::remove_member_without_replacement()
 		} <span class="kw">else </span>{
 			T::WeightInfo::remove_member_with_replacement()
@@ -3756,7 +3767,8 @@
 		/// # &lt;weight&gt;
 		/// The total number of voters and those that are defunct must be provided as witness data.
 		/// # &lt;/weight&gt;
-		</span><span class="attr">#[pallet::weight(T::WeightInfo::clean_defunct_voters(<span class="kw-2">*</span>_num_voters, <span class="kw-2">*</span>_num_defunct))]
+		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
+		#[pallet::weight(T::WeightInfo::clean_defunct_voters(<span class="kw-2">*</span>_num_voters, <span class="kw-2">*</span>_num_defunct))]
 		</span><span class="kw">pub fn </span>clean_defunct_voters(
 			origin: OriginFor&lt;T&gt;,
 			_num_voters: u32,
