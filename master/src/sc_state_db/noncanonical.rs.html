@@ -1065,6 +1065,28 @@
 <a href="#1065" id="1065">1065</a>
 <a href="#1066" id="1066">1066</a>
 <a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1105,6 +1127,7 @@
 	// would be deleted but kept around because block is pinned, ref counted.
 	</span>pinned: HashMap&lt;BlockHash, u32&gt;,
 	pinned_insertions: HashMap&lt;BlockHash, (Vec&lt;Key&gt;, u32)&gt;,
+	last_canon_pinned: <span class="prelude-ty">Option</span>&lt;BlockHash&gt;,
 }
 
 <span class="attr">#[cfg_attr(test, derive(PartialEq, Debug))]
@@ -1292,6 +1315,7 @@
 			pinned: Default::default(),
 			pinned_insertions: Default::default(),
 			values,
+			last_canon_pinned: <span class="prelude-val">None</span>,
 		})
 	}
 
@@ -1433,6 +1457,16 @@
 			.iter()
 			.position(|overlay| overlay.hash == <span class="kw-2">*</span>hash)
 			.ok_or(StateDbError::InvalidBlock)<span class="question-mark">?</span>;
+
+		<span class="comment">// No failures are possible beyond this point.
+
+		// Unpin previously canonicalized block
+		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(prev_hash) = <span class="self">self</span>.last_canon_pinned.take() {
+			<span class="self">self</span>.unpin(<span class="kw-2">&amp;</span>prev_hash);
+		}
+		<span class="comment">// Force pin canonicalized block so that it is no discarded immediately
+		</span><span class="self">self</span>.pin(hash);
+		<span class="self">self</span>.last_canon_pinned = <span class="prelude-val">Some</span>(hash.clone());
 
 		<span class="kw">let </span><span class="kw-2">mut </span>discarded_journals = Vec::new();
 		<span class="kw">let </span><span class="kw-2">mut </span>discarded_blocks = Vec::new();
@@ -1747,6 +1781,7 @@
 		db.commit(<span class="kw-2">&amp;</span>overlay.insert(<span class="kw-2">&amp;</span>h2, <span class="number">11</span>, <span class="kw-2">&amp;</span>h1, make_changeset(<span class="kw-2">&amp;</span>[<span class="number">5</span>], <span class="kw-2">&amp;</span>[<span class="number">3</span>])).unwrap());
 		<span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h1, <span class="kw-2">&amp;mut </span>commit).unwrap();
+		overlay.unpin(<span class="kw-2">&amp;</span>h1);
 		db.commit(<span class="kw-2">&amp;</span>commit);
 		<span class="macro">assert_eq!</span>(overlay.levels.len(), <span class="number">1</span>);
 
@@ -1774,15 +1809,16 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h1, <span class="kw-2">&amp;mut </span>commit).unwrap();
 		db.commit(<span class="kw-2">&amp;</span>commit);
-		<span class="macro">assert!</span>(!contains(<span class="kw-2">&amp;</span>overlay, <span class="number">5</span>));
+		<span class="macro">assert!</span>(contains(<span class="kw-2">&amp;</span>overlay, <span class="number">5</span>));
 		<span class="macro">assert!</span>(contains(<span class="kw-2">&amp;</span>overlay, <span class="number">7</span>));
 		<span class="macro">assert_eq!</span>(overlay.levels.len(), <span class="number">1</span>);
-		<span class="macro">assert_eq!</span>(overlay.parents.len(), <span class="number">1</span>);
+		<span class="macro">assert_eq!</span>(overlay.parents.len(), <span class="number">2</span>);
 		<span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h2, <span class="kw-2">&amp;mut </span>commit).unwrap();
+		<span class="macro">assert!</span>(!contains(<span class="kw-2">&amp;</span>overlay, <span class="number">5</span>));
 		db.commit(<span class="kw-2">&amp;</span>commit);
 		<span class="macro">assert_eq!</span>(overlay.levels.len(), <span class="number">0</span>);
-		<span class="macro">assert_eq!</span>(overlay.parents.len(), <span class="number">0</span>);
+		<span class="macro">assert_eq!</span>(overlay.parents.len(), <span class="number">1</span>);
 		<span class="macro">assert!</span>(db.data_eq(<span class="kw-2">&amp;</span>make_db(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>])));
 	}
 
@@ -1799,6 +1835,8 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h_1, <span class="kw-2">&amp;mut </span>commit).unwrap();
 		db.commit(<span class="kw-2">&amp;</span>commit);
+		<span class="comment">// explicitly unpin last block
+		</span>overlay.unpin(<span class="kw-2">&amp;</span>h_1);
 		<span class="macro">assert!</span>(!contains(<span class="kw-2">&amp;</span>overlay, <span class="number">1</span>));
 	}
 
@@ -1885,6 +1923,8 @@
 		<span class="comment">// canonicalize 1. 2 and all its children should be discarded
 		</span><span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h_1, <span class="kw-2">&amp;mut </span>commit).unwrap();
+		<span class="comment">// explicitly unpin last block
+		</span>overlay.unpin(<span class="kw-2">&amp;</span>h_1);
 		db.commit(<span class="kw-2">&amp;</span>commit);
 		<span class="macro">assert_eq!</span>(overlay.levels.len(), <span class="number">2</span>);
 		<span class="macro">assert_eq!</span>(overlay.parents.len(), <span class="number">6</span>);
@@ -1905,6 +1945,7 @@
 		<span class="comment">// canonicalize 1_2. 1_1 and all its children should be discarded
 		</span><span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h_1_2, <span class="kw-2">&amp;mut </span>commit).unwrap();
+		overlay.unpin(<span class="kw-2">&amp;</span>h_1_2);
 		db.commit(<span class="kw-2">&amp;</span>commit);
 		<span class="macro">assert_eq!</span>(overlay.levels.len(), <span class="number">1</span>);
 		<span class="macro">assert_eq!</span>(overlay.parents.len(), <span class="number">3</span>);
@@ -1921,6 +1962,7 @@
 		<span class="comment">// canonicalize 1_2_2
 		</span><span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h_1_2_2, <span class="kw-2">&amp;mut </span>commit).unwrap();
+		overlay.unpin(<span class="kw-2">&amp;</span>h_1_2_2);
 		db.commit(<span class="kw-2">&amp;</span>commit);
 		<span class="macro">assert_eq!</span>(overlay.levels.len(), <span class="number">0</span>);
 		<span class="macro">assert_eq!</span>(overlay.parents.len(), <span class="number">0</span>);
@@ -2031,6 +2073,7 @@
 		<span class="macro">assert!</span>(contains(<span class="kw-2">&amp;</span>overlay, <span class="number">1</span>));
 		overlay.unpin(<span class="kw-2">&amp;</span>h_21);
 		<span class="macro">assert!</span>(!contains(<span class="kw-2">&amp;</span>overlay, <span class="number">1</span>));
+		overlay.unpin(<span class="kw-2">&amp;</span>h_12);
 		<span class="macro">assert!</span>(overlay.pinned.is_empty());
 	}
 
@@ -2065,7 +2108,8 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>commit = CommitSet::default();
 		overlay.canonicalize(<span class="kw-2">&amp;</span>h21, <span class="kw-2">&amp;mut </span>commit).unwrap(); <span class="comment">// h11 should stay in the DB
-		</span>db.commit(<span class="kw-2">&amp;</span>commit);
+		</span>overlay.unpin(<span class="kw-2">&amp;</span>h21);
+		db.commit(<span class="kw-2">&amp;</span>commit);
 		<span class="macro">assert!</span>(!contains(<span class="kw-2">&amp;</span>overlay, <span class="number">21</span>));
 	}
 
