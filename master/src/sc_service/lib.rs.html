@@ -570,18 +570,6 @@
 <a href="#570" id="570">570</a>
 <a href="#571" id="571">571</a>
 <a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a>
-<a href="#575" id="575">575</a>
-<a href="#576" id="576">576</a>
-<a href="#577" id="577">577</a>
-<a href="#578" id="578">578</a>
-<a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
-<a href="#581" id="581">581</a>
-<a href="#582" id="582">582</a>
-<a href="#583" id="583">583</a>
-<a href="#584" id="584">584</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -627,7 +615,6 @@
 <span class="kw">use </span>sc_client_api::{blockchain::HeaderBackend, BlockBackend, BlockchainEvents, ProofProvider};
 <span class="kw">use </span>sc_network::PeerId;
 <span class="kw">use </span>sc_network_common::{config::MultiaddrWithPeerId, service::NetworkBlock};
-<span class="kw">use </span>sc_rpc_server::WsConfig;
 <span class="kw">use </span>sc_utils::mpsc::TracingUnboundedReceiver;
 <span class="kw">use </span>sp_blockchain::HeaderMetadata;
 <span class="kw">use </span>sp_consensus::SyncOracle;
@@ -878,20 +865,9 @@
 
 <span class="comment">// Wrapper for HTTP and WS servers that makes sure they are properly shut down.
 </span><span class="kw">mod </span>waiting {
-	<span class="kw">pub struct </span>HttpServer(<span class="kw">pub </span><span class="prelude-ty">Option</span>&lt;sc_rpc_server::HttpServer&gt;);
+	<span class="kw">pub struct </span>Server(<span class="kw">pub </span><span class="prelude-ty">Option</span>&lt;sc_rpc_server::Server&gt;);
 
-	<span class="kw">impl </span>Drop <span class="kw">for </span>HttpServer {
-		<span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="self">self</span>.<span class="number">0</span>.take() {
-				<span class="comment">// This doesn&#39;t not wait for the server to be stopped but fires the signal.
-				</span><span class="kw">let _ </span>= server.stop();
-			}
-		}
-	}
-
-	<span class="kw">pub struct </span>WsServer(<span class="kw">pub </span><span class="prelude-ty">Option</span>&lt;sc_rpc_server::WsServer&gt;);
-
-	<span class="kw">impl </span>Drop <span class="kw">for </span>WsServer {
+	<span class="kw">impl </span>Drop <span class="kw">for </span>Server {
 		<span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="self">self</span>.<span class="number">0</span>.take() {
 				<span class="comment">// This doesn&#39;t not wait for the server to be stopped but fires the signal.
@@ -910,9 +886,6 @@
 <span class="kw">where
 	</span>R: Fn(sc_rpc::DenyUnsafe) -&gt; <span class="prelude-ty">Result</span>&lt;RpcModule&lt;()&gt;, Error&gt;,
 {
-	<span class="kw">let </span>(max_request_size, ws_max_response_size, http_max_response_size) =
-		legacy_cli_parsing(config);
-
 	<span class="kw">fn </span>deny_unsafe(addr: SocketAddr, methods: <span class="kw-2">&amp;</span>RpcMethods) -&gt; sc_rpc::DenyUnsafe {
 		<span class="kw">let </span>is_exposed_addr = !addr.ip().is_loopback();
 		<span class="kw">match </span>(is_exposed_addr, methods) {
@@ -920,6 +893,9 @@
 			<span class="kw">_ </span>=&gt; sc_rpc::DenyUnsafe::Yes,
 		}
 	}
+
+	<span class="kw">let </span>(max_request_size, ws_max_response_size, http_max_response_size) =
+		legacy_cli_parsing(config);
 
 	<span class="kw">let </span>random_port = |<span class="kw-2">mut </span>addr: SocketAddr| {
 		addr.set_port(<span class="number">0</span>);
@@ -930,6 +906,7 @@
 		.rpc_ws
 		.unwrap_or_else(|| <span class="string">&quot;127.0.0.1:9944&quot;</span>.parse().expect(<span class="string">&quot;valid sockaddr; qed&quot;</span>));
 	<span class="kw">let </span>ws_addr2 = random_port(ws_addr);
+
 	<span class="kw">let </span>http_addr = config
 		.rpc_http
 		.unwrap_or_else(|| <span class="string">&quot;127.0.0.1:9933&quot;</span>.parse().expect(<span class="string">&quot;valid sockaddr; qed&quot;</span>));
@@ -937,29 +914,29 @@
 
 	<span class="kw">let </span>metrics = sc_rpc_server::RpcMetrics::new(config.prometheus_registry())<span class="question-mark">?</span>;
 
-	<span class="kw">let </span>http_fut = sc_rpc_server::start_http(
-		[http_addr, http_addr2],
-		config.rpc_cors.as_ref(),
-		max_request_size,
-		http_max_response_size,
-		metrics.clone(),
-		gen_rpc_module(deny_unsafe(ws_addr, <span class="kw-2">&amp;</span>config.rpc_methods))<span class="question-mark">?</span>,
-		config.tokio_handle.clone(),
-	);
-
-	<span class="kw">let </span>ws_config = WsConfig {
+	<span class="kw">let </span>server_config = sc_rpc_server::WsConfig {
 		max_connections: config.rpc_ws_max_connections,
 		max_payload_in_mb: max_request_size,
 		max_payload_out_mb: ws_max_response_size,
 		max_subs_per_conn: config.rpc_max_subs_per_conn,
 	};
 
-	<span class="kw">let </span>ws_fut = sc_rpc_server::start_ws(
+	<span class="kw">let </span>http_fut = sc_rpc_server::start_http(
+		[http_addr, http_addr2],
+		config.rpc_cors.as_ref(),
+		max_request_size,
+		http_max_response_size,
+		metrics.clone(),
+		gen_rpc_module(deny_unsafe(http_addr, <span class="kw-2">&amp;</span>config.rpc_methods))<span class="question-mark">?</span>,
+		config.tokio_handle.clone(),
+	);
+
+	<span class="kw">let </span>ws_fut = sc_rpc_server::start(
 		[ws_addr, ws_addr2],
 		config.rpc_cors.as_ref(),
-		ws_config,
-		metrics,
-		gen_rpc_module(deny_unsafe(http_addr, <span class="kw-2">&amp;</span>config.rpc_methods))<span class="question-mark">?</span>,
+		server_config.clone(),
+		metrics.clone(),
+		gen_rpc_module(deny_unsafe(ws_addr, <span class="kw-2">&amp;</span>config.rpc_methods))<span class="question-mark">?</span>,
 		config.tokio_handle.clone(),
 		rpc_id_provider,
 	);
@@ -967,8 +944,7 @@
 	<span class="kw">match </span>tokio::task::block_in_place(|| {
 		config.tokio_handle.block_on(futures::future::try_join(http_fut, ws_fut))
 	}) {
-		<span class="prelude-val">Ok</span>((http, ws)) =&gt;
-			<span class="prelude-val">Ok</span>(Box::new((waiting::HttpServer(<span class="prelude-val">Some</span>(http)), waiting::WsServer(<span class="prelude-val">Some</span>(ws))))),
+		<span class="prelude-val">Ok</span>((http, ws)) =&gt; <span class="prelude-val">Ok</span>(Box::new((waiting::Server(<span class="prelude-val">Some</span>(http)), waiting::Server(<span class="prelude-val">Some</span>(ws))))),
 		<span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(Error::Application(e)),
 	}
 }

@@ -1167,6 +1167,46 @@
 <a href="#1167" id="1167">1167</a>
 <a href="#1168" id="1168">1168</a>
 <a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
+<a href="#1171" id="1171">1171</a>
+<a href="#1172" id="1172">1172</a>
+<a href="#1173" id="1173">1173</a>
+<a href="#1174" id="1174">1174</a>
+<a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
+<a href="#1208" id="1208">1208</a>
+<a href="#1209" id="1209">1209</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1208,7 +1248,9 @@
 	path::{Path, PathBuf},
 	sync::Arc,
 };
-<span class="kw">use </span>substrate_rpc_client::{rpc_params, ws_client, ChainApi, ClientT, StateApi, WsClient};
+<span class="kw">use </span>substrate_rpc_client::{
+	rpc_params, ws_client, BatchRequestBuilder, ChainApi, ClientT, StateApi, WsClient,
+};
 
 <span class="kw">type </span>KeyValue = (StorageKey, StorageData);
 <span class="kw">type </span>TopKeyValues = Vec&lt;KeyValue&gt;;
@@ -1503,33 +1545,50 @@
 		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Querying a total of {} keys&quot;</span>, keys.len());
 
 		<span class="kw">let </span><span class="kw-2">mut </span>key_values: Vec&lt;KeyValue&gt; = <span class="macro">vec!</span>[];
+		<span class="kw">let </span><span class="kw-2">mut </span>batch_success = <span class="bool-val">true</span>;
+
 		<span class="kw">let </span>client = <span class="self">self</span>.as_online().rpc_client();
 		<span class="kw">for </span>chunk_keys <span class="kw">in </span>keys.chunks(BATCH_SIZE) {
-			<span class="kw">let </span>batch = chunk_keys
-				.iter()
-				.cloned()
-				.map(|key| (<span class="string">&quot;state_getStorage&quot;</span>, <span class="macro">rpc_params!</span>[key, at]))
-				.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+			<span class="kw">let </span><span class="kw-2">mut </span>batch = BatchRequestBuilder::new();
 
-			<span class="kw">let </span>values = client.batch_request::&lt;<span class="prelude-ty">Option</span>&lt;StorageData&gt;&gt;(batch).<span class="kw">await</span>.map_err(|e| {
-				<span class="macro">log::error!</span>(
-					target: LOG_TARGET,
-					<span class="string">&quot;failed to execute batch: {:?}. Error: {:?}&quot;</span>,
-					chunk_keys.iter().map(HexDisplay::from).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-					e
-				);
-				<span class="string">&quot;batch failed.&quot;
-			</span>})<span class="question-mark">?</span>;
+			<span class="kw">for </span>key <span class="kw">in </span>chunk_keys.iter() {
+				batch
+					.insert(<span class="string">&quot;state_getStorage&quot;</span>, <span class="macro">rpc_params!</span>[key, at])
+					.map_err(|<span class="kw">_</span>| <span class="string">&quot;Invalid batch params&quot;</span>)<span class="question-mark">?</span>;
+			}
 
-			<span class="macro">assert_eq!</span>(chunk_keys.len(), values.len());
+			<span class="kw">let </span>batch_response =
+				client.batch_request::&lt;<span class="prelude-ty">Option</span>&lt;StorageData&gt;&gt;(batch).<span class="kw">await</span>.map_err(|e| {
+					<span class="macro">log::error!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;failed to execute batch: {:?}. Error: {:?}&quot;</span>,
+						chunk_keys.iter().map(HexDisplay::from).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
+						e
+					);
+					<span class="string">&quot;batch failed.&quot;
+				</span>})<span class="question-mark">?</span>;
 
-			<span class="kw">for </span>(idx, key) <span class="kw">in </span>chunk_keys.iter().enumerate() {
-				<span class="kw">let </span>maybe_value = values[idx].clone();
-				<span class="kw">let </span>value = maybe_value.unwrap_or_else(|| {
-					<span class="macro">log::warn!</span>(target: LOG_TARGET, <span class="string">&quot;key {:?} had none corresponding value.&quot;</span>, <span class="kw-2">&amp;</span>key);
-					StorageData(<span class="macro">vec!</span>[])
-				});
-				key_values.push((key.clone(), value));
+			<span class="macro">assert_eq!</span>(chunk_keys.len(), batch_response.len());
+
+			<span class="kw">for </span>(key, maybe_value) <span class="kw">in </span>chunk_keys.into_iter().zip(batch_response) {
+				<span class="kw">match </span>maybe_value {
+					<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(v)) =&gt; {
+						key_values.push((key.clone(), v));
+					},
+					<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
+						<span class="macro">log::warn!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;key {:?} had none corresponding value.&quot;</span>,
+							<span class="kw-2">&amp;</span>key
+						);
+						key_values.push((key.clone(), StorageData(<span class="macro">vec!</span>[])));
+					},
+					<span class="prelude-val">Err</span>(e) =&gt; {
+						<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;key {:?} failed: {:?}&quot;</span>, <span class="kw-2">&amp;</span>key, e);
+						batch_success = <span class="bool-val">false</span>;
+					},
+				};
+
 				<span class="kw">if </span>key_values.len() % (<span class="number">10 </span>* BATCH_SIZE) == <span class="number">0 </span>{
 					<span class="kw">let </span>ratio: f64 = key_values.len() <span class="kw">as </span>f64 / keys_count <span class="kw">as </span>f64;
 					<span class="macro">log::debug!</span>(
@@ -1543,7 +1602,11 @@
 			}
 		}
 
-		<span class="prelude-val">Ok</span>(key_values)
+		<span class="kw">if </span>batch_success {
+			<span class="prelude-val">Ok</span>(key_values)
+		} <span class="kw">else </span>{
+			<span class="prelude-val">Err</span>(<span class="string">&quot;batch failed.&quot;</span>)
+		}
 	}
 
 	<span class="doccomment">/// Get the values corresponding to `child_keys` at the given `prefixed_top_key`.
@@ -1554,12 +1617,14 @@
 		at: B::Hash,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;KeyValue&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>child_kv_inner = <span class="macro">vec!</span>[];
+		<span class="kw">let </span><span class="kw-2">mut </span>batch_success = <span class="bool-val">true</span>;
+
 		<span class="kw">for </span>batch_child_key <span class="kw">in </span>child_keys.chunks(BATCH_SIZE) {
-			<span class="kw">let </span>batch_request = batch_child_key
-				.iter()
-				.cloned()
-				.map(|key| {
-					(
+			<span class="kw">let </span><span class="kw-2">mut </span>batch_request = BatchRequestBuilder::new();
+
+			<span class="kw">for </span>key <span class="kw">in </span>batch_child_key {
+				batch_request
+					.insert(
 						<span class="string">&quot;childstate_getStorage&quot;</span>,
 						<span class="macro">rpc_params!</span>[
 							PrefixedStorageKey::new(prefixed_top_key.as_ref().to_vec()),
@@ -1567,8 +1632,8 @@
 							at
 						],
 					)
-				})
-				.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+					.map_err(|<span class="kw">_</span>| <span class="string">&quot;Invalid batch params&quot;</span>)<span class="question-mark">?</span>;
+			}
 
 			<span class="kw">let </span>batch_response = <span class="self">self
 				</span>.as_online()
@@ -1587,17 +1652,32 @@
 
 			<span class="macro">assert_eq!</span>(batch_child_key.len(), batch_response.len());
 
-			<span class="kw">for </span>(idx, key) <span class="kw">in </span>batch_child_key.iter().enumerate() {
-				<span class="kw">let </span>maybe_value = batch_response[idx].clone();
-				<span class="kw">let </span>value = maybe_value.unwrap_or_else(|| {
-					<span class="macro">log::warn!</span>(target: LOG_TARGET, <span class="string">&quot;key {:?} had none corresponding value.&quot;</span>, <span class="kw-2">&amp;</span>key);
-					StorageData(<span class="macro">vec!</span>[])
-				});
-				child_kv_inner.push((key.clone(), value));
+			<span class="kw">for </span>(key, maybe_value) <span class="kw">in </span>batch_child_key.iter().zip(batch_response) {
+				<span class="kw">match </span>maybe_value {
+					<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(v)) =&gt; {
+						child_kv_inner.push((key.clone(), v));
+					},
+					<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
+						<span class="macro">log::warn!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;key {:?} had none corresponding value.&quot;</span>,
+							<span class="kw-2">&amp;</span>key
+						);
+						child_kv_inner.push((key.clone(), StorageData(<span class="macro">vec!</span>[])));
+					},
+					<span class="prelude-val">Err</span>(e) =&gt; {
+						<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;key {:?} failed: {:?}&quot;</span>, <span class="kw-2">&amp;</span>key, e);
+						batch_success = <span class="bool-val">false</span>;
+					},
+				};
 			}
 		}
 
-		<span class="prelude-val">Ok</span>(child_kv_inner)
+		<span class="kw">if </span>batch_success {
+			<span class="prelude-val">Ok</span>(child_kv_inner)
+		} <span class="kw">else </span>{
+			<span class="prelude-val">Err</span>(<span class="string">&quot;batch failed.&quot;</span>)
+		}
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>rpc_child_get_keys(
