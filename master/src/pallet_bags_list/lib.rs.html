@@ -400,6 +400,8 @@
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -761,25 +763,26 @@
 		</span>List::&lt;T, I&gt;::unsafe_clear()
 	}
 
-	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
-	</span><span class="kw">fn </span>score_update_worst_case(who: <span class="kw-2">&amp;</span>T::AccountId, is_increase: bool) -&gt; <span class="self">Self</span>::Score {
-		<span class="kw">use </span>frame_support::traits::Get <span class="kw">as _</span>;
-		<span class="kw">let </span>thresholds = T::BagThresholds::get();
-		<span class="kw">let </span>node = list::Node::&lt;T, I&gt;::get(who).unwrap();
-		<span class="kw">let </span>current_bag_idx = thresholds
-			.iter()
-			.chain(sp_std::iter::once(<span class="kw-2">&amp;</span>T::Score::max_value()))
-			.position(|w| w == <span class="kw-2">&amp;</span>node.bag_upper())
-			.unwrap();
+	<span class="macro">frame_election_provider_support::runtime_benchmarks_enabled! </span>{
+		<span class="kw">fn </span>score_update_worst_case(who: <span class="kw-2">&amp;</span>T::AccountId, is_increase: bool) -&gt; <span class="self">Self</span>::Score {
+			<span class="kw">use </span>frame_support::traits::Get <span class="kw">as _</span>;
+			<span class="kw">let </span>thresholds = T::BagThresholds::get();
+			<span class="kw">let </span>node = list::Node::&lt;T, I&gt;::get(who).unwrap();
+			<span class="kw">let </span>current_bag_idx = thresholds
+				.iter()
+				.chain(sp_std::iter::once(<span class="kw-2">&amp;</span>T::Score::max_value()))
+				.position(|w| w == <span class="kw-2">&amp;</span>node.bag_upper)
+				.unwrap();
 
-		<span class="kw">if </span>is_increase {
-			<span class="kw">let </span>next_threshold_idx = current_bag_idx + <span class="number">1</span>;
-			<span class="macro">assert!</span>(thresholds.len() &gt; next_threshold_idx);
-			thresholds[next_threshold_idx]
-		} <span class="kw">else </span>{
-			<span class="macro">assert!</span>(current_bag_idx != <span class="number">0</span>);
-			<span class="kw">let </span>prev_threshold_idx = current_bag_idx - <span class="number">1</span>;
-			thresholds[prev_threshold_idx]
+			<span class="kw">if </span>is_increase {
+				<span class="kw">let </span>next_threshold_idx = current_bag_idx + <span class="number">1</span>;
+				<span class="macro">assert!</span>(thresholds.len() &gt; next_threshold_idx);
+				thresholds[next_threshold_idx]
+			} <span class="kw">else </span>{
+				<span class="macro">assert!</span>(current_bag_idx != <span class="number">0</span>);
+				<span class="kw">let </span>prev_threshold_idx = current_bag_idx - <span class="number">1</span>;
+				thresholds[prev_threshold_idx]
+			}
 		}
 	}
 }
@@ -791,15 +794,16 @@
 		Node::&lt;T, I&gt;::get(id).map(|node| node.score()).unwrap_or_default()
 	}
 
-	<span class="attr">#[cfg(any(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, feature = <span class="string">&quot;fuzz&quot;</span>, test))]
-	</span><span class="kw">fn </span>set_score_of(id: <span class="kw-2">&amp;</span>T::AccountId, new_score: T::Score) {
-		ListNodes::&lt;T, I&gt;::mutate(id, |maybe_node| {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(node) = maybe_node.as_mut() {
-				node.set_score(new_score)
-			} <span class="kw">else </span>{
-				<span class="macro">panic!</span>(<span class="string">&quot;trying to mutate {:?} which does not exists&quot;</span>, id);
-			}
-		})
+	<span class="macro">frame_election_provider_support::runtime_benchmarks_or_fuzz_enabled! </span>{
+		<span class="kw">fn </span>set_score_of(id: <span class="kw-2">&amp;</span>T::AccountId, new_score: T::Score) {
+			ListNodes::&lt;T, I&gt;::mutate(id, |maybe_node| {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(node) = maybe_node.as_mut() {
+					node.score = new_score;
+				} <span class="kw">else </span>{
+					<span class="macro">panic!</span>(<span class="string">&quot;trying to mutate {:?} which does not exists&quot;</span>, id);
+				}
+			})
+		}
 	}
 }
 </code></pre></div>
