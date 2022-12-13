@@ -1288,6 +1288,14 @@
 <a href="#1288" id="1288">1288</a>
 <a href="#1289" id="1289">1289</a>
 <a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
+<a href="#1296" id="1296">1296</a>
+<a href="#1297" id="1297">1297</a>
+<a href="#1298" id="1298">1298</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1432,6 +1440,7 @@
 <span class="kw">type </span>CodeVec&lt;T&gt; = BoundedVec&lt;u8, &lt;T <span class="kw">as </span>Config&gt;::MaxCodeLen&gt;;
 <span class="kw">type </span>RelaxedCodeVec&lt;T&gt; = WeakBoundedVec&lt;u8, &lt;T <span class="kw">as </span>Config&gt;::MaxCodeLen&gt;;
 <span class="kw">type </span>AccountIdLookupOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::Lookup <span class="kw">as </span>StaticLookup&gt;::Source;
+<span class="kw">type </span>DebugBufferVec&lt;T&gt; = BoundedVec&lt;u8, &lt;T <span class="kw">as </span>Config&gt;::MaxDebugBufferLen&gt;;
 
 <span class="doccomment">/// Used as a sentinel value when reading and writing contract memory.
 ///
@@ -1634,6 +1643,10 @@
 		/// Do **not** set to `true` on productions chains.
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>UnsafeUnstableInterface: Get&lt;bool&gt;;
+
+		<span class="doccomment">/// The maximum length of the debug buffer in bytes.
+		</span><span class="attr">#[pallet::constant]
+		</span><span class="kw">type </span>MaxDebugBufferLen: Get&lt;u32&gt;;
 	}
 
 	<span class="attr">#[pallet::hooks]
@@ -2153,6 +2166,9 @@
 		</span>CodeRejected,
 		<span class="doccomment">/// An indetermistic code was used in a context where this is not permitted.
 		</span>Indeterministic,
+		<span class="doccomment">/// The debug buffer size used during contract execution exceeded the limit determined by
+		/// the `MaxDebugBufferLen` pallet config parameter.
+		</span>DebugBufferExhausted,
 	}
 
 	<span class="doccomment">/// A mapping from an original code hash to the original code, untouched by instrumentation.
@@ -2251,7 +2267,7 @@
 		debug: bool,
 		determinism: Determinism,
 	) -&gt; ContractExecResult&lt;BalanceOf&lt;T&gt;&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(Vec::new()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 		<span class="kw">let </span>output = <span class="self">Self</span>::internal_call(
 			origin,
 			dest,
@@ -2267,7 +2283,7 @@
 			gas_consumed: output.gas_meter.gas_consumed(),
 			gas_required: output.gas_meter.gas_required(),
 			storage_deposit: output.storage_deposit,
-			debug_message: debug_message.unwrap_or_default(),
+			debug_message: debug_message.unwrap_or_default().to_vec(),
 		}
 	}
 
@@ -2293,7 +2309,7 @@
 		salt: Vec&lt;u8&gt;,
 		debug: bool,
 	) -&gt; ContractInstantiateResult&lt;T::AccountId, BalanceOf&lt;T&gt;&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(Vec::new()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 		<span class="kw">let </span>output = <span class="self">Self</span>::internal_instantiate(
 			origin,
 			value,
@@ -2312,7 +2328,7 @@
 			gas_consumed: output.gas_meter.gas_consumed(),
 			gas_required: output.gas_meter.gas_required(),
 			storage_deposit: output.storage_deposit,
-			debug_message: debug_message.unwrap_or_default(),
+			debug_message: debug_message.unwrap_or_default().to_vec(),
 		}
 	}
 
@@ -2403,7 +2419,7 @@
 		gas_limit: Weight,
 		storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
 		data: Vec&lt;u8&gt;,
-		debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;&gt;,
+		debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>DebugBufferVec&lt;T&gt;&gt;,
 		determinism: Determinism,
 	) -&gt; InternalCallOutput&lt;T&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::new(gas_limit);
@@ -2446,7 +2462,7 @@
 		code: Code&lt;CodeHash&lt;T&gt;&gt;,
 		data: Vec&lt;u8&gt;,
 		salt: Vec&lt;u8&gt;,
-		<span class="kw-2">mut </span>debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;&gt;,
+		<span class="kw-2">mut </span>debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>DebugBufferVec&lt;T&gt;&gt;,
 	) -&gt; InternalInstantiateOutput&lt;T&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>storage_deposit = Default::default();
 		<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::new(gas_limit);
@@ -2462,7 +2478,7 @@
 						TryInstantiate::Skip,
 					)
 					.map_err(|(err, msg)| {
-						debug_message.as_mut().map(|buffer| buffer.extend(msg.as_bytes()));
+						debug_message.as_mut().map(|buffer| buffer.try_extend(<span class="kw-2">&amp;mut </span>msg.bytes()));
 						err
 					})<span class="question-mark">?</span>;
 					<span class="comment">// The open deposit will be charged during execution when the
