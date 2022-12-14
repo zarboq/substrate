@@ -1431,6 +1431,44 @@
 <a href="#1431" id="1431">1431</a>
 <a href="#1432" id="1432">1432</a>
 <a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
+<a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
+<a href="#1454" id="1454">1454</a>
+<a href="#1455" id="1455">1455</a>
+<a href="#1456" id="1456">1456</a>
+<a href="#1457" id="1457">1457</a>
+<a href="#1458" id="1458">1458</a>
+<a href="#1459" id="1459">1459</a>
+<a href="#1460" id="1460">1460</a>
+<a href="#1461" id="1461">1461</a>
+<a href="#1462" id="1462">1462</a>
+<a href="#1463" id="1463">1463</a>
+<a href="#1464" id="1464">1464</a>
+<a href="#1465" id="1465">1465</a>
+<a href="#1466" id="1466">1466</a>
+<a href="#1467" id="1467">1467</a>
+<a href="#1468" id="1468">1468</a>
+<a href="#1469" id="1469">1469</a>
+<a href="#1470" id="1470">1470</a>
+<a href="#1471" id="1471">1471</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1493,7 +1531,7 @@
 	until_imported::UntilVoteTargetImported,
 	voting_rule::VotingRule <span class="kw">as </span>VotingRuleT,
 	ClientForGrandpa, CommandOrError, Commit, Config, Error, NewAuthoritySet, Precommit, Prevote,
-	PrimaryPropose, SignedMessage, VoterCommand,
+	PrimaryPropose, SignedMessage, VoterCommand, LOG_TARGET,
 };
 
 <span class="kw">type </span>HistoricalVotes&lt;Block&gt; = finality_grandpa::HistoricalVotes&lt;
@@ -1984,7 +2022,10 @@
 		</span>{
 			<span class="prelude-val">Some</span>(proof) =&gt; proof,
 			<span class="prelude-val">None </span>=&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Equivocation offender is not part of the authority set.&quot;</span>);
+				<span class="macro">debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Equivocation offender is not part of the authority set.&quot;
+				</span>);
 				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 			},
 		};
@@ -2042,8 +2083,13 @@
 	<span class="kw">let </span>tree_route = <span class="kw">match </span>tree_route_res {
 		<span class="prelude-val">Ok</span>(tree_route) =&gt; tree_route,
 		<span class="prelude-val">Err</span>(e) =&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Encountered error computing ancestry between block {:?} and base {:?}: {}&quot;</span>,
-				   block, base, e);
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Encountered error computing ancestry between block {:?} and base {:?}: {}&quot;</span>,
+				block,
+				base,
+				e
+			);
 
 			<span class="kw">return </span><span class="prelude-val">Err</span>(GrandpaError::NotDescendent)
 		},
@@ -2388,7 +2434,8 @@
 		historical_votes: <span class="kw-2">&amp;</span>HistoricalVotes&lt;Block&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt; {
 		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Voter {} completed round {} in set {}. Estimate = {:?}, Finalized in round = {:?}&quot;</span>,
+			target: LOG_TARGET,
+			<span class="string">&quot;Voter {} completed round {} in set {}. Estimate = {:?}, Finalized in round = {:?}&quot;</span>,
 			<span class="self">self</span>.config.name(),
 			round,
 			<span class="self">self</span>.set_id,
@@ -2449,7 +2496,8 @@
 		historical_votes: <span class="kw-2">&amp;</span>HistoricalVotes&lt;Block&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt; {
 		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Voter {} concluded round {} in set {}. Estimate = {:?}, Finalized in round = {:?}&quot;</span>,
+			target: LOG_TARGET,
+			<span class="string">&quot;Voter {} concluded round {} in set {}. Estimate = {:?}, Finalized in round = {:?}&quot;</span>,
 			<span class="self">self</span>.config.name(),
 			round,
 			<span class="self">self</span>.set_id,
@@ -2535,9 +2583,12 @@
 			<span class="self">Self</span>::Signature,
 		&gt;,
 	) {
-		<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Detected prevote equivocation in the finality worker: {:?}&quot;</span>, equivocation);
+		<span class="macro">warn!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Detected prevote equivocation in the finality worker: {:?}&quot;</span>, equivocation
+		);
 		<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.report_equivocation(equivocation.into()) {
-			<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Error reporting prevote equivocation: {}&quot;</span>, err);
+			<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Error reporting prevote equivocation: {}&quot;</span>, err);
 		}
 	}
 
@@ -2550,9 +2601,12 @@
 			<span class="self">Self</span>::Signature,
 		&gt;,
 	) {
-		<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Detected precommit equivocation in the finality worker: {:?}&quot;</span>, equivocation);
+		<span class="macro">warn!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Detected precommit equivocation in the finality worker: {:?}&quot;</span>, equivocation
+		);
 		<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.report_equivocation(equivocation.into()) {
-			<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Error reporting precommit equivocation: {}&quot;</span>, err);
+			<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Error reporting precommit equivocation: {}&quot;</span>, err);
 		}
 	}
 }
@@ -2591,7 +2645,8 @@
 	<span class="kw">let </span>base_header = <span class="kw">match </span>client.header(BlockId::Hash(block))<span class="question-mark">? </span>{
 		<span class="prelude-val">Some</span>(h) =&gt; h,
 		<span class="prelude-val">None </span>=&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>,
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
 				<span class="string">&quot;Encountered error finding best chain containing {:?}: couldn&#39;t find base block&quot;</span>,
 				block,
 			);
@@ -2605,7 +2660,10 @@
 	// proceed onwards. most of the time there will be no pending transition.  the limit, if any, is
 	// guaranteed to be higher than or equal to the given base number.
 	</span><span class="kw">let </span>limit = authority_set.current_limit(<span class="kw-2">*</span>base_header.number());
-	<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Finding best chain containing block {:?} with number limit {:?}&quot;</span>, block, limit);
+	<span class="macro">debug!</span>(
+		target: LOG_TARGET,
+		<span class="string">&quot;Finding best chain containing block {:?} with number limit {:?}&quot;</span>, block, limit
+	);
 
 	<span class="kw">let </span>result = <span class="kw">match </span>select_chain.finality_target(block, <span class="prelude-val">None</span>).<span class="kw">await </span>{
 		<span class="prelude-val">Ok</span>(best_hash) =&gt; {
@@ -2667,7 +2725,10 @@
 				.or_else(|| <span class="prelude-val">Some</span>((target_header.hash(), <span class="kw-2">*</span>target_header.number())))
 		},
 		<span class="prelude-val">Err</span>(e) =&gt; {
-			<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Encountered error finding best chain containing {:?}: {}&quot;</span>, block, e);
+			<span class="macro">warn!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Encountered error finding best chain containing {:?}: {}&quot;</span>, block, e
+			);
 			<span class="prelude-val">None
 		</span>},
 	};
@@ -2706,7 +2767,7 @@
 		<span class="comment">// This can happen after a forced change (triggered manually from the runtime when
 		// finality is stalled), since the voter will be restarted at the median last finalized
 		// block, which can be lower than the local best finalized block.
-		</span><span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Re-finalized block #{:?} ({:?}) in the canonical chain, current best finalized is #{:?}&quot;</span>,
+		</span><span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Re-finalized block #{:?} ({:?}) in the canonical chain, current best finalized is #{:?}&quot;</span>,
 				hash,
 				number,
 				status.finalized_number,
@@ -2736,7 +2797,10 @@
 		) {
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(sender) = justification_sender {
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = sender.notify(justification) {
-					<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Error creating justification for subscriber: {}&quot;</span>, err);
+					<span class="macro">warn!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Error creating justification for subscriber: {}&quot;</span>, err
+					);
 				}
 			}
 		}
@@ -2787,11 +2851,16 @@
 		</span>client
 			.apply_finality(import_op, hash, persisted_justification, <span class="bool-val">true</span>)
 			.map_err(|e| {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Error applying finality to block {:?}: {}&quot;</span>, (hash, number), e);
+				<span class="macro">warn!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Error applying finality to block {:?}: {}&quot;</span>,
+					(hash, number),
+					e
+				);
 				e
 			})<span class="question-mark">?</span>;
 
-		<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Finalizing blocks up to ({:?}, {})&quot;</span>, number, hash);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Finalizing blocks up to ({:?}, {})&quot;</span>, number, hash);
 
 		<span class="macro">telemetry!</span>(
 			telemetry;
@@ -2809,13 +2878,17 @@
 			</span><span class="kw">let </span>(new_id, set_ref) = authority_set.current();
 
 			<span class="kw">if </span>set_ref.len() &gt; <span class="number">16 </span>{
-				<span class="macro">afg_log!</span>(
+				<span class="macro">grandpa_log!</span>(
 					initial_sync,
 					<span class="string">&quot;👴 Applying GRANDPA set change to new set with {} authorities&quot;</span>,
 					set_ref.len(),
 				);
 			} <span class="kw">else </span>{
-				<span class="macro">afg_log!</span>(initial_sync, <span class="string">&quot;👴 Applying GRANDPA set change to new set {:?}&quot;</span>, set_ref);
+				<span class="macro">grandpa_log!</span>(
+					initial_sync,
+					<span class="string">&quot;👴 Applying GRANDPA set change to new set {:?}&quot;</span>,
+					set_ref
+				);
 			}
 
 			<span class="macro">telemetry!</span>(
@@ -2844,8 +2917,11 @@
 			);
 
 			<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = write_result {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Failed to write updated authority set to disk. Bailing.&quot;</span>);
-				<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Node is in a potentially inconsistent state.&quot;</span>);
+				<span class="macro">warn!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Failed to write updated authority set to disk. Bailing.&quot;
+				</span>);
+				<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Node is in a potentially inconsistent state.&quot;</span>);
 
 				<span class="kw">return </span><span class="prelude-val">Err</span>(e.into())
 			}

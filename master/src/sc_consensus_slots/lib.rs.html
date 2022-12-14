@@ -1249,6 +1249,8 @@
 <a href="#1249" id="1249">1249</a>
 <a href="#1250" id="1250">1250</a>
 <a href="#1251" id="1251">1251</a>
+<a href="#1252" id="1252">1252</a>
+<a href="#1253" id="1253">1253</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1298,6 +1300,8 @@
 	ops::Deref,
 	time::{Duration, Instant},
 };
+
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;slots&quot;</span>;
 
 <span class="doccomment">/// The changes that need to applied to the storage to create the state for a block.
 ///
@@ -1449,9 +1453,9 @@
 	&gt; {
 		<span class="kw">let </span>slot = slot_info.slot;
 		<span class="kw">let </span>telemetry = <span class="self">self</span>.telemetry();
-		<span class="kw">let </span>logging_target = <span class="self">self</span>.logging_target();
+		<span class="kw">let </span>log_target = <span class="self">self</span>.logging_target();
 
-		<span class="kw">let </span>inherent_data = <span class="self">Self</span>::create_inherent_data(<span class="kw-2">&amp;</span>slot_info, <span class="kw-2">&amp;</span>logging_target).<span class="kw">await</span><span class="question-mark">?</span>;
+		<span class="kw">let </span>inherent_data = <span class="self">Self</span>::create_inherent_data(<span class="kw-2">&amp;</span>slot_info, <span class="kw-2">&amp;</span>log_target).<span class="kw">await</span><span class="question-mark">?</span>;
 
 		<span class="kw">let </span>proposing_remaining_duration = <span class="self">self</span>.proposing_remaining_duration(<span class="kw-2">&amp;</span>slot_info);
 		<span class="kw">let </span>logs = <span class="self">self</span>.pre_digest_data(slot, claim);
@@ -1471,19 +1475,19 @@
 		<span class="kw">let </span>proposal = <span class="kw">match </span>futures::future::select(proposing, proposing_remaining).<span class="kw">await </span>{
 			Either::Left((<span class="prelude-val">Ok</span>(p), <span class="kw">_</span>)) =&gt; p,
 			Either::Left((<span class="prelude-val">Err</span>(err), <span class="kw">_</span>)) =&gt; {
-				<span class="macro">warn!</span>(target: logging_target, <span class="string">&quot;Proposing failed: {}&quot;</span>, err);
+				<span class="macro">warn!</span>(target: log_target, <span class="string">&quot;Proposing failed: {}&quot;</span>, err);
 
 				<span class="kw">return </span><span class="prelude-val">None
 			</span>},
 			Either::Right(<span class="kw">_</span>) =&gt; {
 				<span class="macro">info!</span>(
-					target: logging_target,
+					target: log_target,
 					<span class="string">&quot;⌛️ Discarding proposal for slot {}; block production took too long&quot;</span>, slot,
 				);
 				<span class="comment">// If the node was compiled with debug, tell the user to use release optimizations.
 				</span><span class="attr">#[cfg(build_type = <span class="string">&quot;debug&quot;</span>)]
 				</span><span class="macro">info!</span>(
-					target: logging_target,
+					target: log_target,
 					<span class="string">&quot;👉 Recompile your node in `--release` mode to mitigate this problem.&quot;</span>,
 				);
 				<span class="macro">telemetry!</span>(
@@ -1776,13 +1780,13 @@
 		<span class="kw">let </span>slot_info = <span class="kw">match </span>slots.next_slot().<span class="kw">await </span>{
 			<span class="prelude-val">Ok</span>(r) =&gt; r,
 			<span class="prelude-val">Err</span>(e) =&gt; {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;slots&quot;</span>, <span class="string">&quot;Error while polling for next slot: {}&quot;</span>, e);
+				<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Error while polling for next slot: {}&quot;</span>, e);
 				<span class="kw">return
 			</span>},
 		};
 
 		<span class="kw">if </span>sync_oracle.is_major_syncing() {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;slots&quot;</span>, <span class="string">&quot;Skipping proposal slot due to sync.&quot;</span>);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Skipping proposal slot due to sync.&quot;</span>);
 			<span class="kw">continue
 		</span>}
 

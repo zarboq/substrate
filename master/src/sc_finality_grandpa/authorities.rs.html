@@ -1746,6 +1746,10 @@
 <a href="#1746" id="1746">1746</a>
 <a href="#1747" id="1747">1747</a>
 <a href="#1748" id="1748">1748</a>
+<a href="#1749" id="1749">1749</a>
+<a href="#1750" id="1750">1750</a>
+<a href="#1751" id="1751">1751</a>
+<a href="#1752" id="1752">1752</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1777,7 +1781,7 @@
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_INFO};
 <span class="kw">use </span>sp_finality_grandpa::{AuthorityId, AuthorityList};
 
-<span class="kw">use </span><span class="kw">crate</span>::SetId;
+<span class="kw">use crate</span>::{SetId, LOG_TARGET};
 
 <span class="doccomment">/// Error type returned on operations on the `AuthoritySet`.
 </span><span class="attr">#[derive(Debug, thiserror::Error)]
@@ -2062,7 +2066,7 @@
 		<span class="kw">let </span>number = pending.canon_height.clone();
 
 		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;afg&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;Inserting potential standard set change signaled at block {:?} (delayed by {:?} blocks).&quot;</span>,
 			(<span class="kw-2">&amp;</span>number, <span class="kw-2">&amp;</span>hash),
 			pending.delay,
@@ -2071,7 +2075,7 @@
 		<span class="self">self</span>.pending_standard_changes.import(hash, number, pending, is_descendent_of)<span class="question-mark">?</span>;
 
 		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;afg&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;There are now {} alternatives for the next pending standard change (roots), and a \
 			 total of {} pending standard changes (across all forks).&quot;</span>,
 			<span class="self">self</span>.pending_standard_changes.roots().count(),
@@ -2110,7 +2114,7 @@
 			.unwrap_or_else(|i| i);
 
 		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;afg&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;Inserting potential forced set change at block {:?} (delayed by {:?} blocks).&quot;</span>,
 			(<span class="kw-2">&amp;</span>pending.canon_height, <span class="kw-2">&amp;</span>pending.canon_hash),
 			pending.delay,
@@ -2118,7 +2122,11 @@
 
 		<span class="self">self</span>.pending_forced_changes.insert(idx, pending);
 
-		<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;There are now {} pending forced changes.&quot;</span>, <span class="self">self</span>.pending_forced_changes.len());
+		<span class="macro">debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;There are now {} pending forced changes.&quot;</span>,
+			<span class="self">self</span>.pending_forced_changes.len()
+		);
 
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2223,7 +2231,7 @@
 					<span class="kw">if </span>standard_change.effective_number() &lt;= median_last_finalized &amp;&amp;
 						is_descendent_of(<span class="kw-2">&amp;</span>standard_change.canon_hash, <span class="kw-2">&amp;</span>change.canon_hash)<span class="question-mark">?
 					</span>{
-						<span class="macro">log::info!</span>(target: <span class="string">&quot;afg&quot;</span>,
+						<span class="macro">log::info!</span>(target: LOG_TARGET,
 							<span class="string">&quot;Not applying authority set change forced at block #{:?}, due to pending standard change at block #{:?}&quot;</span>,
 							change.canon_height,
 							standard_change.effective_number(),
@@ -2236,7 +2244,7 @@
 				}
 
 				<span class="comment">// apply this change: make the set canonical
-				</span><span class="macro">afg_log!</span>(
+				</span><span class="macro">grandpa_log!</span>(
 					initial_sync,
 					<span class="string">&quot;👴 Applying authority set change forced at block #{:?}&quot;</span>,
 					change.canon_height,
@@ -2318,7 +2326,7 @@
 				}
 
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(change) = change {
-					<span class="macro">afg_log!</span>(
+					<span class="macro">grandpa_log!</span>(
 						initial_sync,
 						<span class="string">&quot;👴 Applying authority set change scheduled at block #{:?}&quot;</span>,
 						change.canon_height,

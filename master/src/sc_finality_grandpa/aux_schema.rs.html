@@ -784,6 +784,9 @@
 <a href="#784" id="784">784</a>
 <a href="#785" id="785">785</a>
 <a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -824,7 +827,7 @@
 		CompletedRound, CompletedRounds, CurrentRounds, HasVoted, SharedVoterSetState,
 		VoterSetState,
 	},
-	GrandpaJustification, NewAuthoritySet,
+	GrandpaJustification, NewAuthoritySet, LOG_TARGET,
 };
 
 <span class="kw">const </span>VERSION_KEY: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;grandpa_schema_version&quot;</span>;
@@ -886,8 +889,8 @@
 				<span class="comment">// previously we only supported at most one pending change per fork
 				</span><span class="kw-2">&amp;</span>|<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>),
 			) {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Error migrating pending authority set change: {}&quot;</span>, err);
-				<span class="macro">warn!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Node is in a potentially inconsistent state.&quot;</span>);
+				<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Error migrating pending authority set change: {}&quot;</span>, err);
+				<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Node is in a potentially inconsistent state.&quot;</span>);
 			}
 		}
 
@@ -1170,8 +1173,11 @@
 	}
 
 	<span class="comment">// genesis.
-	</span><span class="macro">info!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;👴 Loading GRANDPA authority set \
-		from genesis on what appears to be first startup.&quot;</span>);
+	</span><span class="macro">info!</span>(
+		target: LOG_TARGET,
+		<span class="string">&quot;👴 Loading GRANDPA authority set \
+		from genesis on what appears to be first startup.&quot;
+	</span>);
 
 	<span class="kw">let </span>genesis_authorities = genesis_authorities()<span class="question-mark">?</span>;
 	<span class="kw">let </span>genesis_set = AuthoritySet::genesis(genesis_authorities)

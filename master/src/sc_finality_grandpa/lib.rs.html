@@ -1178,6 +1178,15 @@
 <a href="#1178" id="1178">1178</a>
 <a href="#1179" id="1179">1179</a>
 <a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1273,10 +1282,12 @@
 	time::Duration,
 };
 
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;grandpa&quot;</span>;
+
 <span class="comment">// utility logging macro that takes as first argument a conditional to
 // decide whether to log under debug or info level (useful to restrict
 // logging under initial sync).
-</span><span class="macro">macro_rules! </span>afg_log {
+</span><span class="macro">macro_rules! </span>grandpa_log {
 	(<span class="macro-nonterminal">$condition</span>:expr, $(<span class="macro-nonterminal">$msg</span>: expr),+ $(,)<span class="question-mark">?</span>) =&gt; {
 		{
 			<span class="kw">let </span>log_level = <span class="kw">if </span><span class="macro-nonterminal">$condition </span>{
@@ -1285,7 +1296,7 @@
 				log::Level::Info
 			};
 
-			<span class="macro">log::log!</span>(target: <span class="string">&quot;afg&quot;</span>, log_level, $(<span class="macro-nonterminal">$msg</span>),+);
+			<span class="macro">log::log!</span>(target: LOG_TARGET, log_level, $(<span class="macro-nonterminal">$msg</span>),+);
 		}
 	};
 }
@@ -1983,10 +1994,11 @@
 	);
 
 	<span class="kw">let </span>voter_work = voter_work.map(|res| <span class="kw">match </span>res {
-		<span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">error!</span>(target: <span class="string">&quot;afg&quot;</span>,
+		<span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">error!</span>(
+			target: LOG_TARGET,
 			<span class="string">&quot;GRANDPA voter future has concluded naturally, this should be unreachable.&quot;
 		</span>),
-		<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;GRANDPA voter error: {}&quot;</span>, e),
+		<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;GRANDPA voter error: {}&quot;</span>, e),
 	});
 
 	<span class="comment">// Make sure that `telemetry_task` doesn&#39;t accidentally finish and kill grandpa.
@@ -2051,7 +2063,7 @@
 		<span class="kw">let </span>metrics = <span class="kw">match </span>prometheus_registry.as_ref().map(Metrics::register) {
 			<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(metrics)) =&gt; <span class="prelude-val">Some</span>(metrics),
 			<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(e)) =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Failed to register metrics: {:?}&quot;</span>, e);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Failed to register metrics: {:?}&quot;</span>, e);
 				<span class="prelude-val">None
 			</span>},
 			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
@@ -2093,7 +2105,12 @@
 	/// state. This method should be called when we know that the authority set
 	/// has changed (e.g. as signalled by a voter command).
 	</span><span class="kw">fn </span>rebuild_voter(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;{}: Starting new voter with set ID {}&quot;</span>, <span class="self">self</span>.env.config.name(), <span class="self">self</span>.env.set_id);
+		<span class="macro">debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;{}: Starting new voter with set ID {}&quot;</span>,
+			<span class="self">self</span>.env.config.name(),
+			<span class="self">self</span>.env.set_id
+		);
 
 		<span class="kw">let </span>maybe_authority_id =
 			local_authority_id(<span class="kw-2">&amp;</span><span class="self">self</span>.env.voters, <span class="self">self</span>.env.config.keystore.as_ref());
@@ -2154,7 +2171,8 @@
 
 				<span class="comment">// Repoint shared_voter_state so that the RPC endpoint can query the state
 				</span><span class="kw">if </span><span class="self">self</span>.shared_voter_state.reset(voter.voter_state()).is_none() {
-					<span class="macro">info!</span>(target: <span class="string">&quot;afg&quot;</span>,
+					<span class="macro">info!</span>(
+						target: LOG_TARGET,
 						<span class="string">&quot;Timed out trying to update shared GRANDPA voter state. \
 						RPC endpoints may return stale data.&quot;
 					</span>);
@@ -2223,7 +2241,7 @@
 				<span class="prelude-val">Ok</span>(())
 			},
 			VoterCommand::Pause(reason) =&gt; {
-				<span class="macro">info!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Pausing old validator set: {}&quot;</span>, reason);
+				<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;Pausing old validator set: {}&quot;</span>, reason);
 
 				<span class="comment">// not racing because old voter is shut down.
 				</span><span class="self">self</span>.env.update_voter_set_state(|voter_set_state| {

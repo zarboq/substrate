@@ -346,6 +346,19 @@
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -392,6 +405,8 @@
 };
 <span class="kw">pub use </span>basic_queue::BasicQueue;
 <span class="kw">use </span>sp_consensus::{error::Error <span class="kw">as </span>ConsensusError, BlockOrigin, CacheKeyId};
+
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;sync::import-queue&quot;</span>;
 
 <span class="doccomment">/// A commonly-used Import Queue type.
 ///
@@ -595,15 +610,15 @@
 		(<span class="prelude-val">Some</span>(header), justifications) =&gt; (header, justifications),
 		(<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; {
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>peer) = peer {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Header {} was not provided by {} &quot;</span>, block.hash, peer);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Header {} was not provided by {} &quot;</span>, block.hash, peer);
 			} <span class="kw">else </span>{
-				<span class="macro">debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Header {} was not provided &quot;</span>, block.hash);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Header {} was not provided &quot;</span>, block.hash);
 			}
 			<span class="kw">return </span><span class="prelude-val">Err</span>(BlockImportError::IncompleteHeader(peer))
 		},
 	};
 
-	<span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Header {} has {:?} logs&quot;</span>, block.hash, header.digest().logs().len());
+	<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Header {} has {:?} logs&quot;</span>, block.hash, header.digest().logs().len());
 
 	<span class="kw">let </span>number = <span class="kw-2">*</span>header.number();
 	<span class="kw">let </span>hash = block.hash;
@@ -611,27 +626,31 @@
 
 	<span class="kw">let </span>import_handler = |import| <span class="kw">match </span>import {
 		<span class="prelude-val">Ok</span>(ImportResult::AlreadyInChain) =&gt; {
-			<span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Block already in chain {}: {:?}&quot;</span>, number, hash);
+			<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Block already in chain {}: {:?}&quot;</span>, number, hash);
 			<span class="prelude-val">Ok</span>(BlockImportStatus::ImportedKnown(number, peer))
 		},
 		<span class="prelude-val">Ok</span>(ImportResult::Imported(aux)) =&gt;
 			<span class="prelude-val">Ok</span>(BlockImportStatus::ImportedUnknown(number, aux, peer)),
 		<span class="prelude-val">Ok</span>(ImportResult::MissingState) =&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Parent state is missing for {}: {:?}, parent: {:?}&quot;</span>,
-					number, hash, parent_hash);
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Parent state is missing for {}: {:?}, parent: {:?}&quot;</span>, number, hash, parent_hash
+			);
 			<span class="prelude-val">Err</span>(BlockImportError::MissingState)
 		},
 		<span class="prelude-val">Ok</span>(ImportResult::UnknownParent) =&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Block with unknown parent {}: {:?}, parent: {:?}&quot;</span>,
-					number, hash, parent_hash);
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Block with unknown parent {}: {:?}, parent: {:?}&quot;</span>, number, hash, parent_hash
+			);
 			<span class="prelude-val">Err</span>(BlockImportError::UnknownParent)
 		},
 		<span class="prelude-val">Ok</span>(ImportResult::KnownBad) =&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Peer gave us a bad block {}: {:?}&quot;</span>, number, hash);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Peer gave us a bad block {}: {:?}&quot;</span>, number, hash);
 			<span class="prelude-val">Err</span>(BlockImportError::BadBlock(peer))
 		},
 		<span class="prelude-val">Err</span>(e) =&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Error importing block {}: {:?}: {}&quot;</span>, number, hash, e);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Error importing block {}: {:?}: {}&quot;</span>, number, hash, e);
 			<span class="prelude-val">Err</span>(BlockImportError::Other(e))
 		},
 	};
@@ -672,9 +691,16 @@
 
 	<span class="kw">let </span>(import_block, maybe_keys) = verifier.verify(import_block).<span class="kw">await</span>.map_err(|msg| {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>peer) = peer {
-			<span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Verifying {}({}) from {} failed: {}&quot;</span>, number, hash, peer, msg);
+			<span class="macro">trace!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Verifying {}({}) from {} failed: {}&quot;</span>,
+				number,
+				hash,
+				peer,
+				msg
+			);
 		} <span class="kw">else </span>{
-			<span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Verifying {}({}) failed: {}&quot;</span>, number, hash, msg);
+			<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Verifying {}({}) failed: {}&quot;</span>, number, hash, msg);
 		}
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = metrics.as_ref() {
 			metrics.report_verification(<span class="bool-val">false</span>, started.elapsed());

@@ -1073,6 +1073,21 @@
 <a href="#1073" id="1073">1073</a>
 <a href="#1074" id="1074">1074</a>
 <a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1129,7 +1144,7 @@
 
 <span class="kw">use crate</span>::{
 	environment::HasVoted, CatchUp, Commit, CommunicationIn, CommunicationOutH, CompactCommit,
-	Error, Message, SignedMessage,
+	Error, Message, SignedMessage, LOG_TARGET,
 };
 <span class="kw">use </span>gossip::{
 	FullCatchUpMessage, FullCommitMessage, GossipMessage, GossipValidator, PeerReport, VoteMessage,
@@ -1349,7 +1364,8 @@
 					gossip_engine.lock().register_gossip_message(topic, message.encode());
 				}
 
-				<span class="macro">trace!</span>(target: <span class="string">&quot;afg&quot;</span>,
+				<span class="macro">trace!</span>(
+					target: LOG_TARGET,
 					<span class="string">&quot;Registered {} messages for topic {:?} (round: {}, set_id: {})&quot;</span>,
 					round.votes.len(),
 					topic,
@@ -1415,13 +1431,19 @@
 
 				<span class="kw">match </span>decoded {
 					<span class="prelude-val">Err</span>(<span class="kw-2">ref </span>e) =&gt; {
-						<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Skipping malformed message {:?}: {}&quot;</span>, notification, e);
+						<span class="macro">debug!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;Skipping malformed message {:?}: {}&quot;</span>, notification, e
+						);
 						future::ready(<span class="prelude-val">None</span>)
 					},
 					<span class="prelude-val">Ok</span>(GossipMessage::Vote(msg)) =&gt; {
 						<span class="comment">// check signature.
 						</span><span class="kw">if </span>!voters.contains(<span class="kw-2">&amp;</span>msg.message.id) {
-							<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Skipping message from unknown voter {}&quot;</span>, msg.message.id);
+							<span class="macro">debug!</span>(
+								target: LOG_TARGET,
+								<span class="string">&quot;Skipping message from unknown voter {}&quot;</span>, msg.message.id
+							);
 							<span class="kw">return </span>future::ready(<span class="prelude-val">None</span>)
 						}
 
@@ -1463,7 +1485,7 @@
 						future::ready(<span class="prelude-val">Some</span>(msg.message))
 					},
 					<span class="kw">_ </span>=&gt; {
-						<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Skipping unknown message type&quot;</span>);
+						<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Skipping unknown message type&quot;</span>);
 						future::ready(<span class="prelude-val">None</span>)
 					},
 				}
@@ -1706,7 +1728,12 @@
 			<span class="comment">// this could be optimized by decoding piecewise.
 			</span><span class="kw">let </span>decoded = GossipMessage::&lt;B&gt;::decode(<span class="kw-2">&amp;mut &amp;</span>notification.message[..]);
 			<span class="kw">if let </span><span class="prelude-val">Err</span>(<span class="kw-2">ref </span>e) = decoded {
-				<span class="macro">trace!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Skipping malformed commit message {:?}: {}&quot;</span>, notification, e);
+				<span class="macro">trace!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Skipping malformed commit message {:?}: {}&quot;</span>,
+					notification,
+					e
+				);
 			}
 			future::ready(decoded.map(<span class="kw">move </span>|d| (notification, d)).ok())
 		})
@@ -1717,7 +1744,7 @@
 				GossipMessage::CatchUp(msg) =&gt;
 					process_catch_up(msg, notification, <span class="kw-2">&amp;</span>gossip_engine, <span class="kw-2">&amp;</span>gossip_validator, <span class="kw-2">&amp;</span>voters),
 				<span class="kw">_ </span>=&gt; {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Skipping unknown message type&quot;</span>);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Skipping unknown message type&quot;</span>);
 					<span class="prelude-val">None
 				</span>},
 			})
@@ -1823,7 +1850,7 @@
 			});
 
 			<span class="macro">debug!</span>(
-				target: <span class="string">&quot;afg&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;Announcing block {} to peers which we voted on in round {} in set {}&quot;</span>,
 				target_hash,
 				<span class="self">self</span>.round,
@@ -1888,7 +1915,7 @@
 				<span class="kw">return </span><span class="prelude-val">Err</span>(cost::MALFORMED_COMMIT)
 			}
 		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Skipping commit containing unknown voter {}&quot;</span>, id);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Skipping commit containing unknown voter {}&quot;</span>, id);
 			<span class="kw">return </span><span class="prelude-val">Err</span>(cost::MALFORMED_COMMIT)
 		}
 	}
@@ -1913,7 +1940,7 @@
 			set_id.<span class="number">0</span>,
 			<span class="kw-2">&amp;mut </span>buf,
 		) {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Bad commit message signature {}&quot;</span>, id);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Bad commit message signature {}&quot;</span>, id);
 			<span class="macro">telemetry!</span>(
 				telemetry;
 				CONSENSUS_DEBUG;
@@ -1961,7 +1988,10 @@
 					<span class="kw">return </span><span class="prelude-val">Err</span>(cost::MALFORMED_CATCH_UP)
 				}
 			} <span class="kw">else </span>{
-				<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Skipping catch up message containing unknown voter {}&quot;</span>, id);
+				<span class="macro">debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Skipping catch up message containing unknown voter {}&quot;</span>, id
+				);
 				<span class="kw">return </span><span class="prelude-val">Err</span>(cost::MALFORMED_CATCH_UP)
 			}
 		}
@@ -1997,7 +2027,7 @@
 			<span class="kw">if </span>!sp_finality_grandpa::check_message_signature_with_buffer(
 				<span class="kw-2">&amp;</span>msg, id, sig, round, set_id, buf,
 			) {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Bad catch up message signature {}&quot;</span>, id);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Bad catch up message signature {}&quot;</span>, id);
 				<span class="macro">telemetry!</span>(
 					telemetry;
 					CONSENSUS_DEBUG;

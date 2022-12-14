@@ -1845,6 +1845,16 @@
 <a href="#1845" id="1845">1845</a>
 <a href="#1846" id="1846">1846</a>
 <a href="#1847" id="1847">1847</a>
+<a href="#1848" id="1848">1848</a>
+<a href="#1849" id="1849">1849</a>
+<a href="#1850" id="1850">1850</a>
+<a href="#1851" id="1851">1851</a>
+<a href="#1852" id="1852">1852</a>
+<a href="#1853" id="1853">1853</a>
+<a href="#1854" id="1854">1854</a>
+<a href="#1855" id="1855">1855</a>
+<a href="#1856" id="1856">1856</a>
+<a href="#1857" id="1857">1857</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1995,6 +2005,8 @@
 <span class="kw">pub mod </span>aux_schema;
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
+
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;babe&quot;</span>;
 
 <span class="doccomment">/// BABE epoch information
 </span><span class="attr">#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug)]
@@ -2170,7 +2182,7 @@
 }
 
 <span class="kw">fn </span>babe_err&lt;B: BlockT&gt;(error: Error&lt;B&gt;) -&gt; Error&lt;B&gt; {
-	<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;{}&quot;</span>, error);
+	<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;{}&quot;</span>, error);
 	error
 }
 
@@ -2192,7 +2204,7 @@
 	<span class="kw">let </span>block_id = <span class="kw">if </span>client.usage_info().chain.finalized_state.is_some() {
 		BlockId::Hash(client.usage_info().chain.best_hash)
 	} <span class="kw">else </span>{
-		<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;No finalized state is available. Reading config from genesis&quot;</span>);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;No finalized state is available. Reading config from genesis&quot;</span>);
 		BlockId::Hash(client.usage_info().chain.genesis_hash)
 	};
 
@@ -2333,7 +2345,7 @@
 		telemetry,
 	};
 
-	<span class="macro">info!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;👶 Starting BABE Authorship worker&quot;</span>);
+	<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;👶 Starting BABE Authorship worker&quot;</span>);
 
 	<span class="kw">let </span>slot_worker = sc_consensus_slots::start_slot_worker(
 		babe_link.config.slot_duration(),
@@ -2370,12 +2382,8 @@
 		<span class="prelude-val">Ok</span>(meta) =&gt; {
 			hashes.insert(meta.parent);
 		},
-		<span class="prelude-val">Err</span>(err) =&gt; <span class="macro">warn!</span>(
-			target: <span class="string">&quot;babe&quot;</span>,
-			<span class="string">&quot;Failed to lookup metadata for block `{:?}`: {}&quot;</span>,
-			first,
-			err,
-		),
+		<span class="prelude-val">Err</span>(err) =&gt;
+			<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Failed to lookup metadata for block `{:?}`: {}&quot;</span>, first, err,),
 	}
 
 	<span class="comment">// Cleans data for finalized block&#39;s ancestors
@@ -2563,8 +2571,8 @@
 	<span class="kw">type </span>AuxData = ViableEpochDescriptor&lt;B::Hash, NumberFor&lt;B&gt;, Epoch&gt;;
 
 	<span class="kw">fn </span>logging_target(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-		<span class="string">&quot;babe&quot;
-	</span>}
+		LOG_TARGET
+	}
 
 	<span class="kw">fn </span>block_import(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::BlockImport {
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>.block_import
@@ -2596,7 +2604,7 @@
 		slot: Slot,
 		epoch_descriptor: <span class="kw-2">&amp;</span>ViableEpochDescriptor&lt;B::Hash, NumberFor&lt;B&gt;, Epoch&gt;,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Claim&gt; {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Attempting to claim slot {}&quot;</span>, slot);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Attempting to claim slot {}&quot;</span>, slot);
 		<span class="kw">let </span>s = authorship::claim_slot(
 			slot,
 			<span class="self">self</span>.epoch_changes
@@ -2607,7 +2615,7 @@
 		);
 
 		<span class="kw">if </span>s.is_some() {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Claimed slot {}&quot;</span>, slot);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Claimed slot {}&quot;</span>, slot);
 		}
 
 		s
@@ -2624,7 +2632,7 @@
 			<span class="prelude-val">Ok</span>(()) =&gt; <span class="bool-val">true</span>,
 			<span class="prelude-val">Err</span>(e) =&gt;
 				<span class="kw">if </span>e.is_full() {
-					<span class="macro">warn!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Trying to notify a slot but the channel is full&quot;</span>);
+					<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;Trying to notify a slot but the channel is full&quot;</span>);
 					<span class="bool-val">true
 				</span>} <span class="kw">else </span>{
 					<span class="bool-val">false
@@ -2751,10 +2759,10 @@
 
 	<span class="kw">let </span><span class="kw-2">mut </span>pre_digest: <span class="prelude-ty">Option</span>&lt;<span class="kw">_</span>&gt; = <span class="prelude-val">None</span>;
 	<span class="kw">for </span>log <span class="kw">in </span>header.digest().logs() {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Checking log {:?}, looking for pre runtime digest&quot;</span>, log);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Checking log {:?}, looking for pre runtime digest&quot;</span>, log);
 		<span class="kw">match </span>(log.as_babe_pre_digest(), pre_digest.is_some()) {
 			(<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="bool-val">true</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::MultiplePreRuntimeDigests)),
-			(<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="macro">trace!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
+			(<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
 			(s, <span class="bool-val">false</span>) =&gt; pre_digest = s,
 		}
 	}
@@ -2767,13 +2775,13 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;NextEpochDescriptor&gt;, Error&lt;B&gt;&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>epoch_digest: <span class="prelude-ty">Option</span>&lt;<span class="kw">_</span>&gt; = <span class="prelude-val">None</span>;
 	<span class="kw">for </span>log <span class="kw">in </span>header.digest().logs() {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Checking log {:?}, looking for epoch change digest.&quot;</span>, log);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Checking log {:?}, looking for epoch change digest.&quot;</span>, log);
 		<span class="kw">let </span>log = log.try_to::&lt;ConsensusLog&gt;(OpaqueDigestItemId::Consensus(<span class="kw-2">&amp;</span>BABE_ENGINE_ID));
 		<span class="kw">match </span>(log, epoch_digest.is_some()) {
 			(<span class="prelude-val">Some</span>(ConsensusLog::NextEpochData(<span class="kw">_</span>)), <span class="bool-val">true</span>) =&gt;
 				<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::MultipleEpochChangeDigests)),
 			(<span class="prelude-val">Some</span>(ConsensusLog::NextEpochData(epoch)), <span class="bool-val">false</span>) =&gt; epoch_digest = <span class="prelude-val">Some</span>(epoch),
-			<span class="kw">_ </span>=&gt; <span class="macro">trace!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
+			<span class="kw">_ </span>=&gt; <span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
 		}
 	}
 
@@ -2786,13 +2794,13 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;NextConfigDescriptor&gt;, Error&lt;B&gt;&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>config_digest: <span class="prelude-ty">Option</span>&lt;<span class="kw">_</span>&gt; = <span class="prelude-val">None</span>;
 	<span class="kw">for </span>log <span class="kw">in </span>header.digest().logs() {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Checking log {:?}, looking for epoch change digest.&quot;</span>, log);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Checking log {:?}, looking for epoch change digest.&quot;</span>, log);
 		<span class="kw">let </span>log = log.try_to::&lt;ConsensusLog&gt;(OpaqueDigestItemId::Consensus(<span class="kw-2">&amp;</span>BABE_ENGINE_ID));
 		<span class="kw">match </span>(log, config_digest.is_some()) {
 			(<span class="prelude-val">Some</span>(ConsensusLog::NextConfigData(<span class="kw">_</span>)), <span class="bool-val">true</span>) =&gt;
 				<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::MultipleConfigChangeDigests)),
 			(<span class="prelude-val">Some</span>(ConsensusLog::NextConfigData(config)), <span class="bool-val">false</span>) =&gt; config_digest = <span class="prelude-val">Some</span>(config),
-			<span class="kw">_ </span>=&gt; <span class="macro">trace!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
+			<span class="kw">_ </span>=&gt; <span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
 		}
 	}
 
@@ -2922,7 +2930,10 @@
 			<span class="prelude-val">None </span>=&gt; <span class="kw">match </span>generate_key_owner_proof(<span class="kw-2">&amp;</span>best_id)<span class="question-mark">? </span>{
 				<span class="prelude-val">Some</span>(proof) =&gt; proof,
 				<span class="prelude-val">None </span>=&gt; {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Equivocation offender is not part of the authority set.&quot;</span>);
+					<span class="macro">debug!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Equivocation offender is not part of the authority set.&quot;
+					</span>);
 					<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 				},
 			},
@@ -2938,7 +2949,7 @@
 			)
 			.map_err(Error::RuntimeApi)<span class="question-mark">?</span>;
 
-		<span class="macro">info!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Submitted equivocation report for author {:?}&quot;</span>, author);
+		<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;Submitted equivocation report for author {:?}&quot;</span>, author);
 
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2968,7 +2979,7 @@
 		<span class="kw-2">mut </span>block: BlockImportParams&lt;Block, ()&gt;,
 	) -&gt; BlockVerificationResult&lt;Block&gt; {
 		<span class="macro">trace!</span>(
-			target: <span class="string">&quot;babe&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;Verifying origin: {:?} header: {:?} justification(s): {:?} body: {:?}&quot;</span>,
 			block.origin,
 			block.header,
@@ -2987,7 +2998,11 @@
 			</span><span class="kw">return </span><span class="prelude-val">Ok</span>((block, Default::default()))
 		}
 
-		<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;We have {:?} logs in this header&quot;</span>, block.header.digest().logs().len());
+		<span class="macro">debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;We have {:?} logs in this header&quot;</span>,
+			block.header.digest().logs().len()
+		);
 
 		<span class="kw">let </span>create_inherent_data_providers = <span class="self">self
 			</span>.create_inherent_data_providers
@@ -3051,7 +3066,10 @@
 					)
 					.<span class="kw">await
 				</span>{
-					<span class="macro">warn!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Error checking/reporting BABE equivocation: {}&quot;</span>, err);
+					<span class="macro">warn!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Error checking/reporting BABE equivocation: {}&quot;</span>, err
+					);
 				}
 
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(inner_body) = block.body {
@@ -3080,7 +3098,7 @@
 					block.body = <span class="prelude-val">Some</span>(inner_body);
 				}
 
-				<span class="macro">trace!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Checked {:?}; importing.&quot;</span>, pre_header);
+				<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Checked {:?}; importing.&quot;</span>, pre_header);
 				<span class="macro">telemetry!</span>(
 					<span class="self">self</span>.telemetry;
 					CONSENSUS_TRACE;
@@ -3099,7 +3117,7 @@
 				<span class="prelude-val">Ok</span>((block, Default::default()))
 			},
 			CheckedHeader::Deferred(a, b) =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Checking {:?} failed; {:?}, {:?}.&quot;</span>, hash, a, b);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Checking {:?} failed; {:?}, {:?}.&quot;</span>, hash, a, b);
 				<span class="macro">telemetry!</span>(
 					<span class="self">self</span>.telemetry;
 					CONSENSUS_DEBUG;
@@ -3367,21 +3385,23 @@
 					log::Level::Info
 				};
 
-				<span class="macro">log!</span>(target: <span class="string">&quot;babe&quot;</span>,
-					 log_level,
-					 <span class="string">&quot;👶 New epoch {} launching at block {} (block slot {} &gt;= start slot {}).&quot;</span>,
-					 viable_epoch.as_ref().epoch_index,
-					 hash,
-					 slot,
-					 viable_epoch.as_ref().start_slot,
+				<span class="macro">log!</span>(
+					target: LOG_TARGET,
+					log_level,
+					<span class="string">&quot;👶 New epoch {} launching at block {} (block slot {} &gt;= start slot {}).&quot;</span>,
+					viable_epoch.as_ref().epoch_index,
+					hash,
+					slot,
+					viable_epoch.as_ref().start_slot,
 				);
 
 				<span class="kw">let </span>next_epoch = viable_epoch.increment((next_epoch_descriptor, epoch_config));
 
-				<span class="macro">log!</span>(target: <span class="string">&quot;babe&quot;</span>,
-					 log_level,
-					 <span class="string">&quot;👶 Next epoch starts at slot {}&quot;</span>,
-					 next_epoch.as_ref().start_slot,
+				<span class="macro">log!</span>(
+					target: LOG_TARGET,
+					log_level,
+					<span class="string">&quot;👶 Next epoch starts at slot {}&quot;</span>,
+					next_epoch.as_ref().start_slot,
 				);
 
 				<span class="comment">// prune the tree of epochs not part of the finalized chain or
@@ -3412,7 +3432,7 @@
 				};
 
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = prune_and_import() {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;Failed to launch next epoch: {}&quot;</span>, e);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Failed to launch next epoch: {}&quot;</span>, e);
 					<span class="kw-2">*</span>epoch_changes =
 						old_epoch_changes.expect(<span class="string">&quot;set `Some` above and not taken; qed&quot;</span>);
 					<span class="kw">return </span><span class="prelude-val">Err</span>(e)

@@ -2602,6 +2602,17 @@
 <a href="#2602" id="2602">2602</a>
 <a href="#2603" id="2603">2603</a>
 <a href="#2604" id="2604">2604</a>
+<a href="#2605" id="2605">2605</a>
+<a href="#2606" id="2606">2606</a>
+<a href="#2607" id="2607">2607</a>
+<a href="#2608" id="2608">2608</a>
+<a href="#2609" id="2609">2609</a>
+<a href="#2610" id="2610">2610</a>
+<a href="#2611" id="2611">2611</a>
+<a href="#2612" id="2612">2612</a>
+<a href="#2613" id="2613">2613</a>
+<a href="#2614" id="2614">2614</a>
+<a href="#2615" id="2615">2615</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -2703,7 +2714,7 @@
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor, Zero};
 
 <span class="kw">use super</span>::{benefit, cost, Round, SetId, NEIGHBOR_REBROADCAST_PERIOD};
-<span class="kw">use crate</span>::{environment, CatchUp, CompactCommit, SignedMessage};
+<span class="kw">use crate</span>::{environment, CatchUp, CompactCommit, SignedMessage, LOG_TARGET};
 
 <span class="kw">use </span>std::{
 	collections::{HashSet, VecDeque},
@@ -3182,8 +3193,13 @@
 			last_update: <span class="prelude-val">Some</span>(now),
 		};
 
-		<span class="macro">trace!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Peer {} updated view. Now at {:?}, {:?}&quot;</span>,
-			who, peer.view.round, peer.view.set_id);
+		<span class="macro">trace!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Peer {} updated view. Now at {:?}, {:?}&quot;</span>,
+			who,
+			peer.view.round,
+			peer.view.set_id
+		);
 
 		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>peer.view))
 	}
@@ -3405,8 +3421,12 @@
 
 			<span class="kw">let </span>set_id = local_view.set_id;
 
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Voter {} noting beginning of round {:?} to network.&quot;</span>,
-				<span class="self">self</span>.config.name(), (round, set_id));
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Voter {} noting beginning of round {:?} to network.&quot;</span>,
+				<span class="self">self</span>.config.name(),
+				(round, set_id)
+			);
 
 			local_view.update_round(round);
 
@@ -3428,7 +3448,7 @@
 							authorities.iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
 
 						<span class="kw">if </span>diff_authorities {
-							<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>,
+							<span class="macro">debug!</span>(target: LOG_TARGET,
 								<span class="string">&quot;Gossip validator noted set {:?} twice with different authorities. \
 								Was the authority set hard forked?&quot;</span>,
 								set_id,
@@ -3516,7 +3536,7 @@
 
 		<span class="comment">// ensure authority is part of the set.
 		</span><span class="kw">if </span>!<span class="self">self</span>.authorities.contains(<span class="kw-2">&amp;</span>full.message.id) {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Message from unknown voter: {}&quot;</span>, full.message.id);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Message from unknown voter: {}&quot;</span>, full.message.id);
 			<span class="macro">telemetry!</span>(
 				<span class="self">self</span>.config.telemetry;
 				CONSENSUS_DEBUG;
@@ -3533,7 +3553,7 @@
 			full.round.<span class="number">0</span>,
 			full.set_id.<span class="number">0</span>,
 		) {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Bad message signature {}&quot;</span>, full.message.id);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Bad message signature {}&quot;</span>, full.message.id);
 			<span class="macro">telemetry!</span>(
 				<span class="self">self</span>.config.telemetry;
 				CONSENSUS_DEBUG;
@@ -3568,7 +3588,7 @@
 		<span class="kw">if </span>full.message.precommits.len() != full.message.auth_data.len() ||
 			full.message.precommits.is_empty()
 		{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Malformed compact commit&quot;</span>);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Malformed compact commit&quot;</span>);
 			<span class="macro">telemetry!</span>(
 				<span class="self">self</span>.config.telemetry;
 				CONSENSUS_DEBUG;
@@ -3627,9 +3647,9 @@
 			PendingCatchUp::Processing { .. } =&gt; {
 				<span class="self">self</span>.pending_catch_up = PendingCatchUp::None;
 			},
-			state =&gt; <span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>,
-				<span class="string">&quot;Noted processed catch up message when state was: {:?}&quot;</span>,
-				state,
+			state =&gt; <span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Noted processed catch up message when state was: {:?}&quot;</span>, state,
 			),
 		}
 	}
@@ -3671,7 +3691,9 @@
 			<span class="kw">return </span>(<span class="prelude-val">None</span>, Action::Discard(Misbehavior::OutOfScopeMessage.cost()))
 		}
 
-		<span class="macro">trace!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Replying to catch-up request for round {} from {} with round {}&quot;</span>,
+		<span class="macro">trace!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Replying to catch-up request for round {} from {} with round {}&quot;</span>,
 			request.round.<span class="number">0</span>,
 			who,
 			last_completed_round.number,
@@ -3745,9 +3767,9 @@
 				<span class="kw">let </span>(catch_up_allowed, catch_up_report) = <span class="self">self</span>.note_catch_up_request(who, <span class="kw-2">&amp;</span>request);
 
 				<span class="kw">if </span>catch_up_allowed {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Sending catch-up request for round {} to {}&quot;</span>,
-						   round,
-						   who,
+					<span class="macro">debug!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Sending catch-up request for round {} to {}&quot;</span>, round, who,
 					);
 
 					catch_up = <span class="prelude-val">Some</span>(GossipMessage::&lt;Block&gt;::CatchUpRequest(request));
@@ -3951,7 +3973,7 @@
 		<span class="kw">let </span>metrics = <span class="kw">match </span>prometheus_registry.map(Metrics::register) {
 			<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(metrics)) =&gt; <span class="prelude-val">Some</span>(metrics),
 			<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(e)) =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Failed to register metrics: {:?}&quot;</span>, e);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Failed to register metrics: {:?}&quot;</span>, e);
 				<span class="prelude-val">None
 			</span>},
 			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
@@ -4070,7 +4092,7 @@
 				},
 				<span class="prelude-val">Err</span>(e) =&gt; {
 					message_name = <span class="prelude-val">None</span>;
-					<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Error decoding message: {}&quot;</span>, e);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Error decoding message: {}&quot;</span>, e);
 					<span class="macro">telemetry!</span>(
 						<span class="self">self</span>.telemetry;
 						CONSENSUS_DEBUG;

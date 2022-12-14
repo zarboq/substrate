@@ -114,6 +114,8 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -137,16 +139,18 @@
 </span><span class="kw">use </span>futures::{future::FutureExt <span class="kw">as _</span>, prelude::<span class="kw-2">*</span>, ready, stream::Stream};
 <span class="kw">use </span>futures_timer::Delay;
 <span class="kw">use </span>log::debug;
-<span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
 <span class="kw">use </span>std::{
 	pin::Pin,
 	task::{Context, Poll},
 	time::Duration,
 };
 
-<span class="kw">use </span><span class="kw">super</span>::gossip::{GossipMessage, NeighborPacket};
 <span class="kw">use </span>sc_network::PeerId;
+<span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
+
+<span class="kw">use </span><span class="kw">super</span>::gossip::{GossipMessage, NeighborPacket};
+<span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
 
 <span class="doccomment">/// A sender used to send neighbor packets to a background job.
 </span><span class="attr">#[derive(Clone)]
@@ -162,7 +166,7 @@
 		neighbor_packet: NeighborPacket&lt;NumberFor&lt;B&gt;&gt;,
 	) {
 		<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.<span class="number">0</span>.unbounded_send((who, neighbor_packet)) {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Failed to send neighbor packet: {:?}&quot;</span>, err);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Failed to send neighbor packet: {:?}&quot;</span>, err);
 		}
 	}
 }

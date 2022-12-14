@@ -680,6 +680,8 @@
 <a href="#680" id="680">680</a>
 <a href="#681" id="681">681</a>
 <a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -748,6 +750,8 @@
 	RuntimeString,
 };
 <span class="kw">use </span>std::{cmp::Ordering, collections::HashMap, marker::PhantomData, sync::Arc, time::Duration};
+
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;pow&quot;</span>;
 
 <span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error&lt;B: BlockT&gt; {
@@ -1213,7 +1217,7 @@
 			</span>}
 
 			<span class="kw">if </span>sync_oracle.is_major_syncing() {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;pow&quot;</span>, <span class="string">&quot;Skipping proposal due to sync.&quot;</span>);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Skipping proposal due to sync.&quot;</span>);
 				worker.on_major_syncing();
 				<span class="kw">continue
 			</span>}
@@ -1222,7 +1226,7 @@
 				<span class="prelude-val">Ok</span>(x) =&gt; x,
 				<span class="prelude-val">Err</span>(err) =&gt; {
 					<span class="macro">warn!</span>(
-						target: <span class="string">&quot;pow&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;Unable to pull new block for authoring. \
 						 Select best chain error: {}&quot;</span>,
 						err
@@ -1243,7 +1247,7 @@
 				<span class="prelude-val">Ok</span>(x) =&gt; x,
 				<span class="prelude-val">Err</span>(err) =&gt; {
 					<span class="macro">warn!</span>(
-						target: <span class="string">&quot;pow&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;Unable to propose new block for authoring. \
 						 Fetch difficulty failed: {}&quot;</span>,
 						err,
@@ -1259,7 +1263,7 @@
 				<span class="prelude-val">Ok</span>(x) =&gt; x,
 				<span class="prelude-val">Err</span>(err) =&gt; {
 					<span class="macro">warn!</span>(
-						target: <span class="string">&quot;pow&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;Unable to propose new block for authoring. \
 						 Creating inherent data providers failed: {}&quot;</span>,
 						err,
@@ -1272,7 +1276,7 @@
 				<span class="prelude-val">Ok</span>(r) =&gt; r,
 				<span class="prelude-val">Err</span>(e) =&gt; {
 					<span class="macro">warn!</span>(
-						target: <span class="string">&quot;pow&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;Unable to propose new block for authoring. \
 						 Creating inherent data failed: {}&quot;</span>,
 						e,
@@ -1292,7 +1296,7 @@
 				<span class="prelude-val">Ok</span>(x) =&gt; x,
 				<span class="prelude-val">Err</span>(err) =&gt; {
 					<span class="macro">warn!</span>(
-						target: <span class="string">&quot;pow&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;Unable to propose new block for authoring. \
 						 Creating proposer failed: {:?}&quot;</span>,
 						err,
@@ -1306,7 +1310,7 @@
 					<span class="prelude-val">Ok</span>(x) =&gt; x,
 					<span class="prelude-val">Err</span>(err) =&gt; {
 						<span class="macro">warn!</span>(
-							target: <span class="string">&quot;pow&quot;</span>,
+							target: LOG_TARGET,
 							<span class="string">&quot;Unable to propose new block for authoring. \
 							 Creating proposal failed: {}&quot;</span>,
 							err,
@@ -1336,14 +1340,14 @@
 </span><span class="kw">fn </span>find_pre_digest&lt;B: BlockT&gt;(header: <span class="kw-2">&amp;</span>B::Header) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, Error&lt;B&gt;&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>pre_digest: <span class="prelude-ty">Option</span>&lt;<span class="kw">_</span>&gt; = <span class="prelude-val">None</span>;
 	<span class="kw">for </span>log <span class="kw">in </span>header.digest().logs() {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;pow&quot;</span>, <span class="string">&quot;Checking log {:?}, looking for pre runtime digest&quot;</span>, log);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Checking log {:?}, looking for pre runtime digest&quot;</span>, log);
 		<span class="kw">match </span>(log, pre_digest.is_some()) {
 			(DigestItem::PreRuntime(POW_ENGINE_ID, <span class="kw">_</span>), <span class="bool-val">true</span>) =&gt;
 				<span class="kw">return </span><span class="prelude-val">Err</span>(Error::MultiplePreRuntimeDigests),
 			(DigestItem::PreRuntime(POW_ENGINE_ID, v), <span class="bool-val">false</span>) =&gt; {
 				pre_digest = <span class="prelude-val">Some</span>(v.clone());
 			},
-			(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">trace!</span>(target: <span class="string">&quot;pow&quot;</span>, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
+			(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Ignoring digest not meant for us&quot;</span>),
 		}
 	}
 

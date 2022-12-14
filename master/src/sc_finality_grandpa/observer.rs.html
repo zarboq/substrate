@@ -513,7 +513,7 @@
 	environment, global_communication,
 	notification::GrandpaJustificationSender,
 	ClientForGrandpa, CommandOrError, CommunicationIn, Config, Error, LinkHalf, VoterCommand,
-	VoterSetState,
+	VoterSetState, LOG_TARGET,
 };
 
 <span class="kw">struct </span>ObserverChain&lt;<span class="lifetime">&#39;a</span>, Block: BlockT, Client&gt; {
@@ -615,7 +615,7 @@
 			<span class="comment">// proceed processing with new finalized block number
 			</span>future::ok(finalized_number)
 		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Received invalid commit: ({:?}, {:?})&quot;</span>, round, commit);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Received invalid commit: ({:?}, {:?})&quot;</span>, round, commit);
 
 			finality_grandpa::process_commit_validation_result(validation_result, callback);
 
@@ -787,7 +787,7 @@
 		// update it on-disk in case we restart as validator in the future.
 		</span><span class="self">self</span>.persistent_data.set_state = <span class="kw">match </span>command {
 			VoterCommand::Pause(reason) =&gt; {
-				<span class="macro">info!</span>(target: <span class="string">&quot;afg&quot;</span>, <span class="string">&quot;Pausing old validator set: {}&quot;</span>, reason);
+				<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;Pausing old validator set: {}&quot;</span>, reason);
 
 				<span class="kw">let </span>completed_rounds = <span class="self">self</span>.persistent_data.set_state.read().completed_rounds();
 				<span class="kw">let </span>set_state = VoterSetState::Paused { completed_rounds };

@@ -285,12 +285,6 @@
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -341,7 +335,7 @@
 };
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">use crate</span>::{Call, Config, Pallet};
+<span class="kw">use crate</span>::{Call, Config, Pallet, LOG_TARGET};
 
 <span class="doccomment">/// A trait with utility methods for handling equivocation reports in BABE.
 /// The trait provides methods for reporting an offence triggered by a valid
@@ -454,15 +448,9 @@
 		};
 
 		<span class="kw">match </span>SubmitTransaction::&lt;T, Call&lt;T&gt;&gt;::submit_unsigned_transaction(call.into()) {
-			<span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">log::info!</span>(
-				target: <span class="string">&quot;runtime::babe&quot;</span>,
-				<span class="string">&quot;Submitted BABE equivocation report.&quot;</span>,
-			),
-			<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">log::error!</span>(
-				target: <span class="string">&quot;runtime::babe&quot;</span>,
-				<span class="string">&quot;Error submitting equivocation report: {:?}&quot;</span>,
-				e,
-			),
+			<span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;Submitted BABE equivocation report.&quot;</span>,),
+			<span class="prelude-val">Err</span>(e) =&gt;
+				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;Error submitting equivocation report: {:?}&quot;</span>, e,),
 		}
 
 		<span class="prelude-val">Ok</span>(())
@@ -485,7 +473,7 @@
 				TransactionSource::Local | TransactionSource::InBlock =&gt; { <span class="comment">/* allowed */ </span>},
 				<span class="kw">_ </span>=&gt; {
 					<span class="macro">log::warn!</span>(
-						target: <span class="string">&quot;runtime::babe&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;rejecting unsigned report equivocation transaction because it is not local/in-block.&quot;</span>,
 					);
 
