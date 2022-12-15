@@ -316,6 +316,10 @@
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -377,6 +381,8 @@
 	</span><span class="kw">pub </span>weight: syn::Expr,
 	<span class="doccomment">/// Call index of the dispatchable.
 	</span><span class="kw">pub </span>call_index: u8,
+	<span class="doccomment">/// Whether an explicit call index was specified.
+	</span><span class="kw">pub </span>explicit_call_index: bool,
 	<span class="doccomment">/// Docs, used for metadata.
 	</span><span class="kw">pub </span>docs: Vec&lt;syn::Lit&gt;,
 	<span class="doccomment">/// Attributes annotated at the top of the dispatchable function.
@@ -561,6 +567,7 @@
 					FunctionAttr::CallIndex(idx) =&gt; idx,
 					<span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;checked during creation of the let binding&quot;</span>),
 				});
+				<span class="kw">let </span>explicit_call_index = call_index.is_some();
 
 				<span class="kw">let </span>final_index = <span class="kw">match </span>call_index {
 					<span class="prelude-val">Some</span>(i) =&gt; i,
@@ -614,6 +621,7 @@
 					name: method.sig.ident.clone(),
 					weight,
 					call_index: final_index,
+					explicit_call_index,
 					args,
 					docs,
 					attrs: method.attrs.clone(),
