@@ -169,55 +169,6 @@
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -236,30 +187,25 @@
 // limitations under the License.
 
 </span><span class="kw">use crate</span>::{
-	build_executor, ensure_matching_spec, extract_code, full_extensions, hash_of, local_spec,
-	state_machine_call_with_proof, SharedParams, State, LOG_TARGET,
+	build_executor, full_extensions, rpc_err_handler, state_machine_call_with_proof, LiveState,
+	SharedParams, State, LOG_TARGET,
 };
 <span class="kw">use </span>parity_scale_codec::Encode;
-<span class="kw">use </span>sc_service::{Configuration, NativeExecutionDispatch};
-<span class="kw">use </span>sp_core::storage::well_known_keys;
-<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor};
+<span class="kw">use </span>sc_executor::sp_wasm_interface::HostFunctions;
+<span class="kw">use </span>sp_rpc::{list::ListOrValue, number::NumberOrHex};
+<span class="kw">use </span>sp_runtime::{
+	generic::SignedBlock,
+	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor},
+};
 <span class="kw">use </span>std::{fmt::Debug, str::FromStr};
 <span class="kw">use </span>substrate_rpc_client::{ws_client, ChainApi};
 
-<span class="doccomment">/// Configurations of the [`Command::ExecuteBlock`].
+<span class="doccomment">/// Configurations of the [`crate::Command::ExecuteBlock`].
 ///
 /// This will always call into `TryRuntime_execute_block`, which can optionally skip the state-root
 /// check (useful for trying a unreleased runtime), and can execute runtime sanity checks as well.
 </span><span class="attr">#[derive(Debug, Clone, clap::Parser)]
 </span><span class="kw">pub struct </span>ExecuteBlockCmd {
-	<span class="doccomment">/// Overwrite the wasm code in state or not.
-	</span><span class="attr">#[arg(long)]
-	</span>overwrite_wasm_code: bool,
-
-	<span class="doccomment">/// If set the state root check is disabled.
-	</span><span class="attr">#[arg(long)]
-	</span>no_state_root_check: bool,
-
 	<span class="doccomment">/// Which try-state targets to execute when running this command.
 	///
 	/// Expected values:
@@ -269,69 +215,28 @@
 	///   `Staking, System`).
 	/// - `rr-[x]` where `[x]` is a number. Then, the given number of pallets are checked in a
 	///   round-robin fashion.
-	</span><span class="attr">#[arg(long, default_value = <span class="string">&quot;none&quot;</span>)]
-	</span>try_state: frame_try_runtime::TryStateSelect,
-
-	<span class="doccomment">/// The block hash at which to fetch the block.
-	///
-	/// If the `live` state type is being used, then this can be omitted, and is equal to whatever
-	/// the `state::at` is. Only use this (with care) when combined with a snapshot.
-	</span><span class="attr">#[arg(
-		long,
-		value_parser = <span class="kw">crate</span>::parse::hash
-	)]
-	</span>block_at: <span class="prelude-ty">Option</span>&lt;String&gt;,
+	</span><span class="attr">#[arg(long, default_value = <span class="string">&quot;all&quot;</span>)]
+	</span><span class="kw">pub </span>try_state: frame_try_runtime::TryStateSelect,
 
 	<span class="doccomment">/// The ws uri from which to fetch the block.
 	///
-	/// If the `live` state type is being used, then this can be omitted, and is equal to whatever
-	/// the `state::uri` is. Only use this (with care) when combined with a snapshot.
+	/// This will always fetch the next block of whatever `state` is referring to, because this is
+	/// the only sensible combination. In other words, if you have the state of block `n`, you
+	/// should execute block `n+1` on top of it.
+	///
+	/// If `state` is `Live`, this can be ignored and the same uri is used for both.
 	</span><span class="attr">#[arg(
 		long,
 		value_parser = <span class="kw">crate</span>::parse::url
 	)]
-	</span>block_ws_uri: <span class="prelude-ty">Option</span>&lt;String&gt;,
+	</span><span class="kw">pub </span>block_ws_uri: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
 	<span class="doccomment">/// The state type to use.
-	///
-	/// For this command only, if the `live` is used, then state of the parent block is fetched.
-	///
-	/// If `block_at` is provided, then the [`State::Live::at`] is being ignored.
 	</span><span class="attr">#[command(subcommand)]
-	</span>state: State,
+	</span><span class="kw">pub </span>state: State,
 }
 
 <span class="kw">impl </span>ExecuteBlockCmd {
-	<span class="kw">async fn </span>block_at&lt;Block: BlockT&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ws_uri: String) -&gt; sc_cli::Result&lt;Block::Hash&gt;
-	<span class="kw">where
-		</span>Block::Hash: FromStr + serde::de::DeserializeOwned,
-		&lt;Block::Hash <span class="kw">as </span>FromStr&gt;::Err: Debug,
-		Block::Header: serde::de::DeserializeOwned,
-	{
-		<span class="kw">let </span>rpc = ws_client(<span class="kw-2">&amp;</span>ws_uri).<span class="kw">await</span><span class="question-mark">?</span>;
-
-		<span class="kw">match </span>(<span class="kw-2">&amp;</span><span class="self">self</span>.block_at, <span class="kw-2">&amp;</span><span class="self">self</span>.state) {
-			(<span class="prelude-val">Some</span>(block_at), State::Snap { .. }) =&gt; hash_of::&lt;Block&gt;(block_at),
-			(<span class="prelude-val">Some</span>(block_at), State::Live { .. }) =&gt; {
-				<span class="macro">log::warn!</span>(target: LOG_TARGET, <span class="string">&quot;--block-at is provided while state type is live. the `Live::at` will be ignored&quot;</span>);
-				hash_of::&lt;Block&gt;(block_at)
-			},
-			(<span class="prelude-val">None</span>, State::Live { at: <span class="prelude-val">None</span>, .. }) =&gt; {
-				<span class="macro">log::warn!</span>(
-					target: LOG_TARGET,
-					<span class="string">&quot;No --block-at or --at provided, using the latest finalized block instead&quot;
-				</span>);
-				ChainApi::&lt;(), Block::Hash, Block::Header, ()&gt;::finalized_head(<span class="kw-2">&amp;</span>rpc)
-					.<span class="kw">await
-					</span>.map_err(|e| e.to_string().into())
-			},
-			(<span class="prelude-val">None</span>, State::Live { at: <span class="prelude-val">Some</span>(at), .. }) =&gt; hash_of::&lt;Block&gt;(at),
-			<span class="kw">_ </span>=&gt; {
-				<span class="macro">panic!</span>(<span class="string">&quot;either `--block-at` must be provided, or state must be `live with a proper `--at``&quot;</span>);
-			},
-		}
-	}
-
 	<span class="kw">fn </span>block_ws_uri&lt;Block: BlockT&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String
 	<span class="kw">where
 		</span>Block::Hash: FromStr,
@@ -343,7 +248,7 @@
 				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;--block-uri is provided while state type is live, Are you sure you know what you are doing?&quot;</span>);
 				block_ws_uri.to_owned()
 			},
-			(<span class="prelude-val">None</span>, State::Live { uri, .. }) =&gt; uri.clone(),
+			(<span class="prelude-val">None</span>, State::Live(LiveState { uri, .. })) =&gt; uri.clone(),
 			(<span class="prelude-val">None</span>, State::Snap { .. }) =&gt; {
 				<span class="macro">panic!</span>(<span class="string">&quot;either `--block-uri` must be provided, or state must be `live`&quot;</span>);
 			},
@@ -351,10 +256,9 @@
 	}
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>execute_block&lt;Block, ExecDispatch&gt;(
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>execute_block&lt;Block, HostFns&gt;(
 	shared: SharedParams,
 	command: ExecuteBlockCmd,
-	config: Configuration,
 ) -&gt; sc_cli::Result&lt;()&gt;
 <span class="kw">where
 	</span>Block: BlockT + serde::de::DeserializeOwned,
@@ -362,81 +266,79 @@
 	&lt;Block::Hash <span class="kw">as </span>FromStr&gt;::Err: Debug,
 	Block::Hash: serde::de::DeserializeOwned,
 	Block::Header: serde::de::DeserializeOwned,
-	NumberFor&lt;Block&gt;: FromStr,
-	&lt;NumberFor&lt;Block&gt; <span class="kw">as </span>FromStr&gt;::Err: Debug,
-	ExecDispatch: NativeExecutionDispatch + <span class="lifetime">&#39;static</span>,
+	&lt;NumberFor&lt;Block&gt; <span class="kw">as </span>TryInto&lt;u64&gt;&gt;::Error: Debug,
+	HostFns: HostFunctions,
 {
-	<span class="kw">let </span>executor = build_executor::&lt;ExecDispatch&gt;(<span class="kw-2">&amp;</span>shared, <span class="kw-2">&amp;</span>config);
-	<span class="kw">let </span>execution = shared.execution;
+	<span class="kw">let </span>executor = build_executor::&lt;HostFns&gt;(<span class="kw-2">&amp;</span>shared);
+	<span class="kw">let </span>ext = command.state.into_ext::&lt;Block, HostFns&gt;(<span class="kw-2">&amp;</span>shared, <span class="kw-2">&amp;</span>executor, <span class="prelude-val">None</span>).<span class="kw">await</span><span class="question-mark">?</span>;
 
-	<span class="kw">let </span>block_ws_uri = command.block_ws_uri::&lt;Block&gt;();
-	<span class="kw">let </span>block_at = command.block_at::&lt;Block&gt;(block_ws_uri.clone()).<span class="kw">await</span><span class="question-mark">?</span>;
+	<span class="comment">// get the block number associated with this block.
+	</span><span class="kw">let </span>block_ws_uri = command.block_ws_uri::&lt;Block&gt;();
 	<span class="kw">let </span>rpc = ws_client(<span class="kw-2">&amp;</span>block_ws_uri).<span class="kw">await</span><span class="question-mark">?</span>;
-	<span class="kw">let </span>block: Block = ChainApi::&lt;(), Block::Hash, Block::Header, <span class="kw">_</span>&gt;::block(<span class="kw-2">&amp;</span>rpc, <span class="prelude-val">Some</span>(block_at))
-		.<span class="kw">await
-		</span>.unwrap()
-		.unwrap();
-	<span class="kw">let </span>parent_hash = block.header().parent_hash();
-	<span class="macro">log::info!</span>(
-		target: LOG_TARGET,
-		<span class="string">&quot;fetched block #{:?} from {:?}, parent_hash to fetch the state {:?}&quot;</span>,
-		block.header().number(),
-		block_ws_uri,
-		parent_hash
-	);
+	<span class="kw">let </span>next_hash = next_hash_of::&lt;Block&gt;(<span class="kw-2">&amp;</span>rpc, ext.block_hash).<span class="kw">await</span><span class="question-mark">?</span>;
 
-	<span class="kw">let </span>ext = {
-		<span class="kw">let </span>builder = command
-			.state
-			.builder::&lt;Block&gt;()<span class="question-mark">?
-			</span><span class="comment">// make sure the state is being build with the parent hash, if it is online.
-			</span>.overwrite_online_at(parent_hash.to_owned())
-			.state_version(shared.state_version);
+	<span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;fetching next block: {:?} &quot;</span>, next_hash);
 
-		<span class="kw">let </span>builder = <span class="kw">if </span>command.overwrite_wasm_code {
-			<span class="macro">log::info!</span>(
-				target: LOG_TARGET,
-				<span class="string">&quot;replacing the in-storage :code: with the local code from {}&#39;s chain_spec (your local repo)&quot;</span>,
-				config.chain_spec.name(),
-			);
-			<span class="kw">let </span>(code_key, code) = extract_code(<span class="kw-2">&amp;</span>config.chain_spec)<span class="question-mark">?</span>;
-			builder.inject_hashed_key_value(<span class="kw-2">&amp;</span>[(code_key, code)])
-		} <span class="kw">else </span>{
-			builder.inject_hashed_key(well_known_keys::CODE)
-		};
-
-		builder.build().<span class="kw">await</span><span class="question-mark">?
-	</span>};
+	<span class="kw">let </span>block = ChainApi::&lt;(), Block::Hash, Block::Header, SignedBlock&lt;Block&gt;&gt;::block(
+		<span class="kw-2">&amp;</span>rpc,
+		<span class="prelude-val">Some</span>(next_hash),
+	)
+	.<span class="kw">await
+	</span>.map_err(rpc_err_handler)<span class="question-mark">?
+	</span>.expect(<span class="string">&quot;header exists, block should also exist; qed&quot;</span>)
+	.block;
 
 	<span class="comment">// A digest item gets added when the runtime is processing the block, so we need to pop
 	// the last one to be consistent with what a gossiped block would contain.
 	</span><span class="kw">let </span>(<span class="kw-2">mut </span>header, extrinsics) = block.deconstruct();
 	header.digest_mut().pop();
 	<span class="kw">let </span>block = Block::new(header, extrinsics);
-	<span class="kw">let </span>payload = (block.clone(), !command.no_state_root_check, command.try_state).encode();
 
-	<span class="kw">let </span>(expected_spec_name, expected_spec_version, <span class="kw">_</span>) =
-		local_spec::&lt;Block, ExecDispatch&gt;(<span class="kw-2">&amp;</span>ext, <span class="kw-2">&amp;</span>executor);
-	ensure_matching_spec::&lt;Block&gt;(
-		block_ws_uri.clone(),
-		expected_spec_name,
-		expected_spec_version,
-		shared.no_spec_check_panic,
-	)
-	.<span class="kw">await</span>;
+	<span class="comment">// for now, hardcoded for the sake of simplicity. We might customize them one day.
+	</span><span class="kw">let </span>state_root_check = <span class="bool-val">false</span>;
+	<span class="kw">let </span>signature_check = <span class="bool-val">false</span>;
+	<span class="kw">let </span>payload = (block.clone(), state_root_check, signature_check, command.try_state).encode();
 
-	<span class="kw">let _ </span>= state_machine_call_with_proof::&lt;Block, ExecDispatch&gt;(
+	<span class="kw">let _ </span>= state_machine_call_with_proof::&lt;Block, HostFns&gt;(
 		<span class="kw-2">&amp;</span>ext,
 		<span class="kw-2">&amp;</span>executor,
-		execution,
 		<span class="string">&quot;TryRuntime_execute_block&quot;</span>,
 		<span class="kw-2">&amp;</span>payload,
 		full_extensions(),
 	)<span class="question-mark">?</span>;
 
-	<span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;Core_execute_block executed without errors.&quot;</span>);
-
 	<span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>next_hash_of&lt;Block: BlockT&gt;(
+	rpc: <span class="kw-2">&amp;</span>substrate_rpc_client::WsClient,
+	hash: Block::Hash,
+) -&gt; sc_cli::Result&lt;Block::Hash&gt;
+<span class="kw">where
+	</span>Block: BlockT + serde::de::DeserializeOwned,
+	Block::Header: serde::de::DeserializeOwned,
+{
+	<span class="kw">let </span>number = ChainApi::&lt;(), Block::Hash, Block::Header, ()&gt;::header(rpc, <span class="prelude-val">Some</span>(hash))
+		.<span class="kw">await
+		</span>.map_err(rpc_err_handler)
+		.and_then(|maybe_header| maybe_header.ok_or(<span class="string">&quot;header_not_found&quot;</span>).map(|h| <span class="kw-2">*</span>h.number()))<span class="question-mark">?</span>;
+
+	<span class="kw">let </span>next = number + sp_runtime::traits::One::one();
+
+	<span class="kw">let </span>next_hash = <span class="kw">match </span>ChainApi::&lt;(), Block::Hash, Block::Header, ()&gt;::block_hash(
+		rpc,
+		<span class="prelude-val">Some</span>(ListOrValue::Value(NumberOrHex::Number(
+			next.try_into().map_err(|<span class="kw">_</span>| <span class="string">&quot;failed to convert number to block number&quot;</span>)<span class="question-mark">?</span>,
+		))),
+	)
+	.<span class="kw">await
+	</span>.map_err(rpc_err_handler)<span class="question-mark">?
+	</span>{
+		ListOrValue::Value(t) =&gt; t.expect(<span class="string">&quot;value passed in; value comes out; qed&quot;</span>),
+		<span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
+	};
+
+	<span class="prelude-val">Ok</span>(next_hash)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="try_runtime_cli" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

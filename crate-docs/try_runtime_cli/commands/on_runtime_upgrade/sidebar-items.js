@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["OnRuntimeUpgradeCmd","Configurations of the [`crate::Command::OnRuntimeUpgrade`]."]]};

@@ -86,6 +86,10 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright 2021 Parity Technologies (UK) Ltd.
 // This file is part of Polkadot.
 
@@ -113,7 +117,7 @@
 </span><span class="kw">pub async fn </span>execute&lt;Runtime, Block&gt;(voter_limit: <span class="prelude-ty">Option</span>&lt;usize&gt;, currency_unit: u64, ws_url: String)
 <span class="kw">where
 	</span>Runtime: <span class="kw">crate</span>::RuntimeT&lt;pallet_bags_list::Instance1&gt;,
-	Block: BlockT,
+	Block: BlockT + DeserializeOwned,
 	Block::Header: DeserializeOwned,
 {
 	<span class="kw">use </span>frame_support::storage::generator::StorageMap;
@@ -126,14 +130,18 @@
 			</span>pallets: <span class="macro">vec!</span>[pallet_bags_list::Pallet::&lt;Runtime, pallet_bags_list::Instance1&gt;::name()
 				.to_string()],
 			at: <span class="prelude-val">None</span>,
+			hashed_prefixes: <span class="macro">vec!</span>[
+				&lt;pallet_staking::Bonded&lt;Runtime&gt;&gt;::prefix_hash(),
+				&lt;pallet_staking::Ledger&lt;Runtime&gt;&gt;::prefix_hash(),
+				&lt;pallet_staking::Validators&lt;Runtime&gt;&gt;::map_storage_final_prefix(),
+				&lt;pallet_staking::Nominators&lt;Runtime&gt;&gt;::map_storage_final_prefix(),
+			],
+			hashed_keys: <span class="macro">vec!</span>[
+				&lt;pallet_staking::Validators&lt;Runtime&gt;&gt;::counter_storage_final_key().to_vec(),
+				&lt;pallet_staking::Nominators&lt;Runtime&gt;&gt;::counter_storage_final_key().to_vec(),
+			],
 			..Default::default()
 		}))
-		.inject_hashed_prefix(<span class="kw-2">&amp;</span>&lt;pallet_staking::Bonded&lt;Runtime&gt;&gt;::prefix_hash())
-		.inject_hashed_prefix(<span class="kw-2">&amp;</span>&lt;pallet_staking::Ledger&lt;Runtime&gt;&gt;::prefix_hash())
-		.inject_hashed_prefix(<span class="kw-2">&amp;</span>&lt;pallet_staking::Validators&lt;Runtime&gt;&gt;::map_storage_final_prefix())
-		.inject_hashed_prefix(<span class="kw-2">&amp;</span>&lt;pallet_staking::Nominators&lt;Runtime&gt;&gt;::map_storage_final_prefix())
-		.inject_hashed_key(<span class="kw-2">&amp;</span>&lt;pallet_staking::Validators&lt;Runtime&gt;&gt;::counter_storage_final_key())
-		.inject_hashed_key(<span class="kw-2">&amp;</span>&lt;pallet_staking::Nominators&lt;Runtime&gt;&gt;::counter_storage_final_key())
 		.build()
 		.<span class="kw">await
 		</span>.unwrap();

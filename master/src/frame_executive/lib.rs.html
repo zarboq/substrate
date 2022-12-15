@@ -1588,6 +1588,72 @@
 <a href="#1588" id="1588">1588</a>
 <a href="#1589" id="1589">1589</a>
 <a href="#1590" id="1590">1590</a>
+<a href="#1591" id="1591">1591</a>
+<a href="#1592" id="1592">1592</a>
+<a href="#1593" id="1593">1593</a>
+<a href="#1594" id="1594">1594</a>
+<a href="#1595" id="1595">1595</a>
+<a href="#1596" id="1596">1596</a>
+<a href="#1597" id="1597">1597</a>
+<a href="#1598" id="1598">1598</a>
+<a href="#1599" id="1599">1599</a>
+<a href="#1600" id="1600">1600</a>
+<a href="#1601" id="1601">1601</a>
+<a href="#1602" id="1602">1602</a>
+<a href="#1603" id="1603">1603</a>
+<a href="#1604" id="1604">1604</a>
+<a href="#1605" id="1605">1605</a>
+<a href="#1606" id="1606">1606</a>
+<a href="#1607" id="1607">1607</a>
+<a href="#1608" id="1608">1608</a>
+<a href="#1609" id="1609">1609</a>
+<a href="#1610" id="1610">1610</a>
+<a href="#1611" id="1611">1611</a>
+<a href="#1612" id="1612">1612</a>
+<a href="#1613" id="1613">1613</a>
+<a href="#1614" id="1614">1614</a>
+<a href="#1615" id="1615">1615</a>
+<a href="#1616" id="1616">1616</a>
+<a href="#1617" id="1617">1617</a>
+<a href="#1618" id="1618">1618</a>
+<a href="#1619" id="1619">1619</a>
+<a href="#1620" id="1620">1620</a>
+<a href="#1621" id="1621">1621</a>
+<a href="#1622" id="1622">1622</a>
+<a href="#1623" id="1623">1623</a>
+<a href="#1624" id="1624">1624</a>
+<a href="#1625" id="1625">1625</a>
+<a href="#1626" id="1626">1626</a>
+<a href="#1627" id="1627">1627</a>
+<a href="#1628" id="1628">1628</a>
+<a href="#1629" id="1629">1629</a>
+<a href="#1630" id="1630">1630</a>
+<a href="#1631" id="1631">1631</a>
+<a href="#1632" id="1632">1632</a>
+<a href="#1633" id="1633">1633</a>
+<a href="#1634" id="1634">1634</a>
+<a href="#1635" id="1635">1635</a>
+<a href="#1636" id="1636">1636</a>
+<a href="#1637" id="1637">1637</a>
+<a href="#1638" id="1638">1638</a>
+<a href="#1639" id="1639">1639</a>
+<a href="#1640" id="1640">1640</a>
+<a href="#1641" id="1641">1641</a>
+<a href="#1642" id="1642">1642</a>
+<a href="#1643" id="1643">1643</a>
+<a href="#1644" id="1644">1644</a>
+<a href="#1645" id="1645">1645</a>
+<a href="#1646" id="1646">1646</a>
+<a href="#1647" id="1647">1647</a>
+<a href="#1648" id="1648">1648</a>
+<a href="#1649" id="1649">1649</a>
+<a href="#1650" id="1650">1650</a>
+<a href="#1651" id="1651">1651</a>
+<a href="#1652" id="1652">1652</a>
+<a href="#1653" id="1653">1653</a>
+<a href="#1654" id="1654">1654</a>
+<a href="#1655" id="1655">1655</a>
+<a href="#1656" id="1656">1656</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1817,27 +1883,71 @@
 {
 	<span class="doccomment">/// Execute given block, but don&#39;t as strict is the normal block execution.
 	///
-	/// Some consensus related checks such as the state root check can be switched off via
-	/// `try_state_root`. Some additional non-consensus checks can be additionally enabled via
-	/// `try_state`.
+	/// Some checks can be disabled via:
+	///
+	/// - `state_root_check`
+	/// - `signature_check`
 	///
 	/// Should only be used for testing ONLY.
 	</span><span class="kw">pub fn </span>try_execute_block(
 		block: Block,
-		try_state_root: bool,
+		state_root_check: bool,
+		signature_check: bool,
 		select: frame_try_runtime::TryStateSelect,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;frame_support::weights::Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="kw">use </span>frame_support::traits::TryState;
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		<span class="macro">frame_support::log::info!</span>(
+			target: <span class="string">&quot;frame::executive&quot;</span>,
+			<span class="string">&quot;try-runtime: executing block #{:?} / state root check: {:?} / signature check: {:?} / try-state-select: {:?}&quot;</span>,
+			block.header().number(),
+			state_root_check,
+			signature_check,
+			select,
+		);
 
 		<span class="self">Self</span>::initialize_block(block.header());
 		<span class="self">Self</span>::initial_checks(<span class="kw-2">&amp;</span>block);
 
 		<span class="kw">let </span>(header, extrinsics) = block.deconstruct();
 
-		<span class="self">Self</span>::execute_extrinsics_with_book_keeping(extrinsics, <span class="kw-2">*</span>header.number());
+		<span class="kw">let </span>try_apply_extrinsic = |uxt: Block::Extrinsic| -&gt; ApplyExtrinsicResult {
+			sp_io::init_tracing();
+			<span class="kw">let </span>encoded = uxt.encode();
+			<span class="kw">let </span>encoded_len = encoded.len();
 
-		<span class="comment">// run the try-state checks of all pallets.
-		</span>&lt;AllPalletsWithSystem <span class="kw">as </span>TryState&lt;System::BlockNumber&gt;&gt;::try_state(
+			<span class="comment">// skip signature verification.
+			</span><span class="kw">let </span>xt = <span class="kw">if </span>signature_check {
+				uxt.check(<span class="kw-2">&amp;</span>Default::default())
+			} <span class="kw">else </span>{
+				uxt.unchecked_into_checked_i_know_what_i_am_doing(<span class="kw-2">&amp;</span>Default::default())
+			}<span class="question-mark">?</span>;
+			&lt;frame_system::Pallet&lt;System&gt;&gt;::note_extrinsic(encoded);
+
+			<span class="kw">let </span>dispatch_info = xt.get_dispatch_info();
+			<span class="kw">let </span>r = Applyable::apply::&lt;UnsignedValidator&gt;(xt, <span class="kw-2">&amp;</span>dispatch_info, encoded_len)<span class="question-mark">?</span>;
+
+			&lt;frame_system::Pallet&lt;System&gt;&gt;::note_applied_extrinsic(<span class="kw-2">&amp;</span>r, dispatch_info);
+
+			<span class="prelude-val">Ok</span>(r.map(|<span class="kw">_</span>| ()).map_err(|e| e.error))
+		};
+
+		<span class="kw">for </span>e <span class="kw">in </span>extrinsics {
+			<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = try_apply_extrinsic(e.clone()) {
+				<span class="macro">frame_support::log::error!</span>(
+					target: <span class="string">&quot;runtime::executive&quot;</span>, <span class="string">&quot;executing transaction {:?} failed due to {:?}. Aborting the rest of the block execution.&quot;</span>,
+					e,
+					err,
+				);
+				<span class="kw">break
+			</span>}
+		}
+
+		<span class="comment">// post-extrinsics book-keeping
+		</span>&lt;frame_system::Pallet&lt;System&gt;&gt;::note_finished_extrinsics();
+		<span class="self">Self</span>::idle_and_finalize_hook(<span class="kw-2">*</span>header.number());
+
+		<span class="comment">// run the try-state checks of all pallets, ensuring they don&#39;t alter any state.
+		</span><span class="kw">let </span>_guard = frame_support::StorageNoopGuard::default();
+		&lt;AllPalletsWithSystem <span class="kw">as </span>frame_support::traits::TryState&lt;System::BlockNumber&gt;&gt;::try_state(
 			<span class="kw-2">*</span>header.number(),
 			select,
 		)
@@ -1845,6 +1955,7 @@
 			<span class="macro">frame_support::log::error!</span>(target: <span class="string">&quot;runtime::executive&quot;</span>, <span class="string">&quot;failure: {:?}&quot;</span>, e);
 			e
 		})<span class="question-mark">?</span>;
+		drop(_guard);
 
 		<span class="comment">// do some of the checks that would normally happen in `final_checks`, but perhaps skip
 		// the state root check.
@@ -1856,7 +1967,7 @@
 				<span class="macro">assert!</span>(header_item == computed_item, <span class="string">&quot;Digest item must match that calculated.&quot;</span>);
 			}
 
-			<span class="kw">if </span>try_state_root {
+			<span class="kw">if </span>state_root_check {
 				<span class="kw">let </span>storage_root = new_header.state_root();
 				header.state_root().check_equal(storage_root);
 				<span class="macro">assert!</span>(
@@ -1876,9 +1987,30 @@
 
 	<span class="doccomment">/// Execute all `OnRuntimeUpgrade` of this runtime, including the pre and post migration checks.
 	///
-	/// This should only be used for testing.
-	</span><span class="kw">pub fn </span>try_runtime_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;frame_support::weights::Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="kw">let </span>weight = <span class="self">Self</span>::execute_on_runtime_upgrade();
+	/// Runs the try-state code both before and after the migration function if `checks` is set to
+	/// `true`. Also, if set to `true`, it runs the `pre_upgrade` and `post_upgrade` hooks.
+	</span><span class="kw">pub fn </span>try_runtime_upgrade(checks: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		<span class="kw">if </span>checks {
+			<span class="kw">let </span>_guard = frame_support::StorageNoopGuard::default();
+			&lt;AllPalletsWithSystem <span class="kw">as </span>frame_support::traits::TryState&lt;System::BlockNumber&gt;&gt;::try_state(
+				frame_system::Pallet::&lt;System&gt;::block_number(),
+				frame_try_runtime::TryStateSelect::All,
+			)<span class="question-mark">?</span>;
+		}
+
+		<span class="kw">let </span>weight =
+			&lt;(COnRuntimeUpgrade, AllPalletsWithSystem) <span class="kw">as </span>OnRuntimeUpgrade&gt;::try_on_runtime_upgrade(
+				checks,
+			)<span class="question-mark">?</span>;
+
+		<span class="kw">if </span>checks {
+			<span class="kw">let </span>_guard = frame_support::StorageNoopGuard::default();
+			&lt;AllPalletsWithSystem <span class="kw">as </span>frame_support::traits::TryState&lt;System::BlockNumber&gt;&gt;::try_state(
+				frame_system::Pallet::&lt;System&gt;::block_number(),
+				frame_try_runtime::TryStateSelect::All,
+			)<span class="question-mark">?</span>;
+		}
+
 		<span class="prelude-val">Ok</span>(weight)
 	}
 }
@@ -1904,7 +2036,7 @@
 	UnsignedValidator: ValidateUnsigned&lt;Call = CallOf&lt;Block::Extrinsic, Context&gt;&gt;,
 {
 	<span class="doccomment">/// Execute all `OnRuntimeUpgrade` of this runtime, and return the aggregate weight.
-	</span><span class="kw">pub fn </span>execute_on_runtime_upgrade() -&gt; frame_support::weights::Weight {
+	</span><span class="kw">pub fn </span>execute_on_runtime_upgrade() -&gt; Weight {
 		&lt;(COnRuntimeUpgrade, AllPalletsWithSystem) <span class="kw">as </span>OnRuntimeUpgrade&gt;::on_runtime_upgrade()
 	}
 

@@ -1741,6 +1741,9 @@
 <a href="#1741" id="1741">1741</a>
 <a href="#1742" id="1742">1742</a>
 <a href="#1743" id="1743">1743</a>
+<a href="#1744" id="1744">1744</a>
+<a href="#1745" id="1745">1745</a>
+<a href="#1746" id="1746">1746</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -3379,9 +3382,9 @@
 		<span class="macro">ensure!</span>(
 			T::VoterList::iter()
 				.all(|x| &lt;Nominators&lt;T&gt;&gt;::contains_key(<span class="kw-2">&amp;</span>x) || &lt;Validators&lt;T&gt;&gt;::contains_key(<span class="kw-2">&amp;</span>x)),
-			<span class="string">&quot;VoterList contains non-nominators&quot;
+			<span class="string">&quot;VoterList contains non-staker&quot;
 		</span>);
-		T::VoterList::try_state()<span class="question-mark">?</span>;
+
 		<span class="self">Self</span>::check_nominators()<span class="question-mark">?</span>;
 		<span class="self">Self</span>::check_exposures()<span class="question-mark">?</span>;
 		<span class="self">Self</span>::check_ledgers()<span class="question-mark">?</span>;
@@ -3394,7 +3397,10 @@
 				Nominators::&lt;T&gt;::count() + Validators::&lt;T&gt;::count(),
 			<span class="string">&quot;wrong external count&quot;
 		</span>);
-
+		<span class="macro">ensure!</span>(
+			&lt;T <span class="kw">as </span>Config&gt;::TargetList::count() == Validators::&lt;T&gt;::count(),
+			<span class="string">&quot;wrong external count&quot;
+		</span>);
 		<span class="macro">ensure!</span>(
 			ValidatorCount::&lt;T&gt;::get() &lt;=
 				&lt;T::ElectionProvider <span class="kw">as </span>frame_election_provider_support::ElectionProviderBase&gt;::MaxWinners::get(),
@@ -3435,7 +3441,7 @@
 		&lt;Nominators&lt;T&gt;&gt;::iter()
 			.filter_map(
 				|(nominator, nomination)| {
-					<span class="kw">if </span>nomination.submitted_in &gt; era {
+					<span class="kw">if </span>nomination.submitted_in &lt; era {
 						<span class="prelude-val">Some</span>(nominator)
 					} <span class="kw">else </span>{
 						<span class="prelude-val">None

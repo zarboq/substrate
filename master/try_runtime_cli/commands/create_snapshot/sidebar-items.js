@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["CreateSnapshotCmd","Configurations of the [`crate::Command::CreateSnapshot`]."]]};

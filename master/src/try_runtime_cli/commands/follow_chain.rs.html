@@ -213,32 +213,33 @@
 // limitations under the License.
 
 </span><span class="kw">use crate</span>::{
-	build_executor, ensure_matching_spec, extract_code, full_extensions, local_spec, parse,
-	state_machine_call_with_proof, SharedParams, LOG_TARGET,
+	build_executor, full_extensions, parse, rpc_err_handler, state_machine_call_with_proof,
+	LiveState, SharedParams, State, LOG_TARGET,
 };
 <span class="kw">use </span>parity_scale_codec::{Decode, Encode};
-<span class="kw">use </span>remote_externalities::{Builder, Mode, OnlineConfig};
-<span class="kw">use </span>sc_executor::NativeExecutionDispatch;
-<span class="kw">use </span>sc_service::Configuration;
+<span class="kw">use </span>sc_executor::sp_wasm_interface::HostFunctions;
 <span class="kw">use </span>serde::{de::DeserializeOwned, Serialize};
 <span class="kw">use </span>sp_core::H256;
-<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor};
+<span class="kw">use </span>sp_runtime::{
+	generic::SignedBlock,
+	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor},
+};
 <span class="kw">use </span>std::{fmt::Debug, str::FromStr};
 <span class="kw">use </span>substrate_rpc_client::{ws_client, ChainApi, FinalizedHeaders, Subscription, WsClient};
 
 <span class="kw">const </span>SUB: <span class="kw-2">&amp;</span>str = <span class="string">&quot;chain_subscribeFinalizedHeads&quot;</span>;
 <span class="kw">const </span>UN_SUB: <span class="kw-2">&amp;</span>str = <span class="string">&quot;chain_unsubscribeFinalizedHeads&quot;</span>;
 
-<span class="doccomment">/// Configurations of the [`Command::FollowChain`].
+<span class="doccomment">/// Configurations of the [`crate::Command::FollowChain`].
 </span><span class="attr">#[derive(Debug, Clone, clap::Parser)]
 </span><span class="kw">pub struct </span>FollowChainCmd {
 	<span class="doccomment">/// The url to connect to.
 	</span><span class="attr">#[arg(short, long, value_parser = parse::url)]
-	</span>uri: String,
+	</span><span class="kw">pub </span>uri: String,
 
 	<span class="doccomment">/// If set, then the state root check is enabled.
 	</span><span class="attr">#[arg(long)]
-	</span>state_root_check: bool,
+	</span><span class="kw">pub </span>state_root_check: bool,
 
 	<span class="doccomment">/// Which try-state targets to execute when running this command.
 	///
@@ -249,12 +250,12 @@
 	///   `Staking, System`).
 	/// - `rr-[x]` where `[x]` is a number. Then, the given number of pallets are checked in a
 	///   round-robin fashion.
-	</span><span class="attr">#[arg(long, default_value = <span class="string">&quot;none&quot;</span>)]
-	</span>try_state: frame_try_runtime::TryStateSelect,
+	</span><span class="attr">#[arg(long, default_value = <span class="string">&quot;all&quot;</span>)]
+	</span><span class="kw">pub </span>try_state: frame_try_runtime::TryStateSelect,
 
 	<span class="doccomment">/// If present, a single connection to a node will be kept and reused for fetching blocks.
 	</span><span class="attr">#[arg(long)]
-	</span>keep_connection: bool,
+	</span><span class="kw">pub </span>keep_connection: bool,
 }
 
 <span class="doccomment">/// Start listening for with `SUB` at `url`.
@@ -274,10 +275,9 @@
 	<span class="prelude-val">Ok</span>((client, sub))
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>follow_chain&lt;Block, ExecDispatch&gt;(
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>follow_chain&lt;Block, HostFns&gt;(
 	shared: SharedParams,
 	command: FollowChainCmd,
-	config: Configuration,
 ) -&gt; sc_cli::Result&lt;()&gt;
 <span class="kw">where
 	</span>Block: BlockT&lt;Hash = H256&gt; + DeserializeOwned,
@@ -286,26 +286,35 @@
 	&lt;Block::Hash <span class="kw">as </span>FromStr&gt;::Err: Debug,
 	NumberFor&lt;Block&gt;: FromStr,
 	&lt;NumberFor&lt;Block&gt; <span class="kw">as </span>FromStr&gt;::Err: Debug,
-	ExecDispatch: NativeExecutionDispatch + <span class="lifetime">&#39;static</span>,
+	HostFns: HostFunctions,
 {
-	<span class="kw">let </span><span class="kw-2">mut </span>maybe_state_ext = <span class="prelude-val">None</span>;
 	<span class="kw">let </span>(rpc, subscription) = start_subscribing::&lt;Block::Header&gt;(<span class="kw-2">&amp;</span>command.uri).<span class="kw">await</span><span class="question-mark">?</span>;
-
-	<span class="kw">let </span>(code_key, code) = extract_code(<span class="kw-2">&amp;</span>config.chain_spec)<span class="question-mark">?</span>;
-	<span class="kw">let </span>executor = build_executor::&lt;ExecDispatch&gt;(<span class="kw-2">&amp;</span>shared, <span class="kw-2">&amp;</span>config);
-	<span class="kw">let </span>execution = shared.execution;
-
 	<span class="kw">let </span><span class="kw-2">mut </span>finalized_headers: FinalizedHeaders&lt;Block, <span class="kw">_</span>, <span class="kw">_</span>&gt; =
 		FinalizedHeaders::new(<span class="kw-2">&amp;</span>rpc, subscription);
+
+	<span class="kw">let </span><span class="kw-2">mut </span>maybe_state_ext = <span class="prelude-val">None</span>;
+	<span class="kw">let </span>executor = build_executor::&lt;HostFns&gt;(<span class="kw-2">&amp;</span>shared);
 
 	<span class="kw">while let </span><span class="prelude-val">Some</span>(header) = finalized_headers.next().<span class="kw">await </span>{
 		<span class="kw">let </span>hash = header.hash();
 		<span class="kw">let </span>number = header.number();
 
-		<span class="kw">let </span>block: Block = ChainApi::&lt;(), Block::Hash, Block::Header, <span class="kw">_</span>&gt;::block(<span class="kw-2">&amp;</span>rpc, <span class="prelude-val">Some</span>(hash))
-			.<span class="kw">await
-			</span>.unwrap()
-			.unwrap();
+		<span class="kw">let </span>block =
+			ChainApi::&lt;(), Block::Hash, Block::Header, SignedBlock&lt;Block&gt;&gt;::block(<span class="kw-2">&amp;</span>rpc, <span class="prelude-val">Some</span>(hash))
+				.<span class="kw">await
+				</span>.or_else(|e| {
+					<span class="kw">if </span><span class="macro">matches!</span>(e, substrate_rpc_client::Error::ParseError(<span class="kw">_</span>)) {
+						<span class="macro">log::error!</span>(
+							<span class="string">&quot;failed to parse the block format of remote against the local \
+						codebase. The block format has changed, and follow-chain cannot run in \
+						this case. Try running this command in a branch of your codebase that has \
+						the same block format as the remote chain. For now, we replace the block with an empty one&quot;
+						</span>);
+					}
+					<span class="prelude-val">Err</span>(rpc_err_handler(e))
+				})<span class="question-mark">?
+				</span>.expect(<span class="string">&quot;if header exists, block should also exist.&quot;</span>)
+				.block;
 
 		<span class="macro">log::debug!</span>(
 			target: LOG_TARGET,
@@ -317,49 +326,40 @@
 
 		<span class="comment">// create an ext at the state of this block, whatever is the first subscription event.
 		</span><span class="kw">if </span>maybe_state_ext.is_none() {
-			<span class="kw">let </span>builder = Builder::&lt;Block&gt;::new()
-				.mode(Mode::Online(OnlineConfig {
-					transport: command.uri.clone().into(),
-					at: <span class="prelude-val">Some</span>(<span class="kw-2">*</span>header.parent_hash()),
-					..Default::default()
-				}))
-				.state_version(shared.state_version);
-
-			<span class="kw">let </span>new_ext = builder
-				.inject_hashed_key_value(<span class="kw-2">&amp;</span>[(code_key.clone(), code.clone())])
-				.build()
-				.<span class="kw">await</span><span class="question-mark">?</span>;
-			<span class="macro">log::info!</span>(
-				target: LOG_TARGET,
-				<span class="string">&quot;initialized state externalities at {:?}, storage root {:?}&quot;</span>,
-				number,
-				new_ext.as_backend().root()
-			);
-
-			<span class="kw">let </span>(expected_spec_name, expected_spec_version, spec_state_version) =
-				local_spec::&lt;Block, ExecDispatch&gt;(<span class="kw-2">&amp;</span>new_ext, <span class="kw-2">&amp;</span>executor);
-			ensure_matching_spec::&lt;Block&gt;(
-				command.uri.clone(),
-				expected_spec_name,
-				expected_spec_version,
-				shared.no_spec_check_panic,
-			)
-			.<span class="kw">await</span>;
-
-			maybe_state_ext = <span class="prelude-val">Some</span>((new_ext, spec_state_version));
+			<span class="kw">let </span>state = State::Live(LiveState {
+				uri: command.uri.clone(),
+				<span class="comment">// a bit dodgy, we have to un-parse the has to a string again and re-parse it
+				// inside.
+				</span>at: <span class="prelude-val">Some</span>(hex::encode(header.parent_hash().encode())),
+				pallet: <span class="macro">vec!</span>[],
+				child_tree: <span class="bool-val">true</span>,
+			});
+			<span class="kw">let </span>ext = state.into_ext::&lt;Block, HostFns&gt;(<span class="kw-2">&amp;</span>shared, <span class="kw-2">&amp;</span>executor, <span class="prelude-val">None</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+			maybe_state_ext = <span class="prelude-val">Some</span>(ext);
 		}
 
-		<span class="kw">let </span>(state_ext, spec_state_version) =
+		<span class="kw">let </span>state_ext =
 			maybe_state_ext.as_mut().expect(<span class="string">&quot;state_ext either existed or was just created&quot;</span>);
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>changes, encoded_result) = state_machine_call_with_proof::&lt;Block, ExecDispatch&gt;(
+		<span class="kw">let </span>result = state_machine_call_with_proof::&lt;Block, HostFns&gt;(
 			state_ext,
 			<span class="kw-2">&amp;</span>executor,
-			execution,
 			<span class="string">&quot;TryRuntime_execute_block&quot;</span>,
 			(block, command.state_root_check, command.try_state.clone()).encode().as_ref(),
 			full_extensions(),
-		)<span class="question-mark">?</span>;
+		);
+
+		<span class="kw">if let </span><span class="prelude-val">Err</span>(why) = result {
+			<span class="macro">log::error!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;failed to execute block {:?} due to {:?}&quot;</span>,
+				number,
+				why
+			);
+			<span class="kw">continue
+		</span>}
+
+		<span class="kw">let </span>(<span class="kw-2">mut </span>changes, encoded_result) = result.expect(<span class="string">&quot;checked to be Ok; qed&quot;</span>);
 
 		<span class="kw">let </span>consumed_weight = &lt;sp_weights::Weight <span class="kw">as </span>Decode&gt;::decode(<span class="kw-2">&amp;mut &amp;*</span>encoded_result)
 			.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;failed to decode weight: {:?}&quot;</span>, e))<span class="question-mark">?</span>;
@@ -368,13 +368,13 @@
 			.drain_storage_changes(
 				<span class="kw-2">&amp;</span>state_ext.backend,
 				<span class="kw-2">&amp;mut </span>Default::default(),
-				<span class="comment">// Note that in case a block contains a runtime upgrade,
-				// state version could potentially be incorrect here,
-				// this is very niche and would only result in unaligned
-				// roots, so this use case is ignored for now.
-				</span><span class="kw-2">*</span>spec_state_version,
+				<span class="comment">// Note that in case a block contains a runtime upgrade, state version could
+				// potentially be incorrect here, this is very niche and would only result in
+				// unaligned roots, so this use case is ignored for now.
+				</span>state_ext.state_version,
 			)
 			.unwrap();
+
 		state_ext.backend.apply_transaction(
 			storage_changes.transaction_storage_root,
 			storage_changes.transaction,

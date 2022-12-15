@@ -1776,6 +1776,9 @@
 <a href="#1776" id="1776">1776</a>
 <a href="#1777" id="1777">1777</a>
 <a href="#1778" id="1778">1778</a>
+<a href="#1779" id="1779">1779</a>
+<a href="#1780" id="1780">1780</a>
+<a href="#1781" id="1781">1781</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -3397,7 +3400,10 @@
 	<span class="kw">use </span>frame_system::Pallet <span class="kw">as </span>System;
 	<span class="kw">use </span>remote_externalities::Mode;
 	<span class="kw">use </span>sp_core::H256;
-	<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, HashFor, Header <span class="kw">as _</span>, One, Zero};
+	<span class="kw">use </span>sp_runtime::{
+		traits::{Block <span class="kw">as </span>BlockT, HashFor, Header <span class="kw">as _</span>, One, Zero},
+		DeserializeOwned,
+	};
 	<span class="kw">use </span>thousands::Separable;
 
 	<span class="attr">#[allow(dead_code)]
@@ -3426,12 +3432,12 @@
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>run_with_limits&lt;Runtime, Block&gt;(limits: MigrationLimits, mode: Mode&lt;Block&gt;)
 	<span class="kw">where
 		</span>Runtime: <span class="kw">crate</span>::Config&lt;Hash = H256&gt;,
-		Block: BlockT&lt;Hash = H256&gt;,
+		Block: BlockT&lt;Hash = H256&gt; + DeserializeOwned,
 		Block::Header: serde::de::DeserializeOwned,
 	{
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = remote_externalities::Builder::&lt;Block&gt;::new()
 			.mode(mode)
-			.state_version(sp_core::storage::StateVersion::V0)
+			.overwrite_state_version(sp_core::storage::StateVersion::V0)
 			.build()
 			.<span class="kw">await
 			</span>.unwrap();
