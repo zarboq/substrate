@@ -103,9 +103,12 @@ pool.</li>
 </ul>
 <h4 id="note-1"><a href="#note-1">Note</a></h4>
 <p>If there are too many unlocking chunks to unbond with the pool account,
-<a href="enum.Call.html#variant.pool_withdraw_unbonded" title="Call::pool_withdraw_unbonded"><code>Call::pool_withdraw_unbonded</code></a> can be called to try and minimize unlocking chunks. If
-there are too many unlocking chunks, the result of this call will likely be the
-<code>NoMoreChunks</code> error from the staking system.</p>
+<a href="enum.Call.html#variant.pool_withdraw_unbonded" title="Call::pool_withdraw_unbonded"><code>Call::pool_withdraw_unbonded</code></a> can be called to try and minimize unlocking chunks.
+The <a href="../../sp_staking/trait.StakingInterface.html#tymethod.unbond" title="StakingInterface::unbond"><code>StakingInterface::unbond</code></a> will implicitly call <a href="enum.Call.html#variant.pool_withdraw_unbonded" title="Call::pool_withdraw_unbonded"><code>Call::pool_withdraw_unbonded</code></a>
+to try to free chunks if necessary (ie. if unbound was called and no unlocking chunks
+are available). However, it may not be possible to release the current unlocking chunks,
+in which case, the result of this call will likely be the <code>NoMoreChunks</code> error from the
+staking system.</p>
 </div><h3 id="variant.pool_withdraw_unbonded" class="variant small-section-header"><a href="#variant.pool_withdraw_unbonded" class="anchor field"></a><code>pool_withdraw_unbonded</code></h3><div class="sub-variant" id="variant.pool_withdraw_unbonded.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.pool_withdraw_unbonded.field.pool_id" class="variant small-section-header"><a href="#variant.pool_withdraw_unbonded.field.pool_id" class="anchor field"></a><code>pool_id:&nbsp;<a class="type" href="../type.PoolId.html" title="type pallet_nomination_pools::PoolId">PoolId</a></code></span></div><div class="sub-variant-field"><span id="variant.pool_withdraw_unbonded.field.num_slashing_spans" class="variant small-section-header"><a href="#variant.pool_withdraw_unbonded.field.num_slashing_spans" class="anchor field"></a><code>num_slashing_spans:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Call <code>withdraw_unbonded</code> for the pools account. This call can be made by any account.</p>
 <p>This is useful if their are too many unlocking chunks to call <code>unbond</code>, and some
 can be cleared by withdrawing. In the case there are too many unlocking chunks, the user
