@@ -103,8 +103,6 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -184,7 +182,6 @@
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span><span class="kw">crate</span>::tests::BeefyTestNet;
 	<span class="kw">use </span>sc_network_test::TestNetFactory;
-	<span class="kw">use </span>tokio::runtime::Runtime;
 
 	<span class="comment">// also used in tests.rs
 	</span><span class="kw">pub fn </span>verify_persisted_version&lt;B: BlockT, BE: Backend&lt;B&gt;&gt;(backend: <span class="kw-2">&amp;</span>BE) -&gt; bool {
@@ -192,10 +189,9 @@
 		version == CURRENT_VERSION
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>should_load_persistent_sanity_checks() {
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(runtime.handle().clone(), <span class="number">1</span>);
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>should_load_persistent_sanity_checks() {
+		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
 		<span class="kw">let </span>backend = net.peer(<span class="number">0</span>).client().as_backend();
 
 		<span class="comment">// version not available in db -&gt; None

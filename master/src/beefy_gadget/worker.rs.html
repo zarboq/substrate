@@ -1519,8 +1519,6 @@
 <a href="#1519" id="1519">1519</a>
 <a href="#1520" id="1520">1520</a>
 <a href="#1521" id="1521">1521</a>
-<a href="#1522" id="1522">1522</a>
-<a href="#1523" id="1523">1523</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -2506,7 +2504,6 @@
 		runtime::{Block, Digest, DigestItem, Header, H256},
 		Backend,
 	};
-	<span class="kw">use </span>tokio::runtime::Runtime;
 
 	<span class="kw">impl</span>&lt;B: <span class="kw">super</span>::Block&gt; PersistedState&lt;B&gt; {
 		<span class="kw">pub fn </span>voting_oracle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>VoterOracle&lt;B&gt; {
@@ -2818,12 +2815,11 @@
 		<span class="macro">assert_eq!</span>(extracted, <span class="prelude-val">Some</span>(validator_set));
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>keystore_vs_validator_set() {
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>keystore_vs_validator_set() {
 		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(runtime.handle().clone(), <span class="number">1</span>);
+		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
 		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 
 		<span class="comment">// keystore doesn&#39;t contain other keys than validators&#39;
@@ -2842,12 +2838,11 @@
 		<span class="macro">assert_eq!</span>(worker.verify_validator_set(<span class="kw-2">&amp;</span><span class="number">1</span>, <span class="kw-2">&amp;</span>validator_set), expected_err);
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>should_finalize_correctly() {
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>should_finalize_correctly() {
 		<span class="kw">let </span>keys = [Keyring::Alice];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(<span class="kw-2">&amp;</span>keys), <span class="number">0</span>).unwrap();
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(runtime.handle().clone(), <span class="number">1</span>);
+		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
 		<span class="kw">let </span>backend = net.peer(<span class="number">0</span>).client().as_backend();
 		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 		<span class="comment">// remove default session, will manually add custom one.
@@ -2870,11 +2865,12 @@
 
 		<span class="comment">// no &#39;best beefy block&#39; or finality proofs
 		</span><span class="macro">assert_eq!</span>(worker.best_beefy_block(), <span class="number">0</span>);
-		runtime.block_on(poll_fn(<span class="kw">move </span>|cx| {
+		poll_fn(<span class="kw">move </span>|cx| {
 			<span class="macro">assert_eq!</span>(best_block_stream.poll_next_unpin(cx), Poll::Pending);
 			<span class="macro">assert_eq!</span>(finality_proof.poll_next_unpin(cx), Poll::Pending);
 			Poll::Ready(())
-		}));
+		})
+		.<span class="kw">await</span>;
 
 		<span class="comment">// unknown hash for block #1
 		</span><span class="kw">let </span>(<span class="kw-2">mut </span>best_block_streams, <span class="kw-2">mut </span>finality_proofs) =
@@ -2891,7 +2887,7 @@
 		</span>worker.finalize(justif.clone()).unwrap();
 		<span class="comment">// verify block finalized
 		</span><span class="macro">assert_eq!</span>(worker.best_beefy_block(), <span class="number">1</span>);
-		runtime.block_on(poll_fn(<span class="kw">move </span>|cx| {
+		poll_fn(<span class="kw">move </span>|cx| {
 			<span class="comment">// unknown hash -&gt; nothing streamed
 			</span><span class="macro">assert_eq!</span>(best_block_stream.poll_next_unpin(cx), Poll::Pending);
 			<span class="comment">// commitment streamed
@@ -2901,7 +2897,8 @@
 				v =&gt; <span class="macro">panic!</span>(<span class="string">&quot;unexpected value: {:?}&quot;</span>, v),
 			}
 			Poll::Ready(())
-		}));
+		})
+		.<span class="kw">await</span>;
 
 		<span class="comment">// generate 2 blocks, try again expect success
 		</span><span class="kw">let </span>(<span class="kw-2">mut </span>best_block_streams, <span class="kw">_</span>) = get_beefy_streams(<span class="kw-2">&amp;mut </span>net, keys);
@@ -2923,7 +2920,7 @@
 		</span><span class="macro">assert_eq!</span>(worker.active_rounds().unwrap().session_start(), <span class="number">2</span>);
 		<span class="comment">// verify block finalized
 		</span><span class="macro">assert_eq!</span>(worker.best_beefy_block(), <span class="number">2</span>);
-		runtime.block_on(poll_fn(<span class="kw">move </span>|cx| {
+		poll_fn(<span class="kw">move </span>|cx| {
 			<span class="kw">match </span>best_block_stream.poll_next_unpin(cx) {
 				<span class="comment">// expect Some(hash-of-block-2)
 				</span>Poll::Ready(<span class="prelude-val">Some</span>(hash)) =&gt; {
@@ -2933,19 +2930,19 @@
 				v =&gt; <span class="macro">panic!</span>(<span class="string">&quot;unexpected value: {:?}&quot;</span>, v),
 			}
 			Poll::Ready(())
-		}));
+		})
+		.<span class="kw">await</span>;
 
 		<span class="comment">// check BEEFY justifications are also appended to backend
 		</span><span class="kw">let </span>justifs = backend.blockchain().justifications(hashof2).unwrap().unwrap();
 		<span class="macro">assert!</span>(justifs.get(BEEFY_ENGINE_ID).is_some())
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>should_init_session() {
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>should_init_session() {
 		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice, Keyring::Bob];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(runtime.handle().clone(), <span class="number">1</span>);
+		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
 		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 
 		<span class="kw">let </span>worker_rounds = worker.active_rounds().unwrap();
@@ -2972,12 +2969,11 @@
 		<span class="macro">assert_eq!</span>(rounds.validator_set_id(), new_validator_set.id());
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>should_triage_votes_and_process_later() {
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>should_triage_votes_and_process_later() {
 		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice, Keyring::Bob];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(runtime.handle().clone(), <span class="number">1</span>);
+		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
 		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 		<span class="comment">// remove default session, will manually add custom one.
 		</span>worker.persisted_state.voting_oracle.sessions.clear();

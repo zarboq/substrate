@@ -975,17 +975,6 @@
 <a href="#975" id="975">975</a>
 <a href="#976" id="976">976</a>
 <a href="#977" id="977">977</a>
-<a href="#978" id="978">978</a>
-<a href="#979" id="979">979</a>
-<a href="#980" id="980">980</a>
-<a href="#981" id="981">981</a>
-<a href="#982" id="982">982</a>
-<a href="#983" id="983">983</a>
-<a href="#984" id="984">984</a>
-<a href="#985" id="985">985</a>
-<a href="#986" id="986">986</a>
-<a href="#987" id="987">987</a>
-<a href="#988" id="988">988</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1648,7 +1637,6 @@
 		runtime::{Header, H256},
 		TestClient,
 	};
-	<span class="kw">use </span>tokio::runtime::{Handle, Runtime};
 
 	<span class="kw">const </span>SLOT_DURATION_MS: u64 = <span class="number">1000</span>;
 
@@ -1706,18 +1694,9 @@
 	&gt;;
 	<span class="kw">type </span>AuraPeer = Peer&lt;(), PeersClient&gt;;
 
-	<span class="kw">pub struct </span>AuraTestNet {
-		rt_handle: Handle,
+	<span class="attr">#[derive(Default)]
+	</span><span class="kw">pub struct </span>AuraTestNet {
 		peers: Vec&lt;AuraPeer&gt;,
-	}
-
-	<span class="kw">impl </span>WithRuntime <span class="kw">for </span>AuraTestNet {
-		<span class="kw">fn </span>with_runtime(rt_handle: Handle) -&gt; <span class="self">Self </span>{
-			AuraTestNet { rt_handle, peers: Vec::new() }
-		}
-		<span class="kw">fn </span>rt_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Handle {
-			<span class="kw-2">&amp;</span><span class="self">self</span>.rt_handle
-		}
 	}
 
 	<span class="kw">impl </span>TestNetFactory <span class="kw">for </span>AuraTestNet {
@@ -1768,11 +1747,10 @@
 		}
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>authoring_blocks() {
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>authoring_blocks() {
 		sp_tracing::try_init_simple();
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span>net = AuraTestNet::new(runtime.handle().clone(), <span class="number">3</span>);
+		<span class="kw">let </span>net = AuraTestNet::new(<span class="number">3</span>);
 
 		<span class="kw">let </span>peers = <span class="kw-2">&amp;</span>[(<span class="number">0</span>, Keyring::Alice), (<span class="number">1</span>, Keyring::Bob), (<span class="number">2</span>, Keyring::Charlie)];
 
@@ -1838,13 +1816,14 @@
 			);
 		}
 
-		runtime.block_on(future::select(
+		future::select(
 			future::poll_fn(<span class="kw">move </span>|cx| {
 				net.lock().poll(cx);
 				Poll::&lt;()&gt;::Pending
 			}),
 			future::select(future::join_all(aura_futures), future::join_all(import_notifications)),
-		));
+		)
+		.<span class="kw">await</span>;
 	}
 
 	<span class="attr">#[test]
@@ -1863,10 +1842,9 @@
 		);
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>current_node_authority_should_claim_slot() {
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span>net = AuraTestNet::new(runtime.handle().clone(), <span class="number">4</span>);
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>current_node_authority_should_claim_slot() {
+		<span class="kw">let </span>net = AuraTestNet::new(<span class="number">4</span>);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>authorities = <span class="macro">vec!</span>[
 			Keyring::Alice.public().into(),
@@ -1910,20 +1888,19 @@
 			Default::default(),
 			Default::default(),
 		);
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">0</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_none());
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">1</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_none());
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">2</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_none());
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">3</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_some());
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">4</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_none());
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">5</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_none());
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">6</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_none());
-		<span class="macro">assert!</span>(runtime.block_on(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">7</span>.into(), <span class="kw-2">&amp;</span>authorities)).is_some());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">0</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_none());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">1</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_none());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">2</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_none());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">3</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_some());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">4</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_none());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">5</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_none());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">6</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_none());
+		<span class="macro">assert!</span>(worker.claim_slot(<span class="kw-2">&amp;</span>head, <span class="number">7</span>.into(), <span class="kw-2">&amp;</span>authorities).<span class="kw">await</span>.is_some());
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>on_slot_returns_correct_block() {
-		<span class="kw">let </span>runtime = Runtime::new().unwrap();
-		<span class="kw">let </span>net = AuraTestNet::new(runtime.handle().clone(), <span class="number">4</span>);
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>on_slot_returns_correct_block() {
+		<span class="kw">let </span>net = AuraTestNet::new(<span class="number">4</span>);
 
 		<span class="kw">let </span>keystore_path = tempfile::tempdir().expect(<span class="string">&quot;Creates keystore path&quot;</span>);
 		<span class="kw">let </span>keystore = LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore.&quot;</span>);
@@ -1959,16 +1936,17 @@
 
 		<span class="kw">let </span>head = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0</span>)).unwrap().unwrap();
 
-		<span class="kw">let </span>res = runtime
-			.block_on(worker.on_slot(SlotInfo {
+		<span class="kw">let </span>res = worker
+			.on_slot(SlotInfo {
 				slot: <span class="number">0</span>.into(),
 				ends_at: Instant::now() + Duration::from_secs(<span class="number">100</span>),
 				create_inherent_data: Box::new(()),
 				duration: Duration::from_millis(<span class="number">1000</span>),
 				chain_head: head,
 				block_size_limit: <span class="prelude-val">None</span>,
-			}))
-			.unwrap();
+			})
+			.<span class="kw">await
+			</span>.unwrap();
 
 		<span class="comment">// The returned block should be imported and we should be able to get its header by now.
 		</span><span class="macro">assert!</span>(client.header(<span class="kw-2">&amp;</span>BlockId::Hash(res.block.hash())).unwrap().is_some());
