@@ -1733,6 +1733,7 @@
 <a href="#1733" id="1733">1733</a>
 <a href="#1734" id="1734">1734</a>
 <a href="#1735" id="1735">1735</a>
+<a href="#1736" id="1736">1736</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1823,7 +1824,7 @@
 		extract_actual_pays_fee, extract_actual_weight, DispatchClass, DispatchInfo,
 		DispatchResult, DispatchResultWithPostInfo, PerDispatchClass,
 	},
-	storage,
+	storage::{<span class="self">self</span>, StorageStreamIter},
 	traits::{
 		ConstU32, Contains, EnsureOrigin, Get, HandleLifetime, OnKilledAccount, OnNewAccount,
 		OriginTrait, PalletInfo, SortedMembers, StoredMap, TypedGet,
@@ -3179,15 +3180,16 @@
 	</span><span class="kw">pub fn </span>events() -&gt; Vec&lt;EventRecord&lt;T::RuntimeEvent, T::Hash&gt;&gt; {
 		<span class="comment">// Dereferencing the events here is fine since we are not in the
 		// memory-restricted runtime.
-		</span><span class="self">Self</span>::read_events_no_consensus().into_iter().map(|e| <span class="kw-2">*</span>e).collect()
+		</span><span class="self">Self</span>::read_events_no_consensus().map(|e| <span class="kw-2">*</span>e).collect()
 	}
 
 	<span class="doccomment">/// Get the current events deposited by the runtime.
 	///
 	/// Should only be called if you know what you are doing and outside of the runtime block
 	/// execution else it can have a large impact on the PoV size of a block.
-	</span><span class="kw">pub fn </span>read_events_no_consensus() -&gt; Vec&lt;Box&lt;EventRecord&lt;T::RuntimeEvent, T::Hash&gt;&gt;&gt; {
-		Events::&lt;T&gt;::get()
+	</span><span class="kw">pub fn </span>read_events_no_consensus(
+	) -&gt; <span class="kw">impl </span>sp_std::iter::Iterator&lt;Item = Box&lt;EventRecord&lt;T::RuntimeEvent, T::Hash&gt;&gt;&gt; {
+		Events::&lt;T&gt;::stream_iter()
 	}
 
 	<span class="doccomment">/// Set the block number to something in particular. Can be used as an alternative to
