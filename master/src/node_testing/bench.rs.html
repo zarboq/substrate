@@ -698,6 +698,16 @@
 <a href="#698" id="698">698</a>
 <a href="#699" id="699">699</a>
 <a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1097,24 +1107,34 @@
 		<span class="kw">let </span>task_executor = TaskExecutor::new();
 
 		<span class="kw">let </span>backend = sc_service::new_db_backend(db_config).expect(<span class="string">&quot;Should not fail&quot;</span>);
+		<span class="kw">let </span>executor = NativeElseWasmExecutor::new(
+			WasmExecutionMethod::Compiled {
+				instantiation_strategy: WasmtimeInstantiationStrategy::PoolingCopyOnWrite,
+			},
+			<span class="prelude-val">None</span>,
+			<span class="number">8</span>,
+			<span class="number">2</span>,
+		);
+		<span class="kw">let </span>client_config = sc_service::ClientConfig::default();
+		<span class="kw">let </span>genesis_block_builder = sc_service::GenesisBlockBuilder::new(
+			<span class="kw-2">&amp;</span>keyring.generate_genesis(),
+			!client_config.no_genesis,
+			backend.clone(),
+			executor.clone(),
+		)
+		.expect(<span class="string">&quot;Failed to create genesis block builder&quot;</span>);
+
 		<span class="kw">let </span>client = sc_service::new_client(
 			backend.clone(),
-			NativeElseWasmExecutor::new(
-				WasmExecutionMethod::Compiled {
-					instantiation_strategy: WasmtimeInstantiationStrategy::PoolingCopyOnWrite,
-				},
-				<span class="prelude-val">None</span>,
-				<span class="number">8</span>,
-				<span class="number">2</span>,
-			),
-			<span class="kw-2">&amp;</span>keyring.generate_genesis(),
+			executor,
+			genesis_block_builder,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			ExecutionExtensions::new(profile.into_execution_strategies(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
 			Box::new(task_executor.clone()),
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
-			Default::default(),
+			client_config,
 		)
 		.expect(<span class="string">&quot;Should not fail&quot;</span>);
 

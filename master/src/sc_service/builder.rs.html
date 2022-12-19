@@ -995,6 +995,29 @@
 <a href="#995" id="995">995</a>
 <a href="#996" id="996">996</a>
 <a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
+<a href="#1018" id="1018">1018</a>
+<a href="#1019" id="1019">1019</a>
+<a href="#1020" id="1020">1020</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1019,7 +1042,8 @@
 	config::{Configuration, KeystoreConfig, PrometheusConfig},
 	error::Error,
 	metrics::MetricsService,
-	start_rpc_servers, RpcHandlers, SpawnTaskHandle, TaskManager, TransactionPoolAdapter,
+	start_rpc_servers, BuildGenesisBlock, GenesisBlockBuilder, RpcHandlers, SpawnTaskHandle,
+	TaskManager, TransactionPoolAdapter,
 };
 <span class="kw">use </span>futures::{channel::oneshot, future::ready, FutureExt, StreamExt};
 <span class="kw">use </span>jsonrpsee::RpcModule;
@@ -1069,7 +1093,6 @@
 <span class="kw">use </span>sp_runtime::{
 	generic::BlockId,
 	traits::{Block <span class="kw">as </span>BlockT, BlockIdTo, NumberFor, Zero},
-	BuildStorage,
 };
 <span class="kw">use </span>std::{str::FromStr, sync::Arc, time::SystemTime};
 
@@ -1179,7 +1202,7 @@
 	new_full_parts(config, telemetry, executor).map(|parts| parts.<span class="number">0</span>)
 }
 
-<span class="doccomment">/// Create the initial parts of a full node.
+<span class="doccomment">/// Create the initial parts of a full node with the default genesis block builder.
 </span><span class="kw">pub fn </span>new_full_parts&lt;TBl, TRtApi, TExec&gt;(
 	config: <span class="kw-2">&amp;</span>Configuration,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
@@ -1188,6 +1211,34 @@
 <span class="kw">where
 	</span>TBl: BlockT,
 	TExec: CodeExecutor + RuntimeVersionOf + Clone,
+{
+	<span class="kw">let </span>backend = new_db_backend(config.db_config())<span class="question-mark">?</span>;
+
+	<span class="kw">let </span>genesis_block_builder = GenesisBlockBuilder::new(
+		config.chain_spec.as_storage_builder(),
+		!config.no_genesis(),
+		backend.clone(),
+		executor.clone(),
+	)<span class="question-mark">?</span>;
+
+	new_full_parts_with_genesis_builder(config, telemetry, executor, backend, genesis_block_builder)
+}
+
+<span class="doccomment">/// Create the initial parts of a full node.
+</span><span class="kw">pub fn </span>new_full_parts_with_genesis_builder&lt;TBl, TRtApi, TExec, TBuildGenesisBlock&gt;(
+	config: <span class="kw-2">&amp;</span>Configuration,
+	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
+	executor: TExec,
+	backend: Arc&lt;TFullBackend&lt;TBl&gt;&gt;,
+	genesis_block_builder: TBuildGenesisBlock,
+) -&gt; <span class="prelude-ty">Result</span>&lt;TFullParts&lt;TBl, TRtApi, TExec&gt;, Error&gt;
+<span class="kw">where
+	</span>TBl: BlockT,
+	TExec: CodeExecutor + RuntimeVersionOf + Clone,
+	TBuildGenesisBlock: BuildGenesisBlock&lt;
+		TBl,
+		BlockImportOperation = &lt;Backend&lt;TBl&gt; <span class="kw">as </span>sc_client_api::backend::Backend&lt;TBl&gt;&gt;::BlockImportOperation
+	&gt;,
 {
 	<span class="kw">let </span>keystore_container = KeystoreContainer::new(<span class="kw-2">&amp;</span>config.keystore)<span class="question-mark">?</span>;
 
@@ -1205,16 +1256,7 @@
 		.cloned()
 		.unwrap_or_default();
 
-	<span class="kw">let </span>(client, backend) = {
-		<span class="kw">let </span>db_config = sc_client_db::DatabaseSettings {
-			trie_cache_maximum_size: config.trie_cache_maximum_size,
-			state_pruning: config.state_pruning.clone(),
-			source: config.database.clone(),
-			blocks_pruning: config.blocks_pruning,
-		};
-
-		<span class="kw">let </span>backend = new_db_backend(db_config)<span class="question-mark">?</span>;
-
+	<span class="kw">let </span>client = {
 		<span class="kw">let </span>extensions = sc_client_api::execution_extensions::ExecutionExtensions::new(
 			config.execution_strategies.clone(),
 			<span class="prelude-val">Some</span>(keystore_container.sync_keystore()),
@@ -1241,7 +1283,7 @@
 		<span class="kw">let </span>client = new_client(
 			backend.clone(),
 			executor,
-			chain_spec.as_storage_builder(),
+			genesis_block_builder,
 			fork_blocks,
 			bad_blocks,
 			extensions,
@@ -1260,7 +1302,7 @@
 			},
 		)<span class="question-mark">?</span>;
 
-		(client, backend)
+		client
 	};
 
 	<span class="prelude-val">Ok</span>((client, backend, keystore_container, task_manager))
@@ -1279,10 +1321,10 @@
 }
 
 <span class="doccomment">/// Create an instance of client backed by given backend.
-</span><span class="kw">pub fn </span>new_client&lt;E, Block, RA&gt;(
+</span><span class="kw">pub fn </span>new_client&lt;E, Block, RA, G&gt;(
 	backend: Arc&lt;Backend&lt;Block&gt;&gt;,
 	executor: E,
-	genesis_storage: <span class="kw-2">&amp;</span><span class="kw">dyn </span>BuildStorage,
+	genesis_block_builder: G,
 	fork_blocks: ForkBlocks&lt;Block&gt;,
 	bad_blocks: BadBlocks&lt;Block&gt;,
 	execution_extensions: ExecutionExtensions&lt;Block&gt;,
@@ -1302,6 +1344,10 @@
 <span class="kw">where
 	</span>Block: BlockT,
 	E: CodeExecutor + RuntimeVersionOf,
+	G: BuildGenesisBlock&lt;
+		Block,
+		BlockImportOperation = &lt;Backend&lt;Block&gt; <span class="kw">as </span>sc_client_api::backend::Backend&lt;Block&gt;&gt;::BlockImportOperation
+	&gt;,
 {
 	<span class="kw">let </span>executor = <span class="kw">crate</span>::client::LocalCallExecutor::new(
 		backend.clone(),
@@ -1313,7 +1359,7 @@
 	<span class="kw">crate</span>::client::Client::new(
 		backend,
 		executor,
-		genesis_storage,
+		genesis_block_builder,
 		fork_blocks,
 		bad_blocks,
 		prometheus_registry,

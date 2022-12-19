@@ -461,6 +461,16 @@
 <a href="#461" id="461">461</a>
 <a href="#462" id="462">462</a>
 <a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -666,7 +676,7 @@
 	)
 	<span class="kw">where
 		</span>ExecutorDispatch:
-			sc_client_api::CallExecutor&lt;Block&gt; + sc_executor::RuntimeVersionOf + <span class="lifetime">&#39;static</span>,
+			sc_client_api::CallExecutor&lt;Block&gt; + sc_executor::RuntimeVersionOf + Clone + <span class="lifetime">&#39;static</span>,
 		Backend: sc_client_api::backend::Backend&lt;Block&gt;,
 		&lt;Backend <span class="kw">as </span>sc_client_api::backend::Backend&lt;Block&gt;&gt;::OffchainStorage: <span class="lifetime">&#39;static</span>,
 	{
@@ -686,19 +696,29 @@
 			storage
 		};
 
+		<span class="kw">let </span>client_config = ClientConfig {
+			offchain_indexing_api: <span class="self">self</span>.enable_offchain_indexing_api,
+			no_genesis: <span class="self">self</span>.no_genesis,
+			..Default::default()
+		};
+
+		<span class="kw">let </span>genesis_block_builder = sc_service::GenesisBlockBuilder::new(
+			<span class="kw-2">&amp;</span>storage,
+			!client_config.no_genesis,
+			<span class="self">self</span>.backend.clone(),
+			executor.clone(),
+		)
+		.expect(<span class="string">&quot;Creates genesis block builder&quot;</span>);
+
 		<span class="kw">let </span>client = client::Client::new(
 			<span class="self">self</span>.backend.clone(),
 			executor,
-			<span class="kw-2">&amp;</span>storage,
+			genesis_block_builder,
 			<span class="self">self</span>.fork_blocks,
 			<span class="self">self</span>.bad_blocks,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
-			ClientConfig {
-				offchain_indexing_api: <span class="self">self</span>.enable_offchain_indexing_api,
-				no_genesis: <span class="self">self</span>.no_genesis,
-				..Default::default()
-			},
+			client_config,
 		)
 		.expect(<span class="string">&quot;Creates new client&quot;</span>);
 

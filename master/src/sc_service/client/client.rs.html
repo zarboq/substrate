@@ -2095,6 +2095,10 @@
 <a href="#2095" id="2095">2095</a>
 <a href="#2096" id="2096">2096</a>
 <a href="#2097" id="2097">2097</a>
+<a href="#2098" id="2098">2098</a>
+<a href="#2099" id="2099">2099</a>
+<a href="#2100" id="2100">2100</a>
+<a href="#2101" id="2101">2101</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2117,7 +2121,7 @@
 
 </span><span class="kw">use super</span>::{
 	block_rules::{BlockRules, LookupResult <span class="kw">as </span>BlockLookupResult},
-	genesis,
+	genesis::BuildGenesisBlock,
 };
 <span class="kw">use </span>log::{info, trace, warn};
 <span class="kw">use </span>parking_lot::{Mutex, RwLock};
@@ -2167,7 +2171,7 @@
 		Block <span class="kw">as </span>BlockT, BlockIdTo, HashFor, Header <span class="kw">as </span>HeaderT, NumberFor, One,
 		SaturatedConversion, Zero,
 	},
-	BuildStorage, Digest, Justification, Justifications, StateVersion,
+	Digest, Justification, Justifications, StateVersion,
 };
 <span class="kw">use </span>sp_state_machine::{
 	prove_child_read, prove_range_read_with_child_with_size, prove_read,
@@ -2252,9 +2256,10 @@
 
 <span class="doccomment">/// Create an instance of in-memory client.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;test-helpers&quot;</span>)]
-</span><span class="kw">pub fn </span>new_in_mem&lt;E, Block, S, RA&gt;(
+</span><span class="kw">pub fn </span>new_in_mem&lt;E, Block, G, RA&gt;(
+	backend: Arc&lt;in_mem::Backend&lt;Block&gt;&gt;,
 	executor: E,
-	genesis_storage: <span class="kw-2">&amp;</span>S,
+	genesis_block_builder: G,
 	keystore: <span class="prelude-ty">Option</span>&lt;SyncCryptoStorePtr&gt;,
 	prometheus_registry: <span class="prelude-ty">Option</span>&lt;Registry&gt;,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
@@ -2265,13 +2270,16 @@
 &gt;
 <span class="kw">where
 	</span>E: CodeExecutor + RuntimeVersionOf,
-	S: BuildStorage,
 	Block: BlockT,
+	G: BuildGenesisBlock&lt;
+			Block,
+			BlockImportOperation = &lt;in_mem::Backend&lt;Block&gt; <span class="kw">as </span>backend::Backend&lt;Block&gt;&gt;::BlockImportOperation,
+		&gt;,
 {
 	new_with_backend(
-		Arc::new(in_mem::Backend::new()),
+		backend,
 		executor,
-		genesis_storage,
+		genesis_block_builder,
 		keystore,
 		spawn_handle,
 		prometheus_registry,
@@ -2311,10 +2319,10 @@
 <span class="doccomment">/// Create a client with the explicitly provided backend.
 /// This is useful for testing backend implementations.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;test-helpers&quot;</span>)]
-</span><span class="kw">pub fn </span>new_with_backend&lt;B, E, Block, S, RA&gt;(
+</span><span class="kw">pub fn </span>new_with_backend&lt;B, E, Block, G, RA&gt;(
 	backend: Arc&lt;B&gt;,
 	executor: E,
-	build_genesis_storage: <span class="kw-2">&amp;</span>S,
+	genesis_block_builder: G,
 	keystore: <span class="prelude-ty">Option</span>&lt;SyncCryptoStorePtr&gt;,
 	spawn_handle: Box&lt;<span class="kw">dyn </span>SpawnNamed&gt;,
 	prometheus_registry: <span class="prelude-ty">Option</span>&lt;Registry&gt;,
@@ -2323,7 +2331,10 @@
 ) -&gt; sp_blockchain::Result&lt;Client&lt;B, LocalCallExecutor&lt;Block, B, E&gt;, Block, RA&gt;&gt;
 <span class="kw">where
 	</span>E: CodeExecutor + RuntimeVersionOf,
-	S: BuildStorage,
+	G: BuildGenesisBlock&lt;
+		Block,
+		BlockImportOperation = &lt;B <span class="kw">as </span>backend::Backend&lt;Block&gt;&gt;::BlockImportOperation,
+	&gt;,
 	Block: BlockT,
 	B: backend::LocalBackend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 {
@@ -2344,7 +2355,7 @@
 	Client::new(
 		backend,
 		call_executor,
-		build_genesis_storage,
+		genesis_block_builder,
 		Default::default(),
 		Default::default(),
 		prometheus_registry,
@@ -2444,26 +2455,25 @@
 	Block::Header: Clone,
 {
 	<span class="doccomment">/// Creates new Substrate Client with given blockchain and code executor.
-	</span><span class="kw">pub fn </span>new(
+	</span><span class="kw">pub fn </span>new&lt;G&gt;(
 		backend: Arc&lt;B&gt;,
 		executor: E,
-		build_genesis_storage: <span class="kw-2">&amp;</span><span class="kw">dyn </span>BuildStorage,
+		genesis_block_builder: G,
 		fork_blocks: ForkBlocks&lt;Block&gt;,
 		bad_blocks: BadBlocks&lt;Block&gt;,
 		prometheus_registry: <span class="prelude-ty">Option</span>&lt;Registry&gt;,
 		telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
 		config: ClientConfig&lt;Block&gt;,
-	) -&gt; sp_blockchain::Result&lt;<span class="self">Self</span>&gt; {
+	) -&gt; sp_blockchain::Result&lt;<span class="self">Self</span>&gt;
+	<span class="kw">where
+		</span>G: BuildGenesisBlock&lt;
+			Block,
+			BlockImportOperation = &lt;B <span class="kw">as </span>backend::Backend&lt;Block&gt;&gt;::BlockImportOperation,
+		&gt;,
+	{
 		<span class="kw">let </span>info = backend.blockchain().info();
 		<span class="kw">if </span>info.finalized_state.is_none() {
-			<span class="kw">let </span>genesis_storage =
-				build_genesis_storage.build_storage().map_err(sp_blockchain::Error::Storage)<span class="question-mark">?</span>;
-			<span class="kw">let </span>genesis_state_version =
-				<span class="self">Self</span>::resolve_state_version_from_wasm(<span class="kw-2">&amp;</span>genesis_storage, <span class="kw-2">&amp;</span>executor)<span class="question-mark">?</span>;
-			<span class="kw">let </span><span class="kw-2">mut </span>op = backend.begin_operation()<span class="question-mark">?</span>;
-			<span class="kw">let </span>state_root =
-				op.set_genesis_state(genesis_storage, !config.no_genesis, genesis_state_version)<span class="question-mark">?</span>;
-			<span class="kw">let </span>genesis_block = genesis::construct_genesis_block::&lt;Block&gt;(state_root);
+			<span class="kw">let </span>(genesis_block, <span class="kw-2">mut </span>op) = genesis_block_builder.build_genesis_block()<span class="question-mark">?</span>;
 			<span class="macro">info!</span>(
 				<span class="string">&quot;🔨 Initializing Genesis block/state (state: {}, header-hash: {})&quot;</span>,
 				genesis_block.header().state_root(),
@@ -2476,13 +2486,8 @@
 			} <span class="kw">else </span>{
 				NewBlockState::Normal
 			};
-			op.set_block_data(
-				genesis_block.deconstruct().<span class="number">0</span>,
-				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
-				<span class="prelude-val">None</span>,
-				<span class="prelude-val">None</span>,
-				block_state,
-			)<span class="question-mark">?</span>;
+			<span class="kw">let </span>(header, body) = genesis_block.deconstruct();
+			op.set_block_data(header, <span class="prelude-val">Some</span>(body), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, block_state)<span class="question-mark">?</span>;
 			backend.commit_operation(op)<span class="question-mark">?</span>;
 		}
 
@@ -2737,7 +2742,7 @@
 						<span class="comment">// This is use by fast sync for runtime version to be resolvable from
 						// changes.
 						</span><span class="kw">let </span>state_version =
-							<span class="self">Self</span>::resolve_state_version_from_wasm(<span class="kw-2">&amp;</span>storage, <span class="kw-2">&amp;</span><span class="self">self</span>.executor)<span class="question-mark">?</span>;
+							resolve_state_version_from_wasm(<span class="kw-2">&amp;</span>storage, <span class="kw-2">&amp;</span><span class="self">self</span>.executor)<span class="question-mark">?</span>;
 						<span class="kw">let </span>state_root = operation.op.reset_storage(storage, state_version)<span class="question-mark">?</span>;
 						<span class="kw">if </span>state_root != <span class="kw-2">*</span>import_headers.post().state_root() {
 							<span class="comment">// State root mismatch when importing state. This should not happen in
@@ -3201,34 +3206,37 @@
 		<span class="macro">trace!</span>(<span class="string">&quot;Collected {} uncles&quot;</span>, uncles.len());
 		<span class="prelude-val">Ok</span>(uncles)
 	}
+}
 
-	<span class="kw">fn </span>resolve_state_version_from_wasm(
-		storage: <span class="kw-2">&amp;</span>Storage,
-		executor: <span class="kw-2">&amp;</span>E,
-	) -&gt; sp_blockchain::Result&lt;StateVersion&gt; {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(wasm) = storage.top.get(well_known_keys::CODE) {
-			<span class="kw">let </span><span class="kw-2">mut </span>ext = sp_state_machine::BasicExternalities::new_empty(); <span class="comment">// just to read runtime version.
+<span class="doccomment">/// Return the genesis state version given the genesis storage and executor.
+</span><span class="kw">pub fn </span>resolve_state_version_from_wasm&lt;E&gt;(
+	storage: <span class="kw-2">&amp;</span>Storage,
+	executor: <span class="kw-2">&amp;</span>E,
+) -&gt; sp_blockchain::Result&lt;StateVersion&gt;
+<span class="kw">where
+	</span>E: RuntimeVersionOf,
+{
+	<span class="kw">if let </span><span class="prelude-val">Some</span>(wasm) = storage.top.get(well_known_keys::CODE) {
+		<span class="kw">let </span><span class="kw-2">mut </span>ext = sp_state_machine::BasicExternalities::new_empty(); <span class="comment">// just to read runtime version.
 
-			</span><span class="kw">let </span>code_fetcher = sp_core::traits::WrappedRuntimeCode(wasm.as_slice().into());
-			<span class="kw">let </span>runtime_code = sp_core::traits::RuntimeCode {
-				code_fetcher: <span class="kw-2">&amp;</span>code_fetcher,
-				heap_pages: <span class="prelude-val">None</span>,
-				hash: {
-					<span class="kw">use </span>std::hash::{Hash, Hasher};
-					<span class="kw">let </span><span class="kw-2">mut </span>state = DefaultHasher::new();
-					wasm.hash(<span class="kw-2">&amp;mut </span>state);
-					state.finish().to_le_bytes().to_vec()
-				},
-			};
-			<span class="kw">let </span>runtime_version =
-				RuntimeVersionOf::runtime_version(executor, <span class="kw-2">&amp;mut </span>ext, <span class="kw-2">&amp;</span>runtime_code)
-					.map_err(|e| sp_blockchain::Error::VersionInvalid(e.to_string()))<span class="question-mark">?</span>;
-			<span class="prelude-val">Ok</span>(runtime_version.state_version())
-		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(sp_blockchain::Error::VersionInvalid(
-				<span class="string">&quot;Runtime missing from initial storage, could not read state version.&quot;</span>.to_string(),
-			))
-		}
+		</span><span class="kw">let </span>code_fetcher = sp_core::traits::WrappedRuntimeCode(wasm.as_slice().into());
+		<span class="kw">let </span>runtime_code = sp_core::traits::RuntimeCode {
+			code_fetcher: <span class="kw-2">&amp;</span>code_fetcher,
+			heap_pages: <span class="prelude-val">None</span>,
+			hash: {
+				<span class="kw">use </span>std::hash::{Hash, Hasher};
+				<span class="kw">let </span><span class="kw-2">mut </span>state = DefaultHasher::new();
+				wasm.hash(<span class="kw-2">&amp;mut </span>state);
+				state.finish().to_le_bytes().to_vec()
+			},
+		};
+		<span class="kw">let </span>runtime_version = RuntimeVersionOf::runtime_version(executor, <span class="kw-2">&amp;mut </span>ext, <span class="kw-2">&amp;</span>runtime_code)
+			.map_err(|e| sp_blockchain::Error::VersionInvalid(e.to_string()))<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(runtime_version.state_version())
+	} <span class="kw">else </span>{
+		<span class="prelude-val">Err</span>(sp_blockchain::Error::VersionInvalid(
+			<span class="string">&quot;Runtime missing from initial storage, could not read state version.&quot;</span>.to_string(),
+		))
 	}
 }
 
