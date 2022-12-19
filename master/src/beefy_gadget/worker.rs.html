@@ -2903,10 +2903,10 @@
 		<span class="comment">// generate 2 blocks, try again expect success
 		</span><span class="kw">let </span>(<span class="kw-2">mut </span>best_block_streams, <span class="kw">_</span>) = get_beefy_streams(<span class="kw-2">&amp;mut </span>net, keys);
 		<span class="kw">let </span><span class="kw-2">mut </span>best_block_stream = best_block_streams.drain(..).next().unwrap();
-		net.peer(<span class="number">0</span>).push_blocks(<span class="number">2</span>, <span class="bool-val">false</span>);
-		<span class="comment">// finalize 1 and 2 without justifications
-		</span><span class="kw">let </span>hashof1 = backend.blockchain().expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">1</span>)).unwrap();
-		<span class="kw">let </span>hashof2 = backend.blockchain().expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">2</span>)).unwrap();
+		<span class="kw">let </span>hashes = net.peer(<span class="number">0</span>).push_blocks(<span class="number">2</span>, <span class="bool-val">false</span>);
+		<span class="comment">// finalize 1 and 2 without justifications (hashes does not contain genesis)
+		</span><span class="kw">let </span>hashof1 = hashes[<span class="number">0</span>];
+		<span class="kw">let </span>hashof2 = hashes[<span class="number">1</span>];
 		backend.finalize_block(hashof1, <span class="prelude-val">None</span>).unwrap();
 		backend.finalize_block(hashof2, <span class="prelude-val">None</span>).unwrap();
 
