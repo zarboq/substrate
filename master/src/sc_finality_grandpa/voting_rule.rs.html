@@ -436,6 +436,8 @@
 <a href="#436" id="436">436</a>
 <a href="#437" id="437">437</a>
 <a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -465,10 +467,7 @@
 <span class="kw">use </span>dyn_clone::DynClone;
 
 <span class="kw">use </span>sc_client_api::blockchain::HeaderBackend;
-<span class="kw">use </span>sp_runtime::{
-	generic::BlockId,
-	traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, One, Zero},
-};
+<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, One, Zero};
 
 <span class="doccomment">/// A future returned by a `VotingRule` to restrict a given vote, if any restriction is necessary.
 </span><span class="kw">pub type </span>VotingRuleResult&lt;Block&gt; =
@@ -635,7 +634,7 @@
 
 		target_hash = <span class="kw-2">*</span>target_header.parent_hash();
 		target_header = backend
-			.header(BlockId::Hash(target_hash))
+			.header(target_hash)
 			.ok()<span class="question-mark">?
 			</span>.expect(<span class="string">&quot;Header known to exist due to the existence of one of its descendents; qed&quot;</span>);
 	}
@@ -680,7 +679,7 @@
 						</span>restricted_number &gt;= base.number() &amp;&amp;
 							restricted_number &lt; restricted_target.number()
 					})
-					.and_then(|(hash, <span class="kw">_</span>)| backend.header(BlockId::Hash(hash)).ok())
+					.and_then(|(hash, <span class="kw">_</span>)| backend.header(hash).ok())
 					.and_then(std::convert::identity)
 				{
 					restricted_target = header;
@@ -809,16 +808,18 @@
 		</span><span class="kw">let </span>rule = VotingRulesBuilder::new().add(Subtract(<span class="number">50</span>)).add(Subtract(<span class="number">50</span>)).build();
 
 		<span class="kw">let </span><span class="kw-2">mut </span>client = Arc::new(TestClientBuilder::new().build());
+		<span class="kw">let </span><span class="kw-2">mut </span>hashes = Vec::with_capacity(<span class="number">200</span>);
 
 		<span class="kw">for _ in </span><span class="number">0</span>..<span class="number">200 </span>{
 			<span class="kw">let </span>block = client.new_block(Default::default()).unwrap().build().unwrap().block;
+			hashes.push(block.hash());
 
 			futures::executor::block_on(client.import(BlockOrigin::Own, block)).unwrap();
 		}
 
-		<span class="kw">let </span>genesis = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0u32</span>.into())).unwrap().unwrap();
+		<span class="kw">let </span>genesis = client.header(client.info().genesis_hash).unwrap().unwrap();
 
-		<span class="kw">let </span>best = client.header(<span class="kw-2">&amp;</span>BlockId::Hash(client.info().best_hash)).unwrap().unwrap();
+		<span class="kw">let </span>best = client.header(client.info().best_hash).unwrap().unwrap();
 
 		<span class="kw">let </span>(<span class="kw">_</span>, number) =
 			futures::executor::block_on(rule.restrict_vote(client.clone(), <span class="kw-2">&amp;</span>genesis, <span class="kw-2">&amp;</span>best, <span class="kw-2">&amp;</span>best))
@@ -828,7 +829,7 @@
 		// which means that we should be voting for block #100
 		</span><span class="macro">assert_eq!</span>(number, <span class="number">100</span>);
 
-		<span class="kw">let </span>block110 = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">110u32</span>.into())).unwrap().unwrap();
+		<span class="kw">let </span>block110 = client.header(hashes[<span class="number">109</span>]).unwrap().unwrap();
 
 		<span class="kw">let </span>(<span class="kw">_</span>, number) = futures::executor::block_on(rule.restrict_vote(
 			client.clone(),
@@ -850,17 +851,20 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>client = Arc::new(TestClientBuilder::new().build());
 
-		<span class="kw">for _ in </span><span class="number">0</span>..<span class="number">5 </span>{
+		<span class="kw">let </span>n = <span class="number">5</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>hashes = Vec::with_capacity(n);
+		<span class="kw">for _ in </span><span class="number">0</span>..n {
 			<span class="kw">let </span>block = client.new_block(Default::default()).unwrap().build().unwrap().block;
+			hashes.push(block.hash());
 
 			futures::executor::block_on(client.import(BlockOrigin::Own, block)).unwrap();
 		}
 
-		<span class="kw">let </span>best = client.header(<span class="kw-2">&amp;</span>BlockId::Hash(client.info().best_hash)).unwrap().unwrap();
+		<span class="kw">let </span>best = client.header(client.info().best_hash).unwrap().unwrap();
 		<span class="kw">let </span>best_number = <span class="kw-2">*</span>best.number();
 
-		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0u32</span>..<span class="number">5 </span>{
-			<span class="kw">let </span>base = client.header(<span class="kw-2">&amp;</span>BlockId::Number(i.into())).unwrap().unwrap();
+		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..n {
+			<span class="kw">let </span>base = client.header(hashes[i]).unwrap().unwrap();
 			<span class="kw">let </span>(<span class="kw">_</span>, number) = futures::executor::block_on(rule.restrict_vote(
 				client.clone(),
 				<span class="kw-2">&amp;</span>base,

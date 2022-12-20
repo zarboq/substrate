@@ -1065,14 +1065,6 @@
 <a href="#1065" id="1065">1065</a>
 <a href="#1066" id="1066">1066</a>
 <a href="#1067" id="1067">1067</a>
-<a href="#1068" id="1068">1068</a>
-<a href="#1069" id="1069">1069</a>
-<a href="#1070" id="1070">1070</a>
-<a href="#1071" id="1071">1071</a>
-<a href="#1072" id="1072">1072</a>
-<a href="#1073" id="1073">1073</a>
-<a href="#1074" id="1074">1074</a>
-<a href="#1075" id="1075">1075</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1692,8 +1684,7 @@
 		block_on(
 			txpool.maintain(chain_event(
 				client
-					.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0u64</span>))
-					.expect(<span class="string">&quot;header get error&quot;</span>)
+					.expect_header(client.info().genesis_hash)
 					.expect(<span class="string">&quot;there should be header&quot;</span>),
 			)),
 		);
@@ -1703,7 +1694,7 @@
 
 		<span class="kw">let </span>cell = Mutex::new((<span class="bool-val">false</span>, time::Instant::now()));
 		<span class="kw">let </span>proposer = proposer_factory.init_with_now(
-			<span class="kw-2">&amp;</span>client.header(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>)).unwrap().unwrap(),
+			<span class="kw-2">&amp;</span>client.expect_header(client.info().genesis_hash).unwrap(),
 			Box::new(<span class="kw">move </span>|| {
 				<span class="kw">let </span><span class="kw-2">mut </span>value = cell.lock();
 				<span class="kw">if </span>!value.<span class="number">0 </span>{
@@ -1747,7 +1738,7 @@
 
 		<span class="kw">let </span>cell = Mutex::new((<span class="bool-val">false</span>, time::Instant::now()));
 		<span class="kw">let </span>proposer = proposer_factory.init_with_now(
-			<span class="kw-2">&amp;</span>client.header(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>)).unwrap().unwrap(),
+			<span class="kw-2">&amp;</span>client.expect_header(client.info().genesis_hash).unwrap(),
 			Box::new(<span class="kw">move </span>|| {
 				<span class="kw">let </span><span class="kw-2">mut </span>value = cell.lock();
 				<span class="kw">if </span>!value.<span class="number">0 </span>{
@@ -1780,15 +1771,13 @@
 		);
 
 		<span class="kw">let </span>genesis_hash = client.info().best_hash;
-		<span class="kw">let </span>block_id = BlockId::Hash(genesis_hash);
 
 		block_on(txpool.submit_at(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>), SOURCE, <span class="macro">vec!</span>[extrinsic(<span class="number">0</span>)])).unwrap();
 
 		block_on(
 			txpool.maintain(chain_event(
 				client
-					.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0u64</span>))
-					.expect(<span class="string">&quot;header get error&quot;</span>)
+					.expect_header(client.info().genesis_hash)
 					.expect(<span class="string">&quot;there should be header&quot;</span>),
 			)),
 		);
@@ -1797,7 +1786,7 @@
 			ProposerFactory::new(spawner.clone(), client.clone(), txpool.clone(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
 
 		<span class="kw">let </span>proposer = proposer_factory.init_with_now(
-			<span class="kw-2">&amp;</span>client.header(<span class="kw-2">&amp;</span>block_id).unwrap().unwrap(),
+			<span class="kw-2">&amp;</span>client.header(genesis_hash).unwrap().unwrap(),
 			Box::new(<span class="kw">move </span>|| time::Instant::now()),
 		);
 
@@ -1809,7 +1798,7 @@
 		<span class="macro">assert_eq!</span>(proposal.block.extrinsics().len(), <span class="number">1</span>);
 
 		<span class="kw">let </span>api = client.runtime_api();
-		api.execute_block(<span class="kw-2">&amp;</span>block_id, proposal.block).unwrap();
+		api.execute_block(<span class="kw-2">&amp;</span>BlockId::Hash(genesis_hash), proposal.block).unwrap();
 
 		<span class="kw">let </span>state = backend.state_at(genesis_hash).unwrap();
 
@@ -1865,8 +1854,9 @@
 		                         number,
 		                         expected_block_extrinsics,
 		                         expected_pool_transactions| {
+			<span class="kw">let </span>hash = client.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(number)).unwrap();
 			<span class="kw">let </span>proposer = proposer_factory.init_with_now(
-				<span class="kw-2">&amp;</span>client.header(<span class="kw-2">&amp;</span>BlockId::number(number)).unwrap().unwrap(),
+				<span class="kw-2">&amp;</span>client.expect_header(hash).unwrap(),
 				Box::new(<span class="kw">move </span>|| time::Instant::now()),
 			);
 
@@ -1888,8 +1878,7 @@
 		block_on(
 			txpool.maintain(chain_event(
 				client
-					.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0u64</span>))
-					.expect(<span class="string">&quot;header get error&quot;</span>)
+					.expect_header(client.info().genesis_hash)
 					.expect(<span class="string">&quot;there should be header&quot;</span>),
 			)),
 		);
@@ -1897,14 +1886,12 @@
 
 		<span class="comment">// let&#39;s create one block and import it
 		</span><span class="kw">let </span>block = propose_block(<span class="kw-2">&amp;</span>client, <span class="number">0</span>, <span class="number">2</span>, <span class="number">7</span>);
+		<span class="kw">let </span>hashof1 = block.hash();
 		block_on(client.import(BlockOrigin::Own, block)).unwrap();
 
 		block_on(
 			txpool.maintain(chain_event(
-				client
-					.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">1</span>))
-					.expect(<span class="string">&quot;header get error&quot;</span>)
-					.expect(<span class="string">&quot;there should be header&quot;</span>),
+				client.expect_header(hashof1).expect(<span class="string">&quot;there should be header&quot;</span>),
 			)),
 		);
 		<span class="macro">assert_eq!</span>(txpool.ready().count(), <span class="number">5</span>);
@@ -1926,8 +1913,7 @@
 			client.clone(),
 		);
 		<span class="kw">let </span>genesis_header = client
-			.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0u64</span>))
-			.expect(<span class="string">&quot;header get error&quot;</span>)
+			.expect_header(client.info().genesis_hash)
 			.expect(<span class="string">&quot;there should be header&quot;</span>);
 
 		<span class="kw">let </span>extrinsics_num = <span class="number">5</span>;
@@ -2041,8 +2027,7 @@
 		block_on(
 			txpool.maintain(chain_event(
 				client
-					.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0u64</span>))
-					.expect(<span class="string">&quot;header get error&quot;</span>)
+					.expect_header(client.info().genesis_hash)
 					.expect(<span class="string">&quot;there should be header&quot;</span>),
 			)),
 		);
@@ -2053,7 +2038,7 @@
 
 		<span class="kw">let </span>cell = Mutex::new(time::Instant::now());
 		<span class="kw">let </span>proposer = proposer_factory.init_with_now(
-			<span class="kw-2">&amp;</span>client.header(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>)).unwrap().unwrap(),
+			<span class="kw-2">&amp;</span>client.expect_header(client.info().genesis_hash).unwrap(),
 			Box::new(<span class="kw">move </span>|| {
 				<span class="kw">let </span><span class="kw-2">mut </span>value = cell.lock();
 				<span class="kw">let </span>old = <span class="kw-2">*</span>value;
@@ -2104,8 +2089,7 @@
 		block_on(
 			txpool.maintain(chain_event(
 				client
-					.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0u64</span>))
-					.expect(<span class="string">&quot;header get error&quot;</span>)
+					.expect_header(client.info().genesis_hash)
 					.expect(<span class="string">&quot;there should be header&quot;</span>),
 			)),
 		);
@@ -2118,7 +2102,7 @@
 		<span class="kw">let </span>cell = Arc::new(Mutex::new((<span class="number">0</span>, time::Instant::now())));
 		<span class="kw">let </span>cell2 = cell.clone();
 		<span class="kw">let </span>proposer = proposer_factory.init_with_now(
-			<span class="kw-2">&amp;</span>client.header(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>)).unwrap().unwrap(),
+			<span class="kw-2">&amp;</span>client.expect_header(client.info().genesis_hash).unwrap(),
 			Box::new(<span class="kw">move </span>|| {
 				<span class="kw">let </span><span class="kw-2">mut </span>value = cell.lock();
 				<span class="kw">let </span>(called, old) = <span class="kw-2">*</span>value;

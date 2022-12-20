@@ -1519,6 +1519,17 @@
 <a href="#1519" id="1519">1519</a>
 <a href="#1520" id="1520">1520</a>
 <a href="#1521" id="1521">1521</a>
+<a href="#1522" id="1522">1522</a>
+<a href="#1523" id="1523">1523</a>
+<a href="#1524" id="1524">1524</a>
+<a href="#1525" id="1525">1525</a>
+<a href="#1526" id="1526">1526</a>
+<a href="#1527" id="1527">1527</a>
+<a href="#1528" id="1528">1528</a>
+<a href="#1529" id="1529">1529</a>
+<a href="#1530" id="1530">1530</a>
+<a href="#1531" id="1531">1531</a>
+<a href="#1532" id="1532">1532</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -1986,7 +1997,7 @@
 				.map(|hash| {
 					backend
 						.blockchain()
-						.expect_header(BlockId::hash(<span class="kw-2">*</span>hash))
+						.expect_header(<span class="kw-2">*</span>hash)
 						.expect(<span class="string">&quot;just finalized block should be available; qed.&quot;</span>)
 				})
 				.chain(std::iter::once(header.clone()))
@@ -2239,16 +2250,25 @@
 		</span><span class="kw">let </span>target_header = <span class="kw">if </span>target_number == <span class="self">self</span>.best_grandpa_block() {
 			<span class="self">self</span>.persisted_state.best_grandpa_block_header.clone()
 		} <span class="kw">else </span>{
-			<span class="self">self</span>.backend
+			<span class="kw">let </span>hash = <span class="self">self
+				</span>.backend
 				.blockchain()
-				.expect_header(BlockId::Number(target_number))
+				.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(target_number))
 				.map_err(|err| {
 					<span class="kw">let </span>err_msg = <span class="macro">format!</span>(
-						<span class="string">&quot;Couldn&#39;t get header for block #{:?} (error: {:?}), skipping vote..&quot;</span>,
+						<span class="string">&quot;Couldn&#39;t get hash for block #{:?} (error: {:?}), skipping vote..&quot;</span>,
 						target_number, err
 					);
 					Error::Backend(err_msg)
-				})<span class="question-mark">?
+				})<span class="question-mark">?</span>;
+
+			<span class="self">self</span>.backend.blockchain().expect_header(hash).map_err(|err| {
+				<span class="kw">let </span>err_msg = <span class="macro">format!</span>(
+					<span class="string">&quot;Couldn&#39;t get header for block #{:?} ({:?}) (error: {:?}), skipping vote..&quot;</span>,
+					target_number, hash, err
+				);
+				Error::Backend(err_msg)
+			})<span class="question-mark">?
 		</span>};
 		<span class="kw">let </span>target_hash = target_header.hash();
 
@@ -2571,8 +2591,10 @@
 			<span class="string">&quot;/beefy/justifs/1&quot;</span>.into(),
 			known_peers,
 		);
-		<span class="kw">let </span>at = BlockId::number(Zero::zero());
-		<span class="kw">let </span>genesis_header = backend.blockchain().expect_header(at).unwrap();
+		<span class="kw">let </span>genesis_header = backend
+			.blockchain()
+			.expect_header(backend.blockchain().info().genesis_hash)
+			.unwrap();
 		<span class="kw">let </span>persisted_state = PersistedState::checked_new(
 			genesis_header,
 			Zero::zero(),

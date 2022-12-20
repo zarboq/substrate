@@ -392,7 +392,7 @@
 <span class="doccomment">/// Blockchain database header backend. Does not perform any validation.
 </span><span class="kw">pub trait </span>HeaderBackend&lt;Block: BlockT&gt;: Send + Sync {
 	<span class="doccomment">/// Get block header. Returns `None` if block is not found.
-	</span><span class="kw">fn </span>header(<span class="kw-2">&amp;</span><span class="self">self</span>, id: BlockId&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Block::Header&gt;&gt;;
+	</span><span class="kw">fn </span>header(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Block::Header&gt;&gt;;
 	<span class="doccomment">/// Get blockchain info.
 	</span><span class="kw">fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Info&lt;Block&gt;;
 	<span class="doccomment">/// Get block status.
@@ -422,9 +422,9 @@
 	}
 
 	<span class="doccomment">/// Get block header. Returns `UnknownBlock` error if block is not found.
-	</span><span class="kw">fn </span>expect_header(<span class="kw-2">&amp;</span><span class="self">self</span>, id: BlockId&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Block::Header&gt; {
-		<span class="self">self</span>.header(id)<span class="question-mark">?
-			</span>.ok_or_else(|| Error::UnknownBlock(<span class="macro">format!</span>(<span class="string">&quot;Expect header: {}&quot;</span>, id)))
+	</span><span class="kw">fn </span>expect_header(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;Block::Header&gt; {
+		<span class="self">self</span>.header(hash)<span class="question-mark">?
+			</span>.ok_or_else(|| Error::UnknownBlock(<span class="macro">format!</span>(<span class="string">&quot;Expect header: {}&quot;</span>, hash)))
 	}
 
 	<span class="doccomment">/// Convert an arbitrary block ID into a block number. Returns `UnknownBlock` error if block is
@@ -560,7 +560,7 @@
 		import_lock: <span class="kw-2">&amp;</span>RwLock&lt;()&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Block::Hash&gt;&gt; {
 		<span class="kw">let </span>target_header = {
-			<span class="kw">match </span><span class="self">self</span>.header(BlockId::Hash(target_hash))<span class="question-mark">? </span>{
+			<span class="kw">match </span><span class="self">self</span>.header(target_hash)<span class="question-mark">? </span>{
 				<span class="prelude-val">Some</span>(x) =&gt; x,
 				<span class="comment">// target not in blockchain
 				</span><span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
@@ -615,7 +615,7 @@
 			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(max_number) = maybe_max_number {
 				<span class="kw">loop </span>{
 					<span class="kw">let </span>current_header = <span class="self">self
-						</span>.header(BlockId::Hash(current_hash))<span class="question-mark">?
+						</span>.header(current_hash)<span class="question-mark">?
 						</span>.ok_or_else(|| Error::MissingHeader(current_hash.to_string()))<span class="question-mark">?</span>;
 
 					<span class="kw">if </span>current_header.number() &lt;= <span class="kw-2">&amp;</span>max_number {
@@ -635,7 +635,7 @@
 				}
 
 				<span class="kw">let </span>current_header = <span class="self">self
-					</span>.header(BlockId::Hash(current_hash))<span class="question-mark">?
+					</span>.header(current_hash)<span class="question-mark">?
 					</span>.ok_or_else(|| Error::MissingHeader(current_hash.to_string()))<span class="question-mark">?</span>;
 
 				<span class="comment">// stop search in this chain once we go below the target&#39;s block number

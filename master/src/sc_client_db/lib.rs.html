@@ -3927,10 +3927,6 @@
 <a href="#3927" id="3927">3927</a>
 <a href="#3928" id="3928">3928</a>
 <a href="#3929" id="3929">3929</a>
-<a href="#3930" id="3930">3930</a>
-<a href="#3931" id="3931">3931</a>
-<a href="#3932" id="3932">3932</a>
-<a href="#3933" id="3933">3933</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -4457,21 +4453,19 @@
 }
 
 <span class="kw">impl</span>&lt;Block: BlockT&gt; sc_client_api::blockchain::HeaderBackend&lt;Block&gt; <span class="kw">for </span>BlockchainDb&lt;Block&gt; {
-	<span class="kw">fn </span>header(<span class="kw-2">&amp;</span><span class="self">self</span>, id: BlockId&lt;Block&gt;) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;Block::Header&gt;&gt; {
-		<span class="kw">match </span><span class="kw-2">&amp;</span>id {
-			BlockId::Hash(h) =&gt; {
-				<span class="kw">let </span><span class="kw-2">mut </span>cache = <span class="self">self</span>.header_cache.lock();
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(result) = cache.get_refresh(h) {
-					<span class="kw">return </span><span class="prelude-val">Ok</span>(result.clone())
-				}
-				<span class="kw">let </span>header =
-					utils::read_header(<span class="kw-2">&amp;*</span><span class="self">self</span>.db, columns::KEY_LOOKUP, columns::HEADER, id)<span class="question-mark">?</span>;
-				cache_header(<span class="kw-2">&amp;mut </span>cache, <span class="kw-2">*</span>h, header.clone());
-				<span class="prelude-val">Ok</span>(header)
-			},
-			BlockId::Number(<span class="kw">_</span>) =&gt;
-				utils::read_header(<span class="kw-2">&amp;*</span><span class="self">self</span>.db, columns::KEY_LOOKUP, columns::HEADER, id),
+	<span class="kw">fn </span>header(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;Block::Header&gt;&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>cache = <span class="self">self</span>.header_cache.lock();
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(result) = cache.get_refresh(<span class="kw-2">&amp;</span>hash) {
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(result.clone())
 		}
+		<span class="kw">let </span>header = utils::read_header(
+			<span class="kw-2">&amp;*</span><span class="self">self</span>.db,
+			columns::KEY_LOOKUP,
+			columns::HEADER,
+			BlockId::&lt;Block&gt;::Hash(hash),
+		)<span class="question-mark">?</span>;
+		cache_header(<span class="kw-2">&amp;mut </span>cache, hash, header.clone());
+		<span class="prelude-val">Ok</span>(header)
 	}
 
 	<span class="kw">fn </span>info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; sc_client_api::blockchain::Info&lt;Block&gt; {
@@ -4490,7 +4484,7 @@
 
 	<span class="kw">fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: BlockId&lt;Block&gt;) -&gt; ClientResult&lt;sc_client_api::blockchain::BlockStatus&gt; {
 		<span class="kw">let </span>exists = <span class="kw">match </span>id {
-			BlockId::Hash(<span class="kw">_</span>) =&gt; <span class="self">self</span>.header(id)<span class="question-mark">?</span>.is_some(),
+			BlockId::Hash(hash) =&gt; <span class="self">self</span>.header(hash)<span class="question-mark">?</span>.is_some(),
 			BlockId::Number(n) =&gt; n &lt;= <span class="self">self</span>.meta.read().best_number,
 		};
 		<span class="kw">match </span>exists {
@@ -4504,8 +4498,13 @@
 	}
 
 	<span class="kw">fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>, number: NumberFor&lt;Block&gt;) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;Block::Hash&gt;&gt; {
-		<span class="self">self</span>.header(BlockId::Number(number))
-			.map(|maybe_header| maybe_header.map(|header| header.hash()))
+		<span class="prelude-val">Ok</span>(utils::read_header::&lt;Block&gt;(
+			<span class="kw-2">&amp;*</span><span class="self">self</span>.db,
+			columns::KEY_LOOKUP,
+			columns::HEADER,
+			BlockId::Number(number),
+		)<span class="question-mark">?
+		</span>.map(|header| header.hash()))
 	}
 }
 
@@ -4669,7 +4668,7 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;CachedHeaderMetadata&lt;Block&gt;, <span class="self">Self</span>::Error&gt; {
 		<span class="self">self</span>.header_metadata_cache.header_metadata(hash).map_or_else(
 			|| {
-				<span class="self">self</span>.header(BlockId::hash(hash))<span class="question-mark">?
+				<span class="self">self</span>.header(hash)<span class="question-mark">?
 					</span>.map(|header| {
 						<span class="kw">let </span>header_metadata = CachedHeaderMetadata::from(<span class="kw-2">&amp;</span>header);
 						<span class="self">self</span>.header_metadata_cache
@@ -5302,7 +5301,7 @@
 		};
 
 		<span class="kw">for </span>(block_hash, justification) <span class="kw">in </span>operation.finalized_blocks {
-			<span class="kw">let </span>block_header = <span class="self">self</span>.blockchain.expect_header(BlockId::Hash(block_hash))<span class="question-mark">?</span>;
+			<span class="kw">let </span>block_header = <span class="self">self</span>.blockchain.expect_header(block_hash)<span class="question-mark">?</span>;
 			meta_updates.push(<span class="self">self</span>.finalize_block_with_transaction(
 				<span class="kw-2">&amp;mut </span>transaction,
 				block_hash,
@@ -5327,8 +5326,7 @@
 				.highest_leaf()
 				.map(|(n, <span class="kw">_</span>)| n)
 				.unwrap_or(Zero::zero());
-			<span class="kw">let </span>existing_header =
-				number &lt;= highest_leaf &amp;&amp; <span class="self">self</span>.blockchain.header(BlockId::hash(hash))<span class="question-mark">?</span>.is_some();
+			<span class="kw">let </span>existing_header = number &lt;= highest_leaf &amp;&amp; <span class="self">self</span>.blockchain.header(hash)<span class="question-mark">?</span>.is_some();
 
 			<span class="comment">// blocks are keyed by number + hash.
 			</span><span class="kw">let </span>lookup_key = utils::number_and_hash_to_lookup_key(number, hash)<span class="question-mark">?</span>;
@@ -5548,10 +5546,7 @@
 						);
 					}
 				} <span class="kw">else if </span>number &gt; best_num + One::one() &amp;&amp;
-					number &gt; One::one() &amp;&amp; <span class="self">self
-					</span>.blockchain
-					.header(BlockId::hash(parent_hash))<span class="question-mark">?
-					</span>.is_none()
+					number &gt; One::one() &amp;&amp; <span class="self">self</span>.blockchain.header(parent_hash)<span class="question-mark">?</span>.is_none()
 				{
 					<span class="kw">let </span>gap = (best_num + One::one(), number - One::one());
 					transaction.set(columns::META, meta_keys::BLOCK_GAP, <span class="kw-2">&amp;</span>gap.encode());
@@ -5573,10 +5568,9 @@
 		</span>};
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(set_head) = operation.set_head {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(header) = sc_client_api::blockchain::HeaderBackend::header(
-				<span class="kw-2">&amp;</span><span class="self">self</span>.blockchain,
-				BlockId::Hash(set_head),
-			)<span class="question-mark">? </span>{
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(header) =
+				sc_client_api::blockchain::HeaderBackend::header(<span class="kw-2">&amp;</span><span class="self">self</span>.blockchain, set_head)<span class="question-mark">?
+			</span>{
 				<span class="kw">let </span>number = header.number();
 				<span class="kw">let </span>hash = header.hash();
 
@@ -5700,10 +5694,9 @@
 			// that are canonical, but not yet finalized. So we stop deleting as soon as
 			// we reach canonical chain.
 			</span><span class="kw">while </span><span class="self">self</span>.blockchain.hash(number)<span class="question-mark">? </span>!= <span class="prelude-val">Some</span>(hash) {
-				<span class="kw">let </span>id = BlockId::&lt;Block&gt;::hash(hash);
-				<span class="kw">match </span><span class="self">self</span>.blockchain.header(id)<span class="question-mark">? </span>{
+				<span class="kw">match </span><span class="self">self</span>.blockchain.header(hash)<span class="question-mark">? </span>{
 					<span class="prelude-val">Some</span>(header) =&gt; {
-						<span class="self">self</span>.prune_block(transaction, id)<span class="question-mark">?</span>;
+						<span class="self">self</span>.prune_block(transaction, BlockId::&lt;Block&gt;::hash(hash))<span class="question-mark">?</span>;
 						number = header.number().saturating_sub(One::one());
 						hash = <span class="kw-2">*</span>header.parent_hash();
 					},
@@ -5946,7 +5939,7 @@
 		justification: <span class="prelude-ty">Option</span>&lt;Justification&gt;,
 	) -&gt; ClientResult&lt;()&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>transaction = Transaction::new();
-		<span class="kw">let </span>header = <span class="self">self</span>.blockchain.expect_header(BlockId::Hash(hash))<span class="question-mark">?</span>;
+		<span class="kw">let </span>header = <span class="self">self</span>.blockchain.expect_header(hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>displaced = <span class="prelude-val">None</span>;
 
 		<span class="kw">let </span>m = <span class="self">self</span>.finalize_block_with_transaction(
@@ -5968,7 +5961,7 @@
 		justification: Justification,
 	) -&gt; ClientResult&lt;()&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>transaction: Transaction&lt;DbHash&gt; = Transaction::new();
-		<span class="kw">let </span>header = <span class="self">self</span>.blockchain.expect_header(BlockId::Hash(hash))<span class="question-mark">?</span>;
+		<span class="kw">let </span>header = <span class="self">self</span>.blockchain.expect_header(hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span>number = <span class="kw-2">*</span>header.number();
 
 		<span class="comment">// Check if the block is finalized first.
@@ -6074,13 +6067,12 @@
 					<span class="kw">return </span><span class="prelude-val">Ok</span>(c.saturated_into::&lt;NumberFor&lt;Block&gt;&gt;())
 				}
 				<span class="kw">let </span><span class="kw-2">mut </span>transaction = Transaction::new();
-				<span class="kw">let </span>removed =
-					<span class="self">self</span>.blockchain.header(BlockId::Hash(hash_to_revert))<span class="question-mark">?</span>.ok_or_else(|| {
-						sp_blockchain::Error::UnknownBlock(<span class="macro">format!</span>(
-							<span class="string">&quot;Error reverting to {}. Block header not found.&quot;</span>,
-							hash_to_revert,
-						))
-					})<span class="question-mark">?</span>;
+				<span class="kw">let </span>removed = <span class="self">self</span>.blockchain.header(hash_to_revert)<span class="question-mark">?</span>.ok_or_else(|| {
+					sp_blockchain::Error::UnknownBlock(<span class="macro">format!</span>(
+						<span class="string">&quot;Error reverting to {}. Block header not found.&quot;</span>,
+						hash_to_revert,
+					))
+				})<span class="question-mark">?</span>;
 				<span class="kw">let </span>removed_hash = removed.hash();
 
 				<span class="kw">let </span>prev_number = number_to_revert.saturating_sub(One::one());
@@ -7129,7 +7121,7 @@
 		};
 
 		{
-			<span class="kw">let </span>header = backend.blockchain().header(BlockId::Hash(hash1)).unwrap().unwrap();
+			<span class="kw">let </span>header = backend.blockchain().header(hash1).unwrap().unwrap();
 			<span class="kw">let </span><span class="kw-2">mut </span>op = backend.begin_operation().unwrap();
 			op.set_block_data(header, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, NewBlockState::Best).unwrap();
 			backend.commit_operation(op).unwrap();
@@ -7536,26 +7528,26 @@
 		<span class="macro">assert_eq!</span>(backend.blockchain().children(blocks[<span class="number">1</span>]).unwrap(), <span class="macro">vec!</span>[blocks[<span class="number">2</span>], blocks[<span class="number">3</span>]]);
 
 		<span class="macro">assert!</span>(backend.have_state_at(blocks[<span class="number">3</span>], <span class="number">2</span>));
-		<span class="macro">assert!</span>(backend.blockchain().header(BlockId::hash(blocks[<span class="number">3</span>])).unwrap().is_some());
+		<span class="macro">assert!</span>(backend.blockchain().header(blocks[<span class="number">3</span>]).unwrap().is_some());
 		backend.remove_leaf_block(blocks[<span class="number">3</span>]).unwrap();
 		<span class="macro">assert!</span>(!backend.have_state_at(blocks[<span class="number">3</span>], <span class="number">2</span>));
-		<span class="macro">assert!</span>(backend.blockchain().header(BlockId::hash(blocks[<span class="number">3</span>])).unwrap().is_none());
+		<span class="macro">assert!</span>(backend.blockchain().header(blocks[<span class="number">3</span>]).unwrap().is_none());
 		<span class="macro">assert_eq!</span>(backend.blockchain().leaves().unwrap(), <span class="macro">vec!</span>[blocks[<span class="number">2</span>], best_hash]);
 		<span class="macro">assert_eq!</span>(backend.blockchain().children(blocks[<span class="number">1</span>]).unwrap(), <span class="macro">vec!</span>[blocks[<span class="number">2</span>]]);
 
 		<span class="macro">assert!</span>(backend.have_state_at(blocks[<span class="number">2</span>], <span class="number">2</span>));
-		<span class="macro">assert!</span>(backend.blockchain().header(BlockId::hash(blocks[<span class="number">2</span>])).unwrap().is_some());
+		<span class="macro">assert!</span>(backend.blockchain().header(blocks[<span class="number">2</span>]).unwrap().is_some());
 		backend.remove_leaf_block(blocks[<span class="number">2</span>]).unwrap();
 		<span class="macro">assert!</span>(!backend.have_state_at(blocks[<span class="number">2</span>], <span class="number">2</span>));
-		<span class="macro">assert!</span>(backend.blockchain().header(BlockId::hash(blocks[<span class="number">2</span>])).unwrap().is_none());
+		<span class="macro">assert!</span>(backend.blockchain().header(blocks[<span class="number">2</span>]).unwrap().is_none());
 		<span class="macro">assert_eq!</span>(backend.blockchain().leaves().unwrap(), <span class="macro">vec!</span>[best_hash, blocks[<span class="number">1</span>]]);
 		<span class="macro">assert_eq!</span>(backend.blockchain().children(blocks[<span class="number">1</span>]).unwrap(), <span class="macro">vec!</span>[]);
 
 		<span class="macro">assert!</span>(backend.have_state_at(blocks[<span class="number">1</span>], <span class="number">1</span>));
-		<span class="macro">assert!</span>(backend.blockchain().header(BlockId::hash(blocks[<span class="number">1</span>])).unwrap().is_some());
+		<span class="macro">assert!</span>(backend.blockchain().header(blocks[<span class="number">1</span>]).unwrap().is_some());
 		backend.remove_leaf_block(blocks[<span class="number">1</span>]).unwrap();
 		<span class="macro">assert!</span>(!backend.have_state_at(blocks[<span class="number">1</span>], <span class="number">1</span>));
-		<span class="macro">assert!</span>(backend.blockchain().header(BlockId::hash(blocks[<span class="number">1</span>])).unwrap().is_none());
+		<span class="macro">assert!</span>(backend.blockchain().header(blocks[<span class="number">1</span>]).unwrap().is_none());
 		<span class="macro">assert_eq!</span>(backend.blockchain().leaves().unwrap(), <span class="macro">vec!</span>[best_hash]);
 		<span class="macro">assert_eq!</span>(backend.blockchain().children(blocks[<span class="number">0</span>]).unwrap(), <span class="macro">vec!</span>[best_hash]);
 	}

@@ -1179,6 +1179,12 @@
 <a href="#1179" id="1179">1179</a>
 <a href="#1180" id="1180">1180</a>
 <a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1344,17 +1350,23 @@
 
 	<span class="kw">pub fn </span>header(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		block: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
+		hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
 	) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header&gt;&gt; {
-		<span class="self">self</span>.client.header(block)
+		<span class="self">self</span>.client.header(hash)
 	}
 
 	<span class="kw">pub fn </span>has_state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, block: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; bool {
-		<span class="kw">let </span>header = <span class="kw">match </span><span class="self">self</span>.header(block).unwrap() {
-			<span class="prelude-val">Some</span>(header) =&gt; header,
-			<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
+		<span class="kw">let </span>(number, hash) = <span class="kw">match </span><span class="kw-2">*</span>block {
+			BlockId::Hash(h) =&gt; <span class="kw">match </span><span class="self">self</span>.as_client().number(h) {
+				<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(n)) =&gt; (n, h),
+				<span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
+			},
+			BlockId::Number(n) =&gt; <span class="kw">match </span><span class="self">self</span>.as_client().hash(n) {
+				<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(h)) =&gt; (n, h),
+				<span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
+			},
 		};
-		<span class="self">self</span>.backend.have_state_at(header.hash(), <span class="kw-2">*</span>header.number())
+		<span class="self">self</span>.backend.have_state_at(hash, number)
 	}
 
 	<span class="kw">pub fn </span>justifications(
@@ -1548,7 +1560,7 @@
 	{
 		<span class="kw">let </span><span class="kw-2">mut </span>hashes = Vec::with_capacity(count);
 		<span class="kw">let </span>full_client = <span class="self">self</span>.client.as_client();
-		<span class="kw">let </span><span class="kw-2">mut </span>at = full_client.header(<span class="kw-2">&amp;</span>at).unwrap().unwrap().hash();
+		<span class="kw">let </span><span class="kw-2">mut </span>at = full_client.block_hash_from_id(<span class="kw-2">&amp;</span>at).unwrap().unwrap();
 		<span class="kw">for _ in </span><span class="number">0</span>..count {
 			<span class="kw">let </span>builder =
 				full_client.new_block_at(<span class="kw-2">&amp;</span>BlockId::Hash(at), Default::default(), <span class="bool-val">false</span>).unwrap();
@@ -1585,7 +1597,7 @@
 		<span class="kw">if </span>inform_sync_about_new_best_block {
 			<span class="self">self</span>.network.new_best_block_imported(
 				at,
-				<span class="kw-2">*</span>full_client.header(<span class="kw-2">&amp;</span>BlockId::Hash(at)).ok().flatten().unwrap().number(),
+				<span class="kw-2">*</span>full_client.header(at).ok().flatten().unwrap().number(),
 			);
 		}
 		hashes
@@ -1730,7 +1742,7 @@
 	<span class="kw">pub fn </span>has_block(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: H256) -&gt; bool {
 		<span class="self">self</span>.backend
 			.as_ref()
-			.map(|backend| backend.blockchain().header(BlockId::hash(hash)).unwrap().is_some())
+			.map(|backend| backend.blockchain().header(hash).unwrap().is_some())
 			.unwrap_or(<span class="bool-val">false</span>)
 	}
 
@@ -1854,7 +1866,7 @@
 		_start: B::Hash,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;EncodedProof, Box&lt;<span class="kw">dyn </span>std::error::Error + Send + Sync&gt;&gt; {
 		<span class="kw">let </span>info = <span class="self">self</span>.<span class="number">0</span>.info();
-		<span class="kw">let </span>best_header = <span class="self">self</span>.<span class="number">0</span>.header(BlockId::hash(info.best_hash)).unwrap().unwrap();
+		<span class="kw">let </span>best_header = <span class="self">self</span>.<span class="number">0</span>.header(info.best_hash).unwrap().unwrap();
 		<span class="prelude-val">Ok</span>(EncodedProof(best_header.encode()))
 	}
 	<span class="kw">fn </span>verify(

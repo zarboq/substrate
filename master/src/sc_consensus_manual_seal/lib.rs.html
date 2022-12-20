@@ -669,6 +669,8 @@
 <a href="#669" id="669">669</a>
 <a href="#670" id="670">670</a>
 <a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1031,7 +1033,7 @@
 		<span class="kw">let </span>(client, select_chain) = builder.build_with_longest_chain();
 		<span class="kw">let </span>client = Arc::new(client);
 		<span class="kw">let </span>spawner = sp_core::testing::TaskExecutor::new();
-		<span class="kw">let </span>genesis_hash = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0</span>)).unwrap().unwrap().hash();
+		<span class="kw">let </span>genesis_hash = client.info().genesis_hash;
 		<span class="kw">let </span>pool = Arc::new(BasicPool::with_revalidation_type(
 			Options::default(),
 			<span class="bool-val">true</span>.into(),
@@ -1095,7 +1097,8 @@
 			}
 		);
 		<span class="comment">// assert that there&#39;s a new block in the db.
-		</span><span class="macro">assert!</span>(client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">1</span>)).unwrap().is_some())
+		</span><span class="macro">assert!</span>(client.header(created_block.hash).unwrap().is_some());
+		<span class="macro">assert_eq!</span>(client.header(created_block.hash).unwrap().unwrap().number, <span class="number">1</span>)
 	}
 
 	<span class="attr">#[tokio::test]
@@ -1104,7 +1107,7 @@
 		<span class="kw">let </span>(client, select_chain) = builder.build_with_longest_chain();
 		<span class="kw">let </span>client = Arc::new(client);
 		<span class="kw">let </span>spawner = sp_core::testing::TaskExecutor::new();
-		<span class="kw">let </span>genesis_hash = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0</span>)).unwrap().unwrap().hash();
+		<span class="kw">let </span>genesis_hash = client.info().genesis_hash;
 		<span class="kw">let </span>pool = Arc::new(BasicPool::with_revalidation_type(
 			Options::default(),
 			<span class="bool-val">true</span>.into(),
@@ -1165,7 +1168,7 @@
 			}
 		);
 		<span class="comment">// assert that there&#39;s a new block in the db.
-		</span><span class="kw">let </span>header = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">1</span>)).unwrap().unwrap();
+		</span><span class="kw">let </span>header = client.header(created_block.hash).unwrap().unwrap();
 		<span class="kw">let </span>(tx, rx) = futures::channel::oneshot::channel();
 		sink.send(EngineCommand::FinalizeBlock {
 			sender: <span class="prelude-val">Some</span>(tx),
@@ -1189,7 +1192,7 @@
 			<span class="kw-2">&amp;</span>sp_core::testing::TaskExecutor::new(),
 		));
 		<span class="kw">let </span>spawner = sp_core::testing::TaskExecutor::new();
-		<span class="kw">let </span>genesis_hash = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0</span>)).unwrap().unwrap().hash();
+		<span class="kw">let </span>genesis_hash = client.info().genesis_hash;
 		<span class="kw">let </span>pool = Arc::new(BasicPool::with_revalidation_type(
 			Options::default(),
 			<span class="bool-val">true</span>.into(),
@@ -1253,7 +1256,8 @@
 
 		<span class="macro">assert!</span>(pool.submit_one(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">1</span>), SOURCE, uxt(Alice, <span class="number">1</span>)).<span class="kw">await</span>.is_ok());
 
-		<span class="kw">let </span>header = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">1</span>)).expect(<span class="string">&quot;db error&quot;</span>).expect(<span class="string">&quot;imported above&quot;</span>);
+		<span class="kw">let </span>header = client.header(created_block.hash).expect(<span class="string">&quot;db error&quot;</span>).expect(<span class="string">&quot;imported above&quot;</span>);
+		<span class="macro">assert_eq!</span>(header.number, <span class="number">1</span>);
 		pool.maintain(sc_transaction_pool_api::ChainEvent::NewBestBlock {
 			hash: header.hash(),
 			tree_route: <span class="prelude-val">None</span>,
@@ -1285,7 +1289,7 @@
 			</span>.is_ok());
 		<span class="kw">let </span>imported = rx2.<span class="kw">await</span>.unwrap().unwrap();
 		<span class="comment">// assert that fork block is in the db
-		</span><span class="macro">assert!</span>(client.header(<span class="kw-2">&amp;</span>BlockId::Hash(imported.hash)).unwrap().is_some())
+		</span><span class="macro">assert!</span>(client.header(imported.hash).unwrap().is_some())
 	}
 
 	<span class="attr">#[tokio::test]
@@ -1294,7 +1298,7 @@
 		<span class="kw">let </span>(client, select_chain) = builder.build_with_longest_chain();
 		<span class="kw">let </span>client = Arc::new(client);
 		<span class="kw">let </span>spawner = sp_core::testing::TaskExecutor::new();
-		<span class="kw">let </span>genesis_hash = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">0</span>)).unwrap().unwrap().hash();
+		<span class="kw">let </span>genesis_hash = client.header(client.info().genesis_hash).unwrap().unwrap().hash();
 		<span class="kw">let </span>pool = Arc::new(BasicPool::with_revalidation_type(
 			Options::default(),
 			<span class="bool-val">true</span>.into(),
@@ -1336,8 +1340,8 @@
 		<span class="kw">let </span>created_block = rx.<span class="kw">await</span>.unwrap().unwrap();
 
 		<span class="comment">// assert that the background task returned the actual header hash
-		</span><span class="kw">let </span>header = client.header(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">1</span>)).unwrap().unwrap();
-		<span class="macro">assert_eq!</span>(header.hash(), created_block.hash);
+		</span><span class="kw">let </span>header = client.header(created_block.hash).unwrap().unwrap();
+		<span class="macro">assert_eq!</span>(header.number, <span class="number">1</span>);
 	}
 }
 </code></pre></div>

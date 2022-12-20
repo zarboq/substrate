@@ -443,6 +443,9 @@
 <a href="#443" id="443">443</a>
 <a href="#444" id="444">444</a>
 <a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright 2021 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
@@ -561,9 +564,12 @@
 		<span class="kw">let </span>set_changes = set_changes.iter_from(begin_number).ok_or(Error::MissingData)<span class="question-mark">?</span>;
 
 		<span class="kw">for </span>(<span class="kw">_</span>, last_block) <span class="kw">in </span>set_changes {
-			<span class="kw">let </span>header = blockchain.header(BlockId::Number(<span class="kw-2">*</span>last_block))<span class="question-mark">?</span>.expect(
-				<span class="string">&quot;header number comes from previously applied set changes; must exist in db; qed.&quot;</span>,
-			);
+			<span class="kw">let </span>hash = blockchain.block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(<span class="kw-2">*</span>last_block))<span class="question-mark">?
+				</span>.expect(<span class="string">&quot;header number comes from previously applied set changes; corresponding hash must exist in db; qed.&quot;</span>);
+
+			<span class="kw">let </span>header = blockchain
+				.header(hash)<span class="question-mark">?
+				</span>.expect(<span class="string">&quot;header hash obtained from header number exists in db; corresponding header must exist in db too; qed.&quot;</span>);
 
 			<span class="comment">// the last block in a set is the one that triggers a change to the next set,
 			// therefore the block must have a digest that signals the authority set change
@@ -617,7 +623,7 @@
 			});
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(latest_justification) = latest_justification {
-				<span class="kw">let </span>header = blockchain.header(BlockId::Hash(latest_justification.target().<span class="number">1</span>))<span class="question-mark">?
+				<span class="kw">let </span>header = blockchain.header(latest_justification.target().<span class="number">1</span>)<span class="question-mark">?
 					</span>.expect(<span class="string">&quot;header hash corresponds to a justification in db; must exist in db as well; qed.&quot;</span>);
 
 				proofs.push(WarpSyncFragment { header, justification: latest_justification })
