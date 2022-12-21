@@ -926,6 +926,8 @@
 <a href="#926" id="926">926</a>
 <a href="#927" id="927">927</a>
 <a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
+<a href="#930" id="930">930</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1592,7 +1594,8 @@
 				status: AssetStatus::Live,
 			},
 		);
-		<span class="self">Self</span>::deposit_event(Event::ForceCreated { asset_id: id, owner });
+		<span class="self">Self</span>::deposit_event(Event::ForceCreated { asset_id: id, owner: owner.clone() });
+		T::CallbackHandle::created(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>owner);
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -1682,6 +1685,7 @@
 					approvals_destroyed: removed_approvals <span class="kw">as </span>u32,
 					approvals_remaining: details.approvals <span class="kw">as </span>u32,
 				});
+				T::CallbackHandle::destroyed(<span class="kw-2">&amp;</span>id);
 				<span class="prelude-val">Ok</span>(())
 			})<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(removed_approvals)

@@ -1489,6 +1489,33 @@
 <a href="#1489" id="1489">1489</a>
 <a href="#1490" id="1490">1490</a>
 <a href="#1491" id="1491">1491</a>
+<a href="#1492" id="1492">1492</a>
+<a href="#1493" id="1493">1493</a>
+<a href="#1494" id="1494">1494</a>
+<a href="#1495" id="1495">1495</a>
+<a href="#1496" id="1496">1496</a>
+<a href="#1497" id="1497">1497</a>
+<a href="#1498" id="1498">1498</a>
+<a href="#1499" id="1499">1499</a>
+<a href="#1500" id="1500">1500</a>
+<a href="#1501" id="1501">1501</a>
+<a href="#1502" id="1502">1502</a>
+<a href="#1503" id="1503">1503</a>
+<a href="#1504" id="1504">1504</a>
+<a href="#1505" id="1505">1505</a>
+<a href="#1506" id="1506">1506</a>
+<a href="#1507" id="1507">1507</a>
+<a href="#1508" id="1508">1508</a>
+<a href="#1509" id="1509">1509</a>
+<a href="#1510" id="1510">1510</a>
+<a href="#1511" id="1511">1511</a>
+<a href="#1512" id="1512">1512</a>
+<a href="#1513" id="1513">1513</a>
+<a href="#1514" id="1514">1514</a>
+<a href="#1515" id="1515">1515</a>
+<a href="#1516" id="1516">1516</a>
+<a href="#1517" id="1517">1517</a>
+<a href="#1518" id="1518">1518</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1607,6 +1634,11 @@
 //!
 //! Please refer to the [`Pallet`] struct for details on publicly available functions.
 //!
+//! ### Callbacks
+//!
+//! Using `CallbackHandle` associated type, user can configure custom callback functions which are
+//! executed when new asset is created or an existing asset is destroyed.
+//!
 //! ## Related Modules
 //!
 //! * [`System`](../frame_system/index.html)
@@ -1661,6 +1693,18 @@
 <span class="kw">pub use </span>weights::WeightInfo;
 
 <span class="kw">type </span>AccountIdLookupOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::Lookup <span class="kw">as </span>StaticLookup&gt;::Source;
+
+<span class="doccomment">/// Trait with callbacks that are executed after successfull asset creation or destruction.
+</span><span class="kw">pub trait </span>AssetsCallback&lt;AssetId, AccountId&gt; {
+	<span class="doccomment">/// Indicates that asset with `id` was successfully created by the `owner`
+	</span><span class="kw">fn </span>created(_id: <span class="kw-2">&amp;</span>AssetId, _owner: <span class="kw-2">&amp;</span>AccountId) {}
+
+	<span class="doccomment">/// Indicates that asset with `id` has just been destroyed
+	</span><span class="kw">fn </span>destroyed(_id: <span class="kw-2">&amp;</span>AssetId) {}
+}
+
+<span class="doccomment">/// Empty implementation in case no callbacks are required.
+</span><span class="kw">impl</span>&lt;AssetId, AccountId&gt; AssetsCallback&lt;AssetId, AccountId&gt; <span class="kw">for </span>() {}
 
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
@@ -1773,6 +1817,9 @@
 
 		<span class="doccomment">/// Additional data to be stored with an account&#39;s asset balance.
 		</span><span class="kw">type </span>Extra: Member + Parameter + Default + MaxEncodedLen;
+
+		<span class="doccomment">/// Callback methods for asset state change (e.g. asset created or destroyed)
+		</span><span class="kw">type </span>CallbackHandle: AssetsCallback&lt;<span class="self">Self</span>::AssetId, <span class="self">Self</span>::AccountId&gt;;
 
 		<span class="doccomment">/// Weight information for extrinsics in this pallet.
 		</span><span class="kw">type </span>WeightInfo: WeightInfo;
@@ -2089,7 +2136,14 @@
 					status: AssetStatus::Live,
 				},
 			);
-			<span class="self">Self</span>::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
+
+			<span class="self">Self</span>::deposit_event(Event::Created {
+				asset_id: id,
+				creator: owner.clone(),
+				owner: admin,
+			});
+			T::CallbackHandle::created(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>owner);
+
 			<span class="prelude-val">Ok</span>(())
 		}
 
