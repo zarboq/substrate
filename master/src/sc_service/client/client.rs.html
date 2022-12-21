@@ -2651,9 +2651,9 @@
 			CoreApi&lt;Block&gt; + ApiExt&lt;Block, StateBackend = B::State&gt;,
 	{
 		<span class="kw">let </span>parent_hash = <span class="kw-2">*</span>import_headers.post().parent_hash();
-		<span class="kw">let </span>status = <span class="self">self</span>.backend.blockchain().status(BlockId::Hash(hash))<span class="question-mark">?</span>;
-		<span class="kw">let </span>parent_exists = <span class="self">self</span>.backend.blockchain().status(BlockId::Hash(parent_hash))<span class="question-mark">? </span>==
-			blockchain::BlockStatus::InChain;
+		<span class="kw">let </span>status = <span class="self">self</span>.backend.blockchain().status(hash)<span class="question-mark">?</span>;
+		<span class="kw">let </span>parent_exists =
+			<span class="self">self</span>.backend.blockchain().status(parent_hash)<span class="question-mark">? </span>== blockchain::BlockStatus::InChain;
 		<span class="kw">match </span>(import_existing, status) {
 			(<span class="bool-val">false</span>, blockchain::BlockStatus::InChain) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(ImportResult::AlreadyInChain),
 			(<span class="bool-val">false</span>, blockchain::BlockStatus::Unknown) =&gt; {},
@@ -3671,8 +3671,8 @@
 		<span class="self">self</span>.backend.blockchain().info()
 	}
 
-	<span class="kw">fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: BlockId&lt;Block&gt;) -&gt; sp_blockchain::Result&lt;blockchain::BlockStatus&gt; {
-		<span class="self">self</span>.backend.blockchain().status(id)
+	<span class="kw">fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; sp_blockchain::Result&lt;blockchain::BlockStatus&gt; {
+		<span class="self">self</span>.backend.blockchain().status(hash)
 	}
 
 	<span class="kw">fn </span>number(
@@ -3723,8 +3723,8 @@
 		<span class="self">self</span>.backend.blockchain().info()
 	}
 
-	<span class="kw">fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: BlockId&lt;Block&gt;) -&gt; sp_blockchain::Result&lt;blockchain::BlockStatus&gt; {
-		(<span class="kw-2">**</span><span class="self">self</span>).status(id)
+	<span class="kw">fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; sp_blockchain::Result&lt;blockchain::BlockStatus&gt; {
+		(<span class="kw-2">**</span><span class="self">self</span>).status(hash)
 	}
 
 	<span class="kw">fn </span>number(
