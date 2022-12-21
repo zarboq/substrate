@@ -1279,6 +1279,26 @@
 <a href="#1279" id="1279">1279</a>
 <a href="#1280" id="1280">1280</a>
 <a href="#1281" id="1281">1281</a>
+<a href="#1282" id="1282">1282</a>
+<a href="#1283" id="1283">1283</a>
+<a href="#1284" id="1284">1284</a>
+<a href="#1285" id="1285">1285</a>
+<a href="#1286" id="1286">1286</a>
+<a href="#1287" id="1287">1287</a>
+<a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
+<a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
+<a href="#1296" id="1296">1296</a>
+<a href="#1297" id="1297">1297</a>
+<a href="#1298" id="1298">1298</a>
+<a href="#1299" id="1299">1299</a>
+<a href="#1300" id="1300">1300</a>
+<a href="#1301" id="1301">1301</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2033,6 +2053,22 @@
 		<span class="prelude-val">Ok</span>(index)
 	}
 
+	<span class="doccomment">/// Remove trailing `None` items of an agenda at `when`. If all items are `None` remove the
+	/// agenda record entirely.
+	</span><span class="kw">fn </span>cleanup_agenda(when: T::BlockNumber) {
+		<span class="kw">let </span><span class="kw-2">mut </span>agenda = Agenda::&lt;T&gt;::get(when);
+		<span class="kw">match </span>agenda.iter().rposition(|i| i.is_some()) {
+			<span class="prelude-val">Some</span>(i) <span class="kw">if </span>agenda.len() &gt; i + <span class="number">1 </span>=&gt; {
+				agenda.truncate(i + <span class="number">1</span>);
+				Agenda::&lt;T&gt;::insert(when, agenda);
+			},
+			<span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; {},
+			<span class="prelude-val">None </span>=&gt; {
+				Agenda::&lt;T&gt;::remove(when);
+			},
+		}
+	}
+
 	<span class="kw">fn </span>do_schedule(
 		when: DispatchTime&lt;T::BlockNumber&gt;,
 		maybe_periodic: <span class="prelude-ty">Option</span>&lt;schedule::Period&lt;T::BlockNumber&gt;&gt;,
@@ -2083,6 +2119,7 @@
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(id) = s.maybe_id {
 				Lookup::&lt;T&gt;::remove(id);
 			}
+			<span class="self">Self</span>::cleanup_agenda(when);
 			<span class="self">Self</span>::deposit_event(Event::Canceled { when, index });
 			<span class="prelude-val">Ok</span>(())
 		} <span class="kw">else </span>{
@@ -2105,6 +2142,7 @@
 			<span class="macro">ensure!</span>(!<span class="macro">matches!</span>(task, <span class="prelude-val">Some</span>(Scheduled { maybe_id: <span class="prelude-val">Some</span>(<span class="kw">_</span>), .. })), Error::&lt;T&gt;::Named);
 			task.take().ok_or(Error::&lt;T&gt;::NotFound)
 		})<span class="question-mark">?</span>;
+		<span class="self">Self</span>::cleanup_agenda(when);
 		<span class="self">Self</span>::deposit_event(Event::Canceled { when, index });
 
 		<span class="self">Self</span>::place_task(new_time, task).map_err(|x| x.<span class="number">0</span>)
@@ -2161,6 +2199,7 @@
 					}
 					<span class="prelude-val">Ok</span>(())
 				})<span class="question-mark">?</span>;
+				<span class="self">Self</span>::cleanup_agenda(when);
 				<span class="self">Self</span>::deposit_event(Event::Canceled { when, index });
 				<span class="prelude-val">Ok</span>(())
 			} <span class="kw">else </span>{
@@ -2186,6 +2225,7 @@
 			<span class="kw">let </span>task = agenda.get_mut(index <span class="kw">as </span>usize).ok_or(Error::&lt;T&gt;::NotFound)<span class="question-mark">?</span>;
 			task.take().ok_or(Error::&lt;T&gt;::NotFound)
 		})<span class="question-mark">?</span>;
+		<span class="self">Self</span>::cleanup_agenda(when);
 		<span class="self">Self</span>::deposit_event(Event::Canceled { when, index });
 		<span class="self">Self</span>::place_task(new_time, task).map_err(|x| x.<span class="number">0</span>)
 	}

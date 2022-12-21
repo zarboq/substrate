@@ -292,6 +292,14 @@
 <a href="#292" id="292">292</a>
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -538,13 +546,17 @@
 	}: <span class="kw">_</span>&lt;SystemOrigin&lt;T&gt;&gt;(schedule_origin, when, <span class="number">0</span>)
 	verify {
 		<span class="macro">ensure!</span>(
-			Lookup::&lt;T&gt;::get(u32_to_name(<span class="number">0</span>)).is_none(),
-			<span class="string">&quot;didn&#39;t remove from lookup&quot;
+			s == <span class="number">1 </span>|| Lookup::&lt;T&gt;::get(u32_to_name(<span class="number">0</span>)).is_none(),
+			<span class="string">&quot;didn&#39;t remove from lookup if more than 1 task scheduled for `when`&quot;
 		</span>);
 		<span class="comment">// Removed schedule is NONE
 		</span><span class="macro">ensure!</span>(
-			Agenda::&lt;T&gt;::get(when)[<span class="number">0</span>].is_none(),
-			<span class="string">&quot;didn&#39;t remove from schedule&quot;
+			s == <span class="number">1 </span>|| Agenda::&lt;T&gt;::get(when)[<span class="number">0</span>].is_none(),
+			<span class="string">&quot;didn&#39;t remove from schedule if more than 1 task scheduled for `when`&quot;
+		</span>);
+		<span class="macro">ensure!</span>(
+			s &gt; <span class="number">1 </span>|| Agenda::&lt;T&gt;::get(when).len() == <span class="number">0</span>,
+			<span class="string">&quot;remove from schedule if only 1 task scheduled for `when`&quot;
 		</span>);
 	}
 
@@ -574,13 +586,17 @@
 	}: <span class="kw">_</span>(RawOrigin::Root, u32_to_name(<span class="number">0</span>))
 	verify {
 		<span class="macro">ensure!</span>(
-			Lookup::&lt;T&gt;::get(u32_to_name(<span class="number">0</span>)).is_none(),
-			<span class="string">&quot;didn&#39;t remove from lookup&quot;
+			s == <span class="number">1 </span>|| Lookup::&lt;T&gt;::get(u32_to_name(<span class="number">0</span>)).is_none(),
+			<span class="string">&quot;didn&#39;t remove from lookup if more than 1 task scheduled for `when`&quot;
 		</span>);
 		<span class="comment">// Removed schedule is NONE
 		</span><span class="macro">ensure!</span>(
-			Agenda::&lt;T&gt;::get(when)[<span class="number">0</span>].is_none(),
-			<span class="string">&quot;didn&#39;t remove from schedule&quot;
+			s == <span class="number">1 </span>|| Agenda::&lt;T&gt;::get(when)[<span class="number">0</span>].is_none(),
+			<span class="string">&quot;didn&#39;t remove from schedule if more than 1 task scheduled for `when`&quot;
+		</span>);
+		<span class="macro">ensure!</span>(
+			s &gt; <span class="number">1 </span>|| Agenda::&lt;T&gt;::get(when).len() == <span class="number">0</span>,
+			<span class="string">&quot;remove from schedule if only 1 task scheduled for `when`&quot;
 		</span>);
 	}
 
