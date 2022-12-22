@@ -1043,6 +1043,15 @@
 <a href="#1043" id="1043">1043</a>
 <a href="#1044" id="1044">1044</a>
 <a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1316,14 +1325,23 @@
 				<span class="comment">// if it&#39;s not found in the pool query the runtime at parent block
 				// to get validity info and tags that the extrinsic provides.
 				</span><span class="prelude-val">None </span>=&gt; {
-					<span class="kw">let </span>validity = <span class="self">self
-						</span>.validated_pool
-						.api()
-						.validate_transaction(parent, TransactionSource::InBlock, extrinsic.clone())
-						.<span class="kw">await</span>;
+					<span class="comment">// Avoid validating block txs if the pool is empty
+					</span><span class="kw">if </span>!<span class="self">self</span>.validated_pool.status().is_empty() {
+						<span class="kw">let </span>validity = <span class="self">self
+							</span>.validated_pool
+							.api()
+							.validate_transaction(
+								parent,
+								TransactionSource::InBlock,
+								extrinsic.clone(),
+							)
+							.<span class="kw">await</span>;
 
-					<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(validity)) = validity {
-						future_tags.extend(validity.provides);
+						<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(validity)) = validity {
+							future_tags.extend(validity.provides);
+						}
+					} <span class="kw">else </span>{
+						<span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;txpool is empty, skipping validation for block {at:?}&quot;</span>);
 					}
 				},
 			}
