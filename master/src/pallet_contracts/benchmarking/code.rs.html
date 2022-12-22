@@ -516,28 +516,6 @@
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
-<a href="#519" id="519">519</a>
-<a href="#520" id="520">520</a>
-<a href="#521" id="521">521</a>
-<a href="#522" id="522">522</a>
-<a href="#523" id="523">523</a>
-<a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -612,11 +590,6 @@
 	</span><span class="kw">pub </span>aux_body: <span class="prelude-ty">Option</span>&lt;FuncBody&gt;,
 	<span class="doccomment">/// The amount of I64 arguments the aux function should have.
 	</span><span class="kw">pub </span>aux_arg_num: u32,
-	<span class="doccomment">/// If set to true the stack height limiter is injected into the the module. This is
-	/// needed for instruction debugging because the cost of executing the stack height
-	/// instrumentation should be included in the costs for the individual instructions
-	/// that cause more metering code (only call).
-	</span><span class="kw">pub </span>inject_stack_metering: bool,
 	<span class="doccomment">/// Create a table containing function pointers.
 	</span><span class="kw">pub </span>table: <span class="prelude-ty">Option</span>&lt;TableSegment&gt;,
 	<span class="doccomment">/// Create a section named &quot;dummy&quot; of the specified size. This is useful in order to
@@ -778,13 +751,7 @@
 			)));
 		}
 
-		<span class="kw">let </span><span class="kw-2">mut </span>code = contract.build();
-
-		<span class="kw">if </span>def.inject_stack_metering {
-			code = inject_stack_metering::&lt;T&gt;(code);
-		}
-
-		<span class="kw">let </span>code = code.into_bytes().unwrap();
+		<span class="kw">let </span>code = contract.build().into_bytes().unwrap();
 		<span class="kw">let </span>hash = T::Hashing::hash(<span class="kw-2">&amp;</span>code);
 		<span class="self">Self </span>{ code: code.into(), hash, memory: def.memory }
 	}
@@ -792,14 +759,11 @@
 
 <span class="kw">impl</span>&lt;T: Config&gt; WasmModule&lt;T&gt; {
 	<span class="doccomment">/// Uses the supplied wasm module and instruments it when requested.
-	</span><span class="kw">pub fn </span>instrumented(code: <span class="kw-2">&amp;</span>[u8], inject_gas: bool, inject_stack: bool) -&gt; <span class="self">Self </span>{
+	</span><span class="kw">pub fn </span>instrumented(code: <span class="kw-2">&amp;</span>[u8], inject_gas: bool) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>module = {
 			<span class="kw">let </span><span class="kw-2">mut </span>module = Module::from_bytes(code).unwrap();
 			<span class="kw">if </span>inject_gas {
 				module = inject_gas_metering::&lt;T&gt;(module);
-			}
-			<span class="kw">if </span>inject_stack {
-				module = inject_stack_metering::&lt;T&gt;(module);
 			}
 			module
 		};
@@ -1069,14 +1033,6 @@
 	<span class="kw">let </span>gas_rules = schedule.rules(<span class="kw-2">&amp;</span>module, Determinism::Deterministic);
 	<span class="kw">let </span>backend = gas_metering::host_function::Injector::new(<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;gas&quot;</span>);
 	gas_metering::inject(module, backend, <span class="kw-2">&amp;</span>gas_rules).unwrap()
-}
-
-<span class="kw">fn </span>inject_stack_metering&lt;T: Config&gt;(module: Module) -&gt; Module {
-	<span class="kw">if let </span><span class="prelude-val">Some</span>(height) = T::Schedule::get().limits.stack_height {
-		wasm_instrument::inject_stack_limiter(module, height).unwrap()
-	} <span class="kw">else </span>{
-		module
-	}
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="pallet_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
