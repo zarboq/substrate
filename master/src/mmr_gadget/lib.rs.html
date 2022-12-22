@@ -272,6 +272,17 @@
 <a href="#272" id="272">272</a>
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -320,7 +331,7 @@
 <span class="kw">use </span>beefy_primitives::MmrRootHash;
 <span class="kw">use </span>futures::StreamExt;
 <span class="kw">use </span>log::{debug, error, trace, warn};
-<span class="kw">use </span>sc_client_api::{Backend, BlockchainEvents, FinalityNotifications};
+<span class="kw">use </span>sc_client_api::{Backend, BlockchainEvents, FinalityNotification, FinalityNotifications};
 <span class="kw">use </span>sc_offchain::OffchainDb;
 <span class="kw">use </span>sp_api::ProvideRuntimeApi;
 <span class="kw">use </span>sp_blockchain::{HeaderBackend, HeaderMetadata};
@@ -333,6 +344,62 @@
 
 <span class="doccomment">/// Logging target for the mmr gadget.
 </span><span class="kw">pub const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;mmr&quot;</span>;
+
+<span class="doccomment">/// A convenience MMR client trait that defines all the type bounds a MMR client
+/// has to satisfy and defines some helper methods.
+</span><span class="kw">pub trait </span>MmrClient&lt;B, BE&gt;:
+	BlockchainEvents&lt;B&gt; + HeaderBackend&lt;B&gt; + HeaderMetadata&lt;B&gt; + ProvideRuntimeApi&lt;B&gt;
+<span class="kw">where
+	</span>B: Block,
+	BE: Backend&lt;B&gt;,
+	<span class="self">Self</span>::Api: MmrApi&lt;B, MmrRootHash, NumberFor&lt;B&gt;&gt;,
+{
+	<span class="doccomment">/// Get the block number where the mmr pallet was added to the runtime.
+	</span><span class="kw">fn </span>first_mmr_block_num(<span class="kw-2">&amp;</span><span class="self">self</span>, notification: <span class="kw-2">&amp;</span>FinalityNotification&lt;B&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt; {
+		<span class="kw">let </span>best_block = <span class="kw-2">*</span>notification.header.number();
+		<span class="kw">match </span><span class="self">self</span>.runtime_api().mmr_leaf_count(<span class="kw-2">&amp;</span>BlockId::number(best_block)) {
+			<span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(mmr_leaf_count)) =&gt; {
+				<span class="kw">match </span>utils::first_mmr_block_num::&lt;B::Header&gt;(best_block, mmr_leaf_count) {
+					<span class="prelude-val">Ok</span>(first_mmr_block) =&gt; {
+						<span class="macro">debug!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;pallet-mmr detected at block {:?} with genesis at block {:?}&quot;</span>,
+							best_block,
+							first_mmr_block
+						);
+						<span class="prelude-val">Some</span>(first_mmr_block)
+					},
+					<span class="prelude-val">Err</span>(e) =&gt; {
+						<span class="macro">error!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;Error calculating the first mmr block: {:?}&quot;</span>, e
+						);
+						<span class="prelude-val">None
+					</span>},
+				}
+			},
+			<span class="kw">_ </span>=&gt; {
+				<span class="macro">trace!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;pallet-mmr not detected at block {:?} ... (best finalized {:?})&quot;</span>,
+					best_block,
+					notification.header.number()
+				);
+				<span class="prelude-val">None
+			</span>},
+		}
+	}
+}
+
+<span class="kw">impl</span>&lt;B, BE, T&gt; MmrClient&lt;B, BE&gt; <span class="kw">for </span>T
+<span class="kw">where
+	</span>B: Block,
+	BE: Backend&lt;B&gt;,
+	T: BlockchainEvents&lt;B&gt; + HeaderBackend&lt;B&gt; + HeaderMetadata&lt;B&gt; + ProvideRuntimeApi&lt;B&gt;,
+	T::Api: MmrApi&lt;B, MmrRootHash, NumberFor&lt;B&gt;&gt;,
+{
+	<span class="comment">// empty
+</span>}
 
 <span class="kw">struct </span>OffchainMmrBuilder&lt;B: Block, BE: Backend&lt;B&gt;, C&gt; {
 	backend: Arc&lt;BE&gt;,
@@ -347,7 +414,7 @@
 <span class="kw">where
 	</span>B: Block,
 	BE: Backend&lt;B&gt;,
-	C: ProvideRuntimeApi&lt;B&gt; + HeaderBackend&lt;B&gt; + HeaderMetadata&lt;B&gt;,
+	C: MmrClient&lt;B, BE&gt;,
 	C::Api: MmrApi&lt;B, MmrRootHash, NumberFor&lt;B&gt;&gt;,
 {
 	<span class="kw">async fn </span>try_build(
@@ -355,66 +422,21 @@
 		finality_notifications: <span class="kw-2">&amp;mut </span>FinalityNotifications&lt;B&gt;,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;OffchainMmr&lt;B, BE, C&gt;&gt; {
 		<span class="kw">while let </span><span class="prelude-val">Some</span>(notification) = finality_notifications.next().<span class="kw">await </span>{
-			<span class="kw">let </span>best_block = <span class="kw-2">*</span>notification.header.number();
-			<span class="kw">match </span><span class="self">self</span>.client.runtime_api().mmr_leaf_count(<span class="kw-2">&amp;</span>BlockId::number(best_block)) {
-				<span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(mmr_leaf_count)) =&gt; {
-					<span class="macro">debug!</span>(
-						target: LOG_TARGET,
-						<span class="string">&quot;pallet-mmr detected at block {:?} with mmr size {:?}&quot;</span>,
-						best_block,
-						mmr_leaf_count
-					);
-					<span class="kw">match </span>utils::first_mmr_block_num::&lt;B::Header&gt;(best_block, mmr_leaf_count) {
-						<span class="prelude-val">Ok</span>(first_mmr_block) =&gt; {
-							<span class="macro">debug!</span>(
-								target: LOG_TARGET,
-								<span class="string">&quot;pallet-mmr genesis computed at block {:?}&quot;</span>, first_mmr_block,
-							);
-							<span class="kw">let </span>best_canonicalized =
-								<span class="kw">match </span>offchain_mmr::load_or_init_best_canonicalized::&lt;B, BE&gt;(
-									<span class="kw-2">&amp;*</span><span class="self">self</span>.backend,
-									first_mmr_block,
-								) {
-									<span class="prelude-val">Ok</span>(best) =&gt; best,
-									<span class="prelude-val">Err</span>(e) =&gt; {
-										<span class="macro">error!</span>(
-											target: LOG_TARGET,
-											<span class="string">&quot;Error loading state from aux db: {:?}&quot;</span>, e
-										);
-										<span class="kw">return </span><span class="prelude-val">None
-									</span>},
-								};
-							<span class="kw">let </span><span class="kw-2">mut </span>offchain_mmr = OffchainMmr {
-								backend: <span class="self">self</span>.backend,
-								client: <span class="self">self</span>.client,
-								offchain_db: <span class="self">self</span>.offchain_db,
-								indexing_prefix: <span class="self">self</span>.indexing_prefix,
-								first_mmr_block,
-								best_canonicalized,
-							};
-							<span class="comment">// We need to make sure all blocks leading up to current notification
-							// have also been canonicalized.
-							</span>offchain_mmr.canonicalize_catch_up(<span class="kw-2">&amp;</span>notification);
-							<span class="comment">// We have to canonicalize and prune the blocks in the finality
-							// notification that lead to building the offchain-mmr as well.
-							</span>offchain_mmr.canonicalize_and_prune(notification);
-							<span class="kw">return </span><span class="prelude-val">Some</span>(offchain_mmr)
-						},
-						<span class="prelude-val">Err</span>(e) =&gt; {
-							<span class="macro">error!</span>(
-								target: LOG_TARGET,
-								<span class="string">&quot;Error calculating the first mmr block: {:?}&quot;</span>, e
-							);
-						},
-					}
-				},
-				<span class="kw">_ </span>=&gt; {
-					<span class="macro">trace!</span>(
-						target: LOG_TARGET,
-						<span class="string">&quot;Waiting for MMR pallet to become available... (best finalized {:?})&quot;</span>,
-						notification.header.number()
-					);
-				},
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(first_mmr_block_num) = <span class="self">self</span>.client.first_mmr_block_num(<span class="kw-2">&amp;</span>notification) {
+				<span class="kw">let </span><span class="kw-2">mut </span>offchain_mmr = OffchainMmr::new(
+					<span class="self">self</span>.backend,
+					<span class="self">self</span>.client,
+					<span class="self">self</span>.offchain_db,
+					<span class="self">self</span>.indexing_prefix,
+					first_mmr_block_num,
+				)<span class="question-mark">?</span>;
+				<span class="comment">// We need to make sure all blocks leading up to current notification
+				// have also been canonicalized.
+				</span>offchain_mmr.canonicalize_catch_up(<span class="kw-2">&amp;</span>notification);
+				<span class="comment">// We have to canonicalize and prune the blocks in the finality
+				// notification that lead to building the offchain-mmr as well.
+				</span>offchain_mmr.canonicalize_and_prune(notification);
+				<span class="kw">return </span><span class="prelude-val">Some</span>(offchain_mmr)
 			}
 		}
 
@@ -439,7 +461,7 @@
 	</span>B: Block,
 	&lt;B::Header <span class="kw">as </span>Header&gt;::Number: Into&lt;LeafIndex&gt;,
 	BE: Backend&lt;B&gt;,
-	C: BlockchainEvents&lt;B&gt; + HeaderBackend&lt;B&gt; + HeaderMetadata&lt;B&gt; + ProvideRuntimeApi&lt;B&gt;,
+	C: MmrClient&lt;B, BE&gt;,
 	C::Api: MmrApi&lt;B, MmrRootHash, NumberFor&lt;B&gt;&gt;,
 {
 	<span class="kw">async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>, builder: OffchainMmrBuilder&lt;B, BE, C&gt;) {

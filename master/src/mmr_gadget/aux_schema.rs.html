@@ -226,6 +226,16 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -282,8 +292,8 @@
 	}
 }
 
-<span class="doccomment">/// Load or initialize persistent data from backend.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>load_persistent&lt;B, BE&gt;(backend: <span class="kw-2">&amp;</span>BE) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;PersistedState&lt;B&gt;&gt;&gt;
+<span class="doccomment">/// Load persistent data from backend.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>load_state&lt;B, BE&gt;(backend: <span class="kw-2">&amp;</span>BE) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;PersistedState&lt;B&gt;&gt;&gt;
 <span class="kw">where
 	</span>B: Block,
 	BE: AuxStore,
@@ -301,15 +311,36 @@
 	</span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 }
 
+<span class="doccomment">/// Load or initialize persistent data from backend.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>load_or_init_state&lt;B, BE&gt;(
+	backend: <span class="kw-2">&amp;</span>BE,
+	default: NumberFor&lt;B&gt;,
+) -&gt; sp_blockchain::Result&lt;NumberFor&lt;B&gt;&gt;
+<span class="kw">where
+	</span>B: Block,
+	BE: AuxStore,
+{
+	<span class="comment">// Initialize gadget best_canon from AUX DB or from pallet genesis.
+	</span><span class="kw">if let </span><span class="prelude-val">Some</span>(best) = load_state::&lt;B, BE&gt;(backend)<span class="question-mark">? </span>{
+		<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;Loading MMR best canonicalized state from db: {:?}.&quot;</span>, best);
+		<span class="prelude-val">Ok</span>(best)
+	} <span class="kw">else </span>{
+		<span class="macro">info!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Loading MMR from pallet genesis on what appears to be the first startup: {:?}.&quot;</span>,
+			default
+		);
+		write_current_version(backend)<span class="question-mark">?</span>;
+		write_gadget_state::&lt;B, BE&gt;(backend, <span class="kw-2">&amp;</span>default)<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(default)
+	}
+}
+
 <span class="attr">#[cfg(test)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span><span class="kw">crate</span>::test_utils::{
-		run_test_with_mmr_gadget_pre_post_using_client, MmrBlock, MockClient, OffchainKeyType,
-	};
+	<span class="kw">use </span><span class="kw">crate</span>::test_utils::{run_test_with_mmr_gadget_pre_post_using_client, MmrBlock, MockClient};
 	<span class="kw">use </span>parking_lot::Mutex;
-	<span class="kw">use </span>sp_core::offchain::{DbExternalities, StorageKind};
-	<span class="kw">use </span>sp_mmr_primitives::utils::NodesUtils;
 	<span class="kw">use </span>sp_runtime::generic::BlockId;
 	<span class="kw">use </span>std::{sync::Arc, time::Duration};
 	<span class="kw">use </span>substrate_test_runtime_client::{runtime::Block, Backend};
@@ -320,7 +351,7 @@
 		<span class="kw">let </span>backend = <span class="kw-2">&amp;*</span>client.backend;
 
 		<span class="comment">// version not available in db -&gt; None
-		</span><span class="macro">assert_eq!</span>(load_persistent::&lt;Block, Backend&gt;(backend).unwrap(), <span class="prelude-val">None</span>);
+		</span><span class="macro">assert_eq!</span>(load_state::&lt;Block, Backend&gt;(backend).unwrap(), <span class="prelude-val">None</span>);
 
 		<span class="comment">// populate version in db
 		</span>write_current_version(backend).unwrap();
@@ -328,7 +359,7 @@
 		</span><span class="macro">assert_eq!</span>(load_decode(backend, VERSION_KEY).unwrap(), <span class="prelude-val">Some</span>(CURRENT_VERSION));
 
 		<span class="comment">// version is available in db but state isn&#39;t -&gt; None
-		</span><span class="macro">assert_eq!</span>(load_persistent::&lt;Block, Backend&gt;(backend).unwrap(), <span class="prelude-val">None</span>);
+		</span><span class="macro">assert_eq!</span>(load_state::&lt;Block, Backend&gt;(backend).unwrap(), <span class="prelude-val">None</span>);
 	}
 
 	<span class="attr">#[test]
@@ -341,7 +372,7 @@
 		<span class="comment">// version not available in db -&gt; None
 		</span><span class="macro">assert_eq!</span>(load_decode::&lt;Backend, <span class="prelude-ty">Option</span>&lt;u32&gt;&gt;(<span class="kw-2">&amp;*</span>backend, VERSION_KEY).unwrap(), <span class="prelude-val">None</span>);
 		<span class="comment">// state not available in db -&gt; None
-		</span><span class="macro">assert_eq!</span>(load_persistent::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>backend).unwrap(), <span class="prelude-val">None</span>);
+		</span><span class="macro">assert_eq!</span>(load_state::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>backend).unwrap(), <span class="prelude-val">None</span>);
 		<span class="comment">// run the gadget while importing and finalizing 3 blocks
 		</span>run_test_with_mmr_gadget_pre_post_using_client(
 			client.clone(),
@@ -364,7 +395,7 @@
 				<span class="kw">let </span>backend = <span class="kw-2">&amp;*</span>client.backend;
 				<span class="comment">// check there is both version and best canon available in db before running gadget
 				</span><span class="macro">assert_eq!</span>(load_decode(backend, VERSION_KEY).unwrap(), <span class="prelude-val">Some</span>(CURRENT_VERSION));
-				<span class="macro">assert_eq!</span>(load_persistent::&lt;Block, Backend&gt;(backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">3</span>));
+				<span class="macro">assert_eq!</span>(load_state::&lt;Block, Backend&gt;(backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">3</span>));
 			},
 			|client| <span class="kw">async move </span>{
 				<span class="kw">let </span>a4 = client.import_block(<span class="kw-2">&amp;</span>BlockId::Number(<span class="number">3</span>), <span class="string">b&quot;a4&quot;</span>, <span class="prelude-val">Some</span>(<span class="number">3</span>)).<span class="kw">await</span>;
@@ -376,7 +407,7 @@
 				<span class="comment">// a4, a5, a6 were canonicalized
 				</span>client.assert_canonicalized(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>a4, <span class="kw-2">&amp;</span>a5, <span class="kw-2">&amp;</span>a6]);
 				<span class="comment">// check persisted best canon was updated
-				</span><span class="macro">assert_eq!</span>(load_persistent::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>client.backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">6</span>));
+				</span><span class="macro">assert_eq!</span>(load_state::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>client.backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">6</span>));
 			},
 		);
 	}
@@ -405,19 +436,8 @@
 				client.assert_canonicalized(<span class="kw-2">&amp;</span>slice);
 
 				<span class="comment">// now manually move them back to non-canon/temp location
-				</span><span class="kw">let </span><span class="kw-2">mut </span>offchain_db = client.offchain_db();
-				<span class="kw">for </span>mmr_block <span class="kw">in </span>slice {
-					<span class="kw">for </span>node <span class="kw">in </span>NodesUtils::right_branch_ending_in_leaf(mmr_block.leaf_idx.unwrap())
-					{
-						<span class="kw">let </span>canon_key = mmr_block.get_offchain_key(node, OffchainKeyType::Canon);
-						<span class="kw">let </span>val = offchain_db
-							.local_storage_get(StorageKind::PERSISTENT, <span class="kw-2">&amp;</span>canon_key)
-							.unwrap();
-						offchain_db.local_storage_clear(StorageKind::PERSISTENT, <span class="kw-2">&amp;</span>canon_key);
-
-						<span class="kw">let </span>temp_key = mmr_block.get_offchain_key(node, OffchainKeyType::Temp);
-						offchain_db.local_storage_set(StorageKind::PERSISTENT, <span class="kw-2">&amp;</span>temp_key, <span class="kw-2">&amp;</span>val);
-					}
+				</span><span class="kw">for </span>mmr_block <span class="kw">in </span>slice {
+					client.undo_block_canonicalization(mmr_block)
 				}
 			},
 		);
@@ -431,7 +451,7 @@
 				<span class="kw">let </span>slice: Vec&lt;<span class="kw-2">&amp;</span>MmrBlock&gt; = blocks.iter().collect();
 
 				<span class="comment">// verify persisted state says a1, a2, a3 were canonicalized,
-				</span><span class="macro">assert_eq!</span>(load_persistent::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>client.backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">3</span>));
+				</span><span class="macro">assert_eq!</span>(load_state::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>client.backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">3</span>));
 				<span class="comment">// but actually they are NOT canon (we manually reverted them earlier).
 				</span>client.assert_not_canonicalized(<span class="kw-2">&amp;</span>slice);
 			},
@@ -449,7 +469,7 @@
 				<span class="comment">// but a4, a5, a6 were canonicalized
 				</span>client.assert_canonicalized(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>a4, <span class="kw-2">&amp;</span>a5, <span class="kw-2">&amp;</span>a6]);
 				<span class="comment">// check persisted best canon was updated
-				</span><span class="macro">assert_eq!</span>(load_persistent::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>client.backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">6</span>));
+				</span><span class="macro">assert_eq!</span>(load_state::&lt;Block, Backend&gt;(<span class="kw-2">&amp;*</span>client.backend).unwrap(), <span class="prelude-val">Some</span>(<span class="number">6</span>));
 			},
 		);
 	}
