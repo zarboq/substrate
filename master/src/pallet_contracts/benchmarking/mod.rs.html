@@ -3043,6 +3043,9 @@
 <a href="#3043" id="3043">3043</a>
 <a href="#3044" id="3044">3044</a>
 <a href="#3045" id="3045">3045</a>
+<a href="#3046" id="3046">3046</a>
+<a href="#3047" id="3047">3047</a>
+<a href="#3048" id="3048">3048</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -3108,9 +3111,7 @@
 
 <span class="kw">impl</span>&lt;T: Config&gt; Contract&lt;T&gt;
 <span class="kw">where
-	</span>T: Config,
-	T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-	&lt;BalanceOf&lt;T&gt; <span class="kw">as </span>HasCompact&gt;::Type: Clone + Eq + PartialEq + Debug + TypeInfo + Encode,
+	</span>&lt;BalanceOf&lt;T&gt; <span class="kw">as </span>HasCompact&gt;::Type: Clone + Eq + PartialEq + Debug + TypeInfo + Encode,
 {
 	<span class="doccomment">/// Create new contract and use a default account id as instantiator.
 	</span><span class="kw">fn </span>new(module: WasmModule&lt;T&gt;, data: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Contract&lt;T&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
@@ -3135,7 +3136,7 @@
 		<span class="kw">let </span>value = Pallet::&lt;T&gt;::min_balance();
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, caller_funding::&lt;T&gt;());
 		<span class="kw">let </span>salt = <span class="macro">vec!</span>[<span class="number">0xff</span>];
-		<span class="kw">let </span>addr = Contracts::&lt;T&gt;::contract_address(<span class="kw-2">&amp;</span>caller, <span class="kw-2">&amp;</span>module.hash, <span class="kw-2">&amp;</span>salt);
+		<span class="kw">let </span>addr = Contracts::&lt;T&gt;::contract_address(<span class="kw-2">&amp;</span>caller, <span class="kw-2">&amp;</span>module.hash, <span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;</span>salt);
 
 		Contracts::&lt;T&gt;::store_code_raw(module.code, caller.clone())<span class="question-mark">?</span>;
 		Contracts::&lt;T&gt;::instantiate(
@@ -3248,9 +3249,7 @@
 
 <span class="macro">benchmarks! </span>{
 	where_clause { <span class="kw">where
-		</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt;,
-		T::AccountId: AsRef&lt;[u8]&gt;,
-		&lt;BalanceOf&lt;T&gt; <span class="kw">as </span>codec::HasCompact&gt;::Type: Clone + Eq + PartialEq + sp_std::fmt::Debug + scale_info::TypeInfo + codec::Encode,
+		</span>&lt;BalanceOf&lt;T&gt; <span class="kw">as </span>codec::HasCompact&gt;::Type: Clone + Eq + PartialEq + sp_std::fmt::Debug + scale_info::TypeInfo + codec::Encode,
 	}
 
 	<span class="comment">// The base weight consumed on processing contracts deletion queue.
@@ -3315,6 +3314,7 @@
 	// a code of that size into the sandbox.
 	//
 	// `c`: Size of the code in kilobytes.
+	// `i`: Size of the input in kilobytes.
 	// `s`: Size of the salt in kilobytes.
 	//
 	// # Note
@@ -3323,15 +3323,17 @@
 	// to be larger than the maximum size **after instrumentation**.
 	</span>instantiate_with_code {
 		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. Perbill::from_percent(<span class="number">49</span>).mul_ceil(T::MaxCodeLen::get());
+		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>s <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
+		<span class="kw">let </span>input = <span class="macro">vec!</span>[<span class="number">42u8</span>; i <span class="kw">as </span>usize];
 		<span class="kw">let </span>salt = <span class="macro">vec!</span>[<span class="number">42u8</span>; s <span class="kw">as </span>usize];
 		<span class="kw">let </span>value = Pallet::&lt;T&gt;::min_balance();
 		<span class="kw">let </span>caller = whitelisted_caller();
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, caller_funding::&lt;T&gt;());
 		<span class="kw">let </span>WasmModule { code, hash, .. } = WasmModule::&lt;T&gt;::sized(c, Location::Call);
 		<span class="kw">let </span>origin = RawOrigin::Signed(caller.clone());
-		<span class="kw">let </span>addr = Contracts::&lt;T&gt;::contract_address(<span class="kw-2">&amp;</span>caller, <span class="kw-2">&amp;</span>hash, <span class="kw-2">&amp;</span>salt);
-	}: <span class="kw">_</span>(origin, value, Weight::MAX, <span class="prelude-val">None</span>, code, <span class="macro">vec!</span>[], salt)
+		<span class="kw">let </span>addr = Contracts::&lt;T&gt;::contract_address(<span class="kw-2">&amp;</span>caller, <span class="kw-2">&amp;</span>hash, <span class="kw-2">&amp;</span>input, <span class="kw-2">&amp;</span>salt);
+	}: <span class="kw">_</span>(origin, value, Weight::MAX, <span class="prelude-val">None</span>, code, input, salt)
 	verify {
 		<span class="comment">// the contract itself does not trigger any reserves
 		</span><span class="kw">let </span>deposit = T::Currency::reserved_balance(<span class="kw-2">&amp;</span>addr);
@@ -3348,18 +3350,21 @@
 	}
 
 	<span class="comment">// Instantiate uses a dummy contract constructor to measure the overhead of the instantiate.
+	// `i`: Size of the input in kilobytes.
 	// `s`: Size of the salt in kilobytes.
 	</span>instantiate {
+		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>s <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
+		<span class="kw">let </span>input = <span class="macro">vec!</span>[<span class="number">42u8</span>; i <span class="kw">as </span>usize];
 		<span class="kw">let </span>salt = <span class="macro">vec!</span>[<span class="number">42u8</span>; s <span class="kw">as </span>usize];
 		<span class="kw">let </span>value = Pallet::&lt;T&gt;::min_balance();
 		<span class="kw">let </span>caller = whitelisted_caller();
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, caller_funding::&lt;T&gt;());
 		<span class="kw">let </span>WasmModule { code, hash, .. } = WasmModule::&lt;T&gt;::dummy();
 		<span class="kw">let </span>origin = RawOrigin::Signed(caller.clone());
-		<span class="kw">let </span>addr = Contracts::&lt;T&gt;::contract_address(<span class="kw-2">&amp;</span>caller, <span class="kw-2">&amp;</span>hash, <span class="kw-2">&amp;</span>salt);
+		<span class="kw">let </span>addr = Contracts::&lt;T&gt;::contract_address(<span class="kw-2">&amp;</span>caller, <span class="kw-2">&amp;</span>hash, <span class="kw-2">&amp;</span>input, <span class="kw-2">&amp;</span>salt);
 		Contracts::&lt;T&gt;::store_code_raw(code, caller.clone())<span class="question-mark">?</span>;
-	}: <span class="kw">_</span>(origin, value, Weight::MAX, <span class="prelude-val">None</span>, hash, <span class="macro">vec!</span>[], salt)
+	}: <span class="kw">_</span>(origin, value, Weight::MAX, <span class="prelude-val">None</span>, hash, input, salt)
 	verify {
 		<span class="comment">// the contract itself does not trigger any reserves
 		</span><span class="kw">let </span>deposit = T::Currency::reserved_balance(<span class="kw-2">&amp;</span>addr);
@@ -4824,7 +4829,7 @@
 		<span class="kw">let </span>addresses = hashes
 			.iter()
 			.map(|hash| Contracts::&lt;T&gt;::contract_address(
-				<span class="kw-2">&amp;</span>instance.account_id, hash, <span class="kw-2">&amp;</span>[],
+				<span class="kw-2">&amp;</span>instance.account_id, hash, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[],
 			))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
@@ -4841,8 +4846,9 @@
 		}
 	}
 
-	seal_instantiate_per_transfer_salt_kb {
+	seal_instantiate_per_transfer_input_salt_kb {
 		<span class="kw">let </span>t <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
+		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. (code::max_pages::&lt;T&gt;() - <span class="number">1</span>) * <span class="number">64</span>;
 		<span class="kw">let </span>s <span class="kw">in </span><span class="number">0 </span>.. (code::max_pages::&lt;T&gt;() - <span class="number">1</span>) * <span class="number">64</span>;
 		<span class="kw">let </span>callee_code = WasmModule::&lt;T&gt;::dummy();
 		<span class="kw">let </span>hash = callee_code.hash;
@@ -4910,14 +4916,14 @@
 				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// gas
 				</span>Regular(Instruction::I32Const(value_offset <span class="kw">as </span>i32)), <span class="comment">// value_ptr
 				</span>Regular(Instruction::I32Const(value_len <span class="kw">as </span>i32)), <span class="comment">// value_len
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_ptr
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_len
+				</span>Counter(salt_offset <span class="kw">as </span>u32, salt_len <span class="kw">as </span>u32), <span class="comment">// input_data_ptr
+				</span>Regular(Instruction::I32Const((i * <span class="number">1024</span>) <span class="kw">as </span>i32)), <span class="comment">// input_data_len
 				</span>Regular(Instruction::I32Const((addr_len_offset + addr_len) <span class="kw">as </span>i32)), <span class="comment">// address_ptr
 				</span>Regular(Instruction::I32Const(addr_len_offset <span class="kw">as </span>i32)), <span class="comment">// address_len_ptr
 				</span>Regular(Instruction::I32Const(SENTINEL <span class="kw">as </span>i32)), <span class="comment">// output_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// output_len_ptr
 				</span>Counter(salt_offset <span class="kw">as </span>u32, salt_len <span class="kw">as </span>u32), <span class="comment">// salt_ptr
-				</span>Regular(Instruction::I32Const((s * <span class="number">1024</span>).max(salt_len <span class="kw">as </span>u32) <span class="kw">as </span>i32)), <span class="comment">// salt_len
+				</span>Regular(Instruction::I32Const((s * <span class="number">1024</span>) <span class="kw">as </span>i32)), <span class="comment">// salt_len
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
 				Regular(Instruction::I32Eqz),
 				Regular(Instruction::If(BlockType::NoResult)),

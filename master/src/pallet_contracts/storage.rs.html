@@ -337,12 +337,6 @@
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -376,7 +370,6 @@
 	weights::Weight,
 };
 <span class="kw">use </span>scale_info::TypeInfo;
-<span class="kw">use </span>sp_core::crypto::UncheckedFrom;
 <span class="kw">use </span>sp_io::KillStorageResult;
 <span class="kw">use </span>sp_runtime::{
 	traits::{Hash, Saturating, Zero},
@@ -480,11 +473,7 @@
 
 <span class="kw">pub struct </span>Storage&lt;T&gt;(PhantomData&lt;T&gt;);
 
-<span class="kw">impl</span>&lt;T&gt; Storage&lt;T&gt;
-<span class="kw">where
-	</span>T: Config,
-	T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-{
+<span class="kw">impl</span>&lt;T: Config&gt; Storage&lt;T&gt; {
 	<span class="doccomment">/// Reads a storage kv pair of a contract.
 	///
 	/// The read is performed from the `trie_id` only. The `address` is not necessary. If the
@@ -662,11 +651,10 @@
 		Weight::from_ref_time(ref_time_weight)
 	}
 
-	<span class="doccomment">/// Generates a unique trie id by returning  `hash(account_id ++ nonce)`.
+	<span class="doccomment">/// Generates a unique trie id by returning `hash(account_id ++ nonce)`.
 	</span><span class="kw">pub fn </span>generate_trie_id(account_id: <span class="kw-2">&amp;</span>AccountIdOf&lt;T&gt;, nonce: u64) -&gt; TrieId {
-		<span class="kw">let </span>buf: Vec&lt;<span class="kw">_</span>&gt; = account_id.as_ref().iter().chain(<span class="kw-2">&amp;</span>nonce.to_le_bytes()).cloned().collect();
-		T::Hashing::hash(<span class="kw-2">&amp;</span>buf)
-			.as_ref()
+		<span class="kw">let </span>buf = (account_id, nonce).using_encoded(T::Hashing::hash);
+		buf.as_ref()
 			.to_vec()
 			.try_into()
 			.expect(<span class="string">&quot;Runtime uses a reasonable hash size. Hence sizeof(T::Hash) &lt;= 128; qed&quot;</span>)

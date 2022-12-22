@@ -3421,6 +3421,12 @@
 <a href="#3421" id="3421">3421</a>
 <a href="#3422" id="3422">3422</a>
 <a href="#3423" id="3423">3423</a>
+<a href="#3424" id="3424">3424</a>
+<a href="#3425" id="3425">3425</a>
+<a href="#3426" id="3426">3426</a>
+<a href="#3427" id="3427">3427</a>
+<a href="#3428" id="3428">3428</a>
+<a href="#3429" id="3429">3429</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -3455,7 +3461,7 @@
 <span class="kw">use </span>frame_system::RawOrigin;
 <span class="kw">use </span>pallet_contracts_primitives::ExecReturnValue;
 <span class="kw">use </span>smallvec::{Array, SmallVec};
-<span class="kw">use </span>sp_core::{crypto::UncheckedFrom, ecdsa::Public <span class="kw">as </span>ECDSAPublic};
+<span class="kw">use </span>sp_core::ecdsa::Public <span class="kw">as </span>ECDSAPublic;
 <span class="kw">use </span>sp_io::{crypto::secp256k1_ecdsa_recover_compressed, hashing::blake2_256};
 <span class="kw">use </span>sp_runtime::traits::{Convert, Hash};
 <span class="kw">use </span>sp_std::{marker::PhantomData, mem, prelude::<span class="kw-2">*</span>};
@@ -3898,6 +3904,8 @@
 		</span>executable: E,
 		<span class="doccomment">/// A salt used in the contract address deriviation of the new contract.
 		</span>salt: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
+		<span class="doccomment">/// The input data is used in the contract address deriviation of the new contract.
+		</span>input_data: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
 	},
 }
 
@@ -4019,7 +4027,6 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, E&gt; Stack&lt;<span class="lifetime">&#39;a</span>, T, E&gt;
 <span class="kw">where
 	</span>T: Config,
-	T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
 	E: Executable&lt;T&gt;,
 {
 	<span class="doccomment">/// Create and run a new call stack by calling into `dest`.
@@ -4083,6 +4090,7 @@
 				nonce: &lt;Nonce&lt;T&gt;&gt;::get().wrapping_add(<span class="number">1</span>),
 				executable,
 				salt,
+				input_data: input_data.as_ref(),
 			},
 			origin,
 			gas_meter,
@@ -4165,9 +4173,13 @@
 
 					(dest, contract, executable, delegate_caller, ExportedFunction::Call, <span class="prelude-val">None</span>)
 				},
-				FrameArgs::Instantiate { sender, nonce, executable, salt } =&gt; {
-					<span class="kw">let </span>account_id =
-						&lt;Contracts&lt;T&gt;&gt;::contract_address(<span class="kw-2">&amp;</span>sender, executable.code_hash(), salt);
+				FrameArgs::Instantiate { sender, nonce, executable, salt, input_data } =&gt; {
+					<span class="kw">let </span>account_id = Contracts::&lt;T&gt;::contract_address(
+						<span class="kw-2">&amp;</span>sender,
+						executable.code_hash(),
+						input_data,
+						salt,
+					);
 					<span class="kw">let </span>trie_id = Storage::&lt;T&gt;::generate_trie_id(<span class="kw-2">&amp;</span>account_id, nonce);
 					<span class="kw">let </span>contract =
 						Storage::&lt;T&gt;::new_contract(<span class="kw-2">&amp;</span>account_id, trie_id, <span class="kw-2">*</span>executable.code_hash())<span class="question-mark">?</span>;
@@ -4503,7 +4515,6 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, E&gt; Ext <span class="kw">for </span>Stack&lt;<span class="lifetime">&#39;a</span>, T, E&gt;
 <span class="kw">where
 	</span>T: Config,
-	T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
 	E: Executable&lt;T&gt;,
 {
 	<span class="kw">type </span>T = T;
@@ -4590,6 +4601,7 @@
 				nonce,
 				executable,
 				salt,
+				input_data: input_data.as_ref(),
 			},
 			value,
 			gas_limit,

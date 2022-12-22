@@ -229,19 +229,6 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -285,7 +272,6 @@
 	traits::{Get, ReservableCurrency},
 	WeakBoundedVec,
 };
-<span class="kw">use </span>sp_core::crypto::UncheckedFrom;
 <span class="kw">use </span>sp_runtime::traits::BadOrigin;
 <span class="kw">use </span>sp_std::vec;
 
@@ -293,10 +279,7 @@
 ///
 /// Increments the refcount of the in-storage `prefab_module` if it already exists in storage
 /// under the specified `code_hash`.
-</span><span class="kw">pub fn </span>store&lt;T: Config&gt;(<span class="kw-2">mut </span>module: PrefabWasmModule&lt;T&gt;, instantiated: bool) -&gt; DispatchResult
-<span class="kw">where
-	</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-{
+</span><span class="kw">pub fn </span>store&lt;T: Config&gt;(<span class="kw-2">mut </span>module: PrefabWasmModule&lt;T&gt;, instantiated: bool) -&gt; DispatchResult {
 	<span class="kw">let </span>code_hash = sp_std::mem::take(<span class="kw-2">&amp;mut </span>module.code_hash);
 	&lt;CodeStorage&lt;T&gt;&gt;::mutate(<span class="kw-2">&amp;</span>code_hash, |existing| <span class="kw">match </span>existing {
 		<span class="prelude-val">Some</span>(existing) =&gt; {
@@ -379,10 +362,7 @@
 }
 
 <span class="doccomment">/// Try to remove code together with all associated information.
-</span><span class="kw">pub fn </span>try_remove&lt;T: Config&gt;(origin: <span class="kw-2">&amp;</span>T::AccountId, code_hash: CodeHash&lt;T&gt;) -&gt; DispatchResult
-<span class="kw">where
-	</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-{
+</span><span class="kw">pub fn </span>try_remove&lt;T: Config&gt;(origin: <span class="kw-2">&amp;</span>T::AccountId, code_hash: CodeHash&lt;T&gt;) -&gt; DispatchResult {
 	&lt;OwnerInfoOf&lt;T&gt;&gt;::try_mutate_exists(<span class="kw-2">&amp;</span>code_hash, |existing| {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(owner_info) = existing {
 			<span class="macro">ensure!</span>(owner_info.refcount == <span class="number">0</span>, &lt;Error&lt;T&gt;&gt;::CodeInUse);
@@ -408,10 +388,7 @@
 	code_hash: CodeHash&lt;T&gt;,
 	schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
 	gas_meter: <span class="kw-2">&amp;mut </span>GasMeter&lt;T&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;PrefabWasmModule&lt;T&gt;, DispatchError&gt;
-<span class="kw">where
-	</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-{
+) -&gt; <span class="prelude-ty">Result</span>&lt;PrefabWasmModule&lt;T&gt;, DispatchError&gt; {
 	<span class="kw">let </span>max_code_len = T::MaxCodeLen::get();
 	<span class="kw">let </span>charged = gas_meter.charge(CodeToken::Load(max_code_len))<span class="question-mark">?</span>;
 
@@ -436,10 +413,7 @@
 </span><span class="kw">pub fn </span>reinstrument&lt;T: Config&gt;(
 	prefab_module: <span class="kw-2">&amp;mut </span>PrefabWasmModule&lt;T&gt;,
 	schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;u32, DispatchError&gt;
-<span class="kw">where
-	</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-{
+) -&gt; <span class="prelude-ty">Result</span>&lt;u32, DispatchError&gt; {
 	<span class="kw">let </span>original_code =
 		&lt;PristineCode&lt;T&gt;&gt;::get(<span class="kw-2">&amp;</span>prefab_module.code_hash).ok_or(Error::&lt;T&gt;::CodeNotFound)<span class="question-mark">?</span>;
 	<span class="kw">let </span>original_code_len = original_code.len();

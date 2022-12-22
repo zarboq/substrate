@@ -1283,19 +1283,6 @@
 <a href="#1283" id="1283">1283</a>
 <a href="#1284" id="1284">1284</a>
 <a href="#1285" id="1285">1285</a>
-<a href="#1286" id="1286">1286</a>
-<a href="#1287" id="1287">1287</a>
-<a href="#1288" id="1288">1288</a>
-<a href="#1289" id="1289">1289</a>
-<a href="#1290" id="1290">1290</a>
-<a href="#1291" id="1291">1291</a>
-<a href="#1292" id="1292">1292</a>
-<a href="#1293" id="1293">1293</a>
-<a href="#1294" id="1294">1294</a>
-<a href="#1295" id="1295">1295</a>
-<a href="#1296" id="1296">1296</a>
-<a href="#1297" id="1297">1297</a>
-<a href="#1298" id="1298">1298</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1403,7 +1390,7 @@
 	wasm::{OwnerInfo, PrefabWasmModule, TryInstantiate},
 	weights::WeightInfo,
 };
-<span class="kw">use </span>codec::{Codec, Encode, HasCompact};
+<span class="kw">use </span>codec::{Codec, Decode, Encode, HasCompact};
 <span class="kw">use </span>frame_support::{
 	dispatch::{Dispatchable, GetDispatchInfo, Pays, PostDispatchInfo},
 	ensure,
@@ -1421,8 +1408,7 @@
 	StorageDeposit,
 };
 <span class="kw">use </span>scale_info::TypeInfo;
-<span class="kw">use </span>sp_core::crypto::UncheckedFrom;
-<span class="kw">use </span>sp_runtime::traits::{Convert, Hash, Saturating, StaticLookup};
+<span class="kw">use </span>sp_runtime::traits::{Convert, Hash, Saturating, StaticLookup, TrailingZeroInput};
 <span class="kw">use </span>sp_std::{fmt::Debug, marker::PhantomData, prelude::<span class="kw-2">*</span>};
 
 <span class="kw">pub use crate</span>::{
@@ -1453,7 +1439,7 @@
 <span class="doccomment">/// Provides the contract address generation method.
 ///
 /// See [`DefaultAddressGenerator`] for the default implementation.
-</span><span class="kw">pub trait </span>AddressGenerator&lt;T: frame_system::Config&gt; {
+</span><span class="kw">pub trait </span>AddressGenerator&lt;T: Config&gt; {
 	<span class="doccomment">/// Generate the address of a contract based on the given instantiate parameters.
 	///
 	/// # Note for implementors
@@ -1464,6 +1450,7 @@
 	</span><span class="kw">fn </span>generate_address(
 		deploying_address: <span class="kw-2">&amp;</span>T::AccountId,
 		code_hash: <span class="kw-2">&amp;</span>CodeHash&lt;T&gt;,
+		input_data: <span class="kw-2">&amp;</span>[u8],
 		salt: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; T::AccountId;
 }
@@ -1474,28 +1461,21 @@
 /// is only dependant on its inputs. It can therefore be used to reliably predict the
 /// address of a contract. This is akin to the formula of eth&#39;s CREATE2 opcode. There
 /// is no CREATE equivalent because CREATE2 is strictly more powerful.
-///
-/// Formula: `hash(deploying_address ++ code_hash ++ salt)`
+/// Formula:
+/// `hash(&quot;contract_addr_v1&quot; ++ deploying_address ++ code_hash ++ input_data ++ salt)`
 </span><span class="kw">pub struct </span>DefaultAddressGenerator;
 
-<span class="kw">impl</span>&lt;T&gt; AddressGenerator&lt;T&gt; <span class="kw">for </span>DefaultAddressGenerator
-<span class="kw">where
-	</span>T: frame_system::Config,
-	T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-{
+<span class="kw">impl</span>&lt;T: Config&gt; AddressGenerator&lt;T&gt; <span class="kw">for </span>DefaultAddressGenerator {
 	<span class="kw">fn </span>generate_address(
 		deploying_address: <span class="kw-2">&amp;</span>T::AccountId,
 		code_hash: <span class="kw-2">&amp;</span>CodeHash&lt;T&gt;,
+		input_data: <span class="kw-2">&amp;</span>[u8],
 		salt: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; T::AccountId {
-		<span class="kw">let </span>buf: Vec&lt;<span class="kw">_</span>&gt; = deploying_address
-			.as_ref()
-			.iter()
-			.chain(code_hash.as_ref())
-			.chain(salt)
-			.cloned()
-			.collect();
-		UncheckedFrom::unchecked_from(T::Hashing::hash(<span class="kw-2">&amp;</span>buf))
+		<span class="kw">let </span>entropy = (<span class="string">b&quot;contract_addr_v1&quot;</span>, deploying_address, code_hash, input_data, salt)
+			.using_encoded(T::Hashing::hash);
+		Decode::decode(<span class="kw-2">&amp;mut </span>TrailingZeroInput::new(entropy.as_ref()))
+			.expect(<span class="string">&quot;infinite length input; no invalid inputs for type; qed&quot;</span>)
 	}
 }
 
@@ -1650,11 +1630,7 @@
 	}
 
 	<span class="attr">#[pallet::hooks]
-	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt;
-	<span class="kw">where
-		</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt;,
-		T::AccountId: AsRef&lt;[u8]&gt;,
-	{
+	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 		<span class="kw">fn </span>on_idle(_block: T::BlockNumber, remaining_weight: Weight) -&gt; Weight {
 			Storage::&lt;T&gt;::process_deletion_queue_batch(remaining_weight)
 				.saturating_add(T::WeightInfo::on_process_deletion_queue_batch())
@@ -1683,9 +1659,7 @@
 	<span class="attr">#[pallet::call]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt;
 	<span class="kw">where
-		</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt;,
-		T::AccountId: AsRef&lt;[u8]&gt;,
-		&lt;BalanceOf&lt;T&gt; <span class="kw">as </span>HasCompact&gt;::Type: Clone + Eq + PartialEq + Debug + TypeInfo + Encode,
+		</span>&lt;BalanceOf&lt;T&gt; <span class="kw">as </span>HasCompact&gt;::Type: Clone + Eq + PartialEq + Debug + TypeInfo + Encode,
 	{
 		<span class="doccomment">/// Deprecated version if [`Self::call`] for use in an in-storage `Call`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
@@ -1713,7 +1687,7 @@
 		<span class="doccomment">/// Deprecated version if [`Self::instantiate_with_code`] for use in an in-storage `Call`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
 		#[pallet::weight(
-			T::WeightInfo::instantiate_with_code(code.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32)
+			T::WeightInfo::instantiate_with_code(code.len() <span class="kw">as </span>u32, data.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32)
 			.saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight(<span class="kw-2">*</span>gas_limit))
 		)]
 		#[allow(deprecated)]
@@ -1743,7 +1717,7 @@
 		<span class="doccomment">/// Deprecated version if [`Self::instantiate`] for use in an in-storage `Call`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
 		#[pallet::weight(
-			T::WeightInfo::instantiate(salt.len() <span class="kw">as </span>u32).saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight(<span class="kw-2">*</span>gas_limit))
+			T::WeightInfo::instantiate(data.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32).saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight(<span class="kw-2">*</span>gas_limit))
 		)]
 		#[allow(deprecated)]
 		#[deprecated(note = <span class="string">&quot;1D weight is used in this extrinsic, please migrate to `instantiate`&quot;</span>)]
@@ -1931,7 +1905,7 @@
 		/// - The `deploy` function is executed in the context of the newly-created account.
 		</span><span class="attr">#[pallet::call_index(<span class="number">7</span>)]
 		#[pallet::weight(
-			T::WeightInfo::instantiate_with_code(code.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32)
+			T::WeightInfo::instantiate_with_code(code.len() <span class="kw">as </span>u32, data.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32)
 			.saturating_add(<span class="kw-2">*</span>gas_limit)
 		)]
 		</span><span class="kw">pub fn </span>instantiate_with_code(
@@ -1945,6 +1919,7 @@
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>code_len = code.len() <span class="kw">as </span>u32;
+			<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>salt_len = salt.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span><span class="kw-2">mut </span>output = <span class="self">Self</span>::internal_instantiate(
 				origin,
@@ -1963,7 +1938,7 @@
 			}
 			output.gas_meter.into_dispatch_result(
 				output.result.map(|(_address, result)| result),
-				T::WeightInfo::instantiate_with_code(code_len, salt_len),
+				T::WeightInfo::instantiate_with_code(code_len, data_len, salt_len),
 			)
 		}
 
@@ -1974,7 +1949,7 @@
 		/// must be supplied.
 		</span><span class="attr">#[pallet::call_index(<span class="number">8</span>)]
 		#[pallet::weight(
-			T::WeightInfo::instantiate(salt.len() <span class="kw">as </span>u32).saturating_add(<span class="kw-2">*</span>gas_limit)
+			T::WeightInfo::instantiate(data.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32).saturating_add(<span class="kw-2">*</span>gas_limit)
 		)]
 		</span><span class="kw">pub fn </span>instantiate(
 			origin: OriginFor&lt;T&gt;,
@@ -1986,6 +1961,7 @@
 			salt: Vec&lt;u8&gt;,
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
+			<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>salt_len = salt.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span><span class="kw-2">mut </span>output = <span class="self">Self</span>::internal_instantiate(
 				origin,
@@ -2004,7 +1980,7 @@
 			}
 			output.gas_meter.into_dispatch_result(
 				output.result.map(|(_address, output)| output),
-				T::WeightInfo::instantiate(salt_len),
+				T::WeightInfo::instantiate(data_len, salt_len),
 			)
 		}
 	}
@@ -2241,10 +2217,7 @@
 	</span>result: <span class="prelude-ty">Result</span>&lt;O, ExecError&gt;,
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt;
-<span class="kw">where
-	</span>T::AccountId: UncheckedFrom&lt;T::Hash&gt; + AsRef&lt;[u8]&gt;,
-{
+<span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
 	<span class="doccomment">/// Perform a call to a specified contract.
 	///
 	/// This function is similar to [`Self::call`], but doesn&#39;t perform any address lookups
@@ -2379,9 +2352,10 @@
 	</span><span class="kw">pub fn </span>contract_address(
 		deploying_address: <span class="kw-2">&amp;</span>T::AccountId,
 		code_hash: <span class="kw-2">&amp;</span>CodeHash&lt;T&gt;,
+		input_data: <span class="kw-2">&amp;</span>[u8],
 		salt: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; T::AccountId {
-		T::AddressGenerator::generate_address(deploying_address, code_hash, salt)
+		T::AddressGenerator::generate_address(deploying_address, code_hash, input_data, salt)
 	}
 
 	<span class="doccomment">/// Returns the code hash of the contract specified by `account` ID.
