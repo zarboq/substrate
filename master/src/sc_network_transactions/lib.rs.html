@@ -477,6 +477,7 @@
 <a href="#477" id="477">477</a>
 <a href="#478" id="478">478</a>
 <a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -507,7 +508,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::config::<span class="kw-2">*</span>;
 <span class="kw">use </span>codec::{Decode, Encode};
-<span class="kw">use </span>futures::{channel::mpsc, prelude::<span class="kw-2">*</span>, stream::FuturesUnordered};
+<span class="kw">use </span>futures::{prelude::<span class="kw-2">*</span>, stream::FuturesUnordered};
 <span class="kw">use </span>libp2p::{multiaddr, PeerId};
 <span class="kw">use </span>log::{debug, trace, warn};
 <span class="kw">use </span>prometheus_endpoint::{register, Counter, PrometheusError, Registry, U64};
@@ -519,6 +520,7 @@
 	utils::{interval, LruHashSet},
 	ExHashT,
 };
+<span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 <span class="kw">use </span>std::{
 	collections::{hash_map::Entry, HashMap},
@@ -647,7 +649,7 @@
 		metrics_registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Registry&gt;,
 	) -&gt; error::Result&lt;(TransactionsHandler&lt;B, H, S&gt;, TransactionsHandlerController&lt;H&gt;)&gt; {
 		<span class="kw">let </span>event_stream = service.event_stream(<span class="string">&quot;transactions-handler&quot;</span>);
-		<span class="kw">let </span>(to_handler, from_controller) = mpsc::unbounded();
+		<span class="kw">let </span>(to_handler, from_controller) = tracing_unbounded(<span class="string">&quot;mpsc_transactions_handler&quot;</span>, <span class="number">100_000</span>);
 
 		<span class="kw">let </span>handler = TransactionsHandler {
 			protocol_name: <span class="self">self</span>.protocol_name,
@@ -676,7 +678,7 @@
 
 <span class="doccomment">/// Controls the behaviour of a [`TransactionsHandler`] it is connected to.
 </span><span class="kw">pub struct </span>TransactionsHandlerController&lt;H: ExHashT&gt; {
-	to_handler: mpsc::UnboundedSender&lt;ToHandler&lt;H&gt;&gt;,
+	to_handler: TracingUnboundedSender&lt;ToHandler&lt;H&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;H: ExHashT&gt; TransactionsHandlerController&lt;H&gt; {
@@ -725,7 +727,7 @@
 	<span class="comment">// All connected peers
 	</span>peers: HashMap&lt;PeerId, Peer&lt;H&gt;&gt;,
 	transaction_pool: Arc&lt;<span class="kw">dyn </span>TransactionPool&lt;H, B&gt;&gt;,
-	from_controller: mpsc::UnboundedReceiver&lt;ToHandler&lt;H&gt;&gt;,
+	from_controller: TracingUnboundedReceiver&lt;ToHandler&lt;H&gt;&gt;,
 	<span class="doccomment">/// Prometheus metrics.
 	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 }

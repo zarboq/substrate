@@ -568,6 +568,8 @@
 <a href="#568" id="568">568</a>
 <a href="#569" id="569">569</a>
 <a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -610,6 +612,7 @@
 <span class="kw">use </span>libp2p::Multiaddr;
 <span class="kw">use </span>log::{error, warn};
 <span class="kw">use </span>parking_lot::Mutex;
+<span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
 <span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>std::{
 	collections::{
@@ -717,8 +720,8 @@
 </span><span class="kw">pub struct </span>TelemetryWorker {
 	message_receiver: mpsc::Receiver&lt;TelemetryMessage&gt;,
 	message_sender: mpsc::Sender&lt;TelemetryMessage&gt;,
-	register_receiver: mpsc::UnboundedReceiver&lt;Register&gt;,
-	register_sender: mpsc::UnboundedSender&lt;Register&gt;,
+	register_receiver: TracingUnboundedReceiver&lt;Register&gt;,
+	register_sender: TracingUnboundedSender&lt;Register&gt;,
 	id_counter: Arc&lt;atomic::AtomicU64&gt;,
 }
 
@@ -733,7 +736,8 @@
 		// error as early as possible.
 		</span><span class="kw">let </span>_transport = initialize_transport()<span class="question-mark">?</span>;
 		<span class="kw">let </span>(message_sender, message_receiver) = mpsc::channel(buffer_size);
-		<span class="kw">let </span>(register_sender, register_receiver) = mpsc::unbounded();
+		<span class="kw">let </span>(register_sender, register_receiver) =
+			tracing_unbounded(<span class="string">&quot;mpsc_telemetry_register&quot;</span>, <span class="number">10_000</span>);
 
 		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{
 			message_receiver,
@@ -930,7 +934,7 @@
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>TelemetryWorkerHandle {
 	message_sender: mpsc::Sender&lt;TelemetryMessage&gt;,
-	register_sender: mpsc::UnboundedSender&lt;Register&gt;,
+	register_sender: TracingUnboundedSender&lt;Register&gt;,
 	id_counter: Arc&lt;atomic::AtomicU64&gt;,
 }
 
@@ -956,7 +960,7 @@
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Telemetry {
 	message_sender: mpsc::Sender&lt;TelemetryMessage&gt;,
-	register_sender: mpsc::UnboundedSender&lt;Register&gt;,
+	register_sender: TracingUnboundedSender&lt;Register&gt;,
 	id: Id,
 	connection_notifier: TelemetryConnectionNotifier,
 	endpoints: <span class="prelude-ty">Option</span>&lt;TelemetryEndpoints&gt;,
@@ -1030,7 +1034,7 @@
 /// (re-)establishes.
 </span><span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>TelemetryConnectionNotifier {
-	register_sender: mpsc::UnboundedSender&lt;Register&gt;,
+	register_sender: TracingUnboundedSender&lt;Register&gt;,
 	addresses: Vec&lt;Multiaddr&gt;,
 }
 

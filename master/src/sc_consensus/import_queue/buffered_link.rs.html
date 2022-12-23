@@ -181,6 +181,8 @@
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -211,7 +213,7 @@
 //! # use sp_test_primitives::Block;
 //! # struct DummyLink; impl Link&lt;Block&gt; for DummyLink {}
 //! # let mut my_link = DummyLink;
-//! let (mut tx, mut rx) = buffered_link::&lt;Block&gt;();
+//! let (mut tx, mut rx) = buffered_link::&lt;Block&gt;(100_000);
 //! tx.blocks_processed(0, 0, vec![]);
 //!
 //! // Calls `my_link.blocks_processed(0, 0, vec![])` when polled.
@@ -234,9 +236,11 @@
 
 <span class="doccomment">/// Wraps around an unbounded channel from the `futures` crate. The sender implements `Link` and
 /// can be used to buffer commands, and the receiver can be used to poll said commands and transfer
-/// them to another link.
-</span><span class="kw">pub fn </span>buffered_link&lt;B: BlockT&gt;() -&gt; (BufferedLinkSender&lt;B&gt;, BufferedLinkReceiver&lt;B&gt;) {
-	<span class="kw">let </span>(tx, rx) = tracing_unbounded(<span class="string">&quot;mpsc_buffered_link&quot;</span>);
+/// them to another link. `queue_size_warning` sets the warning threshold of the channel queue size.
+</span><span class="kw">pub fn </span>buffered_link&lt;B: BlockT&gt;(
+	queue_size_warning: i64,
+) -&gt; (BufferedLinkSender&lt;B&gt;, BufferedLinkReceiver&lt;B&gt;) {
+	<span class="kw">let </span>(tx, rx) = tracing_unbounded(<span class="string">&quot;mpsc_buffered_link&quot;</span>, queue_size_warning);
 	<span class="kw">let </span>tx = BufferedLinkSender { tx };
 	<span class="kw">let </span>rx = BufferedLinkReceiver { rx: rx.fuse() };
 	(tx, rx)
@@ -358,7 +362,7 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>is_closed() {
-		<span class="kw">let </span>(tx, rx) = <span class="kw">super</span>::buffered_link::&lt;Block&gt;();
+		<span class="kw">let </span>(tx, rx) = <span class="kw">super</span>::buffered_link::&lt;Block&gt;(<span class="number">1</span>);
 		<span class="macro">assert!</span>(!tx.is_closed());
 		drop(rx);
 		<span class="macro">assert!</span>(tx.is_closed());

@@ -425,7 +425,7 @@
 	<span class="doccomment">/// Subscribe to this Hub using the `subs_key: K`.
 	///
 	/// A subscription with a key `K` is possible if the Registry implements `Subscribe&lt;K&gt;`.
-	</span><span class="kw">pub fn </span>subscribe&lt;K&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, subs_key: K) -&gt; Receiver&lt;M, R&gt;
+	</span><span class="kw">pub fn </span>subscribe&lt;K&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, subs_key: K, queue_size_warning: i64) -&gt; Receiver&lt;M, R&gt;
 	<span class="kw">where
 		</span>R: Subscribe&lt;K&gt; + Unsubscribe,
 	{
@@ -439,7 +439,7 @@
 		// have the sink disposed.
 		</span>shared_borrowed.registry.subscribe(subs_key, subs_id);
 
-		<span class="kw">let </span>(tx, rx) = <span class="kw">crate</span>::mpsc::tracing_unbounded(<span class="self">self</span>.tracing_key);
+		<span class="kw">let </span>(tx, rx) = <span class="kw">crate</span>::mpsc::tracing_unbounded(<span class="self">self</span>.tracing_key, queue_size_warning);
 		<span class="macro">assert!</span>(shared_borrowed.sinks.insert(subs_id, tx).is_none(), <span class="string">&quot;Used IDSequence to create another ID. Should be unique until u64 is overflowed. Should be unique.&quot;</span>);
 
 		Receiver { shared: Arc::downgrade(<span class="kw-2">&amp;</span><span class="self">self</span>.shared), subs_id, rx }
