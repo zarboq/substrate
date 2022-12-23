@@ -494,6 +494,8 @@
 <a href="#494" id="494">494</a>
 <a href="#495" id="495">495</a>
 <a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -587,7 +589,7 @@
 		DispatchResult,
 	};
 	<span class="kw">use </span>sp_staking::{EraIndex, StakingInterface};
-	<span class="kw">use </span>sp_std::{prelude::<span class="kw-2">*</span>, vec::Vec};
+	<span class="kw">use </span>sp_std::{collections::btree_set::BTreeSet, prelude::<span class="kw-2">*</span>, vec::Vec};
 	<span class="kw">pub use </span>weights::WeightInfo;
 
 	<span class="attr">#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
@@ -925,9 +927,9 @@
 				}
 			};
 
-			<span class="kw">let </span>check_stash = |stash, deposit, eras_checked: <span class="kw-2">&amp;mut </span>u32| {
+			<span class="kw">let </span>check_stash = |stash, deposit, eras_checked: <span class="kw-2">&amp;mut </span>BTreeSet&lt;EraIndex&gt;| {
 				<span class="kw">let </span>is_exposed = unchecked_eras_to_check.iter().any(|e| {
-					eras_checked.saturating_inc();
+					eras_checked.insert(<span class="kw-2">*</span>e);
 					T::Staking::is_exposed_in_era(<span class="kw-2">&amp;</span>stash, e)
 				});
 
@@ -948,7 +950,7 @@
 				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_unstake()
 			} <span class="kw">else </span>{
 				<span class="comment">// eras checked so far.
-				</span><span class="kw">let </span><span class="kw-2">mut </span>eras_checked = <span class="number">0u32</span>;
+				</span><span class="kw">let </span><span class="kw-2">mut </span>eras_checked = BTreeSet::&lt;EraIndex&gt;::new();
 
 				<span class="kw">let </span>pre_length = stashes.len();
 				<span class="kw">let </span>stashes: BoundedVec&lt;(T::AccountId, BalanceOf&lt;T&gt;), T::BatchSize&gt; = stashes
@@ -964,7 +966,7 @@
 				<span class="macro">log!</span>(
 					debug,
 					<span class="string">&quot;checked {:?} eras, pre stashes: {:?}, post: {:?}&quot;</span>,
-					eras_checked,
+					eras_checked.len(),
 					pre_length,
 					post_length,
 				);
@@ -985,7 +987,9 @@
 					},
 				}
 
-				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_check(validator_count * eras_checked)
+				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_check(
+					validator_count * eras_checked.len() <span class="kw">as </span>u32,
+				)
 			}
 		}
 	}
