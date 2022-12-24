@@ -1025,6 +1025,15 @@
 <a href="#1025" id="1025">1025</a>
 <a href="#1026" id="1026">1026</a>
 <a href="#1027" id="1027">1027</a>
+<a href="#1028" id="1028">1028</a>
+<a href="#1029" id="1029">1029</a>
+<a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1615,10 +1624,19 @@
 			<span class="kw">return
 		</span>}
 
-		<span class="comment">// Update epoch index
-		</span><span class="kw">let </span>epoch_index = EpochIndex::&lt;T&gt;::get()
-			.checked_add(<span class="number">1</span>)
-			.expect(<span class="string">&quot;epoch indices will never reach 2^64 before the death of the universe; qed&quot;</span>);
+		<span class="comment">// Update epoch index.
+		//
+		// NOTE: we figure out the epoch index from the slot, which may not
+		// necessarily be contiguous if the chain was offline for more than
+		// `T::EpochDuration` slots. When skipping from epoch N to e.g. N+4, we
+		// will be using the randomness and authorities for that epoch that had
+		// been previously announced for epoch N+1, and the randomness collected
+		// during the current epoch (N) will be used for epoch N+5.
+		</span><span class="kw">let </span>epoch_index = sp_consensus_babe::epoch_index(
+			CurrentSlot::&lt;T&gt;::get(),
+			GenesisSlot::&lt;T&gt;::get(),
+			T::EpochDuration::get(),
+		);
 
 		EpochIndex::&lt;T&gt;::put(epoch_index);
 		Authorities::&lt;T&gt;::put(authorities);
@@ -1665,11 +1683,16 @@
 		}
 	}
 
-	<span class="doccomment">/// Finds the start slot of the current epoch. only guaranteed to
-	/// give correct results after `initialize` of the first block
-	/// in the chain (as its result is based off of `GenesisSlot`).
+	<span class="doccomment">/// Finds the start slot of the current epoch.
+	///
+	/// Only guaranteed to give correct results after `initialize` of the first
+	/// block in the chain (as its result is based off of `GenesisSlot`).
 	</span><span class="kw">pub fn </span>current_epoch_start() -&gt; Slot {
-		<span class="self">Self</span>::epoch_start(EpochIndex::&lt;T&gt;::get())
+		sp_consensus_babe::epoch_start_slot(
+			EpochIndex::&lt;T&gt;::get(),
+			GenesisSlot::&lt;T&gt;::get(),
+			T::EpochDuration::get(),
+		)
 	}
 
 	<span class="doccomment">/// Produces information about the current epoch.
@@ -1693,9 +1716,15 @@
 			 if u64 is not enough we should crash for safety; qed.&quot;</span>,
 		);
 
+		<span class="kw">let </span>start_slot = sp_consensus_babe::epoch_start_slot(
+			next_epoch_index,
+			GenesisSlot::&lt;T&gt;::get(),
+			T::EpochDuration::get(),
+		);
+
 		Epoch {
 			epoch_index: next_epoch_index,
-			start_slot: <span class="self">Self</span>::epoch_start(next_epoch_index),
+			start_slot,
 			duration: T::EpochDuration::get(),
 			authorities: NextAuthorities::&lt;T&gt;::get().to_vec(),
 			randomness: NextRandomness::&lt;T&gt;::get(),
@@ -1705,17 +1734,6 @@
 				)
 			}),
 		}
-	}
-
-	<span class="kw">fn </span>epoch_start(epoch_index: u64) -&gt; Slot {
-		<span class="comment">// (epoch_index * epoch_duration) + genesis_slot
-
-		</span><span class="kw">const </span>PROOF: <span class="kw-2">&amp;</span>str = <span class="string">&quot;slot number is u64; it should relate in some way to wall clock time; \
-							 if u64 is not enough we should crash for safety; qed.&quot;</span>;
-
-		<span class="kw">let </span>epoch_start = epoch_index.checked_mul(T::EpochDuration::get()).expect(PROOF);
-
-		epoch_start.checked_add(<span class="kw-2">*</span>GenesisSlot::&lt;T&gt;::get()).expect(PROOF).into()
 	}
 
 	<span class="kw">fn </span>deposit_consensus&lt;U: Encode&gt;(new: U) {

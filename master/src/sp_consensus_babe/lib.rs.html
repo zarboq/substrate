@@ -411,6 +411,25 @@
 <a href="#411" id="411">411</a>
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -771,6 +790,25 @@
 	</span><span class="kw">pub </span>randomness: [u8; VRF_OUTPUT_LENGTH],
 	<span class="doccomment">/// Configuration of the epoch.
 	</span><span class="kw">pub </span>config: BabeEpochConfiguration,
+}
+
+<span class="doccomment">/// Returns the epoch index the given slot belongs to.
+</span><span class="kw">pub fn </span>epoch_index(slot: Slot, genesis_slot: Slot, epoch_duration: u64) -&gt; u64 {
+	<span class="kw-2">*</span>slot.saturating_sub(genesis_slot) / epoch_duration
+}
+
+<span class="doccomment">/// Returns the first slot at the given epoch index.
+</span><span class="kw">pub fn </span>epoch_start_slot(epoch_index: u64, genesis_slot: Slot, epoch_duration: u64) -&gt; Slot {
+	<span class="comment">// (epoch_index * epoch_duration) + genesis_slot
+
+	</span><span class="kw">const </span>PROOF: <span class="kw-2">&amp;</span>str = <span class="string">&quot;slot number is u64; it should relate in some way to wall clock time; \
+						 if u64 is not enough we should crash for safety; qed.&quot;</span>;
+
+	epoch_index
+		.checked_mul(epoch_duration)
+		.and_then(|slot| slot.checked_add(<span class="kw-2">*</span>genesis_slot))
+		.expect(PROOF)
+		.into()
 }
 
 <span class="macro">sp_api::decl_runtime_apis! </span>{

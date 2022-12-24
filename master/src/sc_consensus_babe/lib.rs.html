@@ -1855,6 +1855,49 @@
 <a href="#1855" id="1855">1855</a>
 <a href="#1856" id="1856">1856</a>
 <a href="#1857" id="1857">1857</a>
+<a href="#1858" id="1858">1858</a>
+<a href="#1859" id="1859">1859</a>
+<a href="#1860" id="1860">1860</a>
+<a href="#1861" id="1861">1861</a>
+<a href="#1862" id="1862">1862</a>
+<a href="#1863" id="1863">1863</a>
+<a href="#1864" id="1864">1864</a>
+<a href="#1865" id="1865">1865</a>
+<a href="#1866" id="1866">1866</a>
+<a href="#1867" id="1867">1867</a>
+<a href="#1868" id="1868">1868</a>
+<a href="#1869" id="1869">1869</a>
+<a href="#1870" id="1870">1870</a>
+<a href="#1871" id="1871">1871</a>
+<a href="#1872" id="1872">1872</a>
+<a href="#1873" id="1873">1873</a>
+<a href="#1874" id="1874">1874</a>
+<a href="#1875" id="1875">1875</a>
+<a href="#1876" id="1876">1876</a>
+<a href="#1877" id="1877">1877</a>
+<a href="#1878" id="1878">1878</a>
+<a href="#1879" id="1879">1879</a>
+<a href="#1880" id="1880">1880</a>
+<a href="#1881" id="1881">1881</a>
+<a href="#1882" id="1882">1882</a>
+<a href="#1883" id="1883">1883</a>
+<a href="#1884" id="1884">1884</a>
+<a href="#1885" id="1885">1885</a>
+<a href="#1886" id="1886">1886</a>
+<a href="#1887" id="1887">1887</a>
+<a href="#1888" id="1888">1888</a>
+<a href="#1889" id="1889">1889</a>
+<a href="#1890" id="1890">1890</a>
+<a href="#1891" id="1891">1891</a>
+<a href="#1892" id="1892">1892</a>
+<a href="#1893" id="1893">1893</a>
+<a href="#1894" id="1894">1894</a>
+<a href="#1895" id="1895">1895</a>
+<a href="#1896" id="1896">1896</a>
+<a href="#1897" id="1897">1897</a>
+<a href="#1898" id="1898">1898</a>
+<a href="#1899" id="1899">1899</a>
+<a href="#1900" id="1900">1900</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -2400,7 +2443,7 @@
 	</span><span class="kw">let </span>stale_forks = <span class="kw">match </span>client.expand_forks(<span class="kw-2">&amp;</span>notification.stale_heads) {
 		<span class="prelude-val">Ok</span>(stale_forks) =&gt; stale_forks,
 		<span class="prelude-val">Err</span>((stale_forks, e)) =&gt; {
-			<span class="macro">warn!</span>(target: <span class="string">&quot;babe&quot;</span>, <span class="string">&quot;{:?}&quot;</span>, e,);
+			<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;{:?}&quot;</span>, e);
 			stale_forks
 		},
 	};
@@ -3368,11 +3411,12 @@
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(next_epoch_descriptor) = next_epoch_digest {
 				old_epoch_changes = <span class="prelude-val">Some</span>((<span class="kw-2">*</span>epoch_changes).clone());
 
-				<span class="kw">let </span>viable_epoch = epoch_changes
+				<span class="kw">let </span><span class="kw-2">mut </span>viable_epoch = epoch_changes
 					.viable_epoch(<span class="kw-2">&amp;</span>epoch_descriptor, |slot| Epoch::genesis(<span class="kw-2">&amp;</span><span class="self">self</span>.config, slot))
 					.ok_or_else(|| {
 						ConsensusError::ClientImport(Error::&lt;Block&gt;::FetchEpoch(parent_hash).into())
-					})<span class="question-mark">?</span>;
+					})<span class="question-mark">?
+					</span>.into_cloned();
 
 				<span class="kw">let </span>epoch_config = next_config_digest
 					.map(Into::into)
@@ -3384,6 +3428,48 @@
 				} <span class="kw">else </span>{
 					log::Level::Info
 				};
+
+				<span class="kw">if </span>viable_epoch.as_ref().end_slot() &lt;= slot {
+					<span class="comment">// some epochs must have been skipped as our current slot
+					// fits outside the current epoch. we will figure out
+					// which epoch it belongs to and we will re-use the same
+					// data for that epoch
+					</span><span class="kw">let </span><span class="kw-2">mut </span>epoch_data = viable_epoch.as_mut();
+					<span class="kw">let </span>skipped_epochs =
+						<span class="kw-2">*</span>slot.saturating_sub(epoch_data.start_slot) / epoch_data.duration;
+
+					<span class="comment">// NOTE: notice that we are only updating a local copy of the `Epoch`, this
+					// makes it so that when we insert the next epoch into `EpochChanges` below
+					// (after incrementing it), it will use the correct epoch index and start slot.
+					// we do not update the original epoch that will be re-used because there might
+					// be other forks (that we haven&#39;t imported) where the epoch isn&#39;t skipped, and
+					// to import those forks we want to keep the original epoch data. not updating
+					// the original epoch works because when we search the tree for which epoch to
+					// use for a given slot, we will search in-depth with the predicate
+					// `epoch.start_slot &lt;= slot` which will still match correctly without updating
+					// `start_slot` to the correct value as below.
+					</span><span class="kw">let </span>epoch_index = epoch_data.epoch_index.checked_add(skipped_epochs).expect(
+						<span class="string">&quot;epoch number is u64; it should be strictly smaller than number of slots; \
+						slots relate in some way to wall clock time; \
+						if u64 is not enough we should crash for safety; qed.&quot;</span>,
+					);
+
+					<span class="kw">let </span>start_slot = skipped_epochs
+						.checked_mul(epoch_data.duration)
+						.and_then(|skipped_slots| epoch_data.start_slot.checked_add(skipped_slots))
+						.expect(
+							<span class="string">&quot;slot number is u64; it should relate in some way to wall clock time; \
+							 if u64 is not enough we should crash for safety; qed.&quot;</span>,
+						);
+
+					<span class="macro">warn!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;👶 Epoch(s) skipped: from {} to {}&quot;</span>, epoch_data.epoch_index, epoch_index,
+					);
+
+					epoch_data.epoch_index = epoch_index;
+					epoch_data.start_slot = Slot::from(start_slot);
+				}
 
 				<span class="macro">log!</span>(
 					target: LOG_TARGET,
