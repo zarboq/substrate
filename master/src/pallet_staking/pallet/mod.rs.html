@@ -1799,6 +1799,19 @@
 <a href="#1799" id="1799">1799</a>
 <a href="#1800" id="1800">1800</a>
 <a href="#1801" id="1801">1801</a>
+<a href="#1802" id="1802">1802</a>
+<a href="#1803" id="1803">1803</a>
+<a href="#1804" id="1804">1804</a>
+<a href="#1805" id="1805">1805</a>
+<a href="#1806" id="1806">1806</a>
+<a href="#1807" id="1807">1807</a>
+<a href="#1808" id="1808">1808</a>
+<a href="#1809" id="1809">1809</a>
+<a href="#1810" id="1810">1810</a>
+<a href="#1811" id="1811">1811</a>
+<a href="#1812" id="1812">1812</a>
+<a href="#1813" id="1813">1813</a>
+<a href="#1814" id="1814">1814</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1984,8 +1997,10 @@
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>SlashDeferDuration: Get&lt;EraIndex&gt;;
 
-		<span class="doccomment">/// The origin which can cancel a deferred slash. Root can always do this.
-		</span><span class="kw">type </span>SlashCancelOrigin: EnsureOrigin&lt;<span class="self">Self</span>::RuntimeOrigin&gt;;
+		<span class="doccomment">/// The origin which can manage less critical staking parameters that does not require root.
+		///
+		/// Supported actions: (1) cancel deferred slash, (2) set minimum commission.
+		</span><span class="kw">type </span>AdminOrigin: EnsureOrigin&lt;<span class="self">Self</span>::RuntimeOrigin&gt;;
 
 		<span class="doccomment">/// Interface for interacting with a session pallet.
 		</span><span class="kw">type </span>SessionInterface: SessionInterface&lt;<span class="self">Self</span>::AccountId&gt;;
@@ -3253,7 +3268,7 @@
 
 		<span class="doccomment">/// Cancel enactment of a deferred slash.
 		///
-		/// Can be called by the `T::SlashCancelOrigin`.
+		/// Can be called by the `T::AdminOrigin`.
 		///
 		/// Parameters: era and indices of the slashes for that era to kill.
 		</span><span class="attr">#[pallet::call_index(<span class="number">17</span>)]
@@ -3263,7 +3278,7 @@
 			era: EraIndex,
 			slash_indices: Vec&lt;u32&gt;,
 		) -&gt; DispatchResult {
-			T::SlashCancelOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
+			T::AdminOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 
 			<span class="macro">ensure!</span>(!slash_indices.is_empty(), Error::&lt;T&gt;::EmptyTargets);
 			<span class="macro">ensure!</span>(is_sorted_and_unique(<span class="kw-2">&amp;</span>slash_indices), Error::&lt;T&gt;::NotSortedAndUnique);
@@ -3484,7 +3499,6 @@
 			<span class="macro">config_op_exp!</span>(MinCommission&lt;T&gt;, min_commission);
 			<span class="prelude-val">Ok</span>(())
 		}
-
 		<span class="doccomment">/// Declare a `controller` to stop participating as either a validator or nominator.
 		///
 		/// Effects will be felt at the beginning of the next era.
@@ -3591,6 +3605,18 @@
 					})
 					.ok_or(Error::&lt;T&gt;::NotStash)
 			})<span class="question-mark">?</span>;
+			<span class="prelude-val">Ok</span>(())
+		}
+
+		<span class="doccomment">/// Sets the minimum amount of commission that each validators must maintain.
+		///
+		/// This call has lower privilege requirements than `set_staking_config` and can be called
+		/// by the `T::AdminOrigin`. Root can always call this.
+		</span><span class="attr">#[pallet::call_index(<span class="number">25</span>)]
+		#[pallet::weight(T::WeightInfo::set_min_commission())]
+		</span><span class="kw">pub fn </span>set_min_commission(origin: OriginFor&lt;T&gt;, new: Perbill) -&gt; DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
+			MinCommission::&lt;T&gt;::put(new);
 			<span class="prelude-val">Ok</span>(())
 		}
 	}
