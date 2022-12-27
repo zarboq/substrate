@@ -3427,6 +3427,18 @@
 <a href="#3427" id="3427">3427</a>
 <a href="#3428" id="3428">3428</a>
 <a href="#3429" id="3429">3429</a>
+<a href="#3430" id="3430">3430</a>
+<a href="#3431" id="3431">3431</a>
+<a href="#3432" id="3432">3432</a>
+<a href="#3433" id="3433">3433</a>
+<a href="#3434" id="3434">3434</a>
+<a href="#3435" id="3435">3435</a>
+<a href="#3436" id="3436">3436</a>
+<a href="#3437" id="3437">3437</a>
+<a href="#3438" id="3438">3438</a>
+<a href="#3439" id="3439">3439</a>
+<a href="#3440" id="3440">3440</a>
+<a href="#3441" id="3441">3441</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -3708,7 +3720,7 @@
 	/// when the code is executing on-chain.
 	///
 	/// Returns `true` if debug message recording is enabled. Otherwise `false` is returned.
-	</span><span class="kw">fn </span>append_debug_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;bool, DispatchError&gt;;
+	</span><span class="kw">fn </span>append_debug_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>str) -&gt; bool;
 
 	<span class="doccomment">/// Call some dispatchable and return the result.
 	</span><span class="kw">fn </span>call_runtime(<span class="kw-2">&amp;</span><span class="self">self</span>, call: &lt;<span class="self">Self</span>::T <span class="kw">as </span>Config&gt;::RuntimeCall) -&gt; DispatchResultWithPostInfo;
@@ -4763,17 +4775,35 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>.top_frame_mut().nested_gas
 	}
 
-	<span class="kw">fn </span>append_debug_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;bool, DispatchError&gt; {
+	<span class="kw">fn </span>append_debug_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>str) -&gt; bool {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(buffer) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.debug_message {
-			<span class="kw">if </span>!msg.is_empty() {
-				buffer
-					.try_extend(<span class="kw-2">&amp;mut </span>msg.bytes())
-					.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::DebugBufferExhausted)<span class="question-mark">?</span>;
-			}
-			<span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
-		} <span class="kw">else </span>{
-			<span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
-		}
+			<span class="kw">let </span><span class="kw-2">mut </span>msg = msg.bytes();
+			<span class="kw">let </span>num_drain = {
+				<span class="kw">let </span>capacity = DebugBufferVec::&lt;T&gt;::bound().checked_sub(buffer.len()).expect(
+					<span class="string">&quot;
+					`buffer` is of type `DebugBufferVec`,
+					`DebugBufferVec` is a `BoundedVec`,
+					`BoundedVec::len()` &lt;= `BoundedVec::bound()`;
+					qed
+				&quot;</span>,
+				);
+				msg.len().saturating_sub(capacity).min(buffer.len())
+			};
+			buffer.drain(<span class="number">0</span>..num_drain);
+			buffer
+				.try_extend(<span class="kw-2">&amp;mut </span>msg)
+				.map_err(|<span class="kw">_</span>| {
+					<span class="macro">log::debug!</span>(
+						target: <span class="string">&quot;runtime::contracts&quot;</span>,
+						<span class="string">&quot;Debug message to big (size={}) for debug buffer (bound={})&quot;</span>,
+						msg.len(), DebugBufferVec::&lt;T&gt;::bound(),
+					);
+				})
+				.ok();
+			<span class="bool-val">true
+		</span>} <span class="kw">else </span>{
+			<span class="bool-val">false
+		</span>}
 	}
 
 	<span class="kw">fn </span>call_runtime(<span class="kw-2">&amp;</span><span class="self">self</span>, call: &lt;<span class="self">Self</span>::T <span class="kw">as </span>Config&gt;::RuntimeCall) -&gt; DispatchResultWithPostInfo {
@@ -5940,12 +5970,8 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>printing_works() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
-			ctx.ext
-				.append_debug_buffer(<span class="string">&quot;This is a test&quot;</span>)
-				.expect(<span class="string">&quot;Maximum allowed debug buffer size exhausted!&quot;</span>);
-			ctx.ext
-				.append_debug_buffer(<span class="string">&quot;More text&quot;</span>)
-				.expect(<span class="string">&quot;Maximum allowed debug buffer size exhausted!&quot;</span>);
+			ctx.ext.append_debug_buffer(<span class="string">&quot;This is a test&quot;</span>);
+			ctx.ext.append_debug_buffer(<span class="string">&quot;More text&quot;</span>);
 			exec_success()
 		});
 
@@ -5978,12 +6004,8 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>printing_works_on_fail() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
-			ctx.ext
-				.append_debug_buffer(<span class="string">&quot;This is a test&quot;</span>)
-				.expect(<span class="string">&quot;Maximum allowed debug buffer size exhausted!&quot;</span>);
-			ctx.ext
-				.append_debug_buffer(<span class="string">&quot;More text&quot;</span>)
-				.expect(<span class="string">&quot;Maximum allowed debug buffer size exhausted!&quot;</span>);
+			ctx.ext.append_debug_buffer(<span class="string">&quot;This is a test&quot;</span>);
+			ctx.ext.append_debug_buffer(<span class="string">&quot;More text&quot;</span>);
 			exec_trapped()
 		});
 
@@ -6016,7 +6038,7 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>debug_buffer_is_limited() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, <span class="kw">move </span>|ctx, <span class="kw">_</span>| {
-			ctx.ext.append_debug_buffer(<span class="string">&quot;overflowing bytes&quot;</span>)<span class="question-mark">?</span>;
+			ctx.ext.append_debug_buffer(<span class="string">&quot;overflowing bytes&quot;</span>);
 			exec_success()
 		});
 
@@ -6031,21 +6053,23 @@
 			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">10</span>);
 			place_contract(<span class="kw-2">&amp;</span>BOB, code_hash);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(<span class="number">0</span>), <span class="number">0</span>).unwrap();
-			<span class="macro">assert_err!</span>(
-				MockStack::run_call(
-					ALICE,
-					BOB,
-					<span class="kw-2">&amp;mut </span>gas_meter,
-					<span class="kw-2">&amp;mut </span>storage_meter,
-					<span class="kw-2">&amp;</span>schedule,
-					<span class="number">0</span>,
-					<span class="macro">vec!</span>[],
-					<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>debug_buffer),
-					Determinism::Deterministic,
-				)
-				.map_err(|e| e.error),
-				Error::&lt;Test&gt;::DebugBufferExhausted
-			);
+			MockStack::run_call(
+				ALICE,
+				BOB,
+				<span class="kw-2">&amp;mut </span>gas_meter,
+				<span class="kw-2">&amp;mut </span>storage_meter,
+				<span class="kw-2">&amp;</span>schedule,
+				<span class="number">0</span>,
+				<span class="macro">vec!</span>[],
+				<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>debug_buffer),
+				Determinism::Deterministic,
+			)
+			.unwrap();
+			<span class="macro">assert_eq!</span>(
+				<span class="kw-2">&amp;</span>String::from_utf8(debug_buffer[DebugBufferVec::&lt;Test&gt;::bound() - <span class="number">17</span>..].to_vec())
+					.unwrap(),
+				<span class="string">&quot;overflowing bytes&quot;
+			</span>);
 		});
 	}
 
