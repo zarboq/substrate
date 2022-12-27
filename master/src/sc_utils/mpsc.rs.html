@@ -300,9 +300,6 @@
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -342,6 +339,7 @@
 </span><span class="kw">mod </span>inner {
 	<span class="comment">// tracing implementation
 	</span><span class="kw">use </span><span class="kw">crate</span>::metrics::UNBOUNDED_CHANNELS_COUNTER;
+	<span class="kw">use </span>backtrace::Backtrace;
 	<span class="kw">use </span>futures::{
 		channel::mpsc::{
 			<span class="self">self</span>, SendError, TryRecvError, TrySendError, UnboundedReceiver, UnboundedSender,
@@ -352,7 +350,6 @@
 	};
 	<span class="kw">use </span>log::error;
 	<span class="kw">use </span>std::{
-		backtrace::{Backtrace, BacktraceStatus},
 		pin::Pin,
 		sync::{
 			atomic::{AtomicBool, AtomicI64, Ordering},
@@ -413,7 +410,7 @@
 			queue_size: queue_size.clone(),
 			queue_size_warning,
 			warning_fired: Arc::new(AtomicBool::new(<span class="bool-val">false</span>)),
-			creation_backtrace: Arc::new(Backtrace::capture()),
+			creation_backtrace: Arc::new(Backtrace::new_unresolved()),
 		};
 		<span class="kw">let </span>receiver = TracingUnboundedReceiver { inner: r, name, queue_size };
 		(sender, receiver)
@@ -454,23 +451,20 @@
 
 				<span class="kw">let </span>queue_size = <span class="self">self</span>.queue_size.fetch_add(<span class="number">1</span>, Ordering::Relaxed);
 				<span class="kw">if </span>queue_size == <span class="self">self</span>.queue_size_warning &amp;&amp;
-					!<span class="self">self</span>.warning_fired.load(Ordering::Relaxed)
+					<span class="self">self</span>.warning_fired
+						.compare_exchange(<span class="bool-val">false</span>, <span class="bool-val">true</span>, Ordering::Relaxed, Ordering::Relaxed)
+						.is_ok()
 				{
 					<span class="comment">// `warning_fired` and `queue_size` are not synchronized, so it&#39;s possible
 					// that the warning is fired few times before the `warning_fired` is seen
 					// by all threads. This seems better than introducing a mutex guarding them.
-					</span><span class="self">self</span>.warning_fired.store(<span class="bool-val">true</span>, Ordering::Relaxed);
-					<span class="kw">match </span><span class="self">self</span>.creation_backtrace.status() {
-						BacktraceStatus::Captured =&gt; <span class="macro">error!</span>(
-							<span class="string">&quot;The number of unprocessed messages in channel `{}` reached {}.\n\
-							 The channel was created at:\n{}&quot;</span>,
-							<span class="self">self</span>.name, <span class="self">self</span>.queue_size_warning, <span class="self">self</span>.creation_backtrace,
-						),
-						<span class="kw">_ </span>=&gt; <span class="macro">error!</span>(
-							<span class="string">&quot;The number of unprocessed messages in channel `{}` reached {}.&quot;</span>,
-							<span class="self">self</span>.name, <span class="self">self</span>.queue_size_warning,
-						),
-					}
+					</span><span class="kw">let </span><span class="kw-2">mut </span>backtrace = (<span class="kw-2">*</span><span class="self">self</span>.creation_backtrace).clone();
+					backtrace.resolve();
+					<span class="macro">error!</span>(
+						<span class="string">&quot;The number of unprocessed messages in channel `{}` reached {}.\n\
+						 The channel was created at:\n{:?}&quot;</span>,
+						<span class="self">self</span>.name, <span class="self">self</span>.queue_size_warning, backtrace,
+					);
 				}
 
 				s
