@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MigrateManyToTrackInactive",""],["MigrateToTrackInactive",""]]};
+window.SIDEBAR_ITEMS = {"struct":[["MigrateManyToTrackInactive",""],["MigrateToTrackInactive",""],["ResetInactive",""]]};

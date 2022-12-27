@@ -618,6 +618,11 @@
 <a href="#618" id="618">618</a>
 <a href="#619" id="619">619</a>
 <a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -845,7 +850,8 @@
 
 	<span class="doccomment">/// The amount which has been reported as inactive to Currency.
 	</span><span class="attr">#[pallet::storage]
-	</span><span class="kw">pub type </span>Inactive&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; = StorageValue&lt;<span class="kw">_</span>, BalanceOf&lt;T, I&gt;, ValueQuery&gt;;
+	</span><span class="kw">pub type </span>Deactivated&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; =
+		StorageValue&lt;<span class="kw">_</span>, BalanceOf&lt;T, I&gt;, ValueQuery&gt;;
 
 	<span class="doccomment">/// Proposal indices that have been approved but not yet awarded.
 	</span><span class="attr">#[pallet::storage]
@@ -912,6 +918,8 @@
 			amount: BalanceOf&lt;T, I&gt;,
 			beneficiary: T::AccountId,
 		},
+		<span class="doccomment">/// The inactive funds of the pallet have been updated.
+		</span>UpdatedInactive { reactivated: BalanceOf&lt;T, I&gt;, deactivated: BalanceOf&lt;T, I&gt; },
 	}
 
 	<span class="doccomment">/// Error for the treasury pallet.
@@ -941,13 +949,15 @@
 		/// # &lt;/weight&gt;
 		</span><span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
 			<span class="kw">let </span>pot = <span class="self">Self</span>::pot();
-			<span class="kw">let </span>deactivated = Inactive::&lt;T, I&gt;::get();
+			<span class="kw">let </span>deactivated = Deactivated::&lt;T, I&gt;::get();
 			<span class="kw">if </span>pot != deactivated {
-				<span class="kw">match </span>(pot &gt; deactivated, pot.max(deactivated) - pot.min(deactivated)) {
-					(<span class="bool-val">true</span>, delta) =&gt; T::Currency::deactivate(delta),
-					(<span class="bool-val">false</span>, delta) =&gt; T::Currency::reactivate(delta),
-				}
-				Inactive::&lt;T, I&gt;::put(<span class="kw-2">&amp;</span>pot);
+				T::Currency::reactivate(deactivated);
+				T::Currency::deactivate(pot);
+				Deactivated::&lt;T, I&gt;::put(<span class="kw-2">&amp;</span>pot);
+				<span class="self">Self</span>::deposit_event(Event::&lt;T, I&gt;::UpdatedInactive {
+					reactivated: deactivated,
+					deactivated: pot,
+				});
 			}
 
 			<span class="comment">// Check to see if we should spend some funds!
