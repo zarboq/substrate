@@ -434,6 +434,102 @@
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -460,12 +556,19 @@
 	future::{pending, select, try_join_all, BoxFuture, Either},
 	Future, FutureExt, StreamExt,
 };
+<span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>prometheus_endpoint::{
 	exponential_buckets, register, CounterVec, HistogramOpts, HistogramVec, Opts, PrometheusError,
 	Registry, U64,
 };
 <span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
-<span class="kw">use </span>std::{panic, pin::Pin, result::Result};
+<span class="kw">use </span>std::{
+	collections::{hash_map::Entry, HashMap},
+	panic,
+	pin::Pin,
+	result::Result,
+	sync::Arc,
+};
 <span class="kw">use </span>tokio::runtime::Handle;
 <span class="kw">use </span>tracing_futures::Instrument;
 
@@ -508,6 +611,7 @@
 	on_exit: exit_future::Exit,
 	tokio_handle: Handle,
 	metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
+	task_registry: TaskRegistry,
 }
 
 <span class="kw">impl </span>SpawnTaskHandle {
@@ -549,6 +653,7 @@
 	) {
 		<span class="kw">let </span>on_exit = <span class="self">self</span>.on_exit.clone();
 		<span class="kw">let </span>metrics = <span class="self">self</span>.metrics.clone();
+		<span class="kw">let </span>registry = <span class="self">self</span>.task_registry.clone();
 
 		<span class="kw">let </span>group = <span class="kw">match </span>group.into() {
 			GroupName::Specific(var) =&gt; var,
@@ -565,6 +670,10 @@
 		}
 
 		<span class="kw">let </span>future = <span class="kw">async move </span>{
+			<span class="comment">// Register the task and keep the &quot;token&quot; alive until the task is ended. Then this
+			// &quot;token&quot; will unregister this task.
+			</span><span class="kw">let </span>_registry_token = registry.register_task(name, group);
+
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = metrics {
 				<span class="comment">// Add some wrappers around `task`.
 				</span><span class="kw">let </span>task = {
@@ -734,6 +843,8 @@
 	/// terminates and gracefully shutdown. Also ends the parent `future()` if a child&#39;s essential
 	/// task fails.
 	</span>children: Vec&lt;TaskManager&gt;,
+	<span class="doccomment">/// The registry of all running tasks.
+	</span>task_registry: TaskRegistry,
 }
 
 <span class="kw">impl </span>TaskManager {
@@ -760,6 +871,7 @@
 			essential_failed_rx,
 			keep_alive: Box::new(()),
 			children: Vec::new(),
+			task_registry: Default::default(),
 		})
 	}
 
@@ -769,6 +881,7 @@
 			on_exit: <span class="self">self</span>.on_exit.clone(),
 			tokio_handle: <span class="self">self</span>.tokio_handle.clone(),
 			metrics: <span class="self">self</span>.metrics.clone(),
+			task_registry: <span class="self">self</span>.task_registry.clone(),
 		}
 	}
 
@@ -821,6 +934,14 @@
 	</span><span class="kw">pub fn </span>add_child(<span class="kw-2">&amp;mut </span><span class="self">self</span>, child: TaskManager) {
 		<span class="self">self</span>.children.push(child);
 	}
+
+	<span class="doccomment">/// Consume `self` and return the [`TaskRegistry`].
+	///
+	/// This [`TaskRegistry`] can be used to check for still running tasks after this task manager
+	/// was dropped.
+	</span><span class="kw">pub fn </span>into_task_registry(<span class="self">self</span>) -&gt; TaskRegistry {
+		<span class="self">self</span>.task_registry
+	}
 }
 
 <span class="attr">#[derive(Clone)]
@@ -868,6 +989,77 @@
 				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;reason&quot;</span>, <span class="string">&quot;task_group&quot;</span>]
 			)<span class="question-mark">?</span>, registry)<span class="question-mark">?</span>,
 		})
+	}
+}
+
+<span class="doccomment">/// Ensures that a [`Task`] is unregistered when this object is dropped.
+</span><span class="kw">struct </span>UnregisterOnDrop {
+	task: Task,
+	registry: TaskRegistry,
+}
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>UnregisterOnDrop {
+	<span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+		<span class="kw">let </span><span class="kw-2">mut </span>tasks = <span class="self">self</span>.registry.tasks.lock();
+
+		<span class="kw">if let </span>Entry::Occupied(<span class="kw-2">mut </span>entry) = (<span class="kw-2">*</span>tasks).entry(<span class="self">self</span>.task.clone()) {
+			<span class="kw-2">*</span>entry.get_mut() -= <span class="number">1</span>;
+
+			<span class="kw">if </span><span class="kw-2">*</span>entry.get() == <span class="number">0 </span>{
+				entry.remove();
+			}
+		}
+	}
+}
+
+<span class="doccomment">/// Represents a running async task in the [`TaskManager`].
+///
+/// As a task is identified by a name and a group, it is totally valid that there exists multiple
+/// tasks with the same name and group.
+</span><span class="attr">#[derive(Clone, Hash, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>Task {
+	<span class="doccomment">/// The name of the task.
+	</span><span class="kw">pub </span>name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+	<span class="doccomment">/// The group this task is associated to.
+	</span><span class="kw">pub </span>group: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+}
+
+<span class="kw">impl </span>Task {
+	<span class="doccomment">/// Returns if the `group` is the [`DEFAULT_GROUP_NAME`].
+	</span><span class="kw">pub fn </span>is_default_group(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="self">self</span>.group == DEFAULT_GROUP_NAME
+	}
+}
+
+<span class="doccomment">/// Keeps track of all running [`Task`]s in [`TaskManager`].
+</span><span class="attr">#[derive(Clone, Default)]
+</span><span class="kw">pub struct </span>TaskRegistry {
+	tasks: Arc&lt;Mutex&lt;HashMap&lt;Task, usize&gt;&gt;&gt;,
+}
+
+<span class="kw">impl </span>TaskRegistry {
+	<span class="doccomment">/// Register a task with the given `name` and `group`.
+	///
+	/// Returns [`UnregisterOnDrop`] that ensures that the task is unregistered when this value is
+	/// dropped.
+	</span><span class="kw">fn </span>register_task(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, group: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; UnregisterOnDrop {
+		<span class="kw">let </span>task = Task { name, group };
+
+		{
+			<span class="kw">let </span><span class="kw-2">mut </span>tasks = <span class="self">self</span>.tasks.lock();
+
+			<span class="kw-2">*</span>(<span class="kw-2">*</span>tasks).entry(task.clone()).or_default() += <span class="number">1</span>;
+		}
+
+		UnregisterOnDrop { task, registry: <span class="self">self</span>.clone() }
+	}
+
+	<span class="doccomment">/// Returns the running tasks.
+	///
+	/// As a task is only identified by its `name` and `group`, there can be duplicate tasks. The
+	/// number per task represents the concurrently running tasks with the same identifier.
+	</span><span class="kw">pub fn </span>running_tasks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashMap&lt;Task, usize&gt; {
+		(<span class="kw-2">*</span><span class="self">self</span>.tasks.lock()).clone()
 	}
 }
 </code></pre></div>
