@@ -49,6 +49,9 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -69,35 +72,38 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::error::Error;
 <span class="kw">use </span>codec::Encode;
-<span class="kw">use </span>futures::{future, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>sc_client_api::{BlockBackend, HeaderBackend};
 <span class="kw">use </span>sc_consensus::import_queue::ImportQueue;
 <span class="kw">use </span>sp_runtime::{generic::BlockId, traits::Block <span class="kw">as </span>BlockT};
 
 <span class="kw">use </span><span class="kw">crate</span>::chain_ops::import_blocks;
-<span class="kw">use </span>std::{pin::Pin, sync::Arc};
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="doccomment">/// Re-validate known block.
-</span><span class="kw">pub fn </span>check_block&lt;B, IQ, C&gt;(
+</span><span class="kw">pub async fn </span>check_block&lt;B, IQ, C&gt;(
 	client: Arc&lt;C&gt;,
 	import_queue: IQ,
 	block_id: BlockId&lt;B&gt;,
-) -&gt; Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt; + Send&gt;&gt;
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
 <span class="kw">where
 	</span>C: BlockBackend&lt;B&gt; + HeaderBackend&lt;B&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
 	B: BlockT + <span class="kw">for</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt;,
 	IQ: ImportQueue&lt;B&gt; + <span class="lifetime">&#39;static</span>,
 {
-	<span class="kw">match </span>client.block(<span class="kw-2">&amp;</span>block_id) {
-		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(block)) =&gt; {
+	<span class="kw">let </span>maybe_block = client
+		.block_hash_from_id(<span class="kw-2">&amp;</span>block_id)<span class="question-mark">?
+		</span>.map(|hash| client.block(hash))
+		.transpose()<span class="question-mark">?
+		</span>.flatten();
+	<span class="kw">match </span>maybe_block {
+		<span class="prelude-val">Some</span>(block) =&gt; {
 			<span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
 			<span class="number">1u64</span>.encode_to(<span class="kw-2">&amp;mut </span>buf);
 			block.encode_to(<span class="kw-2">&amp;mut </span>buf);
 			<span class="kw">let </span>reader = std::io::Cursor::new(buf);
-			import_blocks(client, import_queue, reader, <span class="bool-val">true</span>, <span class="bool-val">true</span>)
-		},
-		<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; Box::pin(future::err(<span class="string">&quot;Unknown block&quot;</span>.into())),
-		<span class="prelude-val">Err</span>(e) =&gt; Box::pin(future::err(<span class="macro">format!</span>(<span class="string">&quot;Error reading block: {}&quot;</span>, e).into())),
+			import_blocks(client, import_queue, reader, <span class="bool-val">true</span>, <span class="bool-val">true</span>).<span class="kw">await
+		</span>},
+		<span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Unknown block&quot;</span>)<span class="question-mark">?</span>,
 	}
 }
 </code></pre></div>

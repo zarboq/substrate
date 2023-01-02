@@ -4122,9 +4122,6 @@
 <a href="#4122" id="4122">4122</a>
 <a href="#4123" id="4123">4123</a>
 <a href="#4124" id="4124">4124</a>
-<a href="#4125" id="4125">4125</a>
-<a href="#4126" id="4126">4126</a>
-<a href="#4127" id="4127">4127</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -4213,7 +4210,6 @@
 	BlockOrigin, BlockStatus,
 };
 <span class="kw">use </span>sp_runtime::{
-	generic::BlockId,
 	traits::{
 		Block <span class="kw">as </span>BlockT, CheckedSub, Hash, HashFor, Header <span class="kw">as </span>HeaderT, NumberFor, One,
 		SaturatedConversion, Zero,
@@ -5992,8 +5988,7 @@
 		<span class="self">self</span>.best_queued_number = info.best_number;
 
 		<span class="kw">if </span><span class="self">self</span>.mode == SyncMode::Full &amp;&amp;
-			<span class="self">self</span>.client.block_status(<span class="kw-2">&amp;</span>BlockId::hash(info.best_hash))<span class="question-mark">? </span>!=
-				BlockStatus::InChainWithState
+			<span class="self">self</span>.client.block_status(info.best_hash)<span class="question-mark">? </span>!= BlockStatus::InChainWithState
 		{
 			<span class="self">self</span>.import_existing = <span class="bool-val">true</span>;
 			<span class="comment">// Latest state is missing, start with the last finalized state or genesis instead.
@@ -6025,7 +6020,7 @@
 		<span class="kw">if </span><span class="self">self</span>.queue_blocks.contains(hash) {
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(BlockStatus::Queued)
 		}
-		<span class="self">self</span>.client.block_status(<span class="kw-2">&amp;</span>BlockId::Hash(<span class="kw-2">*</span>hash))
+		<span class="self">self</span>.client.block_status(<span class="kw-2">*</span>hash)
 	}
 
 	<span class="doccomment">/// Is the block corresponding to the given hash known?
@@ -6582,9 +6577,7 @@
 						<span class="kw">if </span>queue.contains(hash) {
 							BlockStatus::Queued
 						} <span class="kw">else </span>{
-							client
-								.block_status(<span class="kw-2">&amp;</span>BlockId::Hash(<span class="kw-2">*</span>hash))
-								.unwrap_or(BlockStatus::Unknown)
+							client.block_status(<span class="kw-2">*</span>hash).unwrap_or(BlockStatus::Unknown)
 						}
 					},
 				) {
@@ -7329,6 +7322,7 @@
 	};
 	<span class="kw">use </span>sp_blockchain::HeaderBackend;
 	<span class="kw">use </span>sp_consensus::block_validation::DefaultBlockAnnounceValidator;
+	<span class="kw">use </span>sp_runtime::generic::BlockId;
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		runtime::{Block, Hash, Header},
 		BlockBuilderExt, ClientBlockImportExt, ClientExt, DefaultTestClientBuilderExt, TestClient,

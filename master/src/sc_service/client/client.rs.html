@@ -2095,8 +2095,6 @@
 <a href="#2095" id="2095">2095</a>
 <a href="#2096" id="2096">2096</a>
 <a href="#2097" id="2097">2097</a>
-<a href="#2098" id="2098">2098</a>
-<a href="#2099" id="2099">2099</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2883,7 +2881,8 @@
 		<span class="kw">let </span>parent_hash = import_block.header.parent_hash();
 		<span class="kw">let </span>at = BlockId::Hash(<span class="kw-2">*</span>parent_hash);
 		<span class="kw">let </span>state_action = std::mem::replace(<span class="kw-2">&amp;mut </span>import_block.state_action, StateAction::Skip);
-		<span class="kw">let </span>(enact_state, storage_changes) = <span class="kw">match </span>(<span class="self">self</span>.block_status(<span class="kw-2">&amp;</span>at)<span class="question-mark">?</span>, state_action) {
+		<span class="kw">let </span>(enact_state, storage_changes) = <span class="kw">match </span>(<span class="self">self</span>.block_status(<span class="kw-2">*</span>parent_hash)<span class="question-mark">?</span>, state_action)
+		{
 			(BlockStatus::KnownBad, <span class="kw">_</span>) =&gt;
 				<span class="kw">return </span><span class="prelude-val">Ok</span>(PrepareStorageChangesResult::Discard(ImportResult::KnownBad)),
 			(
@@ -3124,17 +3123,18 @@
 	}
 
 	<span class="doccomment">/// Get block status.
-	</span><span class="kw">pub fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; sp_blockchain::Result&lt;BlockStatus&gt; {
+	</span><span class="kw">pub fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; sp_blockchain::Result&lt;BlockStatus&gt; {
 		<span class="comment">// this can probably be implemented more efficiently
-		</span><span class="kw">if let </span>BlockId::Hash(<span class="kw-2">ref </span>h) = id {
-			<span class="kw">if </span><span class="self">self</span>.importing_block.read().as_ref().map_or(<span class="bool-val">false</span>, |importing| h == importing) {
-				<span class="kw">return </span><span class="prelude-val">Ok</span>(BlockStatus::Queued)
-			}
+		</span><span class="kw">if </span><span class="self">self
+			</span>.importing_block
+			.read()
+			.as_ref()
+			.map_or(<span class="bool-val">false</span>, |importing| <span class="kw-2">&amp;</span>hash == importing)
+		{
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(BlockStatus::Queued)
 		}
-		<span class="kw">let </span>hash_and_number = <span class="kw">match </span><span class="kw-2">*</span>id {
-			BlockId::Hash(hash) =&gt; <span class="self">self</span>.backend.blockchain().number(hash)<span class="question-mark">?</span>.map(|n| (hash, n)),
-			BlockId::Number(n) =&gt; <span class="self">self</span>.backend.blockchain().hash(n)<span class="question-mark">?</span>.map(|hash| (hash, n)),
-		};
+
+		<span class="kw">let </span>hash_and_number = <span class="self">self</span>.backend.blockchain().number(hash)<span class="question-mark">?</span>.map(|n| (hash, n));
 		<span class="kw">match </span>hash_and_number {
 			<span class="prelude-val">Some</span>((hash, number)) =&gt;
 				<span class="kw">if </span><span class="self">self</span>.backend.have_state_at(hash, number) {
@@ -3878,7 +3878,7 @@
 		<span class="comment">// Own status must be checked first. If the block and ancestry is pruned
 		// this function must return `AlreadyInChain` rather than `MissingState`
 		</span><span class="kw">match </span><span class="self">self
-			</span>.block_status(<span class="kw-2">&amp;</span>BlockId::Hash(hash))
+			</span>.block_status(hash)
 			.map_err(|e| ConsensusError::ClientImport(e.to_string()))<span class="question-mark">?
 		</span>{
 			BlockStatus::InChainWithState | BlockStatus::Queued =&gt;
@@ -3891,7 +3891,7 @@
 		}
 
 		<span class="kw">match </span><span class="self">self
-			</span>.block_status(<span class="kw-2">&amp;</span>BlockId::Hash(parent_hash))
+			</span>.block_status(parent_hash)
 			.map_err(|e| ConsensusError::ClientImport(e.to_string()))<span class="question-mark">?
 		</span>{
 			BlockStatus::InChainWithState | BlockStatus::Queued =&gt; {},
@@ -4046,20 +4046,16 @@
 		<span class="self">self</span>.body(hash)
 	}
 
-	<span class="kw">fn </span>block(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; sp_blockchain::Result&lt;<span class="prelude-ty">Option</span>&lt;SignedBlock&lt;Block&gt;&gt;&gt; {
-		<span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="self">self</span>.backend.blockchain().block_hash_from_id(id)<span class="question-mark">? </span>{
-			<span class="prelude-val">Some</span>(hash) =&gt;
-				<span class="kw">match </span>(<span class="self">self</span>.header(hash)<span class="question-mark">?</span>, <span class="self">self</span>.body(hash)<span class="question-mark">?</span>, <span class="self">self</span>.justifications(hash)<span class="question-mark">?</span>) {
-					(<span class="prelude-val">Some</span>(header), <span class="prelude-val">Some</span>(extrinsics), justifications) =&gt;
-						<span class="prelude-val">Some</span>(SignedBlock { block: Block::new(header, extrinsics), justifications }),
-					<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-				},
-			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+	<span class="kw">fn </span>block(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; sp_blockchain::Result&lt;<span class="prelude-ty">Option</span>&lt;SignedBlock&lt;Block&gt;&gt;&gt; {
+		<span class="prelude-val">Ok</span>(<span class="kw">match </span>(<span class="self">self</span>.header(hash)<span class="question-mark">?</span>, <span class="self">self</span>.body(hash)<span class="question-mark">?</span>, <span class="self">self</span>.justifications(hash)<span class="question-mark">?</span>) {
+			(<span class="prelude-val">Some</span>(header), <span class="prelude-val">Some</span>(extrinsics), justifications) =&gt;
+				<span class="prelude-val">Some</span>(SignedBlock { block: Block::new(header, extrinsics), justifications }),
+			<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 		})
 	}
 
-	<span class="kw">fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; sp_blockchain::Result&lt;BlockStatus&gt; {
-		Client::block_status(<span class="self">self</span>, id)
+	<span class="kw">fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; sp_blockchain::Result&lt;BlockStatus&gt; {
+		Client::block_status(<span class="self">self</span>, hash)
 	}
 
 	<span class="kw">fn </span>justifications(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; sp_blockchain::Result&lt;<span class="prelude-ty">Option</span>&lt;Justifications&gt;&gt; {
@@ -4154,9 +4150,9 @@
 {
 	<span class="kw">fn </span>block_status(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;,
+		hash: B::Hash,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;BlockStatus, Box&lt;<span class="kw">dyn </span>std::error::Error + Send&gt;&gt; {
-		Client::block_status(<span class="self">self</span>, id).map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">_</span>&gt;)
+		Client::block_status(<span class="self">self</span>, hash).map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">_</span>&gt;)
 	}
 }
 

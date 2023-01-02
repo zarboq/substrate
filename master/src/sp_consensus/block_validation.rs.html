@@ -117,18 +117,18 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::BlockStatus;
 <span class="kw">use </span>futures::FutureExt <span class="kw">as _</span>;
-<span class="kw">use </span>sp_runtime::{generic::BlockId, traits::Block};
+<span class="kw">use </span>sp_runtime::traits::Block;
 <span class="kw">use </span>std::{error::Error, future::Future, pin::Pin, sync::Arc};
 
 <span class="doccomment">/// A type which provides access to chain information.
 </span><span class="kw">pub trait </span>Chain&lt;B: Block&gt; {
-	<span class="doccomment">/// Retrieve the status of the block denoted by the given [`BlockId`].
-	</span><span class="kw">fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;BlockStatus, Box&lt;<span class="kw">dyn </span>Error + Send&gt;&gt;;
+	<span class="doccomment">/// Retrieve the status of the block denoted by the given [`Block::Hash`].
+	</span><span class="kw">fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: B::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;BlockStatus, Box&lt;<span class="kw">dyn </span>Error + Send&gt;&gt;;
 }
 
 <span class="kw">impl</span>&lt;T: Chain&lt;B&gt;, B: Block&gt; Chain&lt;B&gt; <span class="kw">for </span>Arc&lt;T&gt; {
-	<span class="kw">fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;BlockStatus, Box&lt;<span class="kw">dyn </span>Error + Send&gt;&gt; {
-		(<span class="kw-2">&amp;**</span><span class="self">self</span>).block_status(id)
+	<span class="kw">fn </span>block_status(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: B::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;BlockStatus, Box&lt;<span class="kw">dyn </span>Error + Send&gt;&gt; {
+		(<span class="kw-2">&amp;**</span><span class="self">self</span>).block_status(hash)
 	}
 }
 
@@ -158,7 +158,7 @@
 	/// Returning [`Validation::Failure`] will lead to a decrease of the
 	/// peers reputation as it sent us invalid data.
 	///
-	/// The returned future should only resolve to an error iff there was an internal error
+	/// The returned future should only resolve to an error if there was an internal error
 	/// validating the block announcement. If the block announcement itself is invalid, this should
 	/// *always* return [`Validation::Failure`].
 	</span><span class="kw">fn </span>validate(

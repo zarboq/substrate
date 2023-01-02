@@ -101,6 +101,10 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -128,7 +132,7 @@
 	traits::{Block <span class="kw">as </span>BlockT, NumberFor, One, SaturatedConversion, Zero},
 };
 
-<span class="kw">use </span>sc_client_api::{BlockBackend, UsageProvider};
+<span class="kw">use </span>sc_client_api::{BlockBackend, HeaderBackend, UsageProvider};
 <span class="kw">use </span>std::{io::Write, pin::Pin, sync::Arc, task::Poll};
 
 <span class="doccomment">/// Performs the blocks export.
@@ -140,7 +144,7 @@
 	binary: bool,
 ) -&gt; Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt;&gt;&gt;
 <span class="kw">where
-	</span>C: BlockBackend&lt;B&gt; + UsageProvider&lt;B&gt; + <span class="lifetime">&#39;static</span>,
+	</span>C: HeaderBackend&lt;B&gt; + BlockBackend&lt;B&gt; + UsageProvider&lt;B&gt; + <span class="lifetime">&#39;static</span>,
 	B: BlockT,
 {
 	<span class="kw">let </span><span class="kw-2">mut </span>block = from;
@@ -178,7 +182,12 @@
 			wrote_header = <span class="bool-val">true</span>;
 		}
 
-		<span class="kw">match </span>client.block(<span class="kw-2">&amp;</span>BlockId::number(block))<span class="question-mark">? </span>{
+		<span class="kw">match </span>client
+			.block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::number(block))<span class="question-mark">?
+			</span>.map(|hash| client.block(hash))
+			.transpose()<span class="question-mark">?
+			</span>.flatten()
+		{
 			<span class="prelude-val">Some</span>(block) =&gt;
 				<span class="kw">if </span>binary {
 					output.write_all(<span class="kw-2">&amp;</span>block.encode())<span class="question-mark">?</span>;
@@ -186,8 +195,7 @@
 					serde_json::to_writer(<span class="kw-2">&amp;mut </span>output, <span class="kw-2">&amp;</span>block)
 						.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Error writing JSON: {}&quot;</span>, e))<span class="question-mark">?</span>;
 				},
-			<span class="comment">// Reached end of the chain.
-			</span><span class="prelude-val">None </span>=&gt; <span class="kw">return </span>Poll::Ready(<span class="prelude-val">Ok</span>(())),
+			<span class="prelude-val">None </span>=&gt; <span class="kw">return </span>Poll::Ready(<span class="prelude-val">Ok</span>(())),
 		}
 		<span class="kw">if </span>(block % <span class="number">10000u32</span>.into()).is_zero() {
 			<span class="macro">info!</span>(<span class="string">&quot;#{}&quot;</span>, block);
