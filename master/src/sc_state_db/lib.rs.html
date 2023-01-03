@@ -915,6 +915,31 @@
 <a href="#915" id="915">915</a>
 <a href="#916" id="916">916</a>
 <a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+<a href="#927" id="927">927</a>
+<a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
+<a href="#930" id="930">930</a>
+<a href="#931" id="931">931</a>
+<a href="#932" id="932">932</a>
+<a href="#933" id="933">933</a>
+<a href="#934" id="934">934</a>
+<a href="#935" id="935">935</a>
+<a href="#936" id="936">936</a>
+<a href="#937" id="937">937</a>
+<a href="#938" id="938">938</a>
+<a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
+<a href="#941" id="941">941</a>
+<a href="#942" id="942">942</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1051,7 +1076,7 @@
 	<span class="doccomment">/// Invalid pruning mode specified. Contains expected mode.
 	</span>IncompatiblePruningModes { stored: PruningMode, requested: PruningMode },
 	<span class="doccomment">/// Too many unfinalized sibling blocks inserted.
-	</span>TooManySiblingBlocks,
+	</span>TooManySiblingBlocks { number: u64 },
 	<span class="doccomment">/// Trying to insert existing block.
 	</span>BlockAlreadyExists,
 	<span class="doccomment">/// Invalid metadata
@@ -1101,7 +1126,8 @@
 				<span class="string">&quot;Incompatible pruning modes [stored: {:?}; requested: {:?}]&quot;</span>,
 				stored, requested
 			),
-			<span class="self">Self</span>::TooManySiblingBlocks =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Too many sibling blocks inserted&quot;</span>),
+			<span class="self">Self</span>::TooManySiblingBlocks { number } =&gt;
+				<span class="macro">write!</span>(f, <span class="string">&quot;Too many sibling blocks at #{number} inserted&quot;</span>),
 			<span class="self">Self</span>::BlockAlreadyExists =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Block already exists&quot;</span>),
 			<span class="self">Self</span>::Metadata(message) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Invalid metadata: {}&quot;</span>, message),
 			<span class="self">Self</span>::BlockUnavailable =&gt;
@@ -1199,6 +1225,17 @@
 	buffer
 }
 
+<span class="doccomment">/// Status information about the last canonicalized block.
+</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq)]
+</span><span class="kw">pub enum </span>LastCanonicalized {
+	<span class="doccomment">/// Not yet have canonicalized any block.
+	</span><span class="prelude-val">None</span>,
+	<span class="doccomment">/// The given block number is the last canonicalized block.
+	</span>Block(u64),
+	<span class="doccomment">/// No canonicalization is happening (pruning mode is archive all).
+	</span>NotCanonicalizing,
+}
+
 <span class="kw">pub struct </span>StateDbSync&lt;BlockHash: Hash, Key: Hash, D: MetaDb&gt; {
 	mode: PruningMode,
 	non_canonical: NonCanonicalOverlay&lt;BlockHash, Key&gt;,
@@ -1265,15 +1302,28 @@
 		<span class="prelude-val">Ok</span>(commit)
 	}
 
-	<span class="kw">fn </span>best_canonical(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-		<span class="self">self</span>.non_canonical.last_canonicalized_block_number()
+	<span class="doccomment">/// Returns the block number of the last canonicalized block.
+	</span><span class="kw">fn </span>last_canonicalized(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LastCanonicalized {
+		<span class="kw">if </span><span class="self">self</span>.mode == PruningMode::ArchiveAll {
+			LastCanonicalized::NotCanonicalizing
+		} <span class="kw">else </span>{
+			<span class="self">self</span>.non_canonical
+				.last_canonicalized_block_number()
+				.map(LastCanonicalized::Block)
+				.unwrap_or_else(|| LastCanonicalized::None)
+		}
 	}
 
 	<span class="kw">fn </span>is_pruned(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: <span class="kw-2">&amp;</span>BlockHash, number: u64) -&gt; IsPruned {
 		<span class="kw">match </span><span class="self">self</span>.mode {
 			PruningMode::ArchiveAll =&gt; IsPruned::NotPruned,
 			PruningMode::ArchiveCanonical | PruningMode::Constrained(<span class="kw">_</span>) =&gt; {
-				<span class="kw">if </span><span class="self">self</span>.best_canonical().map(|c| number &gt; c).unwrap_or(<span class="bool-val">true</span>) {
+				<span class="kw">if </span><span class="self">self
+					</span>.non_canonical
+					.last_canonicalized_block_number()
+					.map(|c| number &gt; c)
+					.unwrap_or(<span class="bool-val">true</span>)
+				{
 					<span class="kw">if </span><span class="self">self</span>.non_canonical.have_block(hash) {
 						IsPruned::NotPruned
 					} <span class="kw">else </span>{
@@ -1527,9 +1577,9 @@
 		<span class="self">self</span>.db.write().remove(hash)
 	}
 
-	<span class="doccomment">/// Returns last finalized block number.
-	</span><span class="kw">pub fn </span>best_canonical(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
-		<span class="kw">return </span><span class="self">self</span>.db.read().best_canonical()
+	<span class="doccomment">/// Returns last canonicalized block.
+	</span><span class="kw">pub fn </span>last_canonicalized(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LastCanonicalized {
+		<span class="self">self</span>.db.read().last_canonicalized()
 	}
 
 	<span class="doccomment">/// Check if block is pruned away.

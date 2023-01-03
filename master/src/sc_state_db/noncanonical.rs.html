@@ -1116,6 +1116,11 @@
 <a href="#1116" id="1116">1116</a>
 <a href="#1117" id="1117">1117</a>
 <a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1401,7 +1406,12 @@
 		};
 
 		<span class="kw">if </span>level.blocks.len() &gt;= MAX_BLOCKS_PER_LEVEL <span class="kw">as </span>usize {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(StateDbError::TooManySiblingBlocks)
+			<span class="macro">trace!</span>(
+				target: <span class="string">&quot;state-db&quot;</span>,
+				<span class="string">&quot;Too many sibling blocks at #{number}: {:?}&quot;</span>,
+				level.blocks.iter().map(|b| <span class="kw-2">&amp;</span>b.hash).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+			);
+			<span class="kw">return </span><span class="prelude-val">Err</span>(StateDbError::TooManySiblingBlocks { number })
 		}
 		<span class="kw">if </span>level.blocks.iter().any(|b| b.hash == <span class="kw-2">*</span>hash) {
 			<span class="kw">return </span><span class="prelude-val">Err</span>(StateDbError::BlockAlreadyExists)
