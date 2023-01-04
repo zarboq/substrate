@@ -2601,6 +2601,11 @@
 <a href="#2601" id="2601">2601</a>
 <a href="#2602" id="2602">2602</a>
 <a href="#2603" id="2603">2603</a>
+<a href="#2604" id="2604">2604</a>
+<a href="#2605" id="2605">2605</a>
+<a href="#2606" id="2606">2606</a>
+<a href="#2607" id="2607">2607</a>
+<a href="#2608" id="2608">2608</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -5073,12 +5078,17 @@
 
 		<span class="kw">for </span>id <span class="kw">in </span>reward_pools {
 			<span class="kw">let </span>account = <span class="self">Self</span>::create_reward_account(id);
-			<span class="macro">assert!</span>(
-				T::Currency::free_balance(<span class="kw-2">&amp;</span>account) &gt;= T::Currency::minimum_balance(),
-				<span class="string">&quot;reward pool of {id}: {:?} (ed = {:?})&quot;</span>,
-				T::Currency::free_balance(<span class="kw-2">&amp;</span>account),
-				T::Currency::minimum_balance()
-			);
+			<span class="kw">if </span>T::Currency::free_balance(<span class="kw-2">&amp;</span>account) &lt; T::Currency::minimum_balance() {
+				<span class="macro">log!</span>(
+					warn,
+					<span class="string">&quot;reward pool of {:?}: {:?} (ed = {:?}), should only happen because ED has \
+					changed recently. Pool operators should be notified to top up the reward \
+					account&quot;</span>,
+					id,
+					T::Currency::free_balance(<span class="kw-2">&amp;</span>account),
+					T::Currency::minimum_balance(),
+				)
+			}
 		}
 
 		<span class="kw">let </span><span class="kw-2">mut </span>pools_members = BTreeMap::&lt;PoolId, u32&gt;::new();

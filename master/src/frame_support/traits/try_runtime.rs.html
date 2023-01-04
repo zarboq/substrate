@@ -138,6 +138,46 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -161,7 +201,7 @@
 <span class="kw">use </span>sp_arithmetic::traits::AtLeast32BitUnsigned;
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
-<span class="comment">// Which state tests to execute.
+<span class="doccomment">/// Which state tests to execute.
 </span><span class="attr">#[derive(codec::Encode, codec::Decode, Clone)]
 </span><span class="kw">pub enum </span>Select {
 	<span class="doccomment">/// None of them.
@@ -217,6 +257,46 @@
 					<span class="kw">let </span>pallets = s.split(<span class="string">&#39;,&#39;</span>).map(|x| x.as_bytes().to_vec()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 					<span class="prelude-val">Ok</span>(Select::Only(pallets))
 				},
+		}
+	}
+}
+
+<span class="doccomment">/// Select which checks should be run when trying a runtime upgrade upgrade.
+</span><span class="attr">#[derive(codec::Encode, codec::Decode, Clone, Debug, Copy)]
+</span><span class="kw">pub enum </span>UpgradeCheckSelect {
+	<span class="doccomment">/// Run no checks.
+	</span><span class="prelude-val">None</span>,
+	<span class="doccomment">/// Run the `try_state`, `pre_upgrade` and `post_upgrade` checks.
+	</span>All,
+	<span class="doccomment">/// Run the `pre_upgrade` and `post_upgrade` checks.
+	</span>PreAndPost,
+	<span class="doccomment">/// Run the `try_state` checks.
+	</span>TryState,
+}
+
+<span class="kw">impl </span>UpgradeCheckSelect {
+	<span class="doccomment">/// Whether the pre- and post-upgrade checks are selected.
+	</span><span class="kw">pub fn </span>pre_and_post(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::All | <span class="self">Self</span>::PreAndPost)
+	}
+
+	<span class="doccomment">/// Whether the try-state checks are selected.
+	</span><span class="kw">pub fn </span>try_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::All | <span class="self">Self</span>::TryState)
+	}
+}
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="kw">impl </span>core::str::FromStr <span class="kw">for </span>UpgradeCheckSelect {
+	<span class="kw">type </span><span class="prelude-val">Err </span>= <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
+
+	<span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+		<span class="kw">match </span>s.to_lowercase().as_str() {
+			<span class="string">&quot;none&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::None),
+			<span class="string">&quot;all&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::All),
+			<span class="string">&quot;pre-and-post&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::PreAndPost),
+			<span class="string">&quot;try-state&quot; </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::TryState),
+			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid CheckSelector&quot;</span>),
 		}
 	}
 }

@@ -1654,6 +1654,8 @@
 <a href="#1654" id="1654">1654</a>
 <a href="#1655" id="1655">1655</a>
 <a href="#1656" id="1656">1656</a>
+<a href="#1657" id="1657">1657</a>
+<a href="#1658" id="1658">1658</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1989,8 +1991,10 @@
 	///
 	/// Runs the try-state code both before and after the migration function if `checks` is set to
 	/// `true`. Also, if set to `true`, it runs the `pre_upgrade` and `post_upgrade` hooks.
-	</span><span class="kw">pub fn </span>try_runtime_upgrade(checks: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="kw">if </span>checks {
+	</span><span class="kw">pub fn </span>try_runtime_upgrade(
+		checks: frame_try_runtime::UpgradeCheckSelect,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		<span class="kw">if </span>checks.try_state() {
 			<span class="kw">let </span>_guard = frame_support::StorageNoopGuard::default();
 			&lt;AllPalletsWithSystem <span class="kw">as </span>frame_support::traits::TryState&lt;System::BlockNumber&gt;&gt;::try_state(
 				frame_system::Pallet::&lt;System&gt;::block_number(),
@@ -2000,10 +2004,10 @@
 
 		<span class="kw">let </span>weight =
 			&lt;(COnRuntimeUpgrade, AllPalletsWithSystem) <span class="kw">as </span>OnRuntimeUpgrade&gt;::try_on_runtime_upgrade(
-				checks,
+				checks.pre_and_post(),
 			)<span class="question-mark">?</span>;
 
-		<span class="kw">if </span>checks {
+		<span class="kw">if </span>checks.try_state() {
 			<span class="kw">let </span>_guard = frame_support::StorageNoopGuard::default();
 			&lt;AllPalletsWithSystem <span class="kw">as </span>frame_support::traits::TryState&lt;System::BlockNumber&gt;&gt;::try_state(
 				frame_system::Pallet::&lt;System&gt;::block_number(),

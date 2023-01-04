@@ -76,6 +76,17 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -94,6 +105,7 @@
 // limitations under the License.
 
 </span><span class="kw">use crate</span>::{build_executor, state_machine_call_with_proof, SharedParams, State, LOG_TARGET};
+<span class="kw">use </span>frame_try_runtime::UpgradeCheckSelect;
 <span class="kw">use </span>parity_scale_codec::{Decode, Encode};
 <span class="kw">use </span>sc_executor::sp_wasm_interface::HostFunctions;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
@@ -107,12 +119,22 @@
 	</span><span class="attr">#[command(subcommand)]
 	</span><span class="kw">pub </span>state: State,
 
-	<span class="doccomment">/// Execute `try_state`, `pre_upgrade` and `post_upgrade` checks as well.
+	<span class="doccomment">/// Select which optional checks to perform. Selects all when no value is given.
 	///
-	/// This will perform more checks, but it will also makes the reported PoV/Weight be
-	/// inaccurate.
-	</span><span class="attr">#[clap(long)]
-	</span><span class="kw">pub </span>checks: bool,
+	/// - `none`: Perform no checks (default when the arg is not present).
+	/// - `all`: Perform all checks (default when the arg is present).
+	/// - `pre-and-post`: Perform pre- and post-upgrade checks.
+	/// - `try-state`: Perform the try-state checks.
+	///
+	/// Performing any checks will potentially invalidate the measured PoV/Weight.
+	</span><span class="comment">// NOTE: The clap attributes make it backwards compatible with the previous `--checks` flag.
+	</span><span class="attr">#[clap(long,
+		default_value = <span class="string">&quot;None&quot;</span>,
+		default_missing_value = <span class="string">&quot;All&quot;</span>,
+		num_args = <span class="number">0</span>..=<span class="number">1</span>,
+		require_equals = <span class="bool-val">true</span>,
+		verbatim_doc_comment)]
+	</span><span class="kw">pub </span>checks: UpgradeCheckSelect,
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>on_runtime_upgrade&lt;Block, HostFns&gt;(

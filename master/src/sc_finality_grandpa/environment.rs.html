@@ -1469,6 +1469,13 @@
 <a href="#1469" id="1469">1469</a>
 <a href="#1470" id="1470">1470</a>
 <a href="#1471" id="1471">1471</a>
+<a href="#1472" id="1472">1472</a>
+<a href="#1473" id="1473">1473</a>
+<a href="#1474" id="1474">1474</a>
+<a href="#1475" id="1475">1475</a>
+<a href="#1476" id="1476">1476</a>
+<a href="#1477" id="1477">1477</a>
+<a href="#1478" id="1478">1478</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2645,7 +2652,7 @@
 	<span class="kw">let </span>base_header = <span class="kw">match </span>client.header(block)<span class="question-mark">? </span>{
 		<span class="prelude-val">Some</span>(h) =&gt; h,
 		<span class="prelude-val">None </span>=&gt; {
-			<span class="macro">debug!</span>(
+			<span class="macro">warn!</span>(
 				target: LOG_TARGET,
 				<span class="string">&quot;Encountered error finding best chain containing {:?}: couldn&#39;t find base block&quot;</span>,
 				block,
@@ -2665,75 +2672,82 @@
 		<span class="string">&quot;Finding best chain containing block {:?} with number limit {:?}&quot;</span>, block, limit
 	);
 
-	<span class="kw">let </span>result = <span class="kw">match </span>select_chain.finality_target(block, <span class="prelude-val">None</span>).<span class="kw">await </span>{
-		<span class="prelude-val">Ok</span>(best_hash) =&gt; {
-			<span class="kw">let </span>best_header = client
-				.header(best_hash)<span class="question-mark">?
-				</span>.expect(<span class="string">&quot;Header known to exist after `finality_target` call; qed&quot;</span>);
-
-			<span class="comment">// check if our vote is currently being limited due to a pending change
-			</span><span class="kw">let </span>limit = limit.filter(|limit| limit &lt; best_header.number());
-
-			<span class="kw">let </span>(base_header, best_header, target_header) = <span class="kw">if let </span><span class="prelude-val">Some</span>(target_number) = limit {
-				<span class="kw">let </span><span class="kw-2">mut </span>target_header = best_header.clone();
-
-				<span class="comment">// walk backwards until we find the target block
-				</span><span class="kw">loop </span>{
-					<span class="kw">if </span><span class="kw-2">*</span>target_header.number() &lt; target_number {
-						<span class="macro">unreachable!</span>(
-							<span class="string">&quot;we are traversing backwards from a known block; \
-							 blocks are stored contiguously; \
-							 qed&quot;
-						</span>);
-					}
-
-					<span class="kw">if </span><span class="kw-2">*</span>target_header.number() == target_number {
-						<span class="kw">break
-					</span>}
-
-					target_header = client
-						.header(<span class="kw-2">*</span>target_header.parent_hash())<span class="question-mark">?
-						</span>.expect(<span class="string">&quot;Header known to exist after `finality_target` call; qed&quot;</span>);
-				}
-
-				(base_header, best_header, target_header)
-			} <span class="kw">else </span>{
-				<span class="comment">// otherwise just use the given best as the target
-				</span>(base_header, best_header.clone(), best_header)
-			};
-
-			<span class="comment">// restrict vote according to the given voting rule, if the
-			// voting rule doesn&#39;t restrict the vote then we keep the
-			// previous target.
-			//
-			// note that we pass the original `best_header`, i.e. before the
-			// authority set limit filter, which can be considered a
-			// mandatory/implicit voting rule.
-			//
-			// we also make sure that the restricted vote is higher than the
-			// round base (i.e. last finalized), otherwise the value
-			// returned by the given voting rule is ignored and the original
-			// target is used instead.
-			</span>voting_rule
-				.restrict_vote(client.clone(), <span class="kw-2">&amp;</span>base_header, <span class="kw-2">&amp;</span>best_header, <span class="kw-2">&amp;</span>target_header)
-				.<span class="kw">await
-				</span>.filter(|(<span class="kw">_</span>, restricted_number)| {
-					<span class="comment">// we can only restrict votes within the interval [base, target]
-					</span>restricted_number &gt;= base_header.number() &amp;&amp;
-						restricted_number &lt; target_header.number()
-				})
-				.or_else(|| <span class="prelude-val">Some</span>((target_header.hash(), <span class="kw-2">*</span>target_header.number())))
-		},
-		<span class="prelude-val">Err</span>(e) =&gt; {
+	<span class="kw">let </span><span class="kw-2">mut </span>target_header = <span class="kw">match </span>select_chain.finality_target(block, <span class="prelude-val">None</span>).<span class="kw">await </span>{
+		<span class="prelude-val">Ok</span>(target_hash) =&gt; client
+			.header(target_hash)<span class="question-mark">?
+			</span>.expect(<span class="string">&quot;Header known to exist after `finality_target` call; qed&quot;</span>),
+		<span class="prelude-val">Err</span>(err) =&gt; {
 			<span class="macro">warn!</span>(
 				target: LOG_TARGET,
-				<span class="string">&quot;Encountered error finding best chain containing {:?}: {}&quot;</span>, block, e
+				<span class="string">&quot;Encountered error finding best chain containing {:?}: couldn&#39;t find target block: {}&quot;</span>,
+				block,
+				err,
 			);
-			<span class="prelude-val">None
-		</span>},
+
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+		},
 	};
 
-	<span class="prelude-val">Ok</span>(result)
+	<span class="comment">// NOTE: this is purposefully done after `finality_target` to prevent a case
+	// where in-between these two requests there is a block import and
+	// `finality_target` returns something higher than `best_chain`.
+	</span><span class="kw">let </span>best_header = <span class="kw">match </span>select_chain.best_chain().<span class="kw">await </span>{
+		<span class="prelude-val">Ok</span>(best_header) =&gt; best_header,
+		<span class="prelude-val">Err</span>(err) =&gt; {
+			<span class="macro">warn!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Encountered error finding best chain containing {:?}: couldn&#39;t find best block: {}&quot;</span>,
+				block,
+				err,
+			);
+
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+		},
+	};
+
+	<span class="kw">if </span>target_header.number() &gt; best_header.number() {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::Safety(
+			<span class="string">&quot;SelectChain returned a finality target higher than its best block&quot;</span>.into(),
+		))
+	}
+
+	<span class="comment">// check if our vote is currently being limited due to a pending change,
+	// in which case we will restrict our target header to the given limit
+	</span><span class="kw">if let </span><span class="prelude-val">Some</span>(target_number) = limit.filter(|limit| limit &lt; target_header.number()) {
+		<span class="comment">// walk backwards until we find the target block
+		</span><span class="kw">loop </span>{
+			<span class="kw">if </span><span class="kw-2">*</span>target_header.number() &lt; target_number {
+				<span class="macro">unreachable!</span>(
+					<span class="string">&quot;we are traversing backwards from a known block; \
+					 blocks are stored contiguously; \
+					 qed&quot;
+				</span>);
+			}
+
+			<span class="kw">if </span><span class="kw-2">*</span>target_header.number() == target_number {
+				<span class="kw">break
+			</span>}
+
+			target_header = client
+				.header(<span class="kw-2">*</span>target_header.parent_hash())<span class="question-mark">?
+				</span>.expect(<span class="string">&quot;Header known to exist after `finality_target` call; qed&quot;</span>);
+		}
+	}
+
+	<span class="comment">// restrict vote according to the given voting rule, if the voting rule
+	// doesn&#39;t restrict the vote then we keep the previous target.
+	//
+	// we also make sure that the restricted vote is higher than the round base
+	// (i.e. last finalized), otherwise the value returned by the given voting
+	// rule is ignored and the original target is used instead.
+	</span><span class="prelude-val">Ok</span>(voting_rule
+		.restrict_vote(client.clone(), <span class="kw-2">&amp;</span>base_header, <span class="kw-2">&amp;</span>best_header, <span class="kw-2">&amp;</span>target_header)
+		.<span class="kw">await
+		</span>.filter(|(<span class="kw">_</span>, restricted_number)| {
+			<span class="comment">// we can only restrict votes within the interval [base, target]
+			</span>restricted_number &gt;= base_header.number() &amp;&amp; restricted_number &lt; target_header.number()
+		})
+		.or_else(|| <span class="prelude-val">Some</span>((target_header.hash(), <span class="kw-2">*</span>target_header.number()))))
 }
 
 <span class="doccomment">/// Finalize the given block and apply any authority set changes. If an
