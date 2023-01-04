@@ -417,6 +417,19 @@
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -605,6 +618,19 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		<span class="kw-2">mut </span>block: BlockImportParams&lt;B, ()&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(BlockImportParams&lt;B, ()&gt;, <span class="prelude-ty">Option</span>&lt;Vec&lt;(CacheKeyId, Vec&lt;u8&gt;)&gt;&gt;), String&gt; {
+		<span class="comment">// When importing whole state we don&#39;t verify the seal as the state is not available.
+		</span><span class="kw">if </span>block.with_state() {
+			<span class="kw">return </span><span class="prelude-val">Ok</span>((block, Default::default()))
+		}
+
+		<span class="comment">// Skip checks that include execution, if being told so.
+		//
+		// This is done for example when gap syncing and it is expected that the block after the gap
+		// was checked/chosen properly, e.g. by warp syncing to this block using a finality proof.
+		</span><span class="kw">if </span>block.state_action.skip_execution_checks() {
+			<span class="kw">return </span><span class="prelude-val">Ok</span>((block, Default::default()))
+		}
+
 		<span class="kw">let </span>hash = block.header.hash();
 		<span class="kw">let </span>parent_hash = <span class="kw-2">*</span>block.header.parent_hash();
 		<span class="kw">let </span>authorities = authorities(
