@@ -246,6 +246,30 @@
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -375,6 +399,20 @@
 	) -&gt; DispatchResult {
 		key.using_encoded(|k| value.using_encoded(|v| <span class="self">Self</span>::set_attribute(item, k, v)))
 	}
+
+	<span class="doccomment">/// Clear attribute of `item`&#39;s `key`.
+	///
+	/// By default, this is not a supported operation.
+	</span><span class="kw">fn </span>clear_attribute(_item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, _key: <span class="kw-2">&amp;</span>[u8]) -&gt; DispatchResult {
+		<span class="prelude-val">Err</span>(TokenError::Unsupported.into())
+	}
+
+	<span class="doccomment">/// Attempt to clear the strongly-typed attribute of `item`&#39;s `key`.
+	///
+	/// By default this just attempts to use `clear_attribute`.
+	</span><span class="kw">fn </span>clear_typed_attribute&lt;K: Encode&gt;(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>K) -&gt; DispatchResult {
+		key.using_encoded(|k| <span class="self">Self</span>::clear_attribute(item, k))
+	}
 }
 
 <span class="doccomment">/// Trait for transferring a non-fungible item.
@@ -480,6 +518,16 @@
 			item,
 			key,
 			value,
+		)
+	}
+	<span class="kw">fn </span>clear_attribute(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>[u8]) -&gt; DispatchResult {
+		&lt;F <span class="kw">as </span>nonfungibles::Mutate&lt;AccountId, ItemConfig&gt;&gt;::clear_attribute(<span class="kw-2">&amp;</span>A::get(), item, key)
+	}
+	<span class="kw">fn </span>clear_typed_attribute&lt;K: Encode&gt;(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>K) -&gt; DispatchResult {
+		&lt;F <span class="kw">as </span>nonfungibles::Mutate&lt;AccountId, ItemConfig&gt;&gt;::clear_typed_attribute(
+			<span class="kw-2">&amp;</span>A::get(),
+			item,
+			key,
 		)
 	}
 }
