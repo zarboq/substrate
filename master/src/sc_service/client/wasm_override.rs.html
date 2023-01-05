@@ -348,7 +348,6 @@
 <a href="#348" id="348">348</a>
 <a href="#349" id="349">349</a>
 <a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -413,16 +412,16 @@
 	</span>hash: Vec&lt;u8&gt;,
 	<span class="doccomment">/// The path where this blob was found.
 	</span>path: PathBuf,
-	<span class="doccomment">/// The `spec_name` found in the runtime version of this blob.
-	</span>spec_name: String,
+	<span class="doccomment">/// The runtime version of this blob.
+	</span>version: RuntimeVersion,
 	<span class="doccomment">/// When was the last time we have warned about the wasm blob having
 	/// a wrong `spec_name`?
 	</span>last_warn: parking_lot::Mutex&lt;<span class="prelude-ty">Option</span>&lt;Instant&gt;&gt;,
 }
 
 <span class="kw">impl </span>WasmBlob {
-	<span class="kw">fn </span>new(code: Vec&lt;u8&gt;, hash: Vec&lt;u8&gt;, path: PathBuf, spec_name: String) -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{ code, hash, path, spec_name, last_warn: Default::default() }
+	<span class="kw">fn </span>new(code: Vec&lt;u8&gt;, hash: Vec&lt;u8&gt;, path: PathBuf, version: RuntimeVersion) -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{ code, hash, path, version, last_warn: Default::default() }
 	}
 
 	<span class="kw">fn </span>runtime_code(<span class="kw-2">&amp;</span><span class="self">self</span>, heap_pages: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; RuntimeCode {
@@ -492,10 +491,10 @@
 		spec: <span class="kw-2">&amp;</span>u32,
 		pages: <span class="prelude-ty">Option</span>&lt;u64&gt;,
 		spec_name: <span class="kw-2">&amp;</span>str,
-	) -&gt; <span class="prelude-ty">Option</span>&lt;RuntimeCode&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+	) -&gt; <span class="prelude-ty">Option</span>&lt;(RuntimeCode&lt;<span class="lifetime">&#39;a</span>&gt;, RuntimeVersion)&gt; {
 		<span class="self">self</span>.overrides.get(spec).and_then(|w| {
-			<span class="kw">if </span>spec_name == w.spec_name {
-				<span class="prelude-val">Some</span>(w.runtime_code(pages))
+			<span class="kw">if </span>spec_name == <span class="kw-2">&amp;*</span>w.version.spec_name {
+				<span class="prelude-val">Some</span>((w.runtime_code(pages), w.version.clone()))
 			} <span class="kw">else </span>{
 				<span class="kw">let </span><span class="kw-2">mut </span>last_warn = w.last_warn.lock();
 				<span class="kw">let </span>now = Instant::now();
@@ -506,7 +505,7 @@
 					<span class="macro">tracing::warn!</span>(
 						target = <span class="string">&quot;wasm_overrides&quot;</span>,
 						on_chain_spec_name = %spec_name,
-						override_spec_name = %w.spec_name,
+						override_spec_name = %w.version,
 						spec_version = %spec,
 						wasm_file = %w.path.display(),
 						<span class="string">&quot;On chain and override `spec_name` do not match! Ignoring override.&quot;</span>,
@@ -548,8 +547,7 @@
 					<span class="string">&quot;Found wasm override.&quot;</span>,
 				);
 
-				<span class="kw">let </span>wasm =
-					WasmBlob::new(code, code_hash, path.clone(), version.spec_name.to_string());
+				<span class="kw">let </span>wasm = WasmBlob::new(code, code_hash, path.clone(), version.clone());
 
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(other) = overrides.insert(version.spec_version, wasm) {
 					<span class="macro">tracing::info!</span>(
@@ -597,19 +595,19 @@
 <span class="doccomment">/// Returns a WasmOverride struct filled with dummy data for testing.
 </span><span class="attr">#[cfg(test)]
 </span><span class="kw">pub fn </span>dummy_overrides() -&gt; WasmOverride {
+	<span class="kw">let </span>version = RuntimeVersion { spec_name: <span class="string">&quot;test&quot;</span>.into(), ..Default::default() };
 	<span class="kw">let </span><span class="kw-2">mut </span>overrides = HashMap::new();
 	overrides.insert(
 		<span class="number">0</span>,
-		WasmBlob::new(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>], <span class="macro">vec!</span>[<span class="number">0</span>], PathBuf::new(), <span class="string">&quot;test&quot;</span>.into()),
+		WasmBlob::new(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>], <span class="macro">vec!</span>[<span class="number">0</span>], PathBuf::new(), version.clone()),
 	);
 	overrides.insert(
 		<span class="number">1</span>,
-		WasmBlob::new(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>], <span class="macro">vec!</span>[<span class="number">1</span>], PathBuf::new(), <span class="string">&quot;test&quot;</span>.into()),
+		WasmBlob::new(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>], <span class="macro">vec!</span>[<span class="number">1</span>], PathBuf::new(), version.clone()),
 	);
-	overrides.insert(
-		<span class="number">2</span>,
-		WasmBlob::new(<span class="macro">vec!</span>[<span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>], <span class="macro">vec!</span>[<span class="number">2</span>], PathBuf::new(), <span class="string">&quot;test&quot;</span>.into()),
-	);
+	overrides
+		.insert(<span class="number">2</span>, WasmBlob::new(<span class="macro">vec!</span>[<span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>], <span class="macro">vec!</span>[<span class="number">2</span>], PathBuf::new(), version));
+
 	WasmOverride { overrides }
 }
 
