@@ -1109,6 +1109,31 @@
 <a href="#1109" id="1109">1109</a>
 <a href="#1110" id="1110">1110</a>
 <a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1360,7 +1385,7 @@
 				NonZeroUsize::new(MAX_KNOWN_EXTERNAL_ADDRESSES)
 					.expect(<span class="string">&quot;value is a constant; constant is non-zero; qed.&quot;</span>),
 			),
-			outbound_query_records: Vec::new(),
+			records_to_publish: Default::default(),
 		}
 	}
 }
@@ -1398,8 +1423,12 @@
 	</span>allow_non_globals_in_dht: bool,
 	<span class="doccomment">/// A cache of discovered external addresses. Only used for logging purposes.
 	</span>known_external_addresses: LruHashSet&lt;Multiaddr&gt;,
-	<span class="doccomment">/// A cache of outbound query records.
-	</span>outbound_query_records: Vec&lt;(record::Key, Vec&lt;u8&gt;)&gt;,
+	<span class="doccomment">/// Records to publish per QueryId.
+	///
+	/// After finishing a Kademlia query, libp2p will return us a list of the closest peers that
+	/// did not return the record(in `FinishedWithNoAdditionalRecord`). We will then put the record
+	/// to these peers.
+	</span>records_to_publish: HashMap&lt;QueryId, Record&gt;,
 }
 
 <span class="kw">impl </span>DiscoveryBehaviour {
@@ -1803,33 +1832,54 @@
 					KademliaEvent::OutboundQueryProgressed {
 						result: QueryResult::GetRecord(res),
 						stats,
-						step,
+						id,
 						..
 					} =&gt; {
 						<span class="kw">let </span>ev = <span class="kw">match </span>res {
-							<span class="prelude-val">Ok</span>(ok) =&gt;
-								<span class="kw">if let </span>GetRecordOk::FoundRecord(r) = ok {
-									<span class="self">self</span>.outbound_query_records
-										.push((r.record.key, r.record.value));
+							<span class="prelude-val">Ok</span>(GetRecordOk::FoundRecord(r)) =&gt; {
+								<span class="macro">debug!</span>(
+									target: <span class="string">&quot;sub-libp2p&quot;</span>,
+									<span class="string">&quot;Libp2p =&gt; Found record ({:?}) with value: {:?}&quot;</span>,
+									r.record.key,
+									r.record.value,
+								);
+
+								<span class="comment">// Let&#39;s directly finish the query, as we are only interested in a
+								// quorum of 1.
+								</span><span class="kw">if let </span><span class="prelude-val">Some</span>(kad) = <span class="self">self</span>.kademlia.as_mut() {
+									<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>query) = kad.query_mut(<span class="kw-2">&amp;</span>id) {
+										query.finish();
+									}
+								}
+
+								<span class="self">self</span>.records_to_publish.insert(id, r.record.clone());
+
+								DiscoveryOut::ValueFound(
+									<span class="macro">vec!</span>[(r.record.key, r.record.value)],
+									stats.duration().unwrap_or_default(),
+								)
+							},
+							<span class="prelude-val">Ok</span>(GetRecordOk::FinishedWithNoAdditionalRecord {
+								cache_candidates,
+							}) =&gt; {
+								<span class="kw">if </span>cache_candidates.is_empty() {
 									<span class="kw">continue
-								</span>} <span class="kw">else </span>{
-									<span class="macro">debug!</span>(
-										target: <span class="string">&quot;sub-libp2p&quot;</span>,
-										<span class="string">&quot;Libp2p =&gt; Query progressed to {:?} step (last: {:?})&quot;</span>,
-										step.count,
-										step.last,
-									);
-									<span class="kw">if </span>step.last {
-										<span class="kw">let </span>records =
-											<span class="self">self</span>.outbound_query_records.drain(..).collect();
-										DiscoveryOut::ValueFound(
-											records,
-											stats.duration().unwrap_or_default(),
-										)
-									} <span class="kw">else </span>{
-										<span class="kw">continue
-									</span>}
-								},
+								</span>}
+
+								<span class="comment">// Put the record to the `cache_candidates` that are nearest to the
+								// record key from our point of view of the network.
+								</span><span class="kw">if let </span><span class="prelude-val">Some</span>(record) = <span class="self">self</span>.records_to_publish.remove(<span class="kw-2">&amp;</span>id) {
+									<span class="kw">if let </span><span class="prelude-val">Some</span>(kad) = <span class="self">self</span>.kademlia.as_mut() {
+										kad.put_record_to(
+											record,
+											cache_candidates.into_iter().map(|v| v.<span class="number">1</span>),
+											Quorum::One,
+										);
+									}
+								}
+
+								<span class="kw">continue
+							</span>},
 							<span class="prelude-val">Err</span>(e @ libp2p::kad::GetRecordError::NotFound { .. }) =&gt; {
 								<span class="macro">trace!</span>(
 									target: <span class="string">&quot;sub-libp2p&quot;</span>,
