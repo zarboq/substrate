@@ -417,27 +417,6 @@
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -459,16 +438,17 @@
 </span><span class="kw">use </span>fnv::FnvHashMap;
 <span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>libp2p::{
-	core::{
-		connection::ConnectionId, either::EitherOutput, transport::ListenerId, ConnectedPoint,
-		PeerId, PublicKey,
-	},
+	core::{connection::ConnectionId, either::EitherOutput, ConnectedPoint, PeerId, PublicKey},
 	identify::{
 		Behaviour <span class="kw">as </span>Identify, Config <span class="kw">as </span>IdentifyConfig, Event <span class="kw">as </span>IdentifyEvent,
 		Info <span class="kw">as </span>IdentifyInfo,
 	},
 	ping::{Behaviour <span class="kw">as </span>Ping, Config <span class="kw">as </span>PingConfig, Event <span class="kw">as </span>PingEvent, Success <span class="kw">as </span>PingSuccess},
 	swarm::{
+		behaviour::{
+			AddressChange, ConnectionClosed, ConnectionEstablished, DialFailure, FromSwarm,
+			ListenFailure,
+		},
 		ConnectionHandler, IntoConnectionHandler, IntoConnectionHandlerSelect, NetworkBehaviour,
 		NetworkBehaviourAction, PollParameters,
 	},
@@ -479,7 +459,6 @@
 <span class="kw">use </span>smallvec::SmallVec;
 <span class="kw">use </span>std::{
 	collections::hash_map::Entry,
-	error, io,
 	pin::Pin,
 	task::{Context, Poll},
 	time::{Duration, Instant},
@@ -628,170 +607,149 @@
 		list
 	}
 
-	<span class="kw">fn </span>inject_address_change(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		conn: <span class="kw-2">&amp;</span>ConnectionId,
-		old: <span class="kw-2">&amp;</span>ConnectedPoint,
-		new: <span class="kw-2">&amp;</span>ConnectedPoint,
-	) {
-		<span class="self">self</span>.ping.inject_address_change(peer_id, conn, old, new);
-		<span class="self">self</span>.identify.inject_address_change(peer_id, conn, old, new);
+	<span class="kw">fn </span>on_swarm_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: FromSwarm&lt;<span class="self">Self</span>::ConnectionHandler&gt;) {
+		<span class="kw">match </span>event {
+			FromSwarm::ConnectionEstablished(
+				e @ ConnectionEstablished { peer_id, endpoint, .. },
+			) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::ConnectionEstablished(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::ConnectionEstablished(e));
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.nodes_info.get_mut(peer_id) {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = entry.endpoints.iter_mut().find(|e| e == <span class="kw-2">&amp;</span>old) {
-				<span class="kw-2">*</span>endpoint = new.clone();
-			} <span class="kw">else </span>{
-				<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-					<span class="string">&quot;Unknown address change for peer {:?} from {:?} to {:?}&quot;</span>, peer_id, old, new);
-			}
-		} <span class="kw">else </span>{
-			<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-				<span class="string">&quot;Unknown peer {:?} to change address from {:?} to {:?}&quot;</span>, peer_id, old, new);
-		}
-	}
-
-	<span class="kw">fn </span>inject_connection_established(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		conn: <span class="kw-2">&amp;</span>ConnectionId,
-		endpoint: <span class="kw-2">&amp;</span>ConnectedPoint,
-		failed_addresses: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;Multiaddr&gt;&gt;,
-		other_established: usize,
-	) {
-		<span class="self">self</span>.ping.inject_connection_established(
-			peer_id,
-			conn,
-			endpoint,
-			failed_addresses,
-			other_established,
-		);
-		<span class="self">self</span>.identify.inject_connection_established(
-			peer_id,
-			conn,
-			endpoint,
-			failed_addresses,
-			other_established,
-		);
-		<span class="kw">match </span><span class="self">self</span>.nodes_info.entry(<span class="kw-2">*</span>peer_id) {
-			Entry::Vacant(e) =&gt; {
-				e.insert(NodeInfo::new(endpoint.clone()));
-			},
-			Entry::Occupied(e) =&gt; {
-				<span class="kw">let </span>e = e.into_mut();
-				<span class="kw">if </span>e.info_expire.as_ref().map(|exp| <span class="kw-2">*</span>exp &lt; Instant::now()).unwrap_or(<span class="bool-val">false</span>) {
-					e.client_version = <span class="prelude-val">None</span>;
-					e.latest_ping = <span class="prelude-val">None</span>;
+				<span class="kw">match </span><span class="self">self</span>.nodes_info.entry(peer_id) {
+					Entry::Vacant(e) =&gt; {
+						e.insert(NodeInfo::new(endpoint.clone()));
+					},
+					Entry::Occupied(e) =&gt; {
+						<span class="kw">let </span>e = e.into_mut();
+						<span class="kw">if </span>e.info_expire.as_ref().map(|exp| <span class="kw-2">*</span>exp &lt; Instant::now()).unwrap_or(<span class="bool-val">false</span>)
+						{
+							e.client_version = <span class="prelude-val">None</span>;
+							e.latest_ping = <span class="prelude-val">None</span>;
+						}
+						e.info_expire = <span class="prelude-val">None</span>;
+						e.endpoints.push(endpoint.clone());
+					},
 				}
-				e.info_expire = <span class="prelude-val">None</span>;
-				e.endpoints.push(endpoint.clone());
+			},
+			FromSwarm::ConnectionClosed(ConnectionClosed {
+				peer_id,
+				connection_id,
+				endpoint,
+				handler,
+				remaining_established,
+			}) =&gt; {
+				<span class="kw">let </span>(ping_handler, identity_handler) = handler.into_inner();
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::ConnectionClosed(ConnectionClosed {
+					peer_id,
+					connection_id,
+					endpoint,
+					handler: ping_handler,
+					remaining_established,
+				}));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::ConnectionClosed(ConnectionClosed {
+					peer_id,
+					connection_id,
+					endpoint,
+					handler: identity_handler,
+					remaining_established,
+				}));
+
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.nodes_info.get_mut(<span class="kw-2">&amp;</span>peer_id) {
+					<span class="kw">if </span>remaining_established == <span class="number">0 </span>{
+						entry.info_expire = <span class="prelude-val">Some</span>(Instant::now() + CACHE_EXPIRE);
+					}
+					entry.endpoints.retain(|ep| ep != endpoint)
+				} <span class="kw">else </span>{
+					<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;Unknown connection to {:?} closed: {:?}&quot;</span>, peer_id, endpoint);
+				}
+			},
+			FromSwarm::DialFailure(DialFailure { peer_id, handler, error }) =&gt; {
+				<span class="kw">let </span>(ping_handler, identity_handler) = handler.into_inner();
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::DialFailure(DialFailure {
+					peer_id,
+					handler: ping_handler,
+					error,
+				}));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::DialFailure(DialFailure {
+					peer_id,
+					handler: identity_handler,
+					error,
+				}));
+			},
+			FromSwarm::ListenerClosed(e) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::ListenerClosed(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::ListenerClosed(e));
+			},
+			FromSwarm::ListenFailure(ListenFailure { local_addr, send_back_addr, handler }) =&gt; {
+				<span class="kw">let </span>(ping_handler, identity_handler) = handler.into_inner();
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::ListenFailure(ListenFailure {
+					local_addr,
+					send_back_addr,
+					handler: ping_handler,
+				}));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::ListenFailure(ListenFailure {
+					local_addr,
+					send_back_addr,
+					handler: identity_handler,
+				}));
+			},
+			FromSwarm::ListenerError(e) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::ListenerError(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::ListenerError(e));
+			},
+			FromSwarm::ExpiredExternalAddr(e) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::ExpiredExternalAddr(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::ExpiredExternalAddr(e));
+			},
+			FromSwarm::NewListener(e) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::NewListener(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::NewListener(e));
+			},
+			FromSwarm::ExpiredListenAddr(e) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::ExpiredListenAddr(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::ExpiredListenAddr(e));
+			},
+			FromSwarm::NewExternalAddr(e) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::NewExternalAddr(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::NewExternalAddr(e));
+			},
+			FromSwarm::AddressChange(e @ AddressChange { peer_id, old, new, .. }) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::AddressChange(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::AddressChange(e));
+
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.nodes_info.get_mut(<span class="kw-2">&amp;</span>peer_id) {
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = entry.endpoints.iter_mut().find(|e| e == <span class="kw-2">&amp;</span>old) {
+						<span class="kw-2">*</span>endpoint = new.clone();
+					} <span class="kw">else </span>{
+						<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+							<span class="string">&quot;Unknown address change for peer {:?} from {:?} to {:?}&quot;</span>, peer_id, old, new);
+					}
+				} <span class="kw">else </span>{
+					<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;Unknown peer {:?} to change address from {:?} to {:?}&quot;</span>, peer_id, old, new);
+				}
+			},
+			FromSwarm::NewListenAddr(e) =&gt; {
+				<span class="self">self</span>.ping.on_swarm_event(FromSwarm::NewListenAddr(e));
+				<span class="self">self</span>.identify.on_swarm_event(FromSwarm::NewListenAddr(e));
 			},
 		}
 	}
 
-	<span class="kw">fn </span>inject_connection_closed(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		conn: <span class="kw-2">&amp;</span>ConnectionId,
-		endpoint: <span class="kw-2">&amp;</span>ConnectedPoint,
-		handler: &lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler,
-		remaining_established: usize,
-	) {
-		<span class="kw">let </span>(ping_handler, identity_handler) = handler.into_inner();
-		<span class="self">self</span>.identify.inject_connection_closed(
-			peer_id,
-			conn,
-			endpoint,
-			identity_handler,
-			remaining_established,
-		);
-		<span class="self">self</span>.ping.inject_connection_closed(
-			peer_id,
-			conn,
-			endpoint,
-			ping_handler,
-			remaining_established,
-		);
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.nodes_info.get_mut(peer_id) {
-			<span class="kw">if </span>remaining_established == <span class="number">0 </span>{
-				entry.info_expire = <span class="prelude-val">Some</span>(Instant::now() + CACHE_EXPIRE);
-			}
-			entry.endpoints.retain(|ep| ep != endpoint)
-		} <span class="kw">else </span>{
-			<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-				<span class="string">&quot;Unknown connection to {:?} closed: {:?}&quot;</span>, peer_id, endpoint);
-		}
-	}
-
-	<span class="kw">fn </span>inject_event(
+	<span class="kw">fn </span>on_connection_handler_event(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		peer_id: PeerId,
-		connection: ConnectionId,
-		event: &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as </span>ConnectionHandler&gt;::OutEvent,
+		connection_id: ConnectionId,
+		event: &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as
+		</span>ConnectionHandler&gt;::OutEvent,
 	) {
 		<span class="kw">match </span>event {
-			EitherOutput::First(event) =&gt; <span class="self">self</span>.ping.inject_event(peer_id, connection, event),
-			EitherOutput::Second(event) =&gt; <span class="self">self</span>.identify.inject_event(peer_id, connection, event),
+			EitherOutput::First(event) =&gt;
+				<span class="self">self</span>.ping.on_connection_handler_event(peer_id, connection_id, event),
+			EitherOutput::Second(event) =&gt;
+				<span class="self">self</span>.identify.on_connection_handler_event(peer_id, connection_id, event),
 		}
-	}
-
-	<span class="kw">fn </span>inject_dial_failure(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="prelude-ty">Option</span>&lt;PeerId&gt;,
-		handler: <span class="self">Self</span>::ConnectionHandler,
-		error: <span class="kw-2">&amp;</span>libp2p::swarm::DialError,
-	) {
-		<span class="kw">let </span>(ping_handler, identity_handler) = handler.into_inner();
-		<span class="self">self</span>.identify.inject_dial_failure(peer_id, identity_handler, error);
-		<span class="self">self</span>.ping.inject_dial_failure(peer_id, ping_handler, error);
-	}
-
-	<span class="kw">fn </span>inject_new_listener(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId) {
-		<span class="self">self</span>.ping.inject_new_listener(id);
-		<span class="self">self</span>.identify.inject_new_listener(id);
-	}
-
-	<span class="kw">fn </span>inject_new_listen_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="self">self</span>.ping.inject_new_listen_addr(id, addr);
-		<span class="self">self</span>.identify.inject_new_listen_addr(id, addr);
-	}
-
-	<span class="kw">fn </span>inject_expired_listen_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="self">self</span>.ping.inject_expired_listen_addr(id, addr);
-		<span class="self">self</span>.identify.inject_expired_listen_addr(id, addr);
-	}
-
-	<span class="kw">fn </span>inject_new_external_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="self">self</span>.ping.inject_new_external_addr(addr);
-		<span class="self">self</span>.identify.inject_new_external_addr(addr);
-	}
-
-	<span class="kw">fn </span>inject_expired_external_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="self">self</span>.ping.inject_expired_external_addr(addr);
-		<span class="self">self</span>.identify.inject_expired_external_addr(addr);
-	}
-
-	<span class="kw">fn </span>inject_listen_failure(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		local_addr: <span class="kw-2">&amp;</span>Multiaddr,
-		send_back_addr: <span class="kw-2">&amp;</span>Multiaddr,
-		handler: <span class="self">Self</span>::ConnectionHandler,
-	) {
-		<span class="kw">let </span>(ping_handler, identity_handler) = handler.into_inner();
-		<span class="self">self</span>.identify
-			.inject_listen_failure(local_addr, send_back_addr, identity_handler);
-		<span class="self">self</span>.ping.inject_listen_failure(local_addr, send_back_addr, ping_handler);
-	}
-
-	<span class="kw">fn </span>inject_listener_error(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, err: <span class="kw-2">&amp;</span>(<span class="kw">dyn </span>error::Error + <span class="lifetime">&#39;static</span>)) {
-		<span class="self">self</span>.ping.inject_listener_error(id, err);
-		<span class="self">self</span>.identify.inject_listener_error(id, err);
-	}
-
-	<span class="kw">fn </span>inject_listener_closed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, reason: <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span>io::Error&gt;) {
-		<span class="self">self</span>.ping.inject_listener_closed(id, reason);
-		<span class="self">self</span>.identify.inject_listener_closed(id, reason);
 	}
 
 	<span class="kw">fn </span>poll(

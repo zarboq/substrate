@@ -177,17 +177,17 @@
 ) -&gt; (Boxed&lt;(PeerId, StreamMuxerBox)&gt;, Arc&lt;BandwidthSinks&gt;) {
 	<span class="comment">// Build the base layer of the transport.
 	</span><span class="kw">let </span>transport = <span class="kw">if </span>!memory_only {
-		<span class="kw">let </span>tcp_config = tcp::GenTcpConfig::new().nodelay(<span class="bool-val">true</span>);
-		<span class="kw">let </span>desktop_trans = tcp::TokioTcpTransport::new(tcp_config.clone());
+		<span class="kw">let </span>tcp_config = tcp::Config::new().nodelay(<span class="bool-val">true</span>);
+		<span class="kw">let </span>desktop_trans = tcp::tokio::Transport::new(tcp_config.clone());
 		<span class="kw">let </span>desktop_trans = websocket::WsConfig::new(desktop_trans)
-			.or_transport(tcp::TokioTcpTransport::new(tcp_config.clone()));
+			.or_transport(tcp::tokio::Transport::new(tcp_config.clone()));
 		<span class="kw">let </span>dns_init = dns::TokioDnsConfig::system(desktop_trans);
 		EitherTransport::Left(<span class="kw">if let </span><span class="prelude-val">Ok</span>(dns) = dns_init {
 			EitherTransport::Left(dns)
 		} <span class="kw">else </span>{
-			<span class="kw">let </span>desktop_trans = tcp::TokioTcpTransport::new(tcp_config.clone());
+			<span class="kw">let </span>desktop_trans = tcp::tokio::Transport::new(tcp_config.clone());
 			<span class="kw">let </span>desktop_trans = websocket::WsConfig::new(desktop_trans)
-				.or_transport(tcp::TokioTcpTransport::new(tcp_config));
+				.or_transport(tcp::tokio::Transport::new(tcp_config));
 			EitherTransport::Right(desktop_trans.map_err(dns::DnsErr::Transport))
 		})
 	} <span class="kw">else </span>{

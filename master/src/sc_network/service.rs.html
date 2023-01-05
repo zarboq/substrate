@@ -1947,6 +1947,12 @@
 <a href="#1947" id="1947">1947</a>
 <a href="#1948" id="1948">1948</a>
 <a href="#1949" id="1949">1949</a>
+<a href="#1950" id="1950">1950</a>
+<a href="#1951" id="1951">1951</a>
+<a href="#1952" id="1952">1952</a>
+<a href="#1953" id="1953">1953</a>
+<a href="#1954" id="1954">1954</a>
+<a href="#1955" id="1955">1955</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1989,13 +1995,13 @@
 
 <span class="kw">use </span>futures::{channel::oneshot, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>libp2p::{
-	core::{either::EitherError, upgrade, ConnectedPoint, Executor},
+	core::{either::EitherError, upgrade, ConnectedPoint},
 	identify::Info <span class="kw">as </span>IdentifyInfo,
 	kad::record::Key <span class="kw">as </span>KademliaKey,
 	multiaddr,
 	ping::Failure <span class="kw">as </span>PingFailure,
 	swarm::{
-		AddressScore, ConnectionError, ConnectionLimits, DialError, NetworkBehaviour,
+		AddressScore, ConnectionError, ConnectionLimits, DialError, Executor, NetworkBehaviour,
 		PendingConnectionError, Swarm, SwarmBuilder, SwarmEvent,
 	},
 	Multiaddr, PeerId,
@@ -2319,7 +2325,21 @@
 				}
 			};
 
-			<span class="kw">let </span><span class="kw-2">mut </span>builder = SwarmBuilder::new(transport, behaviour, local_peer_id)
+			<span class="kw">let </span>builder = {
+				<span class="kw">struct </span>SpawnImpl&lt;F&gt;(F);
+				<span class="kw">impl</span>&lt;F: Fn(Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;)&gt; Executor <span class="kw">for </span>SpawnImpl&lt;F&gt; {
+					<span class="kw">fn </span>exec(<span class="kw-2">&amp;</span><span class="self">self</span>, f: Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;) {
+						(<span class="self">self</span>.<span class="number">0</span>)(f)
+					}
+				}
+				SwarmBuilder::with_executor(
+					transport,
+					behaviour,
+					local_peer_id,
+					SpawnImpl(params.executor),
+				)
+			};
+			<span class="kw">let </span>builder = builder
 				.connection_limits(
 					ConnectionLimits::default()
 						.with_max_established_per_peer(<span class="prelude-val">Some</span>(<span class="kw">crate</span>::MAX_CONNECTIONS_PER_PEER <span class="kw">as </span>u32))
@@ -2331,14 +2351,6 @@
 				.notify_handler_buffer_size(NonZeroUsize::new(<span class="number">32</span>).expect(<span class="string">&quot;32 != 0; qed&quot;</span>))
 				.connection_event_buffer_size(<span class="number">1024</span>)
 				.max_negotiating_inbound_streams(<span class="number">2048</span>);
-
-			<span class="kw">struct </span>SpawnImpl&lt;F&gt;(F);
-			<span class="kw">impl</span>&lt;F: Fn(Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;)&gt; Executor <span class="kw">for </span>SpawnImpl&lt;F&gt; {
-				<span class="kw">fn </span>exec(<span class="kw-2">&amp;</span><span class="self">self</span>, f: Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;) {
-					(<span class="self">self</span>.<span class="number">0</span>)(f)
-				}
-			}
-			builder = builder.executor(Box::new(SpawnImpl(params.executor)));
 
 			(builder.build(), bandwidth)
 		};

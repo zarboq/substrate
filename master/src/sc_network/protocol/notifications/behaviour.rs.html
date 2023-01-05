@@ -2070,6 +2070,47 @@
 <a href="#2070" id="2070">2070</a>
 <a href="#2071" id="2071">2071</a>
 <a href="#2072" id="2072">2072</a>
+<a href="#2073" id="2073">2073</a>
+<a href="#2074" id="2074">2074</a>
+<a href="#2075" id="2075">2075</a>
+<a href="#2076" id="2076">2076</a>
+<a href="#2077" id="2077">2077</a>
+<a href="#2078" id="2078">2078</a>
+<a href="#2079" id="2079">2079</a>
+<a href="#2080" id="2080">2080</a>
+<a href="#2081" id="2081">2081</a>
+<a href="#2082" id="2082">2082</a>
+<a href="#2083" id="2083">2083</a>
+<a href="#2084" id="2084">2084</a>
+<a href="#2085" id="2085">2085</a>
+<a href="#2086" id="2086">2086</a>
+<a href="#2087" id="2087">2087</a>
+<a href="#2088" id="2088">2088</a>
+<a href="#2089" id="2089">2089</a>
+<a href="#2090" id="2090">2090</a>
+<a href="#2091" id="2091">2091</a>
+<a href="#2092" id="2092">2092</a>
+<a href="#2093" id="2093">2093</a>
+<a href="#2094" id="2094">2094</a>
+<a href="#2095" id="2095">2095</a>
+<a href="#2096" id="2096">2096</a>
+<a href="#2097" id="2097">2097</a>
+<a href="#2098" id="2098">2098</a>
+<a href="#2099" id="2099">2099</a>
+<a href="#2100" id="2100">2100</a>
+<a href="#2101" id="2101">2101</a>
+<a href="#2102" id="2102">2102</a>
+<a href="#2103" id="2103">2103</a>
+<a href="#2104" id="2104">2104</a>
+<a href="#2105" id="2105">2105</a>
+<a href="#2106" id="2106">2106</a>
+<a href="#2107" id="2107">2107</a>
+<a href="#2108" id="2108">2108</a>
+<a href="#2109" id="2109">2109</a>
+<a href="#2110" id="2110">2110</a>
+<a href="#2111" id="2111">2111</a>
+<a href="#2112" id="2112">2112</a>
+<a href="#2113" id="2113">2113</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -2096,8 +2137,10 @@
 <span class="kw">use </span>fnv::FnvHashMap;
 <span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>libp2p::{
-	core::{connection::ConnectionId, ConnectedPoint, Multiaddr, PeerId},
+	core::{connection::ConnectionId, Multiaddr, PeerId},
 	swarm::{
+		behaviour::{ConnectionClosed, ConnectionEstablished, DialFailure, FromSwarm},
+		handler::ConnectionHandler,
 		DialError, IntoConnectionHandler, NetworkBehaviour, NetworkBehaviourAction, NotifyHandler,
 		PollParameters,
 	},
@@ -3132,413 +3175,449 @@
 		Vec::new()
 	}
 
-	<span class="kw">fn </span>inject_connection_established(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		conn: <span class="kw-2">&amp;</span>ConnectionId,
-		endpoint: <span class="kw-2">&amp;</span>ConnectedPoint,
-		_failed_addresses: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;Multiaddr&gt;&gt;,
-		_other_established: usize,
-	) {
-		<span class="kw">for </span>set_id <span class="kw">in </span>(<span class="number">0</span>..<span class="self">self</span>.notif_protocols.len()).map(sc_peerset::SetId::from) {
-			<span class="kw">match </span><span class="self">self</span>.peers.entry((<span class="kw-2">*</span>peer_id, set_id)).or_insert(PeerState::Poisoned) {
-				<span class="comment">// Requested | PendingRequest =&gt; Enabled
-				</span>st @ <span class="kw-2">&amp;mut </span>PeerState::Requested | st @ <span class="kw-2">&amp;mut </span>PeerState::PendingRequest { .. } =&gt; {
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; Connected({}, {:?}, {:?}): Connection was requested by PSM.&quot;</span>,
-						peer_id, set_id, endpoint
-					);
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>, peer_id, <span class="kw-2">*</span>conn, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
-						peer_id: <span class="kw-2">*</span>peer_id,
-						handler: NotifyHandler::One(<span class="kw-2">*</span>conn),
-						event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
-					});
+	<span class="kw">fn </span>on_swarm_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: FromSwarm&lt;<span class="self">Self</span>::ConnectionHandler&gt;) {
+		<span class="kw">match </span>event {
+			FromSwarm::ConnectionEstablished(ConnectionEstablished {
+				peer_id,
+				endpoint,
+				connection_id,
+				..
+			}) =&gt; {
+				<span class="kw">for </span>set_id <span class="kw">in </span>(<span class="number">0</span>..<span class="self">self</span>.notif_protocols.len()).map(sc_peerset::SetId::from) {
+					<span class="kw">match </span><span class="self">self</span>.peers.entry((peer_id, set_id)).or_insert(PeerState::Poisoned) {
+						<span class="comment">// Requested | PendingRequest =&gt; Enabled
+						</span>st @ <span class="kw-2">&amp;mut </span>PeerState::Requested |
+						st @ <span class="kw-2">&amp;mut </span>PeerState::PendingRequest { .. } =&gt; {
+							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+								<span class="string">&quot;Libp2p =&gt; Connected({}, {:?}, {:?}): Connection was requested by PSM.&quot;</span>,
+								peer_id, set_id, endpoint
+							);
+							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>, peer_id, connection_id, set_id);
+							<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+								peer_id,
+								handler: NotifyHandler::One(connection_id),
+								event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
+							});
 
-					<span class="kw">let </span><span class="kw-2">mut </span>connections = SmallVec::new();
-					connections.push((<span class="kw-2">*</span>conn, ConnectionState::Opening));
-					<span class="kw-2">*</span>st = PeerState::Enabled { connections };
-				},
-
-				<span class="comment">// Poisoned gets inserted above if the entry was missing.
-				// Ø | Backoff =&gt; Disabled
-				</span>st @ <span class="kw-2">&amp;mut </span>PeerState::Poisoned | st @ <span class="kw-2">&amp;mut </span>PeerState::Backoff { .. } =&gt; {
-					<span class="kw">let </span>backoff_until = <span class="kw">if let </span>PeerState::Backoff { timer_deadline, .. } = st {
-						<span class="prelude-val">Some</span>(<span class="kw-2">*</span>timer_deadline)
-					} <span class="kw">else </span>{
-						<span class="prelude-val">None
-					</span>};
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; Connected({}, {:?}, {:?}, {:?}): Not requested by PSM, disabling.&quot;</span>,
-						peer_id, set_id, endpoint, <span class="kw-2">*</span>conn);
-
-					<span class="kw">let </span><span class="kw-2">mut </span>connections = SmallVec::new();
-					connections.push((<span class="kw-2">*</span>conn, ConnectionState::Closed));
-					<span class="kw-2">*</span>st = PeerState::Disabled { connections, backoff_until };
-				},
-
-				<span class="comment">// In all other states, add this new connection to the list of closed inactive
-				// connections.
-				</span>PeerState::Incoming { connections, .. } |
-				PeerState::Disabled { connections, .. } |
-				PeerState::DisabledPendingEnable { connections, .. } |
-				PeerState::Enabled { connections, .. } =&gt; {
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; Connected({}, {:?}, {:?}, {:?}): Secondary connection. Leaving closed.&quot;</span>,
-						peer_id, set_id, endpoint, <span class="kw-2">*</span>conn);
-					connections.push((<span class="kw-2">*</span>conn, ConnectionState::Closed));
-				},
-			}
-		}
-	}
-
-	<span class="kw">fn </span>inject_connection_closed(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		conn: <span class="kw-2">&amp;</span>ConnectionId,
-		_endpoint: <span class="kw-2">&amp;</span>ConnectedPoint,
-		_handler: &lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler,
-		_remaining_established: usize,
-	) {
-		<span class="kw">for </span>set_id <span class="kw">in </span>(<span class="number">0</span>..<span class="self">self</span>.notif_protocols.len()).map(sc_peerset::SetId::from) {
-			<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) = <span class="self">self</span>.peers.entry((<span class="kw-2">*</span>peer_id, set_id)) {
-				entry
-			} <span class="kw">else </span>{
-				<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
-				<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-				<span class="kw">return
-			</span>};
-
-			<span class="kw">match </span>mem::replace(entry.get_mut(), PeerState::Poisoned) {
-				<span class="comment">// Disabled =&gt; Disabled | Backoff | Ø
-				</span>PeerState::Disabled { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): Disabled.&quot;</span>,
-						peer_id, set_id, <span class="kw-2">*</span>conn);
-
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == <span class="kw-2">*</span>conn) {
-						connections.remove(pos);
-					} <span class="kw">else </span>{
-						<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-						<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
-					}
-
-					<span class="kw">if </span>connections.is_empty() {
-						<span class="kw">if let </span><span class="prelude-val">Some</span>(until) = backoff_until {
-							<span class="kw">let </span>now = Instant::now();
-							<span class="kw">if </span>until &gt; now {
-								<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
-								<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
-								<span class="kw">let </span>delay = futures_timer::Delay::new(until - now);
-								<span class="kw">let </span>peer_id = <span class="kw-2">*</span>peer_id;
-								<span class="self">self</span>.delays.push(
-									<span class="kw">async move </span>{
-										delay.<span class="kw">await</span>;
-										(delay_id, peer_id, set_id)
-									}
-									.boxed(),
-								);
-
-								<span class="kw-2">*</span>entry.get_mut() =
-									PeerState::Backoff { timer: delay_id, timer_deadline: until };
-							} <span class="kw">else </span>{
-								entry.remove();
-							}
-						} <span class="kw">else </span>{
-							entry.remove();
-						}
-					} <span class="kw">else </span>{
-						<span class="kw-2">*</span>entry.get_mut() = PeerState::Disabled { connections, backoff_until };
-					}
-				},
-
-				<span class="comment">// DisabledPendingEnable =&gt; DisabledPendingEnable | Backoff
-				</span>PeerState::DisabledPendingEnable { <span class="kw-2">mut </span>connections, timer_deadline, timer } =&gt; {
-					<span class="macro">trace!</span>(
-						target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): Disabled but pending enable.&quot;</span>,
-						peer_id, set_id, <span class="kw-2">*</span>conn
-					);
-
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == <span class="kw-2">*</span>conn) {
-						connections.remove(pos);
-					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
-						<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-					}
-
-					<span class="kw">if </span>connections.is_empty() {
-						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
-						<span class="self">self</span>.peerset.dropped(set_id, <span class="kw-2">*</span>peer_id, DropReason::Unknown);
-						<span class="kw-2">*</span>entry.get_mut() = PeerState::Backoff { timer, timer_deadline };
-					} <span class="kw">else </span>{
-						<span class="kw-2">*</span>entry.get_mut() =
-							PeerState::DisabledPendingEnable { connections, timer_deadline, timer };
-					}
-				},
-
-				<span class="comment">// Incoming =&gt; Incoming | Disabled | Backoff | Ø
-				</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
-					<span class="macro">trace!</span>(
-						target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): OpenDesiredByRemote.&quot;</span>,
-						peer_id, set_id, <span class="kw-2">*</span>conn
-					);
-
-					<span class="macro">debug_assert!</span>(connections
-						.iter()
-						.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote)));
-
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == <span class="kw-2">*</span>conn) {
-						connections.remove(pos);
-					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
-						<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-					}
-
-					<span class="kw">let </span>no_desired_left = !connections
-						.iter()
-						.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote));
-
-					<span class="comment">// If no connection is `OpenDesiredByRemote` anymore, clean up the peerset
-					// incoming request.
-					</span><span class="kw">if </span>no_desired_left {
-						<span class="comment">// In the incoming state, we don&#39;t report &quot;Dropped&quot;. Instead we will just
-						// ignore the corresponding Accept/Reject.
-						</span><span class="kw">if let </span><span class="prelude-val">Some</span>(state) = <span class="self">self
-							</span>.incoming
-							.iter_mut()
-							.find(|i| i.alive &amp;&amp; i.set_id == set_id &amp;&amp; i.peer_id == <span class="kw-2">*</span>peer_id)
-						{
-							state.alive = <span class="bool-val">false</span>;
-						} <span class="kw">else </span>{
-							<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;State mismatch in libp2p: no entry in \
-								incoming corresponding to an incoming state in peers&quot;</span>);
-							<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-						}
-					}
-
-					<span class="kw">if </span>connections.is_empty() {
-						<span class="kw">if let </span><span class="prelude-val">Some</span>(until) = backoff_until {
-							<span class="kw">let </span>now = Instant::now();
-							<span class="kw">if </span>until &gt; now {
-								<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
-								<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
-								<span class="kw">let </span>delay = futures_timer::Delay::new(until - now);
-								<span class="kw">let </span>peer_id = <span class="kw-2">*</span>peer_id;
-								<span class="self">self</span>.delays.push(
-									<span class="kw">async move </span>{
-										delay.<span class="kw">await</span>;
-										(delay_id, peer_id, set_id)
-									}
-									.boxed(),
-								);
-
-								<span class="kw-2">*</span>entry.get_mut() =
-									PeerState::Backoff { timer: delay_id, timer_deadline: until };
-							} <span class="kw">else </span>{
-								entry.remove();
-							}
-						} <span class="kw">else </span>{
-							entry.remove();
-						}
-					} <span class="kw">else if </span>no_desired_left {
-						<span class="comment">// If no connection is `OpenDesiredByRemote` anymore, switch to `Disabled`.
-						</span><span class="kw-2">*</span>entry.get_mut() = PeerState::Disabled { connections, backoff_until };
-					} <span class="kw">else </span>{
-						<span class="kw-2">*</span>entry.get_mut() = PeerState::Incoming { connections, backoff_until };
-					}
-				},
-
-				<span class="comment">// Enabled =&gt; Enabled | Backoff
-				// Peers are always backed-off when disconnecting while Enabled.
-				</span>PeerState::Enabled { <span class="kw-2">mut </span>connections } =&gt; {
-					<span class="macro">trace!</span>(
-						target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): Enabled.&quot;</span>,
-						peer_id, set_id, <span class="kw-2">*</span>conn
-					);
-
-					<span class="macro">debug_assert!</span>(connections.iter().any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(
-						s,
-						ConnectionState::Opening | ConnectionState::Open(<span class="kw">_</span>)
-					)));
-
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) = connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == <span class="kw-2">*</span>conn) {
-						<span class="kw">let </span>(<span class="kw">_</span>, state) = connections.remove(pos);
-						<span class="kw">if let </span>ConnectionState::Open(<span class="kw">_</span>) = state {
-							<span class="kw">if let </span><span class="prelude-val">Some</span>((replacement_pos, replacement_sink)) =
-								connections.iter().enumerate().find_map(|(num, (<span class="kw">_</span>, s))| <span class="kw">match </span>s {
-									ConnectionState::Open(s) =&gt; <span class="prelude-val">Some</span>((num, s.clone())),
-									<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-								}) {
-								<span class="kw">if </span>pos &lt;= replacement_pos {
-									<span class="macro">trace!</span>(
-										target: <span class="string">&quot;sub-libp2p&quot;</span>,
-										<span class="string">&quot;External API &lt;= Sink replaced({}, {:?})&quot;</span>,
-										peer_id, set_id
-									);
-									<span class="kw">let </span>event = NotificationsOut::CustomProtocolReplaced {
-										peer_id: <span class="kw-2">*</span>peer_id,
-										set_id,
-										notifications_sink: replacement_sink,
-									};
-									<span class="self">self</span>.events
-										.push_back(NetworkBehaviourAction::GenerateEvent(event));
-								}
-							} <span class="kw">else </span>{
-								<span class="macro">trace!</span>(
-									target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Closed({}, {:?})&quot;</span>,
-									peer_id, set_id
-								);
-								<span class="kw">let </span>event = NotificationsOut::CustomProtocolClosed {
-									peer_id: <span class="kw-2">*</span>peer_id,
-									set_id,
-								};
-								<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
-							}
-						}
-					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
-						<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-					}
-
-					<span class="kw">if </span>connections.is_empty() {
-						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
-						<span class="self">self</span>.peerset.dropped(set_id, <span class="kw-2">*</span>peer_id, DropReason::Unknown);
-						<span class="kw">let </span>ban_dur = Uniform::new(<span class="number">5</span>, <span class="number">10</span>).sample(<span class="kw-2">&amp;mut </span>rand::thread_rng());
-
-						<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
-						<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
-						<span class="kw">let </span>delay = futures_timer::Delay::new(Duration::from_secs(ban_dur));
-						<span class="kw">let </span>peer_id = <span class="kw-2">*</span>peer_id;
-						<span class="self">self</span>.delays.push(
-							<span class="kw">async move </span>{
-								delay.<span class="kw">await</span>;
-								(delay_id, peer_id, set_id)
-							}
-							.boxed(),
-						);
-
-						<span class="kw-2">*</span>entry.get_mut() = PeerState::Backoff {
-							timer: delay_id,
-							timer_deadline: Instant::now() + Duration::from_secs(ban_dur),
-						};
-					} <span class="kw">else if </span>!connections.iter().any(|(<span class="kw">_</span>, s)| {
-						<span class="macro">matches!</span>(s, ConnectionState::Opening | ConnectionState::Open(<span class="kw">_</span>))
-					}) {
-						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
-						<span class="self">self</span>.peerset.dropped(set_id, <span class="kw-2">*</span>peer_id, DropReason::Unknown);
-
-						<span class="kw-2">*</span>entry.get_mut() = PeerState::Disabled { connections, backoff_until: <span class="prelude-val">None </span>};
-					} <span class="kw">else </span>{
-						<span class="kw-2">*</span>entry.get_mut() = PeerState::Enabled { connections };
-					}
-				},
-
-				PeerState::Requested |
-				PeerState::PendingRequest { .. } |
-				PeerState::Backoff { .. } =&gt; {
-					<span class="comment">// This is a serious bug either in this state machine or in libp2p.
-					</span><span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;`inject_connection_closed` called for unknown peer {}&quot;</span>,
-						peer_id);
-					<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-				},
-				PeerState::Poisoned =&gt; {
-					<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;State of peer {} is poisoned&quot;</span>, peer_id);
-					<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-				},
-			}
-		}
-	}
-
-	<span class="kw">fn </span>inject_dial_failure(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="prelude-ty">Option</span>&lt;PeerId&gt;,
-		<span class="kw">_</span>: <span class="self">Self</span>::ConnectionHandler,
-		error: <span class="kw-2">&amp;</span>DialError,
-	) {
-		<span class="kw">if let </span>DialError::Transport(errors) = error {
-			<span class="kw">for </span>(addr, error) <span class="kw">in </span>errors.iter() {
-				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Reach failure for {:?} through {:?}: {:?}&quot;</span>, peer_id, addr, error);
-			}
-		}
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(peer_id) = peer_id {
-			<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Dial failure for {:?}&quot;</span>, peer_id);
-
-			<span class="kw">for </span>set_id <span class="kw">in </span>(<span class="number">0</span>..<span class="self">self</span>.notif_protocols.len()).map(sc_peerset::SetId::from) {
-				<span class="kw">if let </span>Entry::Occupied(<span class="kw-2">mut </span>entry) = <span class="self">self</span>.peers.entry((peer_id, set_id)) {
-					<span class="kw">match </span>mem::replace(entry.get_mut(), PeerState::Poisoned) {
-						<span class="comment">// The peer is not in our list.
-						</span>st @ PeerState::Backoff { .. } =&gt; {
-							<span class="kw-2">*</span>entry.into_mut() = st;
+							<span class="kw">let </span><span class="kw-2">mut </span>connections = SmallVec::new();
+							connections.push((connection_id, ConnectionState::Opening));
+							<span class="kw-2">*</span>st = PeerState::Enabled { connections };
 						},
 
-						<span class="comment">// &quot;Basic&quot; situation: we failed to reach a peer that the peerset requested.
-						</span>st @ PeerState::Requested | st @ PeerState::PendingRequest { .. } =&gt; {
-							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
-							<span class="self">self</span>.peerset.dropped(set_id, peer_id, DropReason::Unknown);
+						<span class="comment">// Poisoned gets inserted above if the entry was missing.
+						// Ø | Backoff =&gt; Disabled
+						</span>st @ <span class="kw-2">&amp;mut </span>PeerState::Poisoned | st @ <span class="kw-2">&amp;mut </span>PeerState::Backoff { .. } =&gt; {
+							<span class="kw">let </span>backoff_until =
+								<span class="kw">if let </span>PeerState::Backoff { timer_deadline, .. } = st {
+									<span class="prelude-val">Some</span>(<span class="kw-2">*</span>timer_deadline)
+								} <span class="kw">else </span>{
+									<span class="prelude-val">None
+								</span>};
+							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+								<span class="string">&quot;Libp2p =&gt; Connected({}, {:?}, {:?}, {:?}): Not requested by PSM, disabling.&quot;</span>,
+								peer_id, set_id, endpoint, connection_id);
 
-							<span class="kw">let </span>now = Instant::now();
-							<span class="kw">let </span>ban_duration = <span class="kw">match </span>st {
-								PeerState::PendingRequest { timer_deadline, .. }
-									<span class="kw">if </span>timer_deadline &gt; now =&gt;
-									cmp::max(timer_deadline - now, Duration::from_secs(<span class="number">5</span>)),
-								<span class="kw">_ </span>=&gt; Duration::from_secs(<span class="number">5</span>),
-							};
+							<span class="kw">let </span><span class="kw-2">mut </span>connections = SmallVec::new();
+							connections.push((connection_id, ConnectionState::Closed));
+							<span class="kw-2">*</span>st = PeerState::Disabled { connections, backoff_until };
+						},
 
-							<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
-							<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
-							<span class="kw">let </span>delay = futures_timer::Delay::new(ban_duration);
-							<span class="kw">let </span>peer_id = peer_id;
-							<span class="self">self</span>.delays.push(
-								<span class="kw">async move </span>{
-									delay.<span class="kw">await</span>;
-									(delay_id, peer_id, set_id)
+						<span class="comment">// In all other states, add this new connection to the list of closed
+						// inactive connections.
+						</span>PeerState::Incoming { connections, .. } |
+						PeerState::Disabled { connections, .. } |
+						PeerState::DisabledPendingEnable { connections, .. } |
+						PeerState::Enabled { connections, .. } =&gt; {
+							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+								<span class="string">&quot;Libp2p =&gt; Connected({}, {:?}, {:?}, {:?}): Secondary connection. Leaving closed.&quot;</span>,
+								peer_id, set_id, endpoint, connection_id);
+							connections.push((connection_id, ConnectionState::Closed));
+						},
+					}
+				}
+			},
+			FromSwarm::ConnectionClosed(ConnectionClosed { peer_id, connection_id, .. }) =&gt; {
+				<span class="kw">for </span>set_id <span class="kw">in </span>(<span class="number">0</span>..<span class="self">self</span>.notif_protocols.len()).map(sc_peerset::SetId::from) {
+					<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) =
+						<span class="self">self</span>.peers.entry((peer_id, set_id))
+					{
+						entry
+					} <span class="kw">else </span>{
+						<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
+						<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+						<span class="kw">return
+					</span>};
+
+					<span class="kw">match </span>mem::replace(entry.get_mut(), PeerState::Poisoned) {
+						<span class="comment">// Disabled =&gt; Disabled | Backoff | Ø
+						</span>PeerState::Disabled { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
+							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): Disabled.&quot;</span>,
+								peer_id, set_id, connection_id);
+
+							<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) =
+								connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
+							{
+								connections.remove(pos);
+							} <span class="kw">else </span>{
+								<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+								<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+									<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
+							}
+
+							<span class="kw">if </span>connections.is_empty() {
+								<span class="kw">if let </span><span class="prelude-val">Some</span>(until) = backoff_until {
+									<span class="kw">let </span>now = Instant::now();
+									<span class="kw">if </span>until &gt; now {
+										<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
+										<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
+										<span class="kw">let </span>delay = futures_timer::Delay::new(until - now);
+										<span class="self">self</span>.delays.push(
+											<span class="kw">async move </span>{
+												delay.<span class="kw">await</span>;
+												(delay_id, peer_id, set_id)
+											}
+											.boxed(),
+										);
+
+										<span class="kw-2">*</span>entry.get_mut() = PeerState::Backoff {
+											timer: delay_id,
+											timer_deadline: until,
+										};
+									} <span class="kw">else </span>{
+										entry.remove();
+									}
+								} <span class="kw">else </span>{
+									entry.remove();
 								}
-								.boxed(),
+							} <span class="kw">else </span>{
+								<span class="kw-2">*</span>entry.get_mut() =
+									PeerState::Disabled { connections, backoff_until };
+							}
+						},
+
+						<span class="comment">// DisabledPendingEnable =&gt; DisabledPendingEnable | Backoff
+						</span>PeerState::DisabledPendingEnable {
+							<span class="kw-2">mut </span>connections,
+							timer_deadline,
+							timer,
+						} =&gt; {
+							<span class="macro">trace!</span>(
+								target: <span class="string">&quot;sub-libp2p&quot;</span>,
+								<span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): Disabled but pending enable.&quot;</span>,
+								peer_id, set_id, connection_id
 							);
 
-							<span class="kw-2">*</span>entry.into_mut() = PeerState::Backoff {
-								timer: delay_id,
-								timer_deadline: now + ban_duration,
-							};
+							<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) =
+								connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
+							{
+								connections.remove(pos);
+							} <span class="kw">else </span>{
+								<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+									<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
+								<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+							}
+
+							<span class="kw">if </span>connections.is_empty() {
+								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
+								<span class="self">self</span>.peerset.dropped(set_id, peer_id, DropReason::Unknown);
+								<span class="kw-2">*</span>entry.get_mut() = PeerState::Backoff { timer, timer_deadline };
+							} <span class="kw">else </span>{
+								<span class="kw-2">*</span>entry.get_mut() = PeerState::DisabledPendingEnable {
+									connections,
+									timer_deadline,
+									timer,
+								};
+							}
 						},
 
-						<span class="comment">// We can still get dial failures even if we are already connected to the
-						// peer, as an extra diagnostic for an earlier attempt.
-						</span>st @ PeerState::Disabled { .. } |
-						st @ PeerState::Enabled { .. } |
-						st @ PeerState::DisabledPendingEnable { .. } |
-						st @ PeerState::Incoming { .. } =&gt; {
-							<span class="kw-2">*</span>entry.into_mut() = st;
+						<span class="comment">// Incoming =&gt; Incoming | Disabled | Backoff | Ø
+						</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
+							<span class="macro">trace!</span>(
+								target: <span class="string">&quot;sub-libp2p&quot;</span>,
+								<span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): OpenDesiredByRemote.&quot;</span>,
+								peer_id, set_id, connection_id
+							);
+
+							<span class="macro">debug_assert!</span>(connections
+								.iter()
+								.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote)));
+
+							<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) =
+								connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
+							{
+								connections.remove(pos);
+							} <span class="kw">else </span>{
+								<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+									<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
+								<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+							}
+
+							<span class="kw">let </span>no_desired_left = !connections
+								.iter()
+								.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote));
+
+							<span class="comment">// If no connection is `OpenDesiredByRemote` anymore, clean up the
+							// peerset incoming request.
+							</span><span class="kw">if </span>no_desired_left {
+								<span class="comment">// In the incoming state, we don&#39;t report &quot;Dropped&quot;. Instead we will
+								// just ignore the corresponding Accept/Reject.
+								</span><span class="kw">if let </span><span class="prelude-val">Some</span>(state) = <span class="self">self
+									</span>.incoming
+									.iter_mut()
+									.find(|i| i.alive &amp;&amp; i.set_id == set_id &amp;&amp; i.peer_id == peer_id)
+								{
+									state.alive = <span class="bool-val">false</span>;
+								} <span class="kw">else </span>{
+									<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;State mismatch in libp2p: no entry in \
+										incoming corresponding to an incoming state in peers&quot;</span>);
+									<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+								}
+							}
+
+							<span class="kw">if </span>connections.is_empty() {
+								<span class="kw">if let </span><span class="prelude-val">Some</span>(until) = backoff_until {
+									<span class="kw">let </span>now = Instant::now();
+									<span class="kw">if </span>until &gt; now {
+										<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
+										<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
+										<span class="kw">let </span>delay = futures_timer::Delay::new(until - now);
+										<span class="self">self</span>.delays.push(
+											<span class="kw">async move </span>{
+												delay.<span class="kw">await</span>;
+												(delay_id, peer_id, set_id)
+											}
+											.boxed(),
+										);
+
+										<span class="kw-2">*</span>entry.get_mut() = PeerState::Backoff {
+											timer: delay_id,
+											timer_deadline: until,
+										};
+									} <span class="kw">else </span>{
+										entry.remove();
+									}
+								} <span class="kw">else </span>{
+									entry.remove();
+								}
+							} <span class="kw">else if </span>no_desired_left {
+								<span class="comment">// If no connection is `OpenDesiredByRemote` anymore, switch to
+								// `Disabled`.
+								</span><span class="kw-2">*</span>entry.get_mut() =
+									PeerState::Disabled { connections, backoff_until };
+							} <span class="kw">else </span>{
+								<span class="kw-2">*</span>entry.get_mut() =
+									PeerState::Incoming { connections, backoff_until };
+							}
 						},
 
+						<span class="comment">// Enabled =&gt; Enabled | Backoff
+						// Peers are always backed-off when disconnecting while Enabled.
+						</span>PeerState::Enabled { <span class="kw-2">mut </span>connections } =&gt; {
+							<span class="macro">trace!</span>(
+								target: <span class="string">&quot;sub-libp2p&quot;</span>,
+								<span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): Enabled.&quot;</span>,
+								peer_id, set_id, connection_id
+							);
+
+							<span class="macro">debug_assert!</span>(connections.iter().any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(
+								s,
+								ConnectionState::Opening | ConnectionState::Open(<span class="kw">_</span>)
+							)));
+
+							<span class="kw">if let </span><span class="prelude-val">Some</span>(pos) =
+								connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
+							{
+								<span class="kw">let </span>(<span class="kw">_</span>, state) = connections.remove(pos);
+								<span class="kw">if let </span>ConnectionState::Open(<span class="kw">_</span>) = state {
+									<span class="kw">if let </span><span class="prelude-val">Some</span>((replacement_pos, replacement_sink)) = connections
+										.iter()
+										.enumerate()
+										.find_map(|(num, (<span class="kw">_</span>, s))| <span class="kw">match </span>s {
+											ConnectionState::Open(s) =&gt; <span class="prelude-val">Some</span>((num, s.clone())),
+											<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+										}) {
+										<span class="kw">if </span>pos &lt;= replacement_pos {
+											<span class="macro">trace!</span>(
+												target: <span class="string">&quot;sub-libp2p&quot;</span>,
+												<span class="string">&quot;External API &lt;= Sink replaced({}, {:?})&quot;</span>,
+												peer_id, set_id
+											);
+											<span class="kw">let </span>event = NotificationsOut::CustomProtocolReplaced {
+												peer_id,
+												set_id,
+												notifications_sink: replacement_sink,
+											};
+											<span class="self">self</span>.events.push_back(
+												NetworkBehaviourAction::GenerateEvent(event),
+											);
+										}
+									} <span class="kw">else </span>{
+										<span class="macro">trace!</span>(
+											target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Closed({}, {:?})&quot;</span>,
+											peer_id, set_id
+										);
+										<span class="kw">let </span>event = NotificationsOut::CustomProtocolClosed {
+											peer_id,
+											set_id,
+										};
+										<span class="self">self</span>.events.push_back(
+											NetworkBehaviourAction::GenerateEvent(event),
+										);
+									}
+								}
+							} <span class="kw">else </span>{
+								<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+									<span class="string">&quot;inject_connection_closed: State mismatch in the custom protos handler&quot;</span>);
+								<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+							}
+
+							<span class="kw">if </span>connections.is_empty() {
+								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
+								<span class="self">self</span>.peerset.dropped(set_id, peer_id, DropReason::Unknown);
+								<span class="kw">let </span>ban_dur = Uniform::new(<span class="number">5</span>, <span class="number">10</span>).sample(<span class="kw-2">&amp;mut </span>rand::thread_rng());
+
+								<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
+								<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
+								<span class="kw">let </span>delay = futures_timer::Delay::new(Duration::from_secs(ban_dur));
+								<span class="self">self</span>.delays.push(
+									<span class="kw">async move </span>{
+										delay.<span class="kw">await</span>;
+										(delay_id, peer_id, set_id)
+									}
+									.boxed(),
+								);
+
+								<span class="kw-2">*</span>entry.get_mut() = PeerState::Backoff {
+									timer: delay_id,
+									timer_deadline: Instant::now() + Duration::from_secs(ban_dur),
+								};
+							} <span class="kw">else if </span>!connections.iter().any(|(<span class="kw">_</span>, s)| {
+								<span class="macro">matches!</span>(s, ConnectionState::Opening | ConnectionState::Open(<span class="kw">_</span>))
+							}) {
+								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
+								<span class="self">self</span>.peerset.dropped(set_id, peer_id, DropReason::Unknown);
+
+								<span class="kw-2">*</span>entry.get_mut() =
+									PeerState::Disabled { connections, backoff_until: <span class="prelude-val">None </span>};
+							} <span class="kw">else </span>{
+								<span class="kw-2">*</span>entry.get_mut() = PeerState::Enabled { connections };
+							}
+						},
+
+						PeerState::Requested |
+						PeerState::PendingRequest { .. } |
+						PeerState::Backoff { .. } =&gt; {
+							<span class="comment">// This is a serious bug either in this state machine or in libp2p.
+							</span><span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+								<span class="string">&quot;`inject_connection_closed` called for unknown peer {}&quot;</span>,
+								peer_id);
+							<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+						},
 						PeerState::Poisoned =&gt; {
-							<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;State of {:?} is poisoned&quot;</span>, peer_id);
+							<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;State of peer {} is poisoned&quot;</span>, peer_id);
 							<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
 						},
 					}
 				}
-			}
+			},
+			FromSwarm::DialFailure(DialFailure { peer_id, error, .. }) =&gt; {
+				<span class="kw">if let </span>DialError::Transport(errors) = error {
+					<span class="kw">for </span>(addr, error) <span class="kw">in </span>errors.iter() {
+						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Reach failure for {:?} through {:?}: {:?}&quot;</span>, peer_id, addr, error);
+					}
+				}
+
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(peer_id) = peer_id {
+					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Dial failure for {:?}&quot;</span>, peer_id);
+
+					<span class="kw">for </span>set_id <span class="kw">in </span>(<span class="number">0</span>..<span class="self">self</span>.notif_protocols.len()).map(sc_peerset::SetId::from) {
+						<span class="kw">if let </span>Entry::Occupied(<span class="kw-2">mut </span>entry) = <span class="self">self</span>.peers.entry((peer_id, set_id)) {
+							<span class="kw">match </span>mem::replace(entry.get_mut(), PeerState::Poisoned) {
+								<span class="comment">// The peer is not in our list.
+								</span>st @ PeerState::Backoff { .. } =&gt; {
+									<span class="kw-2">*</span>entry.into_mut() = st;
+								},
+
+								<span class="comment">// &quot;Basic&quot; situation: we failed to reach a peer that the peerset
+								// requested.
+								</span>st @ PeerState::Requested |
+								st @ PeerState::PendingRequest { .. } =&gt; {
+									<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
+									<span class="self">self</span>.peerset.dropped(set_id, peer_id, DropReason::Unknown);
+
+									<span class="kw">let </span>now = Instant::now();
+									<span class="kw">let </span>ban_duration = <span class="kw">match </span>st {
+										PeerState::PendingRequest { timer_deadline, .. }
+											<span class="kw">if </span>timer_deadline &gt; now =&gt;
+											cmp::max(timer_deadline - now, Duration::from_secs(<span class="number">5</span>)),
+										<span class="kw">_ </span>=&gt; Duration::from_secs(<span class="number">5</span>),
+									};
+
+									<span class="kw">let </span>delay_id = <span class="self">self</span>.next_delay_id;
+									<span class="self">self</span>.next_delay_id.<span class="number">0 </span>+= <span class="number">1</span>;
+									<span class="kw">let </span>delay = futures_timer::Delay::new(ban_duration);
+									<span class="kw">let </span>peer_id = peer_id;
+									<span class="self">self</span>.delays.push(
+										<span class="kw">async move </span>{
+											delay.<span class="kw">await</span>;
+											(delay_id, peer_id, set_id)
+										}
+										.boxed(),
+									);
+
+									<span class="kw-2">*</span>entry.into_mut() = PeerState::Backoff {
+										timer: delay_id,
+										timer_deadline: now + ban_duration,
+									};
+								},
+
+								<span class="comment">// We can still get dial failures even if we are already connected
+								// to the peer, as an extra diagnostic for an earlier attempt.
+								</span>st @ PeerState::Disabled { .. } |
+								st @ PeerState::Enabled { .. } |
+								st @ PeerState::DisabledPendingEnable { .. } |
+								st @ PeerState::Incoming { .. } =&gt; {
+									<span class="kw-2">*</span>entry.into_mut() = st;
+								},
+
+								PeerState::Poisoned =&gt; {
+									<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;State of {:?} is poisoned&quot;</span>, peer_id);
+									<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+								},
+							}
+						}
+					}
+				}
+			},
+			FromSwarm::ListenerClosed(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::ListenFailure(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::ListenerError(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::ExpiredExternalAddr(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::NewListener(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::ExpiredListenAddr(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::NewExternalAddr(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::AddressChange(<span class="kw">_</span>) =&gt; {},
+			FromSwarm::NewListenAddr(<span class="kw">_</span>) =&gt; {},
 		}
 	}
 
-	<span class="kw">fn </span>inject_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: PeerId, connection: ConnectionId, event: NotifsHandlerOut) {
+	<span class="kw">fn </span>on_connection_handler_event(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		peer_id: PeerId,
+		connection_id: ConnectionId,
+		event: &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as
+		</span>ConnectionHandler&gt;::OutEvent,
+	) {
 		<span class="kw">match </span>event {
 			NotifsHandlerOut::OpenDesiredByRemote { protocol_index } =&gt; {
 				<span class="kw">let </span>set_id = sc_peerset::SetId::from(protocol_index);
 
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;Handler({:?}, {:?}]) =&gt; OpenDesiredByRemote({:?})&quot;</span>,
-					source, connection, set_id);
+					peer_id, connection_id, set_id);
 
-				<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) = <span class="self">self</span>.peers.entry((source, set_id)) {
+				<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) = <span class="self">self</span>.peers.entry((peer_id, set_id))
+				{
 					entry
 				} <span class="kw">else </span>{
 					<span class="macro">error!</span>(
@@ -3556,7 +3635,7 @@
 							.iter()
 							.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote)));
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
-							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection)
+							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
 						{
 							<span class="kw">if let </span>ConnectionState::Closed = <span class="kw-2">*</span>connec_state {
 								<span class="kw-2">*</span>connec_state = ConnectionState::OpenDesiredByRemote;
@@ -3589,14 +3668,14 @@
 						)));
 
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
-							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection)
+							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
 						{
 							<span class="kw">if let </span>ConnectionState::Closed = <span class="kw-2">*</span>connec_state {
 								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>,
-									source, connection, set_id);
+									peer_id, connection_id, set_id);
 								<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
-									peer_id: source,
-									handler: NotifyHandler::One(connection),
+									peer_id,
+									handler: NotifyHandler::One(connection_id),
 									event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
 								});
 								<span class="kw-2">*</span>connec_state = ConnectionState::Opening;
@@ -3626,7 +3705,7 @@
 					<span class="comment">// Disabled =&gt; Disabled | Incoming
 					</span>PeerState::Disabled { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
-							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection)
+							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
 						{
 							<span class="kw">if let </span>ConnectionState::Closed = <span class="kw-2">*</span>connec_state {
 								<span class="kw-2">*</span>connec_state = ConnectionState::OpenDesiredByRemote;
@@ -3635,10 +3714,10 @@
 								<span class="self">self</span>.next_incoming_index.<span class="number">0 </span>+= <span class="number">1</span>;
 
 								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Incoming({}, {:?}).&quot;</span>,
-									source, incoming_id);
-								<span class="self">self</span>.peerset.incoming(set_id, source, incoming_id);
+									peer_id, incoming_id);
+								<span class="self">self</span>.peerset.incoming(set_id, peer_id, incoming_id);
 								<span class="self">self</span>.incoming.push(IncomingPeer {
-									peer_id: source,
+									peer_id,
 									set_id,
 									alive: <span class="bool-val">true</span>,
 									incoming_id,
@@ -3670,14 +3749,14 @@
 					<span class="comment">// DisabledPendingEnable =&gt; Enabled | DisabledPendingEnable
 					</span>PeerState::DisabledPendingEnable { <span class="kw-2">mut </span>connections, timer, timer_deadline } =&gt; {
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
-							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection)
+							connections.iter_mut().find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
 						{
 							<span class="kw">if let </span>ConnectionState::Closed = <span class="kw-2">*</span>connec_state {
 								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>,
-									source, connection, set_id);
+									peer_id, connection_id, set_id);
 								<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
-									peer_id: source,
-									handler: NotifyHandler::One(connection),
+									peer_id,
+									handler: NotifyHandler::One(connection_id),
 									event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
 								});
 								<span class="kw-2">*</span>connec_state = ConnectionState::Opening;
@@ -3721,9 +3800,10 @@
 
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;Handler({}, {:?}) =&gt; CloseDesired({:?})&quot;</span>,
-					source, connection, set_id);
+					peer_id, connection_id, set_id);
 
-				<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) = <span class="self">self</span>.peers.entry((source, set_id)) {
+				<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) = <span class="self">self</span>.peers.entry((peer_id, set_id))
+				{
 					entry
 				} <span class="kw">else </span>{
 					<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;CloseDesired: State mismatch in the custom protos handler&quot;</span>);
@@ -3740,7 +3820,7 @@
 						)));
 
 						<span class="kw">let </span>pos = <span class="kw">if let </span><span class="prelude-val">Some</span>(pos) =
-							connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection)
+							connections.iter().position(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == connection_id)
 						{
 							pos
 						} <span class="kw">else </span>{
@@ -3758,10 +3838,10 @@
 						<span class="macro">debug_assert!</span>(<span class="macro">matches!</span>(connections[pos].<span class="number">1</span>, ConnectionState::Open(<span class="kw">_</span>)));
 						connections[pos].<span class="number">1 </span>= ConnectionState::Closing;
 
-						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({}, {:?}) &lt;= Close({:?})&quot;</span>, source, connection, set_id);
+						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({}, {:?}) &lt;= Close({:?})&quot;</span>, peer_id, connection_id, set_id);
 						<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
-							peer_id: source,
-							handler: NotifyHandler::One(connection),
+							peer_id,
+							handler: NotifyHandler::One(connection_id),
 							event: NotifsHandlerIn::Close { protocol_index: set_id.into() },
 						});
 
@@ -3771,9 +3851,9 @@
 								<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 							}) {
 							<span class="kw">if </span>pos &lt;= replacement_pos {
-								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Sink replaced({:?})&quot;</span>, source);
+								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Sink replaced({:?})&quot;</span>, peer_id);
 								<span class="kw">let </span>event = NotificationsOut::CustomProtocolReplaced {
-									peer_id: source,
+									peer_id,
 									set_id,
 									notifications_sink: replacement_sink,
 								};
@@ -3787,17 +3867,16 @@
 								.iter()
 								.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::Opening))
 							{
-								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, source, set_id);
-								<span class="self">self</span>.peerset.dropped(set_id, source, DropReason::Refused);
+								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({}, {:?})&quot;</span>, peer_id, set_id);
+								<span class="self">self</span>.peerset.dropped(set_id, peer_id, DropReason::Refused);
 								<span class="kw-2">*</span>entry.into_mut() =
 									PeerState::Disabled { connections, backoff_until: <span class="prelude-val">None </span>};
 							} <span class="kw">else </span>{
 								<span class="kw-2">*</span>entry.into_mut() = PeerState::Enabled { connections };
 							}
 
-							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Closed({}, {:?})&quot;</span>, source, set_id);
-							<span class="kw">let </span>event =
-								NotificationsOut::CustomProtocolClosed { peer_id: source, set_id };
+							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Closed({}, {:?})&quot;</span>, peer_id, set_id);
+							<span class="kw">let </span>event = NotificationsOut::CustomProtocolClosed { peer_id, set_id };
 							<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
 						}
 					},
@@ -3821,16 +3900,16 @@
 
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;Handler({}, {:?}) =&gt; CloseResult({:?})&quot;</span>,
-					source, connection, set_id);
+					peer_id, connection_id, set_id);
 
-				<span class="kw">match </span><span class="self">self</span>.peers.get_mut(<span class="kw-2">&amp;</span>(source, set_id)) {
+				<span class="kw">match </span><span class="self">self</span>.peers.get_mut(<span class="kw-2">&amp;</span>(peer_id, set_id)) {
 					<span class="comment">// Move the connection from `Closing` to `Closed`.
 					</span><span class="prelude-val">Some</span>(PeerState::Incoming { connections, .. }) |
 					<span class="prelude-val">Some</span>(PeerState::DisabledPendingEnable { connections, .. }) |
 					<span class="prelude-val">Some</span>(PeerState::Disabled { connections, .. }) |
 					<span class="prelude-val">Some</span>(PeerState::Enabled { connections, .. }) =&gt; {
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) = connections.iter_mut().find(|(c, s)| {
-							<span class="kw-2">*</span>c == connection &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::Closing)
+							<span class="kw-2">*</span>c == connection_id &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::Closing)
 						}) {
 							<span class="kw-2">*</span>connec_state = ConnectionState::Closed;
 						} <span class="kw">else </span>{
@@ -3859,9 +3938,9 @@
 				<span class="kw">let </span>set_id = sc_peerset::SetId::from(protocol_index);
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;Handler({}, {:?}) =&gt; OpenResultOk({:?})&quot;</span>,
-					source, connection, set_id);
+					peer_id, connection_id, set_id);
 
-				<span class="kw">match </span><span class="self">self</span>.peers.get_mut(<span class="kw-2">&amp;</span>(source, set_id)) {
+				<span class="kw">match </span><span class="self">self</span>.peers.get_mut(<span class="kw-2">&amp;</span>(peer_id, set_id)) {
 					<span class="prelude-val">Some</span>(PeerState::Enabled { connections, .. }) =&gt; {
 						<span class="macro">debug_assert!</span>(connections.iter().any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(
 							s,
@@ -3871,12 +3950,12 @@
 							connections.iter().any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::Open(<span class="kw">_</span>)));
 
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) = connections.iter_mut().find(|(c, s)| {
-							<span class="kw-2">*</span>c == connection &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::Opening)
+							<span class="kw-2">*</span>c == connection_id &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::Opening)
 						}) {
 							<span class="kw">if </span>!any_open {
-								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Open({}, {:?})&quot;</span>, source, set_id);
+								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Open({}, {:?})&quot;</span>, peer_id, set_id);
 								<span class="kw">let </span>event = NotificationsOut::CustomProtocolOpen {
-									peer_id: source,
+									peer_id,
 									set_id,
 									negotiated_fallback,
 									received_handshake,
@@ -3887,7 +3966,8 @@
 							<span class="kw-2">*</span>connec_state = ConnectionState::Open(notifications_sink);
 						} <span class="kw">else if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
 							connections.iter_mut().find(|(c, s)| {
-								<span class="kw-2">*</span>c == connection &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::OpeningThenClosing)
+								<span class="kw-2">*</span>c == connection_id &amp;&amp;
+									<span class="macro">matches!</span>(s, ConnectionState::OpeningThenClosing)
 							}) {
 							<span class="kw-2">*</span>connec_state = ConnectionState::Closing;
 						} <span class="kw">else </span>{
@@ -3901,7 +3981,7 @@
 					<span class="prelude-val">Some</span>(PeerState::DisabledPendingEnable { connections, .. }) |
 					<span class="prelude-val">Some</span>(PeerState::Disabled { connections, .. }) =&gt; {
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) = connections.iter_mut().find(|(c, s)| {
-							<span class="kw-2">*</span>c == connection &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::OpeningThenClosing)
+							<span class="kw-2">*</span>c == connection_id &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::OpeningThenClosing)
 						}) {
 							<span class="kw-2">*</span>connec_state = ConnectionState::Closing;
 						} <span class="kw">else </span>{
@@ -3924,9 +4004,10 @@
 				<span class="kw">let </span>set_id = sc_peerset::SetId::from(protocol_index);
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;Handler({:?}, {:?}) =&gt; OpenResultErr({:?})&quot;</span>,
-					source, connection, set_id);
+					peer_id, connection_id, set_id);
 
-				<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) = <span class="self">self</span>.peers.entry((source, set_id)) {
+				<span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw">if let </span>Entry::Occupied(entry) = <span class="self">self</span>.peers.entry((peer_id, set_id))
+				{
 					entry
 				} <span class="kw">else </span>{
 					<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;OpenResultErr: State mismatch in the custom protos handler&quot;</span>);
@@ -3942,12 +4023,13 @@
 						)));
 
 						<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) = connections.iter_mut().find(|(c, s)| {
-							<span class="kw-2">*</span>c == connection &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::Opening)
+							<span class="kw-2">*</span>c == connection_id &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::Opening)
 						}) {
 							<span class="kw-2">*</span>connec_state = ConnectionState::Closed;
 						} <span class="kw">else if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
 							connections.iter_mut().find(|(c, s)| {
-								<span class="kw-2">*</span>c == connection &amp;&amp; <span class="macro">matches!</span>(s, ConnectionState::OpeningThenClosing)
+								<span class="kw-2">*</span>c == connection_id &amp;&amp;
+									<span class="macro">matches!</span>(s, ConnectionState::OpeningThenClosing)
 							}) {
 							<span class="kw-2">*</span>connec_state = ConnectionState::Closing;
 						} <span class="kw">else </span>{
@@ -3959,8 +4041,8 @@
 						<span class="kw">if </span>!connections.iter().any(|(<span class="kw">_</span>, s)| {
 							<span class="macro">matches!</span>(s, ConnectionState::Opening | ConnectionState::Open(<span class="kw">_</span>))
 						}) {
-							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({:?})&quot;</span>, source);
-							<span class="self">self</span>.peerset.dropped(set_id, source, DropReason::Refused);
+							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM &lt;= Dropped({:?})&quot;</span>, peer_id);
+							<span class="self">self</span>.peerset.dropped(set_id, peer_id, DropReason::Refused);
 
 							<span class="kw">let </span>ban_dur = Uniform::new(<span class="number">5</span>, <span class="number">10</span>).sample(<span class="kw-2">&amp;mut </span>rand::thread_rng());
 							<span class="kw-2">*</span>entry.into_mut() = PeerState::Disabled {
@@ -3980,7 +4062,7 @@
 							PeerState::DisabledPendingEnable { connections, .. } =&gt; {
 								<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
 									connections.iter_mut().find(|(c, s)| {
-										<span class="kw-2">*</span>c == connection &amp;&amp;
+										<span class="kw-2">*</span>c == connection_id &amp;&amp;
 											<span class="macro">matches!</span>(s, ConnectionState::OpeningThenClosing)
 									}) {
 									<span class="kw-2">*</span>connec_state = ConnectionState::Closing;
@@ -4009,30 +4091,30 @@
 
 			NotifsHandlerOut::Notification { protocol_index, message } =&gt; {
 				<span class="kw">let </span>set_id = sc_peerset::SetId::from(protocol_index);
-				<span class="kw">if </span><span class="self">self</span>.is_open(<span class="kw-2">&amp;</span>source, set_id) {
+				<span class="kw">if </span><span class="self">self</span>.is_open(<span class="kw-2">&amp;</span>peer_id, set_id) {
 					<span class="macro">trace!</span>(
 						target: <span class="string">&quot;sub-libp2p&quot;</span>,
 						<span class="string">&quot;Handler({:?}) =&gt; Notification({}, {:?}, {} bytes)&quot;</span>,
-						connection,
-						source,
+						connection_id,
+						peer_id,
 						set_id,
 						message.len()
 					);
 					<span class="macro">trace!</span>(
 						target: <span class="string">&quot;sub-libp2p&quot;</span>,
 						<span class="string">&quot;External API &lt;= Message({}, {:?})&quot;</span>,
-						source,
+						peer_id,
 						set_id,
 					);
-					<span class="kw">let </span>event = NotificationsOut::Notification { peer_id: source, set_id, message };
+					<span class="kw">let </span>event = NotificationsOut::Notification { peer_id, set_id, message };
 
 					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
 				} <span class="kw">else </span>{
 					<span class="macro">trace!</span>(
 						target: <span class="string">&quot;sub-libp2p&quot;</span>,
 						<span class="string">&quot;Handler({:?}) =&gt; Post-close notification({}, {:?}, {} bytes)&quot;</span>,
-						connection,
-						source,
+						connection_id,
+						peer_id,
 						set_id,
 						message.len()
 					);

@@ -1109,22 +1109,6 @@
 <a href="#1109" id="1109">1109</a>
 <a href="#1110" id="1110">1110</a>
 <a href="#1111" id="1111">1111</a>
-<a href="#1112" id="1112">1112</a>
-<a href="#1113" id="1113">1113</a>
-<a href="#1114" id="1114">1114</a>
-<a href="#1115" id="1115">1115</a>
-<a href="#1116" id="1116">1116</a>
-<a href="#1117" id="1117">1117</a>
-<a href="#1118" id="1118">1118</a>
-<a href="#1119" id="1119">1119</a>
-<a href="#1120" id="1120">1120</a>
-<a href="#1121" id="1121">1121</a>
-<a href="#1122" id="1122">1122</a>
-<a href="#1123" id="1123">1123</a>
-<a href="#1124" id="1124">1124</a>
-<a href="#1125" id="1125">1125</a>
-<a href="#1126" id="1126">1126</a>
-<a href="#1127" id="1127">1127</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1178,23 +1162,23 @@
 <span class="kw">use </span>futures_timer::Delay;
 <span class="kw">use </span>ip_network::IpNetwork;
 <span class="kw">use </span>libp2p::{
-	core::{
-		connection::ConnectionId, transport::ListenerId, ConnectedPoint, Multiaddr, PeerId,
-		PublicKey,
-	},
+	core::{connection::ConnectionId, Multiaddr, PeerId, PublicKey},
 	kad::{
 		handler::KademliaHandlerProto,
 		record::{
 			<span class="self">self</span>,
 			store::{MemoryStore, RecordStore},
 		},
-		GetClosestPeersError, Kademlia, KademliaBucketInserts, KademliaConfig, KademliaEvent,
-		QueryId, QueryResult, Quorum, Record,
+		GetClosestPeersError, GetRecordOk, Kademlia, KademliaBucketInserts, KademliaConfig,
+		KademliaEvent, QueryId, QueryResult, Quorum, Record,
 	},
-	mdns::{MdnsConfig, MdnsEvent, TokioMdns},
+	mdns::{<span class="self">self</span>, tokio::Behaviour <span class="kw">as </span>TokioMdns},
 	multiaddr::Protocol,
 	swarm::{
-		behaviour::toggle::{Toggle, ToggleIntoConnectionHandler},
+		behaviour::{
+			toggle::{Toggle, ToggleIntoConnectionHandler},
+			DialFailure, FromSwarm, NewExternalAddr,
+		},
 		ConnectionHandler, DialError, IntoConnectionHandler, NetworkBehaviour,
 		NetworkBehaviourAction, PollParameters,
 	},
@@ -1205,7 +1189,6 @@
 <span class="kw">use </span>std::{
 	cmp,
 	collections::{HashMap, HashSet, VecDeque},
-	io,
 	num::NonZeroUsize,
 	task::{Context, Poll},
 	time::Duration,
@@ -1362,7 +1345,7 @@
 			allow_private_ipv4,
 			discovery_only_if_under_num,
 			mdns: <span class="kw">if </span>enable_mdns {
-				<span class="kw">match </span>TokioMdns::new(MdnsConfig::default()) {
+				<span class="kw">match </span>TokioMdns::new(mdns::Config::default()) {
 					<span class="prelude-val">Ok</span>(mdns) =&gt; <span class="prelude-val">Some</span>(mdns),
 					<span class="prelude-val">Err</span>(err) =&gt; {
 						<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Failed to initialize mDNS: {:?}&quot;</span>, err);
@@ -1377,6 +1360,7 @@
 				NonZeroUsize::new(MAX_KNOWN_EXTERNAL_ADDRESSES)
 					.expect(<span class="string">&quot;value is a constant; constant is non-zero; qed.&quot;</span>),
 			),
+			outbound_query_records: Vec::new(),
 		}
 	}
 }
@@ -1414,6 +1398,8 @@
 	</span>allow_non_globals_in_dht: bool,
 	<span class="doccomment">/// A cache of discovered external addresses. Only used for logging purposes.
 	</span>known_external_addresses: LruHashSet&lt;Multiaddr&gt;,
+	<span class="doccomment">/// A cache of outbound query records.
+	</span>outbound_query_records: Vec&lt;(record::Key, Vec&lt;u8&gt;)&gt;,
 }
 
 <span class="kw">impl </span>DiscoveryBehaviour {
@@ -1494,7 +1480,7 @@
 	/// A corresponding `ValueFound` or `ValueNotFound` event will later be generated.
 	</span><span class="kw">pub fn </span>get_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: record::Key) {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(k) = <span class="self">self</span>.kademlia.as_mut() {
-			k.get_record(key.clone(), Quorum::One);
+			k.get_record(key.clone());
 		}
 	}
 
@@ -1643,127 +1629,84 @@
 		list
 	}
 
-	<span class="kw">fn </span>inject_address_change(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		connection_id: <span class="kw-2">&amp;</span>ConnectionId,
-		old: <span class="kw-2">&amp;</span>ConnectedPoint,
-		new: <span class="kw-2">&amp;</span>ConnectedPoint,
-	) {
-		<span class="self">self</span>.kademlia.inject_address_change(peer_id, connection_id, old, new)
-	}
-
-	<span class="kw">fn </span>inject_connection_established(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		conn: <span class="kw-2">&amp;</span>ConnectionId,
-		endpoint: <span class="kw-2">&amp;</span>ConnectedPoint,
-		failed_addresses: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;Multiaddr&gt;&gt;,
-		other_established: usize,
-	) {
-		<span class="self">self</span>.num_connections += <span class="number">1</span>;
-		<span class="self">self</span>.kademlia.inject_connection_established(
-			peer_id,
-			conn,
-			endpoint,
-			failed_addresses,
-			other_established,
-		)
-	}
-
-	<span class="kw">fn </span>inject_connection_closed(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="kw-2">&amp;</span>PeerId,
-		conn: <span class="kw-2">&amp;</span>ConnectionId,
-		endpoint: <span class="kw-2">&amp;</span>ConnectedPoint,
-		handler: &lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler,
-		remaining_established: usize,
-	) {
-		<span class="self">self</span>.num_connections -= <span class="number">1</span>;
-		<span class="self">self</span>.kademlia.inject_connection_closed(
-			peer_id,
-			conn,
-			endpoint,
-			handler,
-			remaining_established,
-		)
-	}
-
-	<span class="kw">fn </span>inject_dial_failure(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer_id: <span class="prelude-ty">Option</span>&lt;PeerId&gt;,
-		handler: <span class="self">Self</span>::ConnectionHandler,
-		error: <span class="kw-2">&amp;</span>DialError,
-	) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(peer_id) = peer_id {
-			<span class="kw">if let </span>DialError::Transport(errors) = error {
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(list) = <span class="self">self</span>.ephemeral_addresses.get_mut(<span class="kw-2">&amp;</span>peer_id) {
-					<span class="kw">for </span>(addr, _error) <span class="kw">in </span>errors {
-						list.retain(|a| a != addr);
+	<span class="kw">fn </span>on_swarm_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: FromSwarm&lt;<span class="self">Self</span>::ConnectionHandler&gt;) {
+		<span class="kw">match </span>event {
+			FromSwarm::ConnectionEstablished(e) =&gt; {
+				<span class="self">self</span>.num_connections += <span class="number">1</span>;
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::ConnectionEstablished(e));
+			},
+			FromSwarm::ConnectionClosed(e) =&gt; {
+				<span class="self">self</span>.num_connections -= <span class="number">1</span>;
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::ConnectionClosed(e));
+			},
+			FromSwarm::DialFailure(e @ DialFailure { peer_id, error, .. }) =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(peer_id) = peer_id {
+					<span class="kw">if let </span>DialError::Transport(errors) = error {
+						<span class="kw">if let </span><span class="prelude-val">Some</span>(list) = <span class="self">self</span>.ephemeral_addresses.get_mut(<span class="kw-2">&amp;</span>peer_id) {
+							<span class="kw">for </span>(addr, _error) <span class="kw">in </span>errors {
+								list.retain(|a| a != addr);
+							}
+						}
 					}
 				}
-			}
-		}
 
-		<span class="self">self</span>.kademlia.inject_dial_failure(peer_id, handler, error)
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::DialFailure(e));
+			},
+			FromSwarm::ListenerClosed(e) =&gt; {
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::ListenerClosed(e));
+			},
+			FromSwarm::ListenFailure(e) =&gt; {
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::ListenFailure(e));
+			},
+			FromSwarm::ListenerError(e) =&gt; {
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::ListenerError(e));
+			},
+			FromSwarm::ExpiredExternalAddr(e) =&gt; {
+				<span class="comment">// We intentionally don&#39;t remove the element from `known_external_addresses` in
+				// order to not print the log line again.
+
+				</span><span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::ExpiredExternalAddr(e));
+			},
+			FromSwarm::NewListener(e) =&gt; {
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::NewListener(e));
+			},
+			FromSwarm::ExpiredListenAddr(e) =&gt; {
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::ExpiredListenAddr(e));
+			},
+			FromSwarm::NewExternalAddr(e @ NewExternalAddr { addr }) =&gt; {
+				<span class="kw">let </span>new_addr = addr.clone().with(Protocol::P2p(<span class="self">self</span>.local_peer_id.into()));
+
+				<span class="kw">if </span><span class="self">Self</span>::can_add_to_dht(addr) {
+					<span class="comment">// NOTE: we might re-discover the same address multiple times
+					// in which case we just want to refrain from logging.
+					</span><span class="kw">if </span><span class="self">self</span>.known_external_addresses.insert(new_addr.clone()) {
+						<span class="macro">info!</span>(
+						  target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						  <span class="string">&quot;🔍 Discovered new external address for our node: {}&quot;</span>,
+						  new_addr,
+						);
+					}
+				}
+
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::NewExternalAddr(e));
+			},
+			FromSwarm::AddressChange(e) =&gt; {
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::AddressChange(e));
+			},
+			FromSwarm::NewListenAddr(e) =&gt; {
+				<span class="self">self</span>.kademlia.on_swarm_event(FromSwarm::NewListenAddr(e));
+			},
+		}
 	}
 
-	<span class="kw">fn </span>inject_event(
+	<span class="kw">fn </span>on_connection_handler_event(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		peer_id: PeerId,
-		connection: ConnectionId,
-		event: &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as </span>ConnectionHandler&gt;::OutEvent,
+		connection_id: ConnectionId,
+		event: &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as
+      </span>ConnectionHandler&gt;::OutEvent,
 	) {
-		<span class="self">self</span>.kademlia.inject_event(peer_id, connection, event)
-	}
-
-	<span class="kw">fn </span>inject_new_external_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="kw">let </span>new_addr = addr.clone().with(Protocol::P2p(<span class="self">self</span>.local_peer_id.into()));
-
-		<span class="kw">if </span><span class="self">Self</span>::can_add_to_dht(addr) {
-			<span class="comment">// NOTE: we might re-discover the same address multiple times
-			// in which case we just want to refrain from logging.
-			</span><span class="kw">if </span><span class="self">self</span>.known_external_addresses.insert(new_addr.clone()) {
-				<span class="macro">info!</span>(
-					target: <span class="string">&quot;sub-libp2p&quot;</span>,
-					<span class="string">&quot;🔍 Discovered new external address for our node: {}&quot;</span>,
-					new_addr,
-				);
-			}
-		}
-
-		<span class="self">self</span>.kademlia.inject_new_external_addr(addr)
-	}
-
-	<span class="kw">fn </span>inject_expired_external_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="comment">// We intentionally don&#39;t remove the element from `known_external_addresses` in order
-		// to not print the log line again.
-
-		</span><span class="self">self</span>.kademlia.inject_expired_external_addr(addr)
-	}
-
-	<span class="kw">fn </span>inject_expired_listen_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="self">self</span>.kademlia.inject_expired_listen_addr(id, addr)
-	}
-
-	<span class="kw">fn </span>inject_new_listener(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId) {
-		<span class="self">self</span>.kademlia.inject_new_listener(id)
-	}
-
-	<span class="kw">fn </span>inject_new_listen_addr(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, addr: <span class="kw-2">&amp;</span>Multiaddr) {
-		<span class="self">self</span>.kademlia.inject_new_listen_addr(id, addr)
-	}
-
-	<span class="kw">fn </span>inject_listen_failure(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>Multiaddr, <span class="kw">_</span>: <span class="kw-2">&amp;</span>Multiaddr, <span class="kw">_</span>: <span class="self">Self</span>::ConnectionHandler) {
-		<span class="comment">// NetworkBehaviour::inject_listen_failure on Kademlia&lt;MemoryStore&gt; does nothing.
-	</span>}
-
-	<span class="kw">fn </span>inject_listener_error(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, err: <span class="kw-2">&amp;</span>(<span class="kw">dyn </span>std::error::Error + <span class="lifetime">&#39;static</span>)) {
-		<span class="self">self</span>.kademlia.inject_listener_error(id, err)
-	}
-
-	<span class="kw">fn </span>inject_listener_closed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: ListenerId, reason: <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span>io::Error&gt;) {
-		<span class="self">self</span>.kademlia.inject_listener_closed(id, reason)
+		<span class="self">self</span>.kademlia.on_connection_handler_event(peer_id, connection_id, event);
 	}
 
 	<span class="kw">fn </span>poll(
@@ -1832,7 +1775,7 @@
 					KademliaEvent::InboundRequest { .. } =&gt; {
 						<span class="comment">// We are not interested in this event at the moment.
 					</span>},
-					KademliaEvent::OutboundQueryCompleted {
+					KademliaEvent::OutboundQueryProgressed {
 						result: QueryResult::GetClosestPeers(res),
 						..
 					} =&gt; <span class="kw">match </span>res {
@@ -1857,24 +1800,36 @@
 							}
 						},
 					},
-					KademliaEvent::OutboundQueryCompleted {
+					KademliaEvent::OutboundQueryProgressed {
 						result: QueryResult::GetRecord(res),
 						stats,
+						step,
 						..
 					} =&gt; {
 						<span class="kw">let </span>ev = <span class="kw">match </span>res {
-							<span class="prelude-val">Ok</span>(ok) =&gt; {
-								<span class="kw">let </span>results = ok
-									.records
-									.into_iter()
-									.map(|r| (r.record.key, r.record.value))
-									.collect();
-
-								DiscoveryOut::ValueFound(
-									results,
-									stats.duration().unwrap_or_default(),
-								)
-							},
+							<span class="prelude-val">Ok</span>(ok) =&gt;
+								<span class="kw">if let </span>GetRecordOk::FoundRecord(r) = ok {
+									<span class="self">self</span>.outbound_query_records
+										.push((r.record.key, r.record.value));
+									<span class="kw">continue
+								</span>} <span class="kw">else </span>{
+									<span class="macro">debug!</span>(
+										target: <span class="string">&quot;sub-libp2p&quot;</span>,
+										<span class="string">&quot;Libp2p =&gt; Query progressed to {:?} step (last: {:?})&quot;</span>,
+										step.count,
+										step.last,
+									);
+									<span class="kw">if </span>step.last {
+										<span class="kw">let </span>records =
+											<span class="self">self</span>.outbound_query_records.drain(..).collect();
+										DiscoveryOut::ValueFound(
+											records,
+											stats.duration().unwrap_or_default(),
+										)
+									} <span class="kw">else </span>{
+										<span class="kw">continue
+									</span>}
+								},
 							<span class="prelude-val">Err</span>(e @ libp2p::kad::GetRecordError::NotFound { .. }) =&gt; {
 								<span class="macro">trace!</span>(
 									target: <span class="string">&quot;sub-libp2p&quot;</span>,
@@ -1900,7 +1855,7 @@
 						};
 						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
 					},
-					KademliaEvent::OutboundQueryCompleted {
+					KademliaEvent::OutboundQueryProgressed {
 						result: QueryResult::PutRecord(res),
 						stats,
 						..
@@ -1922,7 +1877,7 @@
 						};
 						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
 					},
-					KademliaEvent::OutboundQueryCompleted {
+					KademliaEvent::OutboundQueryProgressed {
 						result: QueryResult::RepublishRecord(res),
 						..
 					} =&gt; <span class="kw">match </span>res {
@@ -1938,7 +1893,7 @@
 						),
 					},
 					<span class="comment">// We never start any other type of query.
-					</span>KademliaEvent::OutboundQueryCompleted { result: e, .. } =&gt; {
+					</span>KademliaEvent::OutboundQueryProgressed { result: e, .. } =&gt; {
 						<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Unhandled Kademlia event: {:?}&quot;</span>, e)
 					},
 				},
@@ -1968,7 +1923,7 @@
 			<span class="kw">while let </span>Poll::Ready(ev) = mdns.poll(cx, params) {
 				<span class="kw">match </span>ev {
 					NetworkBehaviourAction::GenerateEvent(event) =&gt; <span class="kw">match </span>event {
-						MdnsEvent::Discovered(list) =&gt; {
+						mdns::Event::Discovered(list) =&gt; {
 							<span class="kw">if </span><span class="self">self</span>.num_connections &gt;= <span class="self">self</span>.discovery_only_if_under_num {
 								<span class="kw">continue
 							</span>}
@@ -1979,7 +1934,7 @@
 								<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
 							}
 						},
-						MdnsEvent::Expired(<span class="kw">_</span>) =&gt; {},
+						mdns::Event::Expired(<span class="kw">_</span>) =&gt; {},
 					},
 					NetworkBehaviourAction::Dial { .. } =&gt; {
 						<span class="macro">unreachable!</span>(<span class="string">&quot;mDNS never dials!&quot;</span>);
@@ -2034,12 +1989,19 @@
 		},
 		identity::{ed25519, Keypair},
 		noise,
-		swarm::{Swarm, SwarmEvent},
+		swarm::{Executor, Swarm, SwarmEvent},
 		yamux, Multiaddr,
 	};
 	<span class="kw">use </span>sc_network_common::config::ProtocolId;
 	<span class="kw">use </span>sp_core::hash::H256;
-	<span class="kw">use </span>std::{collections::HashSet, task::Poll};
+	<span class="kw">use </span>std::{collections::HashSet, pin::Pin, task::Poll};
+
+	<span class="kw">struct </span>TokioExecutor(tokio::runtime::Runtime);
+	<span class="kw">impl </span>Executor <span class="kw">for </span>TokioExecutor {
+		<span class="kw">fn </span>exec(<span class="kw-2">&amp;</span><span class="self">self</span>, f: Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;) {
+			<span class="kw">let _ </span>= <span class="self">self</span>.<span class="number">0</span>.spawn(f);
+		}
+	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>discovery_working() {
@@ -2076,7 +2038,13 @@
 					config.finish()
 				};
 
-				<span class="kw">let </span><span class="kw-2">mut </span>swarm = Swarm::new(transport, behaviour, keypair.public().to_peer_id());
+				<span class="kw">let </span>runtime = tokio::runtime::Runtime::new().unwrap();
+				<span class="kw">let </span><span class="kw-2">mut </span>swarm = Swarm::with_executor(
+					transport,
+					behaviour,
+					keypair.public().to_peer_id(),
+					TokioExecutor(runtime),
+				);
 				<span class="kw">let </span>listen_addr: Multiaddr =
 					<span class="macro">format!</span>(<span class="string">&quot;/memory/{}&quot;</span>, rand::random::&lt;u64&gt;()).parse().unwrap();
 
