@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"trait":[["Api","Every function in this trait represents (at least) one function that can be imported by a contract."]]};
