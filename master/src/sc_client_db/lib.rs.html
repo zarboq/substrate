@@ -4010,21 +4010,6 @@
 <a href="#4010" id="4010">4010</a>
 <a href="#4011" id="4011">4011</a>
 <a href="#4012" id="4012">4012</a>
-<a href="#4013" id="4013">4013</a>
-<a href="#4014" id="4014">4014</a>
-<a href="#4015" id="4015">4015</a>
-<a href="#4016" id="4016">4016</a>
-<a href="#4017" id="4017">4017</a>
-<a href="#4018" id="4018">4018</a>
-<a href="#4019" id="4019">4019</a>
-<a href="#4020" id="4020">4020</a>
-<a href="#4021" id="4021">4021</a>
-<a href="#4022" id="4022">4022</a>
-<a href="#4023" id="4023">4023</a>
-<a href="#4024" id="4024">4024</a>
-<a href="#4025" id="4025">4025</a>
-<a href="#4026" id="4026">4026</a>
-<a href="#4027" id="4027">4027</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -5318,14 +5303,13 @@
 		header: <span class="kw-2">&amp;</span>Block::Header,
 		last_finalized: <span class="prelude-ty">Option</span>&lt;Block::Hash&gt;,
 		justification: <span class="prelude-ty">Option</span>&lt;Justification&gt;,
-		finalization_displaced: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;FinalizationOutcome&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;&gt;,
 	) -&gt; ClientResult&lt;MetaUpdate&lt;Block&gt;&gt; {
 		<span class="comment">// TODO: ensure best chain contains this block.
 		</span><span class="kw">let </span>number = <span class="kw-2">*</span>header.number();
 		<span class="self">self</span>.ensure_sequential_finalization(header, last_finalized)<span class="question-mark">?</span>;
 		<span class="kw">let </span>with_state = sc_client_api::Backend::have_state_at(<span class="self">self</span>, hash, number);
 
-		<span class="self">self</span>.note_finalized(transaction, header, hash, finalization_displaced, with_state)<span class="question-mark">?</span>;
+		<span class="self">self</span>.note_finalized(transaction, header, hash, with_state)<span class="question-mark">?</span>;
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(justification) = justification {
 			transaction.set_from_vec(
@@ -5389,7 +5373,6 @@
 
 	<span class="kw">fn </span>try_commit_operation(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>operation: BlockImportOperation&lt;Block&gt;) -&gt; ClientResult&lt;()&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>transaction = Transaction::new();
-		<span class="kw">let </span><span class="kw-2">mut </span>finalization_displaced_leaves = <span class="prelude-val">None</span>;
 
 		operation.apply_aux(<span class="kw-2">&amp;mut </span>transaction);
 		operation.apply_offchain(<span class="kw-2">&amp;mut </span>transaction);
@@ -5408,7 +5391,6 @@
 				<span class="kw-2">&amp;</span>block_header,
 				<span class="prelude-val">Some</span>(last_finalized_hash),
 				justification,
-				<span class="kw-2">&amp;mut </span>finalization_displaced_leaves,
 			)<span class="question-mark">?</span>);
 			last_finalized_hash = block_hash;
 			last_finalized_num = <span class="kw-2">*</span>block_header.number();
@@ -5581,13 +5563,7 @@
 			<span class="kw">if </span>finalized {
 				<span class="comment">// TODO: ensure best chain contains this block.
 				</span><span class="self">self</span>.ensure_sequential_finalization(header, <span class="prelude-val">Some</span>(last_finalized_hash))<span class="question-mark">?</span>;
-				<span class="self">self</span>.note_finalized(
-					<span class="kw-2">&amp;mut </span>transaction,
-					header,
-					hash,
-					<span class="kw-2">&amp;mut </span>finalization_displaced_leaves,
-					operation.commit_state,
-				)<span class="question-mark">?</span>;
+				<span class="self">self</span>.note_finalized(<span class="kw-2">&amp;mut </span>transaction, header, hash, operation.commit_state)<span class="question-mark">?</span>;
 			} <span class="kw">else </span>{
 				<span class="comment">// canonicalize blocks which are old enough, regardless of finality.
 				</span><span class="self">self</span>.force_delayed_canonicalize(<span class="kw-2">&amp;mut </span>transaction)<span class="question-mark">?
@@ -5719,7 +5695,6 @@
 		transaction: <span class="kw-2">&amp;mut </span>Transaction&lt;DbHash&gt;,
 		f_header: <span class="kw-2">&amp;</span>Block::Header,
 		f_hash: Block::Hash,
-		displaced: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;FinalizationOutcome&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;&gt;,
 		with_state: bool,
 	) -&gt; ClientResult&lt;()&gt; {
 		<span class="kw">let </span>f_num = <span class="kw-2">*</span>f_header.number();
@@ -5747,10 +5722,6 @@
 
 		<span class="kw">let </span>new_displaced = <span class="self">self</span>.blockchain.leaves.write().finalize_height(f_num);
 		<span class="self">self</span>.prune_blocks(transaction, f_num, <span class="kw-2">&amp;</span>new_displaced)<span class="question-mark">?</span>;
-		<span class="kw">match </span>displaced {
-			x @ <span class="kw-2">&amp;mut </span><span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>x = <span class="prelude-val">Some</span>(new_displaced),
-			<span class="kw-2">&amp;mut </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>displaced) =&gt; displaced.merge(new_displaced),
-		}
 
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -6040,7 +6011,6 @@
 	) -&gt; ClientResult&lt;()&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>transaction = Transaction::new();
 		<span class="kw">let </span>header = <span class="self">self</span>.blockchain.expect_header(hash)<span class="question-mark">?</span>;
-		<span class="kw">let </span><span class="kw-2">mut </span>displaced = <span class="prelude-val">None</span>;
 
 		<span class="kw">let </span>m = <span class="self">self</span>.finalize_block_with_transaction(
 			<span class="kw-2">&amp;mut </span>transaction,
@@ -6048,8 +6018,8 @@
 			<span class="kw-2">&amp;</span>header,
 			<span class="prelude-val">None</span>,
 			justification,
-			<span class="kw-2">&amp;mut </span>displaced,
 		)<span class="question-mark">?</span>;
+
 		<span class="self">self</span>.storage.db.commit(transaction)<span class="question-mark">?</span>;
 		<span class="self">self</span>.blockchain.update_meta(m);
 		<span class="prelude-val">Ok</span>(())
