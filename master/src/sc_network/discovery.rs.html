@@ -1134,6 +1134,9 @@
 <a href="#1134" id="1134">1134</a>
 <a href="#1135" id="1135">1135</a>
 <a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1852,7 +1855,9 @@
 									}
 								}
 
-								<span class="self">self</span>.records_to_publish.insert(id, r.record.clone());
+								<span class="comment">// Will be removed below when we receive
+								// `FinishedWithNoAdditionalRecord`.
+								</span><span class="self">self</span>.records_to_publish.insert(id, r.record.clone());
 
 								DiscoveryOut::ValueFound(
 									<span class="macro">vec!</span>[(r.record.key, r.record.value)],
@@ -1862,14 +1867,15 @@
 							<span class="prelude-val">Ok</span>(GetRecordOk::FinishedWithNoAdditionalRecord {
 								cache_candidates,
 							}) =&gt; {
-								<span class="kw">if </span>cache_candidates.is_empty() {
-									<span class="kw">continue
-								</span>}
-
-								<span class="comment">// Put the record to the `cache_candidates` that are nearest to the
-								// record key from our point of view of the network.
+								<span class="comment">// We always need to remove the record to not leak any data!
 								</span><span class="kw">if let </span><span class="prelude-val">Some</span>(record) = <span class="self">self</span>.records_to_publish.remove(<span class="kw-2">&amp;</span>id) {
-									<span class="kw">if let </span><span class="prelude-val">Some</span>(kad) = <span class="self">self</span>.kademlia.as_mut() {
+									<span class="kw">if </span>cache_candidates.is_empty() {
+										<span class="kw">continue
+									</span>}
+
+									<span class="comment">// Put the record to the `cache_candidates` that are nearest to
+									// the record key from our point of view of the network.
+									</span><span class="kw">if let </span><span class="prelude-val">Some</span>(kad) = <span class="self">self</span>.kademlia.as_mut() {
 										kad.put_record_to(
 											record,
 											cache_candidates.into_iter().map(|v| v.<span class="number">1</span>),
