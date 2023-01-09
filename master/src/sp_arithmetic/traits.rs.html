@@ -1029,6 +1029,38 @@
 <a href="#1029" id="1029">1029</a>
 <a href="#1030" id="1030">1030</a>
 <a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
+<a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
+<a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1050,9 +1082,9 @@
 
 </span><span class="kw">use </span>codec::HasCompact;
 <span class="kw">pub use </span>ensure::{
-	Ensure, EnsureAdd, EnsureAddAssign, EnsureDiv, EnsureDivAssign, EnsureFixedPointNumber,
-	EnsureFrom, EnsureInto, EnsureMul, EnsureMulAssign, EnsureOp, EnsureOpAssign, EnsureSub,
-	EnsureSubAssign,
+	ensure_pow, Ensure, EnsureAdd, EnsureAddAssign, EnsureDiv, EnsureDivAssign,
+	EnsureFixedPointNumber, EnsureFrom, EnsureInto, EnsureMul, EnsureMulAssign, EnsureOp,
+	EnsureOpAssign, EnsureSub, EnsureSubAssign,
 };
 <span class="kw">pub use </span>integer_sqrt::IntegerSquareRoot;
 <span class="kw">pub use </span>num_traits::{
@@ -1373,7 +1405,7 @@
 /// The *EnsureOps* family functions follows the same behavior as *CheckedOps* but
 /// returning an [`ArithmeticError`](crate::ArithmeticError) instead of `None`.
 </span><span class="kw">mod </span>ensure {
-	<span class="kw">use super</span>::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Zero};
+	<span class="kw">use super</span>::{checked_pow, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero};
 	<span class="kw">use crate</span>::{ArithmeticError, FixedPointNumber, FixedPointOperand};
 
 	<span class="doccomment">/// Performs addition that returns [`ArithmeticError`] instead of wrapping around on overflow.
@@ -1540,6 +1572,27 @@
 			<span class="self">self</span>.ensure_div_assign(v)<span class="question-mark">?</span>;
 			<span class="prelude-val">Ok</span>(<span class="self">self</span>)
 		}
+	}
+
+	<span class="doccomment">/// Raises a value to the power of exp, returning `ArithmeticError` if an overflow occurred.
+	///
+	/// Check [`checked_pow`] for more info about border cases.
+	///
+	/// ```
+	/// use sp_arithmetic::{traits::ensure_pow, ArithmeticError};
+	///
+	/// fn overflow() -&gt; Result&lt;(), ArithmeticError&gt; {
+	///     ensure_pow(2u64, 64)?;
+	///     Ok(())
+	/// }
+	///
+	/// assert_eq!(overflow(), Err(ArithmeticError::Overflow));
+	/// ```
+	</span><span class="kw">pub fn </span>ensure_pow&lt;T: One + CheckedMul + Clone&gt;(
+		base: T,
+		exp: usize,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;T, ArithmeticError&gt; {
+		checked_pow(base, exp).ok_or(ArithmeticError::Overflow)
 	}
 
 	<span class="kw">impl</span>&lt;T: EnsureAddAssign&gt; EnsureAdd <span class="kw">for </span>T {}
@@ -1985,6 +2038,15 @@
 	}
 
 	<span class="attr">#[test]
+	</span><span class="kw">fn </span>ensure_pow_works() {
+		test_ensure(
+			values().into_iter().map(|(base, exp)| (base, exp <span class="kw">as </span>usize)).collect(),
+			ensure_pow,
+			|<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b| checked_pow(a, b),
+		);
+	}
+
+	<span class="attr">#[test]
 	</span><span class="kw">fn </span>ensure_add_assign_works() {
 		test_ensure_assign(values(), <span class="kw-2">&amp;</span>EnsureAddAssign::ensure_add_assign, <span class="kw-2">&amp;</span>EnsureAdd::ensure_add);
 	}
@@ -2005,11 +2067,12 @@
 	}
 
 	<span class="doccomment">/// Test that the ensured function returns the expected un-ensured value.
-	</span><span class="kw">fn </span>test_ensure&lt;V, E, P&gt;(pairs: Vec&lt;(V, V)&gt;, ensured: E, unensured: P)
+	</span><span class="kw">fn </span>test_ensure&lt;V, W, E, P&gt;(pairs: Vec&lt;(V, W)&gt;, ensured: E, unensured: P)
 	<span class="kw">where
 		</span>V: Ensure + core::fmt::Debug + Copy,
-		E: Fn(V, V) -&gt; <span class="prelude-ty">Result</span>&lt;V, ArithmeticError&gt;,
-		P: Fn(<span class="kw-2">&amp;</span>V, <span class="kw-2">&amp;</span>V) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt;,
+		W: Ensure + core::fmt::Debug + Copy,
+		E: Fn(V, W) -&gt; <span class="prelude-ty">Result</span>&lt;V, ArithmeticError&gt;,
+		P: Fn(<span class="kw-2">&amp;</span>V, <span class="kw-2">&amp;</span>W) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt;,
 	{
 		<span class="kw">for </span>(a, b) <span class="kw">in </span>pairs.into_iter() {
 			<span class="kw">match </span>ensured(a, b) {
@@ -2024,11 +2087,12 @@
 	}
 
 	<span class="doccomment">/// Test that the ensured function modifies `self` to the expected un-ensured value.
-	</span><span class="kw">fn </span>test_ensure_assign&lt;V, E, P&gt;(pairs: Vec&lt;(V, V)&gt;, ensured: E, unensured: P)
+	</span><span class="kw">fn </span>test_ensure_assign&lt;V, W, E, P&gt;(pairs: Vec&lt;(V, W)&gt;, ensured: E, unensured: P)
 	<span class="kw">where
 		</span>V: Ensure + std::panic::RefUnwindSafe + std::panic::UnwindSafe + core::fmt::Debug + Copy,
-		E: Fn(<span class="kw-2">&amp;mut </span>V, V) -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithmeticError&gt;,
-		P: Fn(V, V) -&gt; <span class="prelude-ty">Result</span>&lt;V, ArithmeticError&gt; + std::panic::RefUnwindSafe,
+		W: Ensure + std::panic::RefUnwindSafe + std::panic::UnwindSafe + core::fmt::Debug + Copy,
+		E: Fn(<span class="kw-2">&amp;mut </span>V, W) -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithmeticError&gt;,
+		P: Fn(V, W) -&gt; <span class="prelude-ty">Result</span>&lt;V, ArithmeticError&gt; + std::panic::RefUnwindSafe,
 	{
 		<span class="kw">for </span>(<span class="kw-2">mut </span>a, b) <span class="kw">in </span>pairs.into_iter() {
 			<span class="kw">let </span>old_a = a;
