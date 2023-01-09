@@ -1104,23 +1104,6 @@
 <a href="#1104" id="1104">1104</a>
 <a href="#1105" id="1105">1105</a>
 <a href="#1106" id="1106">1106</a>
-<a href="#1107" id="1107">1107</a>
-<a href="#1108" id="1108">1108</a>
-<a href="#1109" id="1109">1109</a>
-<a href="#1110" id="1110">1110</a>
-<a href="#1111" id="1111">1111</a>
-<a href="#1112" id="1112">1112</a>
-<a href="#1113" id="1113">1113</a>
-<a href="#1114" id="1114">1114</a>
-<a href="#1115" id="1115">1115</a>
-<a href="#1116" id="1116">1116</a>
-<a href="#1117" id="1117">1117</a>
-<a href="#1118" id="1118">1118</a>
-<a href="#1119" id="1119">1119</a>
-<a href="#1120" id="1120">1120</a>
-<a href="#1121" id="1121">1121</a>
-<a href="#1122" id="1122">1122</a>
-<a href="#1123" id="1123">1123</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1446,7 +1429,6 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		level_index: usize,
 		discarded_journals: <span class="kw-2">&amp;mut </span>Vec&lt;Vec&lt;u8&gt;&gt;,
-		discarded_blocks: <span class="kw-2">&amp;mut </span>Vec&lt;BlockHash&gt;,
 		hash: <span class="kw-2">&amp;</span>BlockHash,
 	) {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(level) = <span class="self">self</span>.levels.get(level_index) {
@@ -1458,13 +1440,7 @@
 					.clone();
 				<span class="kw">if </span>parent == <span class="kw-2">*</span>hash {
 					discarded_journals.push(overlay.journal_key.clone());
-					discarded_blocks.push(overlay.hash.clone());
-					<span class="self">self</span>.discard_journals(
-						level_index + <span class="number">1</span>,
-						discarded_journals,
-						discarded_blocks,
-						<span class="kw-2">&amp;</span>overlay.hash,
-					);
+					<span class="self">self</span>.discard_journals(level_index + <span class="number">1</span>, discarded_journals, <span class="kw-2">&amp;</span>overlay.hash);
 				}
 			});
 		}
@@ -1516,7 +1492,6 @@
 		<span class="self">self</span>.pinned_canonincalized.push(hash.clone());
 
 		<span class="kw">let </span><span class="kw-2">mut </span>discarded_journals = Vec::new();
-		<span class="kw">let </span><span class="kw-2">mut </span>discarded_blocks = Vec::new();
 		<span class="kw">for </span>(i, overlay) <span class="kw">in </span>level.blocks.into_iter().enumerate() {
 			<span class="kw">let </span><span class="kw-2">mut </span>pinned_children = <span class="number">0</span>;
 			<span class="comment">// That&#39;s the one we need to canonicalize
@@ -1534,12 +1509,7 @@
 				commit.data.deleted.extend(overlay.deleted.clone());
 			} <span class="kw">else </span>{
 				<span class="comment">// Discard this overlay
-				</span><span class="self">self</span>.discard_journals(
-					<span class="number">0</span>,
-					<span class="kw-2">&amp;mut </span>discarded_journals,
-					<span class="kw-2">&amp;mut </span>discarded_blocks,
-					<span class="kw-2">&amp;</span>overlay.hash,
-				);
+				</span><span class="self">self</span>.discard_journals(<span class="number">0</span>, <span class="kw-2">&amp;mut </span>discarded_journals, <span class="kw-2">&amp;</span>overlay.hash);
 				pinned_children = discard_descendants(
 					<span class="kw-2">&amp;mut </span><span class="self">self</span>.levels.as_mut_slices(),
 					<span class="kw-2">&amp;mut </span><span class="self">self</span>.values,
@@ -1560,7 +1530,6 @@
 				discard_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values, overlay.inserted);
 			}
 			discarded_journals.push(overlay.journal_key.clone());
-			discarded_blocks.push(overlay.hash.clone());
 		}
 		commit.meta.deleted.append(<span class="kw-2">&amp;mut </span>discarded_journals);
 
@@ -1671,10 +1640,7 @@
 							<span class="macro">trace!</span>(target: <span class="string">&quot;state-db-pin&quot;</span>, <span class="string">&quot;Discarding unpinned non-canon block: {:?}&quot;</span>, hash);
 							discard_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values, inserted);
 							<span class="self">self</span>.parents.remove(<span class="kw-2">&amp;</span>hash);
-							<span class="bool-val">true
-						</span>} <span class="kw">else </span>{
-							<span class="bool-val">false
-						</span>}
+						}
 					},
 					Entry::Vacant(<span class="kw">_</span>) =&gt; <span class="kw">break</span>,
 				};
