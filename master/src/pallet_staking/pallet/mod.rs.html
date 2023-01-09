@@ -1816,6 +1816,8 @@
 <a href="#1816" id="1816">1816</a>
 <a href="#1817" id="1817">1817</a>
 <a href="#1818" id="1818">1818</a>
+<a href="#1819" id="1819">1819</a>
+<a href="#1820" id="1820">1820</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2532,6 +2534,8 @@
 		</span>PayoutStarted { era_index: EraIndex, validator_stash: T::AccountId },
 		<span class="doccomment">/// A validator has set their preferences.
 		</span>ValidatorPrefsSet { stash: T::AccountId, prefs: ValidatorPrefs },
+		<span class="doccomment">/// A new force era mode was set.
+		</span>ForceEra { mode: Forcing },
 	}
 
 	<span class="attr">#[pallet::error]
@@ -3195,7 +3199,7 @@
 		#[pallet::weight(T::WeightInfo::force_no_eras())]
 		</span><span class="kw">pub fn </span>force_no_eras(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			ensure_root(origin)<span class="question-mark">?</span>;
-			ForceEra::&lt;T&gt;::put(Forcing::ForceNone);
+			<span class="self">Self</span>::set_force_era(Forcing::ForceNone);
 			<span class="prelude-val">Ok</span>(())
 		}
 
@@ -3219,7 +3223,7 @@
 		#[pallet::weight(T::WeightInfo::force_new_era())]
 		</span><span class="kw">pub fn </span>force_new_era(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			ensure_root(origin)<span class="question-mark">?</span>;
-			ForceEra::&lt;T&gt;::put(Forcing::ForceNew);
+			<span class="self">Self</span>::set_force_era(Forcing::ForceNew);
 			<span class="prelude-val">Ok</span>(())
 		}
 
@@ -3270,7 +3274,7 @@
 		#[pallet::weight(T::WeightInfo::force_new_era_always())]
 		</span><span class="kw">pub fn </span>force_new_era_always(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			ensure_root(origin)<span class="question-mark">?</span>;
-			ForceEra::&lt;T&gt;::put(Forcing::ForceAlways);
+			<span class="self">Self</span>::set_force_era(Forcing::ForceAlways);
 			<span class="prelude-val">Ok</span>(())
 		}
 

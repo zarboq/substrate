@@ -1977,6 +1977,20 @@
 <a href="#1977" id="1977">1977</a>
 <a href="#1978" id="1978">1978</a>
 <a href="#1979" id="1979">1979</a>
+<a href="#1980" id="1980">1980</a>
+<a href="#1981" id="1981">1981</a>
+<a href="#1982" id="1982">1982</a>
+<a href="#1983" id="1983">1983</a>
+<a href="#1984" id="1984">1984</a>
+<a href="#1985" id="1985">1985</a>
+<a href="#1986" id="1986">1986</a>
+<a href="#1987" id="1987">1987</a>
+<a href="#1988" id="1988">1988</a>
+<a href="#1989" id="1989">1989</a>
+<a href="#1990" id="1990">1990</a>
+<a href="#1991" id="1991">1991</a>
+<a href="#1992" id="1992">1992</a>
+<a href="#1993" id="1993">1993</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -3034,7 +3048,7 @@
 			Runtime, RuntimeCall, RuntimeOrigin, System, TestNposSolution, TrimHelpers,
 			UnsignedPhase,
 		},
-		CurrentPhase, Event, InvalidTransaction, Phase, QueuedSolution, TransactionSource,
+		Event, InvalidTransaction, Phase, QueuedSolution, TransactionSource,
 		TransactionValidityError,
 	};
 	<span class="kw">use </span>codec::Decode;
@@ -3107,7 +3121,7 @@
 			<span class="macro">assert!</span>(&lt;MultiPhase <span class="kw">as </span>ValidateUnsigned&gt;::pre_dispatch(<span class="kw-2">&amp;</span>call).is_ok());
 
 			<span class="comment">// unsigned -- but not enabled.
-			</span>&lt;CurrentPhase&lt;Runtime&gt;&gt;::put(Phase::Unsigned((<span class="bool-val">false</span>, <span class="number">25</span>)));
+			</span>MultiPhase::phase_transition(Phase::Unsigned((<span class="bool-val">false</span>, <span class="number">25</span>)));
 			<span class="macro">assert!</span>(MultiPhase::current_phase().is_unsigned());
 			<span class="macro">assert!</span>(<span class="macro">matches!</span>(
 				&lt;MultiPhase <span class="kw">as </span>ValidateUnsigned&gt;::validate_unsigned(
@@ -3300,10 +3314,15 @@
 			<span class="macro">assert_eq!</span>(
 				multi_phase_events(),
 				<span class="macro">vec!</span>[
-					Event::SignedPhaseStarted { round: <span class="number">1 </span>},
-					Event::UnsignedPhaseStarted { round: <span class="number">1 </span>},
+					Event::PhaseTransitioned { from: Phase::Off, to: Phase::Signed, round: <span class="number">1 </span>},
+					Event::PhaseTransitioned {
+						from: Phase::Signed,
+						to: Phase::Unsigned((<span class="bool-val">true</span>, <span class="number">25</span>)),
+						round: <span class="number">1
+					</span>},
 					Event::SolutionStored {
 						compute: ElectionCompute::Unsigned,
+						origin: <span class="prelude-val">None</span>,
 						prev_ejected: <span class="bool-val">false
 					</span>}
 				]
@@ -3640,7 +3659,7 @@
 
 			<span class="kw">let </span>current_block = block_plus(offchain_repeat * <span class="number">2 </span>+ <span class="number">2</span>);
 			<span class="comment">// force the unsigned phase to start on the current block.
-			</span>CurrentPhase::&lt;Runtime&gt;::set(Phase::Unsigned((<span class="bool-val">true</span>, current_block)));
+			</span>MultiPhase::phase_transition(Phase::Unsigned((<span class="bool-val">true</span>, current_block)));
 
 			<span class="comment">// clear the cache and create a solution since we are on the first block of the unsigned
 			// phase.
@@ -3652,8 +3671,12 @@
 			<span class="macro">assert_eq!</span>(
 				multi_phase_events(),
 				<span class="macro">vec!</span>[
-					Event::SignedPhaseStarted { round: <span class="number">1 </span>},
-					Event::UnsignedPhaseStarted { round: <span class="number">1 </span>},
+					Event::PhaseTransitioned { from: Phase::Off, to: Phase::Signed, round: <span class="number">1 </span>},
+					Event::PhaseTransitioned {
+						from: Phase::Signed,
+						to: Phase::Unsigned((<span class="bool-val">true</span>, <span class="number">25</span>)),
+						round: <span class="number">1
+					</span>},
 					Event::ElectionFinalized {
 						compute: ElectionCompute::Fallback,
 						score: ElectionScore {
@@ -3661,7 +3684,12 @@
 							sum_stake: <span class="number">0</span>,
 							sum_stake_squared: <span class="number">0
 						</span>}
-					}
+					},
+					Event::PhaseTransitioned {
+						from: Phase::Unsigned((<span class="bool-val">true</span>, <span class="number">25</span>)),
+						to: Phase::Unsigned((<span class="bool-val">true</span>, <span class="number">37</span>)),
+						round: <span class="number">1
+					</span>},
 				]
 			);
 		})

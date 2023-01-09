@@ -531,6 +531,7 @@
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
 <a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -733,7 +734,7 @@
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::snapshot().is_none());
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::current_phase().is_off());
 	}: {
-		&lt;MultiPhase&lt;T&gt;&gt;::on_initialize_open_signed();
+		&lt;MultiPhase&lt;T&gt;&gt;::phase_transition(Phase::Signed);
 	} verify {
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::snapshot().is_none());
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::current_phase().is_signed());
@@ -743,7 +744,8 @@
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::snapshot().is_none());
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::current_phase().is_off());
 	}: {
-		&lt;MultiPhase&lt;T&gt;&gt;::on_initialize_open_unsigned(<span class="bool-val">true</span>, <span class="number">1u32</span>.into())
+		<span class="kw">let </span>now = frame_system::Pallet::&lt;T&gt;::block_number();
+		&lt;MultiPhase&lt;T&gt;&gt;::phase_transition(Phase::Unsigned((<span class="bool-val">true</span>, now)));
 	} verify {
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::snapshot().is_none());
 		<span class="macro">assert!</span>(&lt;MultiPhase&lt;T&gt;&gt;::current_phase().is_unsigned());
@@ -851,7 +853,7 @@
 	submit {
 		<span class="comment">// the queue is full and the solution is only better than the worse.
 		</span>&lt;MultiPhase&lt;T&gt;&gt;::create_snapshot().map_err(&lt;<span class="kw-2">&amp;</span>str&gt;::from)<span class="question-mark">?</span>;
-		MultiPhase::&lt;T&gt;::on_initialize_open_signed();
+		&lt;MultiPhase&lt;T&gt;&gt;::phase_transition(Phase::Signed);
 		&lt;Round&lt;T&gt;&gt;::put(<span class="number">1</span>);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>signed_submissions = SignedSubmissions::&lt;T&gt;::get();
