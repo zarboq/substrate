@@ -104,6 +104,7 @@
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -123,7 +124,8 @@
 
 </span><span class="doccomment">//! Migrations to version [`4.0.0`], as denoted by the changelog.
 
-</span><span class="kw">use </span>frame_support::{
+</span><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::LOG_TARGET;
+<span class="kw">use </span>frame_support::{
 	traits::{Get, StorageVersion},
 	weights::Weight,
 };
@@ -141,14 +143,14 @@
 </span><span class="kw">pub fn </span>migrate&lt;T: <span class="kw">crate</span>::Config, N: AsRef&lt;str&gt;&gt;(new_pallet_name: N) -&gt; Weight {
 	<span class="kw">if </span>new_pallet_name.as_ref().as_bytes() == OLD_PREFIX {
 		<span class="macro">log::info!</span>(
-			target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;New pallet name is equal to the old prefix. No migration needs to be done.&quot;</span>,
 		);
 		<span class="kw">return </span>Weight::zero()
 	}
 	<span class="kw">let </span>storage_version = StorageVersion::get::&lt;<span class="kw">crate</span>::Pallet&lt;T&gt;&gt;();
 	<span class="macro">log::info!</span>(
-		target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
+		target: LOG_TARGET,
 		<span class="string">&quot;Running migration to v4 for elections-phragmen with storage version {:?}&quot;</span>,
 		storage_version,
 	);
@@ -165,7 +167,7 @@
 		&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get().max_block
 	} <span class="kw">else </span>{
 		<span class="macro">log::warn!</span>(
-			target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;Attempted to apply migration to v4 but failed because storage version is {:?}&quot;</span>,
 			storage_version,
 		);

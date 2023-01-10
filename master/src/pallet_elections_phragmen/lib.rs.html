@@ -3220,11 +3220,6 @@
 <a href="#3220" id="3220">3220</a>
 <a href="#3221" id="3221">3221</a>
 <a href="#3222" id="3222">3222</a>
-<a href="#3223" id="3223">3223</a>
-<a href="#3224" id="3224">3224</a>
-<a href="#3225" id="3225">3225</a>
-<a href="#3226" id="3226">3226</a>
-<a href="#3227" id="3227">3227</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -3348,6 +3343,8 @@
 
 <span class="doccomment">/// All migrations.
 </span><span class="kw">pub mod </span>migrations;
+
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;runtime::elections-phragmen&quot;</span>;
 
 <span class="doccomment">/// The maximum votes allowed per voter.
 </span><span class="kw">pub const </span>MAXIMUM_VOTE: usize = <span class="number">16</span>;
@@ -4016,10 +4013,7 @@
 				} <span class="kw">else </span>{
 					<span class="comment">// overlap. This can never happen. If so, it seems like our intended replacement
 					// is already a member, so not much more to do.
-					</span><span class="macro">log::error!</span>(
-						target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
-						<span class="string">&quot;A member seems to also be a runner-up.&quot;</span>,
-					);
+					</span><span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;A member seems to also be a runner-up.&quot;</span>);
 				}
 				next_best
 			});
@@ -4166,7 +4160,7 @@
 			<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; (),
 			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
 				<span class="macro">log::error!</span>(
-					target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
+					target: LOG_TARGET,
 					<span class="string">&quot;Failed to run election. Number of voters exceeded&quot;</span>,
 				);
 				<span class="self">Self</span>::deposit_event(Event::ElectionError);
@@ -4330,11 +4324,7 @@
 					&lt;ElectionRounds&lt;T&gt;&gt;::mutate(|v| <span class="kw-2">*</span>v += <span class="number">1</span>);
 				})
 				.map_err(|e| {
-					<span class="macro">log::error!</span>(
-						target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
-						<span class="string">&quot;Failed to run election [{:?}].&quot;</span>,
-						e,
-					);
+					<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;Failed to run election [{:?}].&quot;</span>, e,);
 					<span class="self">Self</span>::deposit_event(Event::ElectionError);
 				});
 

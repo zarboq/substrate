@@ -163,17 +163,6 @@
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -193,7 +182,8 @@
 
 </span><span class="doccomment">//! Migrations to version [`3.0.0`], as denoted by the changelog.
 
-</span><span class="kw">use crate</span>::{Config, Pallet};
+</span><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::LOG_TARGET;
+<span class="kw">use crate</span>::{Config, Pallet};
 <span class="kw">use </span>codec::{Decode, Encode, FullCodec};
 <span class="kw">use </span>frame_support::{
 	pallet_prelude::ValueQuery, traits::StorageVersion, weights::Weight, RuntimeDebug, Twox64Concat,
@@ -264,7 +254,7 @@
 ) -&gt; Weight {
 	<span class="kw">let </span>storage_version = StorageVersion::get::&lt;Pallet&lt;T&gt;&gt;();
 	<span class="macro">log::info!</span>(
-		target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
+		target: LOG_TARGET,
 		<span class="string">&quot;Running migration for elections-phragmen with storage version {:?}&quot;</span>,
 		storage_version,
 	);
@@ -280,7 +270,7 @@
 		Weight::MAX
 	} <span class="kw">else </span>{
 		<span class="macro">log::warn!</span>(
-			target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;Attempted to apply migration to V3 but failed because storage version is {:?}&quot;</span>,
 			storage_version,
 		);
@@ -294,22 +284,14 @@
 		<span class="prelude-val">Some</span>(Voter { votes, stake, deposit: old_deposit })
 	});
 
-	<span class="macro">log::info!</span>(
-		target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
-		<span class="string">&quot;migrated {} voter accounts.&quot;</span>,
-		&lt;Voting&lt;V, T&gt;&gt;::iter().count(),
-	);
+	<span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;migrated {} voter accounts.&quot;</span>, &lt;Voting&lt;V, T&gt;&gt;::iter().count());
 }
 
 <span class="doccomment">/// Migrate all candidates to recorded deposit.
 </span><span class="kw">pub fn </span>migrate_candidates_to_recorded_deposit&lt;V: V2ToV3, T: Config&gt;(old_deposit: V::Balance) {
 	<span class="kw">let _ </span>= &lt;Candidates&lt;V, T&gt;&gt;::translate::&lt;Vec&lt;V::AccountId&gt;, <span class="kw">_</span>&gt;(|maybe_old_candidates| {
 		maybe_old_candidates.map(|old_candidates| {
-			<span class="macro">log::info!</span>(
-				target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
-				<span class="string">&quot;migrated {} candidate accounts.&quot;</span>,
-				old_candidates.len(),
-			);
+			<span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;migrated {} candidate accounts.&quot;</span>, old_candidates.len());
 			old_candidates.into_iter().map(|c| (c, old_deposit)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 		})
 	});
@@ -319,11 +301,7 @@
 </span><span class="kw">pub fn </span>migrate_members_to_recorded_deposit&lt;V: V2ToV3, T: Config&gt;(old_deposit: V::Balance) {
 	<span class="kw">let _ </span>= &lt;Members&lt;V, T&gt;&gt;::translate::&lt;Vec&lt;(V::AccountId, V::Balance)&gt;, <span class="kw">_</span>&gt;(|maybe_old_members| {
 		maybe_old_members.map(|old_members| {
-			<span class="macro">log::info!</span>(
-				target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
-				<span class="string">&quot;migrated {} member accounts.&quot;</span>,
-				old_members.len(),
-			);
+			<span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;migrated {} member accounts.&quot;</span>, old_members.len());
 			old_members
 				.into_iter()
 				.map(|(who, stake)| SeatHolder { who, stake, deposit: old_deposit })
@@ -338,7 +316,7 @@
 		|maybe_old_runners_up| {
 			maybe_old_runners_up.map(|old_runners_up| {
 				<span class="macro">log::info!</span>(
-					target: <span class="string">&quot;runtime::elections-phragmen&quot;</span>,
+					target: LOG_TARGET,
 					<span class="string">&quot;migrated {} runner-up accounts.&quot;</span>,
 					old_runners_up.len(),
 				);

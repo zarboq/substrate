@@ -192,6 +192,8 @@
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -223,6 +225,8 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::historical <span class="kw">as </span>pallet_session_historical;
 
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;runtime::session_historical&quot;</span>;
+
 <span class="kw">const </span>OLD_PREFIX: <span class="kw-2">&amp;</span>str = <span class="string">&quot;Session&quot;</span>;
 
 <span class="doccomment">/// Migrate the entire storage of this pallet to a new prefix.
@@ -238,7 +242,7 @@
 
 	<span class="kw">if </span>new_pallet_name == OLD_PREFIX {
 		<span class="macro">log::info!</span>(
-			target: <span class="string">&quot;runtime::session_historical&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;New pallet name is equal to the old prefix. No migration needs to be done.&quot;</span>,
 		);
 		<span class="kw">return </span>Weight::zero()
@@ -246,7 +250,7 @@
 
 	<span class="kw">let </span>on_chain_storage_version = &lt;P <span class="kw">as </span>GetStorageVersion&gt;::on_chain_storage_version();
 	<span class="macro">log::info!</span>(
-		target: <span class="string">&quot;runtime::session_historical&quot;</span>,
+		target: LOG_TARGET,
 		<span class="string">&quot;Running migration to v1 for session_historical with storage version {:?}&quot;</span>,
 		on_chain_storage_version,
 	);
@@ -272,7 +276,7 @@
 		&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get().max_block
 	} <span class="kw">else </span>{
 		<span class="macro">log::warn!</span>(
-			target: <span class="string">&quot;runtime::session_historical&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;Attempted to apply migration to v1 but failed because storage version is {:?}&quot;</span>,
 			on_chain_storage_version,
 		);
@@ -378,7 +382,7 @@
 
 <span class="kw">fn </span>log_migration(stage: <span class="kw-2">&amp;</span>str, storage_prefix: <span class="kw-2">&amp;</span>[u8], old_pallet_name: <span class="kw-2">&amp;</span>str, new_pallet_name: <span class="kw-2">&amp;</span>str) {
 	<span class="macro">log::info!</span>(
-		target: <span class="string">&quot;runtime::session_historical&quot;</span>,
+		target: LOG_TARGET,
 		<span class="string">&quot;{} prefix of storage &#39;{}&#39;: &#39;{}&#39; ==&gt; &#39;{}&#39;&quot;</span>,
 		stage,
 		str::from_utf8(storage_prefix).unwrap_or(<span class="string">&quot;&lt;Invalid UTF8&gt;&quot;</span>),
