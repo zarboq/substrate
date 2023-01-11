@@ -463,6 +463,16 @@
 <a href="#463" id="463">463</a>
 <a href="#464" id="464">464</a>
 <a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -508,6 +518,8 @@
 	ItemDeposit&lt;DepositBalanceOf&lt;T, I&gt;, &lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt;;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>AttributeDepositOf&lt;T, I&gt; =
 	AttributeDeposit&lt;DepositBalanceOf&lt;T, I&gt;, &lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt;;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>ItemMetadataDepositOf&lt;T, I&gt; =
+	ItemMetadataDeposit&lt;DepositBalanceOf&lt;T, I&gt;, &lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt;;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>ItemDetailsFor&lt;T, I&gt; =
 	ItemDetails&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId, ItemDepositOf&lt;T, I&gt;, ApprovalsOf&lt;T, I&gt;&gt;;
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>BalanceOf&lt;T, I = ()&gt; =
@@ -602,12 +614,12 @@
 <span class="doccomment">/// Information about the collection&#39;s metadata.
 </span><span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(StringLimit))]
-#[codec(mel_bound(DepositBalance: MaxEncodedLen))]
-</span><span class="kw">pub struct </span>CollectionMetadata&lt;DepositBalance, StringLimit: Get&lt;u32&gt;&gt; {
+#[codec(mel_bound(Deposit: MaxEncodedLen))]
+</span><span class="kw">pub struct </span>CollectionMetadata&lt;Deposit, StringLimit: Get&lt;u32&gt;&gt; {
 	<span class="doccomment">/// The balance deposited for this metadata.
 	///
 	/// This pays for the data stored in this struct.
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) deposit: DepositBalance,
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) deposit: Deposit,
 	<span class="doccomment">/// General information concerning this collection. Limited in length by `StringLimit`. This
 	/// will generally be either a JSON dump or the hash of some JSON which can be found on a
 	/// hash-addressable global publication system such as IPFS.
@@ -617,12 +629,11 @@
 <span class="doccomment">/// Information about the item&#39;s metadata.
 </span><span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(StringLimit))]
-#[codec(mel_bound(DepositBalance: MaxEncodedLen))]
-</span><span class="kw">pub struct </span>ItemMetadata&lt;DepositBalance, StringLimit: Get&lt;u32&gt;&gt; {
+</span><span class="kw">pub struct </span>ItemMetadata&lt;Deposit, StringLimit: Get&lt;u32&gt;&gt; {
 	<span class="doccomment">/// The balance deposited for this metadata.
 	///
 	/// This pays for the data stored in this struct.
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) deposit: DepositBalance,
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) deposit: Deposit,
 	<span class="doccomment">/// General information concerning this item. Limited in length by `StringLimit`. This will
 	/// generally be either a JSON dump or the hash of some JSON which can be found on a
 	/// hash-addressable global publication system such as IPFS.
@@ -659,6 +670,15 @@
 </span><span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 </span><span class="kw">pub struct </span>AttributeDeposit&lt;DepositBalance, AccountId&gt; {
 	<span class="doccomment">/// A depositor account.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) account: <span class="prelude-ty">Option</span>&lt;AccountId&gt;,
+	<span class="doccomment">/// An amount that gets reserved.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) amount: DepositBalance,
+}
+
+<span class="doccomment">/// Information about the reserved item&#39;s metadata deposit.
+</span><span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+</span><span class="kw">pub struct </span>ItemMetadataDeposit&lt;DepositBalance, AccountId&gt; {
+	<span class="doccomment">/// A depositor account, None means the deposit is collection&#39;s owner.
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) account: <span class="prelude-ty">Option</span>&lt;AccountId&gt;,
 	<span class="doccomment">/// An amount that gets reserved.
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) amount: DepositBalance,

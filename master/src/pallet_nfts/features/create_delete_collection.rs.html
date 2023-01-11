@@ -116,6 +116,7 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -200,12 +201,13 @@
 				Account::&lt;T, I&gt;::remove((<span class="kw-2">&amp;</span>details.owner, <span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item));
 				T::Currency::unreserve(<span class="kw-2">&amp;</span>details.deposit.account, details.deposit.amount);
 			}
-			<span class="attr">#[allow(deprecated)]
-			</span>ItemMetadataOf::&lt;T, I&gt;::remove_prefix(<span class="kw-2">&amp;</span>collection, <span class="prelude-val">None</span>);
-			<span class="attr">#[allow(deprecated)]
-			</span>ItemPriceOf::&lt;T, I&gt;::remove_prefix(<span class="kw-2">&amp;</span>collection, <span class="prelude-val">None</span>);
-			<span class="attr">#[allow(deprecated)]
-			</span>PendingSwapOf::&lt;T, I&gt;::remove_prefix(<span class="kw-2">&amp;</span>collection, <span class="prelude-val">None</span>);
+			<span class="kw">for </span>(<span class="kw">_</span>, metadata) <span class="kw">in </span>ItemMetadataOf::&lt;T, I&gt;::drain_prefix(<span class="kw-2">&amp;</span>collection) {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(depositor) = metadata.deposit.account {
+					T::Currency::unreserve(<span class="kw-2">&amp;</span>depositor, metadata.deposit.amount);
+				}
+			}
+			<span class="kw">let _ </span>= ItemPriceOf::&lt;T, I&gt;::clear_prefix(<span class="kw-2">&amp;</span>collection, witness.items, <span class="prelude-val">None</span>);
+			<span class="kw">let _ </span>= PendingSwapOf::&lt;T, I&gt;::clear_prefix(<span class="kw-2">&amp;</span>collection, witness.items, <span class="prelude-val">None</span>);
 			CollectionMetadataOf::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>collection);
 			<span class="self">Self</span>::clear_roles(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
 

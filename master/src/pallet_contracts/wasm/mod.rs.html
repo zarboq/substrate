@@ -3019,6 +3019,14 @@
 <a href="#3019" id="3019">3019</a>
 <a href="#3020" id="3020">3020</a>
 <a href="#3021" id="3021">3021</a>
+<a href="#3022" id="3022">3022</a>
+<a href="#3023" id="3023">3023</a>
+<a href="#3024" id="3024">3024</a>
+<a href="#3025" id="3025">3025</a>
+<a href="#3026" id="3026">3026</a>
+<a href="#3027" id="3027">3027</a>
+<a href="#3028" id="3028">3028</a>
+<a href="#3029" id="3029">3029</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -5009,6 +5017,52 @@
 		<span class="macro">assert!</span>(mock_ext.gas_meter.gas_left().ref_time() &gt; <span class="number">0</span>);
 	}
 
+	<span class="kw">const </span>CODE_DEPOSIT_EVENT_DUPLICATES: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
+(module
+	(import &quot;seal0&quot; &quot;seal_deposit_event&quot; (func $seal_deposit_event (param i32 i32 i32 i32)))
+	(import &quot;env&quot; &quot;memory&quot; (memory 1 1))
+
+	(func (export &quot;call&quot;)
+		(call $seal_deposit_event
+			(i32.const 32) ;; Pointer to the start of topics buffer
+			(i32.const 129) ;; The length of the topics buffer.
+			(i32.const 8) ;; Pointer to the start of the data buffer
+			(i32.const 13) ;; Length of the buffer
+		)
+	)
+	(func (export &quot;deploy&quot;))
+
+	(data (i32.const 8) &quot;\00\01\2A\00\00\00\00\00\00\00\E5\14\00&quot;)
+
+	;; Encoded Vec&lt;TopicOf&lt;T&gt;&gt;, the buffer has length of 129 bytes.
+	(data (i32.const 32) &quot;\10&quot;
+&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+&quot;\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02&quot;
+&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+&quot;\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04&quot;)
+)
+&quot;#</span>;
+
+	<span class="doccomment">/// Checks that the runtime allows duplicate topics.
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>deposit_event_duplicates_allowed() {
+		<span class="kw">let </span><span class="kw-2">mut </span>mock_ext = MockExt::default();
+		<span class="macro">assert_ok!</span>(execute(CODE_DEPOSIT_EVENT_DUPLICATES, <span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>mock_ext,));
+
+		<span class="macro">assert_eq!</span>(
+			mock_ext.events,
+			<span class="macro">vec!</span>[(
+				<span class="macro">vec!</span>[
+					H256::repeat_byte(<span class="number">0x01</span>),
+					H256::repeat_byte(<span class="number">0x02</span>),
+					H256::repeat_byte(<span class="number">0x01</span>),
+					H256::repeat_byte(<span class="number">0x04</span>)
+				],
+				<span class="macro">vec!</span>[<span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x2a</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0xe5</span>, <span class="number">0x14</span>, <span class="number">0x00</span>]
+			)]
+		);
+	}
+
 	<span class="kw">const </span>CODE_DEPOSIT_EVENT_MAX_TOPICS: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
 	(import &quot;seal0&quot; &quot;seal_deposit_event&quot; (func $seal_deposit_event (param i32 i32 i32 i32)))
@@ -5043,44 +5097,6 @@
 			execute(CODE_DEPOSIT_EVENT_MAX_TOPICS, <span class="macro">vec!</span>[], MockExt::default(),),
 			<span class="prelude-val">Err</span>(ExecError {
 				error: Error::&lt;Test&gt;::TooManyTopics.into(),
-				origin: ErrorOrigin::Caller,
-			})
-		);
-	}
-
-	<span class="kw">const </span>CODE_DEPOSIT_EVENT_DUPLICATES: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
-(module
-	(import &quot;seal0&quot; &quot;seal_deposit_event&quot; (func $seal_deposit_event (param i32 i32 i32 i32)))
-	(import &quot;env&quot; &quot;memory&quot; (memory 1 1))
-
-	(func (export &quot;call&quot;)
-		(call $seal_deposit_event
-			(i32.const 32) ;; Pointer to the start of topics buffer
-			(i32.const 129) ;; The length of the topics buffer.
-			(i32.const 8) ;; Pointer to the start of the data buffer
-			(i32.const 13) ;; Length of the buffer
-		)
-	)
-	(func (export &quot;deploy&quot;))
-
-	(data (i32.const 8) &quot;\00\01\2A\00\00\00\00\00\00\00\E5\14\00&quot;)
-
-	;; Encoded Vec&lt;TopicOf&lt;T&gt;&gt;, the buffer has length of 129 bytes.
-	(data (i32.const 32) &quot;\10&quot;
-&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
-&quot;\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02\02&quot;
-&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
-&quot;\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04\04&quot;)
-)
-&quot;#</span>;
-
-	<span class="doccomment">/// Checks that the runtime traps if there are duplicates.
-	</span><span class="attr">#[test]
-	</span><span class="kw">fn </span>deposit_event_duplicates() {
-		<span class="macro">assert_eq!</span>(
-			execute(CODE_DEPOSIT_EVENT_DUPLICATES, <span class="macro">vec!</span>[], MockExt::default(),),
-			<span class="prelude-val">Err</span>(ExecError {
-				error: Error::&lt;Test&gt;::DuplicateTopics.into(),
 				origin: ErrorOrigin::Caller,
 			})
 		);

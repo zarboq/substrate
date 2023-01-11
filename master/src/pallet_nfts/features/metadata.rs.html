@@ -171,6 +171,27 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -192,19 +213,21 @@
 <span class="kw">use </span>frame_support::pallet_prelude::<span class="kw-2">*</span>;
 
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
-	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_set_item_metadata(
+	<span class="doccomment">/// Note: if `maybe_depositor` is None, that means the depositor will be a collection&#39;s owner
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_set_item_metadata(
 		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 		item: T::ItemId,
 		data: BoundedVec&lt;u8, T::StringLimit&gt;,
+		maybe_depositor: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 	) -&gt; DispatchResult {
+		<span class="kw">let </span>is_root = maybe_check_owner.is_none();
 		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>item_config = <span class="self">Self</span>::get_item_config(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item)<span class="question-mark">?</span>;
 		<span class="macro">ensure!</span>(
-			maybe_check_owner.is_none() ||
-				item_config.is_setting_enabled(ItemSetting::UnlockedMetadata),
+			is_root || item_config.is_setting_enabled(ItemSetting::UnlockedMetadata),
 			Error::&lt;T, I&gt;::LockedItemMetadata
 		);
 
@@ -218,24 +241,38 @@
 			<span class="kw">if </span>metadata.is_none() {
 				collection_details.item_metadatas.saturating_inc();
 			}
-			<span class="kw">let </span>old_deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
-			collection_details.owner_deposit.saturating_reduce(old_deposit);
+
+			<span class="kw">let </span>old_deposit = metadata
+				.take()
+				.map_or(ItemMetadataDeposit { account: <span class="prelude-val">None</span>, amount: Zero::zero() }, |m| m.deposit);
+
 			<span class="kw">let </span><span class="kw-2">mut </span>deposit = Zero::zero();
-			<span class="kw">if </span>collection_config.is_setting_enabled(CollectionSetting::DepositRequired) &amp;&amp;
-				maybe_check_owner.is_some()
+			<span class="kw">if </span>collection_config.is_setting_enabled(CollectionSetting::DepositRequired) &amp;&amp; !is_root
 			{
 				deposit = T::DepositPerByte::get()
 					.saturating_mul(((data.len()) <span class="kw">as </span>u32).into())
 					.saturating_add(T::MetadataDepositBase::get());
 			}
-			<span class="kw">if </span>deposit &gt; old_deposit {
-				T::Currency::reserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit - old_deposit)<span class="question-mark">?</span>;
-			} <span class="kw">else if </span>deposit &lt; old_deposit {
-				T::Currency::unreserve(<span class="kw-2">&amp;</span>collection_details.owner, old_deposit - deposit);
-			}
-			collection_details.owner_deposit.saturating_accrue(deposit);
 
-			<span class="kw-2">*</span>metadata = <span class="prelude-val">Some</span>(ItemMetadata { deposit, data: data.clone() });
+			<span class="comment">// the previous deposit was taken from the item&#39;s owner
+			</span><span class="kw">if </span>old_deposit.account.is_some() &amp;&amp; maybe_depositor.is_none() {
+				T::Currency::unreserve(<span class="kw-2">&amp;</span>old_deposit.account.unwrap(), old_deposit.amount);
+				T::Currency::reserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit)<span class="question-mark">?</span>;
+			} <span class="kw">else if </span>deposit &gt; old_deposit.amount {
+				T::Currency::reserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit - old_deposit.amount)<span class="question-mark">?</span>;
+			} <span class="kw">else if </span>deposit &lt; old_deposit.amount {
+				T::Currency::unreserve(<span class="kw-2">&amp;</span>collection_details.owner, old_deposit.amount - deposit);
+			}
+
+			<span class="kw">if </span>maybe_depositor.is_none() {
+				collection_details.owner_deposit.saturating_accrue(deposit);
+				collection_details.owner_deposit.saturating_reduce(old_deposit.amount);
+			}
+
+			<span class="kw-2">*</span>metadata = <span class="prelude-val">Some</span>(ItemMetadata {
+				deposit: ItemMetadataDeposit { account: maybe_depositor, amount: deposit },
+				data: data.clone(),
+			});
 
 			Collection::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>collection_details);
 			<span class="self">Self</span>::deposit_event(Event::ItemMetadataSet { collection, item, data });
@@ -248,8 +285,14 @@
 		collection: T::CollectionId,
 		item: T::ItemId,
 	) -&gt; DispatchResult {
+		<span class="kw">let </span>is_root = maybe_check_owner.is_none();
+		<span class="kw">let </span>metadata = ItemMetadataOf::&lt;T, I&gt;::take(collection, item)
+			.ok_or(Error::&lt;T, I&gt;::MetadataNotFound)<span class="question-mark">?</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
+		<span class="kw">let </span>depositor_account =
+			metadata.deposit.account.unwrap_or(collection_details.owner.clone());
+
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
 			<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
 		}
@@ -258,20 +301,19 @@
 		</span><span class="kw">let </span>is_locked = <span class="self">Self</span>::get_item_config(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item)
 			.map_or(<span class="bool-val">false</span>, |c| c.has_disabled_setting(ItemSetting::UnlockedMetadata));
 
-		<span class="macro">ensure!</span>(maybe_check_owner.is_none() || !is_locked, Error::&lt;T, I&gt;::LockedItemMetadata);
+		<span class="macro">ensure!</span>(is_root || !is_locked, Error::&lt;T, I&gt;::LockedItemMetadata);
 
-		ItemMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection, item, |metadata| {
-			<span class="kw">if </span>metadata.is_some() {
-				collection_details.item_metadatas.saturating_dec();
-			}
-			<span class="kw">let </span>deposit = metadata.take().ok_or(Error::&lt;T, I&gt;::UnknownItem)<span class="question-mark">?</span>.deposit;
-			T::Currency::unreserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit);
-			collection_details.owner_deposit.saturating_reduce(deposit);
+		collection_details.item_metadatas.saturating_dec();
+		T::Currency::unreserve(<span class="kw-2">&amp;</span>depositor_account, metadata.deposit.amount);
 
-			Collection::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>collection_details);
-			<span class="self">Self</span>::deposit_event(Event::ItemMetadataCleared { collection, item });
-			<span class="prelude-val">Ok</span>(())
-		})
+		<span class="kw">if </span>depositor_account == collection_details.owner {
+			collection_details.owner_deposit.saturating_reduce(metadata.deposit.amount);
+		}
+
+		Collection::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>collection_details);
+		<span class="self">Self</span>::deposit_event(Event::ItemMetadataCleared { collection, item });
+
+		<span class="prelude-val">Ok</span>(())
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_set_collection_metadata(

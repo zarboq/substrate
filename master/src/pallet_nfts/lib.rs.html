@@ -1771,6 +1771,7 @@
 <a href="#1771" id="1771">1771</a>
 <a href="#1772" id="1772">1772</a>
 <a href="#1773" id="1773">1773</a>
+<a href="#1774" id="1774">1774</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2036,7 +2037,7 @@
 		T::CollectionId,
 		Blake2_128Concat,
 		T::ItemId,
-		ItemMetadata&lt;DepositBalanceOf&lt;T, I&gt;, T::StringLimit&gt;,
+		ItemMetadata&lt;ItemMetadataDepositOf&lt;T, I&gt;, T::StringLimit&gt;,
 		OptionQuery,
 	&gt;;
 
@@ -2332,6 +2333,10 @@
 		</span>UnknownItem,
 		<span class="doccomment">/// Swap doesn&#39;t exist.
 		</span>UnknownSwap,
+		<span class="doccomment">/// The given item has no metadata set.
+		</span>MetadataNotFound,
+		<span class="doccomment">/// The provided attribute can&#39;t be found.
+		</span>AttributeNotFound,
 		<span class="doccomment">/// Item is not for sale.
 		</span>NotForSale,
 		<span class="doccomment">/// The provided bid is too low.
@@ -2519,10 +2524,9 @@
 			<span class="self">Self</span>::do_mint(
 				collection,
 				item,
-				caller.clone(),
+				<span class="prelude-val">Some</span>(caller.clone()),
 				mint_to.clone(),
 				item_config,
-				<span class="bool-val">false</span>,
 				|collection_details, collection_config| {
 					<span class="comment">// Issuer can mint regardless of mint settings
 					</span><span class="kw">if </span><span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>caller, CollectionRole::Issuer) {
@@ -2622,9 +2626,7 @@
 					Error::&lt;T, I&gt;::NoPermission
 				);
 			}
-			<span class="self">Self</span>::do_mint(collection, item, mint_to.clone(), mint_to, item_config, <span class="bool-val">true</span>, |<span class="kw">_</span>, <span class="kw">_</span>| {
-				<span class="prelude-val">Ok</span>(())
-			})
+			<span class="self">Self</span>::do_mint(collection, item, <span class="prelude-val">None</span>, mint_to, item_config, |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))
 		}
 
 		<span class="doccomment">/// Destroy a single item.
@@ -3135,7 +3137,7 @@
 		<span class="doccomment">/// Clear an attribute for a collection or item.
 		///
 		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Owner of the
-		/// `collection`.
+		/// attribute.
 		///
 		/// Any deposit is freed for the collection&#39;s owner.
 		///
@@ -3237,7 +3239,7 @@
 			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_set_item_metadata(maybe_check_owner, collection, item, data)
+			<span class="self">Self</span>::do_set_item_metadata(maybe_check_owner, collection, item, data, <span class="prelude-val">None</span>)
 		}
 
 		<span class="doccomment">/// Clear the metadata for an item.
