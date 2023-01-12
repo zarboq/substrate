@@ -1898,6 +1898,13 @@
 <a href="#1898" id="1898">1898</a>
 <a href="#1899" id="1899">1899</a>
 <a href="#1900" id="1900">1900</a>
+<a href="#1901" id="1901">1901</a>
+<a href="#1902" id="1902">1902</a>
+<a href="#1903" id="1903">1903</a>
+<a href="#1904" id="1904">1904</a>
+<a href="#1905" id="1905">1905</a>
+<a href="#1906" id="1906">1906</a>
+<a href="#1907" id="1907">1907</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -2011,7 +2018,7 @@
 <span class="kw">use </span>sp_application_crypto::AppKey;
 <span class="kw">use </span>sp_block_builder::BlockBuilder <span class="kw">as </span>BlockBuilderApi;
 <span class="kw">use </span>sp_blockchain::{
-	Backend <span class="kw">as _</span>, Error <span class="kw">as </span>ClientError, ForkBackend, HeaderBackend, HeaderMetadata,
+	Backend <span class="kw">as _</span>, BlockStatus, Error <span class="kw">as </span>ClientError, ForkBackend, HeaderBackend, HeaderMetadata,
 	<span class="prelude-ty">Result </span><span class="kw">as </span>ClientResult,
 };
 <span class="kw">use </span>sp_consensus::{
@@ -3033,11 +3040,17 @@
 		<span class="kw">let </span>hash = block.header.hash();
 		<span class="kw">let </span>parent_hash = <span class="kw-2">*</span>block.header.parent_hash();
 
-		<span class="kw">if </span>block.with_state() {
-			<span class="comment">// When importing whole state we don&#39;t calculate epoch descriptor, but rather
-			// read it from the state after import. We also skip all verifications
-			// because there&#39;s no parent state and we trust the sync module to verify
-			// that the state is correct and finalized.
+		<span class="kw">let </span>info = <span class="self">self</span>.client.info();
+		<span class="kw">let </span>number = <span class="kw-2">*</span>block.header.number();
+
+		<span class="kw">if </span>info.block_gap.map_or(<span class="bool-val">false</span>, |(s, e)| s &lt;= number &amp;&amp; number &lt;= e) || block.with_state() {
+			<span class="comment">// Verification for imported blocks is skipped in two cases:
+			// 1. When importing blocks below the last finalized block during network initial
+			//    synchronization.
+			// 2. When importing whole state we don&#39;t calculate epoch descriptor, but rather
+			//    read it from the state after import. We also skip all verifications
+			//    because there&#39;s no parent state and we trust the sync module to verify
+			//    that the state is correct and finalized.
 			</span><span class="kw">return </span><span class="prelude-val">Ok</span>((block, Default::default()))
 		}
 
@@ -3299,18 +3312,24 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ImportResult, <span class="self">Self</span>::Error&gt; {
 		<span class="kw">let </span>hash = block.post_hash();
 		<span class="kw">let </span>number = <span class="kw-2">*</span>block.header.number();
+		<span class="kw">let </span>info = <span class="self">self</span>.client.info();
 
-		<span class="comment">// early exit if block already in chain, otherwise the check for
-		// epoch changes will error when trying to re-import an epoch change
-		</span><span class="kw">match </span><span class="self">self</span>.client.status(hash) {
-			<span class="prelude-val">Ok</span>(sp_blockchain::BlockStatus::InChain) =&gt; {
-				<span class="comment">// When re-importing existing block strip away intermediates.
-				</span><span class="kw">let _ </span>= block.remove_intermediate::&lt;BabeIntermediate&lt;Block&gt;&gt;(INTERMEDIATE_KEY);
-				block.fork_choice = <span class="prelude-val">Some</span>(ForkChoiceStrategy::Custom(<span class="bool-val">false</span>));
-				<span class="kw">return </span><span class="self">self</span>.inner.import_block(block, new_cache).<span class="kw">await</span>.map_err(Into::into)
-			},
-			<span class="prelude-val">Ok</span>(sp_blockchain::BlockStatus::Unknown) =&gt; {},
-			<span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(ConsensusError::ClientImport(e.to_string())),
+		<span class="kw">let </span>block_status = <span class="self">self
+			</span>.client
+			.status(hash)
+			.map_err(|e| ConsensusError::ClientImport(e.to_string()))<span class="question-mark">?</span>;
+
+		<span class="comment">// Skip babe logic if block already in chain or importing blocks during initial sync,
+		// otherwise the check for epoch changes will error because trying to re-import an
+		// epoch change or because of missing epoch data in the tree, respectivelly.
+		</span><span class="kw">if </span>info.block_gap.map_or(<span class="bool-val">false</span>, |(s, e)| s &lt;= number &amp;&amp; number &lt;= e) ||
+			block_status == BlockStatus::InChain
+		{
+			<span class="comment">// When re-importing existing block strip away intermediates.
+			// In case of initial sync intermediates should not be present...
+			</span><span class="kw">let _ </span>= block.remove_intermediate::&lt;BabeIntermediate&lt;Block&gt;&gt;(INTERMEDIATE_KEY);
+			block.fork_choice = <span class="prelude-val">Some</span>(ForkChoiceStrategy::Custom(<span class="bool-val">false</span>));
+			<span class="kw">return </span><span class="self">self</span>.inner.import_block(block, new_cache).<span class="kw">await</span>.map_err(Into::into)
 		}
 
 		<span class="kw">if </span>block.with_state() {
@@ -3405,8 +3424,6 @@
 						babe_err(Error::&lt;Block&gt;::UnexpectedEpochChange).into(),
 					)),
 			}
-
-			<span class="kw">let </span>info = <span class="self">self</span>.client.info();
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(next_epoch_descriptor) = next_epoch_digest {
 				old_epoch_changes = <span class="prelude-val">Some</span>((<span class="kw-2">*</span>epoch_changes).clone());
@@ -3601,9 +3618,6 @@
 	Client: HeaderBackend&lt;Block&gt; + HeaderMetadata&lt;Block, Error = sp_blockchain::Error&gt;,
 {
 	<span class="kw">let </span>info = client.info();
-	<span class="kw">if </span>info.block_gap.is_none() {
-		epoch_changes.clear_gap();
-	}
 
 	<span class="kw">let </span>finalized_slot = {
 		<span class="kw">let </span>finalized_header = client
