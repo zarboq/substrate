@@ -266,8 +266,6 @@
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -319,20 +317,14 @@
 <span class="doccomment">/// Key type for BEEFY module.
 </span><span class="kw">pub const </span>KEY_TYPE: sp_application_crypto::KeyTypeId = sp_application_crypto::KeyTypeId(<span class="kw-2">*</span><span class="string">b&quot;beef&quot;</span>);
 
-<span class="doccomment">/// Trait representing BEEFY authority id.
-</span><span class="kw">pub trait </span>BeefyAuthorityId: RuntimeAppPublic {}
-
-<span class="doccomment">/// Means of verification for a BEEFY authority signature.
+<span class="doccomment">/// Trait representing BEEFY authority id, including custom signature verification.
 ///
 /// Accepts custom hashing fn for the message and custom convertor fn for the signer.
-</span><span class="kw">pub trait </span>BeefyVerify&lt;MsgHash: Hash&gt; {
-	<span class="doccomment">/// Type of the signer.
-	</span><span class="kw">type </span>Signer: BeefyAuthorityId;
-
+</span><span class="kw">pub trait </span>BeefyAuthorityId&lt;MsgHash: Hash&gt;: RuntimeAppPublic {
 	<span class="doccomment">/// Verify a signature.
 	///
-	/// Return `true` if signature is valid for the value.
-	</span><span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>[u8], signer: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signer) -&gt; bool;
+	/// Return `true` if signature over `msg` is valid for this id.
+	</span><span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, signature: <span class="kw-2">&amp;</span>&lt;<span class="self">Self </span><span class="kw">as </span>RuntimeAppPublic&gt;::Signature, msg: <span class="kw-2">&amp;</span>[u8]) -&gt; bool;
 }
 
 <span class="doccomment">/// BEEFY cryptographic types
@@ -348,7 +340,7 @@
 /// The current underlying crypto scheme used is ECDSA. This can be changed,
 /// without affecting code restricted against the above listed crypto types.
 </span><span class="kw">pub mod </span>crypto {
-	<span class="kw">use super</span>::{BeefyAuthorityId, BeefyVerify, Hash};
+	<span class="kw">use super</span>::{BeefyAuthorityId, Hash, RuntimeAppPublic};
 	<span class="kw">use </span>sp_application_crypto::{app_crypto, ecdsa};
 	<span class="kw">use </span>sp_core::crypto::Wraps;
 	<span class="macro">app_crypto!</span>(ecdsa, <span class="kw">crate</span>::KEY_TYPE);
@@ -359,21 +351,17 @@
 	<span class="doccomment">/// Signature for a BEEFY authority using ECDSA as its crypto.
 	</span><span class="kw">pub type </span>AuthoritySignature = Signature;
 
-	<span class="kw">impl </span>BeefyAuthorityId <span class="kw">for </span>AuthorityId {}
-
-	<span class="kw">impl</span>&lt;MsgHash: Hash&gt; BeefyVerify&lt;MsgHash&gt; <span class="kw">for </span>AuthoritySignature
+	<span class="kw">impl</span>&lt;MsgHash: Hash&gt; BeefyAuthorityId&lt;MsgHash&gt; <span class="kw">for </span>AuthorityId
 	<span class="kw">where
 		</span>&lt;MsgHash <span class="kw">as </span>Hash&gt;::Output: Into&lt;[u8; <span class="number">32</span>]&gt;,
 	{
-		<span class="kw">type </span>Signer = AuthorityId;
-
-		<span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>[u8], signer: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signer) -&gt; bool {
+		<span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, signature: <span class="kw-2">&amp;</span>&lt;<span class="self">Self </span><span class="kw">as </span>RuntimeAppPublic&gt;::Signature, msg: <span class="kw-2">&amp;</span>[u8]) -&gt; bool {
 			<span class="kw">let </span>msg_hash = &lt;MsgHash <span class="kw">as </span>Hash&gt;::hash(msg).into();
 			<span class="kw">match </span>sp_io::crypto::secp256k1_ecdsa_recover_compressed(
-				<span class="self">self</span>.as_inner_ref().as_ref(),
+				signature.as_inner_ref().as_ref(),
 				<span class="kw-2">&amp;</span>msg_hash,
 			) {
-				<span class="prelude-val">Ok</span>(raw_pubkey) =&gt; raw_pubkey.as_ref() == AsRef::&lt;[u8]&gt;::as_ref(signer),
+				<span class="prelude-val">Ok</span>(raw_pubkey) =&gt; raw_pubkey.as_ref() == AsRef::&lt;[u8]&gt;::as_ref(<span class="self">self</span>),
 				<span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
 			}
 		}
@@ -518,23 +506,31 @@
 			pair.as_inner_ref().sign_prehashed(<span class="kw-2">&amp;</span>blake2_256(msg)).into();
 
 		<span class="comment">// Verification works if same hashing function is used when signing and verifying.
-		</span><span class="macro">assert!</span>(BeefyVerify::&lt;Keccak256&gt;::verify(<span class="kw-2">&amp;</span>keccak_256_signature, msg, <span class="kw-2">&amp;</span>pair.public()));
-		<span class="macro">assert!</span>(BeefyVerify::&lt;BlakeTwo256&gt;::verify(<span class="kw-2">&amp;</span>blake2_256_signature, msg, <span class="kw-2">&amp;</span>pair.public()));
+		</span><span class="macro">assert!</span>(BeefyAuthorityId::&lt;Keccak256&gt;::verify(<span class="kw-2">&amp;</span>pair.public(), <span class="kw-2">&amp;</span>keccak_256_signature, msg));
+		<span class="macro">assert!</span>(BeefyAuthorityId::&lt;BlakeTwo256&gt;::verify(
+			<span class="kw-2">&amp;</span>pair.public(),
+			<span class="kw-2">&amp;</span>blake2_256_signature,
+			msg
+		));
 		<span class="comment">// Verification fails if distinct hashing functions are used when signing and verifying.
-		</span><span class="macro">assert!</span>(!BeefyVerify::&lt;Keccak256&gt;::verify(<span class="kw-2">&amp;</span>blake2_256_signature, msg, <span class="kw-2">&amp;</span>pair.public()));
-		<span class="macro">assert!</span>(!BeefyVerify::&lt;BlakeTwo256&gt;::verify(<span class="kw-2">&amp;</span>keccak_256_signature, msg, <span class="kw-2">&amp;</span>pair.public()));
+		</span><span class="macro">assert!</span>(!BeefyAuthorityId::&lt;Keccak256&gt;::verify(<span class="kw-2">&amp;</span>pair.public(), <span class="kw-2">&amp;</span>blake2_256_signature, msg));
+		<span class="macro">assert!</span>(!BeefyAuthorityId::&lt;BlakeTwo256&gt;::verify(
+			<span class="kw-2">&amp;</span>pair.public(),
+			<span class="kw-2">&amp;</span>keccak_256_signature,
+			msg
+		));
 
 		<span class="comment">// Other public key doesn&#39;t work
 		</span><span class="kw">let </span>(other_pair, <span class="kw">_</span>) = crypto::Pair::generate();
-		<span class="macro">assert!</span>(!BeefyVerify::&lt;Keccak256&gt;::verify(
+		<span class="macro">assert!</span>(!BeefyAuthorityId::&lt;Keccak256&gt;::verify(
+			<span class="kw-2">&amp;</span>other_pair.public(),
 			<span class="kw-2">&amp;</span>keccak_256_signature,
 			msg,
-			<span class="kw-2">&amp;</span>other_pair.public()
 		));
-		<span class="macro">assert!</span>(!BeefyVerify::&lt;BlakeTwo256&gt;::verify(
+		<span class="macro">assert!</span>(!BeefyAuthorityId::&lt;BlakeTwo256&gt;::verify(
+			<span class="kw-2">&amp;</span>other_pair.public(),
 			<span class="kw-2">&amp;</span>blake2_256_signature,
 			msg,
-			<span class="kw-2">&amp;</span>other_pair.public()
 		));
 	}
 }
