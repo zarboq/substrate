@@ -611,6 +611,87 @@
 <a href="#611" id="611">611</a>
 <a href="#612" id="612">612</a>
 <a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -631,13 +712,21 @@
 
 </span><span class="doccomment">//! Substrate transaction pool implementation.
 
-</span><span class="kw">use </span>sc_transaction_pool_api::ChainEvent;
+</span><span class="kw">use </span>num_traits::CheckedSub;
+<span class="kw">use </span>sc_transaction_pool_api::ChainEvent;
 <span class="kw">use </span>sp_blockchain::TreeRoute;
-<span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
+<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
+
+<span class="doccomment">/// The threshold since the last update where we will skip any maintenance for blocks.
+///
+/// This includes tracking re-orgs and sending out certain notifications. In general this shouldn&#39;t
+/// happen and may only happen when the node is doing a full sync.
+</span><span class="kw">const </span>SKIP_MAINTENANCE_THRESHOLD: u16 = <span class="number">20</span>;
 
 <span class="doccomment">/// Helper struct for keeping track of the current state of processed new best
 /// block and finalized events. The main purpose of keeping track of this state
-/// is to figure out if a transaction pool enactment is needed or not.
+/// is to figure out which phases (enactment / finalization) of transaction pool
+/// maintenance are needed.
 ///
 /// Given the following chain:
 ///
@@ -667,6 +756,17 @@
 	recent_finalized_block: Block::Hash,
 }
 
+<span class="doccomment">/// Enactment action that should be performed after processing the `ChainEvent`
+</span><span class="attr">#[derive(Debug)]
+</span><span class="kw">pub enum </span>EnactmentAction&lt;Block: BlockT&gt; {
+	<span class="doccomment">/// Both phases of maintenance shall be skipped
+	</span>Skip,
+	<span class="doccomment">/// Both phases of maintenance shall be performed
+	</span>HandleEnactment(TreeRoute&lt;Block&gt;),
+	<span class="doccomment">/// Enactment phase of maintenance shall be skipped
+	</span>HandleFinalization,
+}
+
 <span class="kw">impl</span>&lt;Block&gt; EnactmentState&lt;Block&gt;
 <span class="kw">where
 	</span>Block: BlockT,
@@ -684,23 +784,38 @@
 	<span class="doccomment">/// Updates the state according to the given `ChainEvent`, returning
 	/// `Some(tree_route)` with a tree route including the blocks that need to
 	/// be enacted/retracted. If no enactment is needed then `None` is returned.
-	</span><span class="kw">pub fn </span>update&lt;F&gt;(
+	</span><span class="kw">pub fn </span>update&lt;TreeRouteF, BlockNumberF&gt;(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		event: <span class="kw-2">&amp;</span>ChainEvent&lt;Block&gt;,
-		tree_route: <span class="kw-2">&amp;</span>F,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;TreeRoute&lt;Block&gt;&gt;, String&gt;
+		tree_route: <span class="kw-2">&amp;</span>TreeRouteF,
+		hash_to_number: <span class="kw-2">&amp;</span>BlockNumberF,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;EnactmentAction&lt;Block&gt;, String&gt;
 	<span class="kw">where
-		</span>F: Fn(Block::Hash, Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;TreeRoute&lt;Block&gt;, String&gt;,
+		</span>TreeRouteF: Fn(Block::Hash, Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;TreeRoute&lt;Block&gt;, String&gt;,
+		BlockNumberF: Fn(Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;NumberFor&lt;Block&gt;&gt;, String&gt;,
 	{
-		<span class="kw">let </span>(new_hash, finalized) = <span class="kw">match </span>event {
-			ChainEvent::NewBestBlock { hash, .. } =&gt; (<span class="kw-2">*</span>hash, <span class="bool-val">false</span>),
-			ChainEvent::Finalized { hash, .. } =&gt; (<span class="kw-2">*</span>hash, <span class="bool-val">true</span>),
+		<span class="kw">let </span>(new_hash, current_hash, finalized) = <span class="kw">match </span>event {
+			ChainEvent::NewBestBlock { hash, .. } =&gt; (<span class="kw-2">*</span>hash, <span class="self">self</span>.recent_best_block, <span class="bool-val">false</span>),
+			ChainEvent::Finalized { hash, .. } =&gt; (<span class="kw-2">*</span>hash, <span class="self">self</span>.recent_finalized_block, <span class="bool-val">true</span>),
 		};
+
+		<span class="comment">// do not proceed with txpool maintain if block distance is to high
+		</span><span class="kw">let </span>skip_maintenance = <span class="kw">match </span>(hash_to_number(new_hash), hash_to_number(current_hash)) {
+			(<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(new)), <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(current))) =&gt;
+				new.checked_sub(<span class="kw-2">&amp;</span>current) &gt; <span class="prelude-val">Some</span>(SKIP_MAINTENANCE_THRESHOLD.into()),
+			<span class="kw">_ </span>=&gt; <span class="bool-val">true</span>,
+		};
+
+		<span class="kw">if </span>skip_maintenance {
+			<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;skip maintain: tree_route would be too long&quot;</span>);
+			<span class="self">self</span>.force_update(event);
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::Skip)
+		}
 
 		<span class="comment">// block was already finalized
 		</span><span class="kw">if </span><span class="self">self</span>.recent_finalized_block == new_hash {
 			<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;handle_enactment: block already finalized&quot;</span>);
-			<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::Skip)
 		}
 
 		<span class="comment">// compute actual tree route from best_block to notified block, and use
@@ -722,7 +837,7 @@
 				<span class="string">&quot;Recently finalized block {} would be retracted by ChainEvent {}, skipping&quot;</span>,
 				<span class="self">self</span>.recent_finalized_block, new_hash
 			);
-			<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::Skip)
 		}
 
 		<span class="kw">if </span>finalized {
@@ -737,7 +852,7 @@
 					target: <span class="string">&quot;txpool&quot;</span>,
 					<span class="string">&quot;handle_enactment: no newly enacted blocks since recent best block&quot;
 				</span>);
-				<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::HandleFinalization)
 			}
 
 			<span class="comment">// otherwise enacted finalized block becomes best block...
@@ -745,7 +860,7 @@
 
 		<span class="self">self</span>.recent_best_block = new_hash;
 
-		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(tree_route))
+		<span class="prelude-val">Ok</span>(EnactmentAction::HandleEnactment(tree_route))
 	}
 
 	<span class="doccomment">/// Forces update of the state according to the given `ChainEvent`. Intended to be used as a
@@ -761,9 +876,10 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>enactment_state_tests {
-	<span class="kw">use </span><span class="kw">super</span>::EnactmentState;
+	<span class="kw">use super</span>::{EnactmentAction, EnactmentState};
 	<span class="kw">use </span>sc_transaction_pool_api::ChainEvent;
 	<span class="kw">use </span>sp_blockchain::{HashAndNumber, TreeRoute};
+	<span class="kw">use </span>sp_runtime::traits::NumberFor;
 	<span class="kw">use </span>std::sync::Arc;
 	<span class="kw">use </span>substrate_test_runtime_client::runtime::{Block, Hash};
 
@@ -783,6 +899,9 @@
 	<span class="kw">fn </span>e1() -&gt; HashAndNumber&lt;Block&gt; {
 		HashAndNumber { number: <span class="number">5</span>, hash: Hash::from([<span class="number">0xE1</span>; <span class="number">32</span>]) }
 	}
+	<span class="kw">fn </span>x1() -&gt; HashAndNumber&lt;Block&gt; {
+		HashAndNumber { number: <span class="number">22</span>, hash: Hash::from([<span class="number">0x1E</span>; <span class="number">32</span>]) }
+	}
 	<span class="kw">fn </span>b2() -&gt; HashAndNumber&lt;Block&gt; {
 		HashAndNumber { number: <span class="number">2</span>, hash: Hash::from([<span class="number">0xB2</span>; <span class="number">32</span>]) }
 	}
@@ -795,11 +914,22 @@
 	<span class="kw">fn </span>e2() -&gt; HashAndNumber&lt;Block&gt; {
 		HashAndNumber { number: <span class="number">5</span>, hash: Hash::from([<span class="number">0xE2</span>; <span class="number">32</span>]) }
 	}
+	<span class="kw">fn </span>x2() -&gt; HashAndNumber&lt;Block&gt; {
+		HashAndNumber { number: <span class="number">22</span>, hash: Hash::from([<span class="number">0x2E</span>; <span class="number">32</span>]) }
+	}
+
+	<span class="kw">fn </span>test_chain() -&gt; Vec&lt;HashAndNumber&lt;Block&gt;&gt; {
+		<span class="macro">vec!</span>[x1(), e1(), d1(), c1(), b1(), a(), b2(), c2(), d2(), e2(), x2()]
+	}
+
+	<span class="kw">fn </span>block_hash_to_block_number(hash: Hash) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;NumberFor&lt;Block&gt;&gt;, String&gt; {
+		<span class="prelude-val">Ok</span>(test_chain().iter().find(|x| x.hash == hash).map(|x| x.number))
+	}
 
 	<span class="doccomment">/// mock tree_route computing function for simple two-forks chain
 	</span><span class="kw">fn </span>tree_route(from: Hash, to: Hash) -&gt; <span class="prelude-ty">Result</span>&lt;TreeRoute&lt;Block&gt;, String&gt; {
-		<span class="kw">let </span>chain = <span class="macro">vec!</span>[e1(), d1(), c1(), b1(), a(), b2(), c2(), d2(), e2()];
-		<span class="kw">let </span>pivot = <span class="number">4_usize</span>;
+		<span class="kw">let </span>chain = test_chain();
+		<span class="kw">let </span>pivot = chain.iter().position(|x| x.number == a().number).unwrap();
 
 		<span class="kw">let </span>from = chain
 			.iter()
@@ -810,13 +940,13 @@
 			.position(|bn| bn.hash == to)
 			.ok_or(<span class="string">&quot;existing block should be given&quot;</span>)<span class="question-mark">?</span>;
 
-		<span class="comment">//    B1-C1-D1-E1
+		<span class="comment">//    B1-C1-D1-E1-..-X1
 		//   /
 		//  A
 		//   \
-		//    B2-C2-D2-E2
+		//    B2-C2-D2-E2-..-X2
 		//
-		//  [E1 D1 C1 B1 A B2 C2 D2 E2]
+		//  [X1 E1 D1 C1 B1 A B2 C2 D2 E2 X2]
 
 		</span><span class="kw">let </span>vec: Vec&lt;HashAndNumber&lt;Block&gt;&gt; = <span class="kw">if </span>from &lt; to {
 			chain.into_iter().skip(from).take(to - from + <span class="number">1</span>).collect()
@@ -986,13 +1116,20 @@
 			<span class="kw">let </span>expected = TreeRoute::new(<span class="macro">vec!</span>[a()], <span class="number">0</span>);
 			assert_treeroute_eq(result, expected);
 		}
+
+		<span class="attr">#[test]
+		</span><span class="kw">fn </span>tree_route_mock_test_17() {
+			<span class="kw">let </span>result = tree_route(x2().hash, b1().hash);
+			<span class="kw">let </span>expected = TreeRoute::new(<span class="macro">vec!</span>[x2(), e2(), d2(), c2(), b2(), a(), b1()], <span class="number">5</span>);
+			assert_treeroute_eq(result, expected);
+		}
 	}
 
 	<span class="kw">fn </span>trigger_new_best_block(
 		state: <span class="kw-2">&amp;mut </span>EnactmentState&lt;Block&gt;,
 		from: HashAndNumber&lt;Block&gt;,
 		acted_on: HashAndNumber&lt;Block&gt;,
-	) -&gt; bool {
+	) -&gt; EnactmentAction&lt;Block&gt; {
 		<span class="kw">let </span>(from, acted_on) = (from.hash, acted_on.hash);
 
 		<span class="kw">let </span>event_tree_route = tree_route(from, acted_on).expect(<span class="string">&quot;Tree route exists&quot;</span>);
@@ -1004,16 +1141,16 @@
 					tree_route: <span class="prelude-val">Some</span>(Arc::new(event_tree_route)),
 				},
 				<span class="kw-2">&amp;</span>tree_route,
+				<span class="kw-2">&amp;</span>block_hash_to_block_number,
 			)
 			.unwrap()
-			.is_some()
 	}
 
 	<span class="kw">fn </span>trigger_finalized(
 		state: <span class="kw-2">&amp;mut </span>EnactmentState&lt;Block&gt;,
 		from: HashAndNumber&lt;Block&gt;,
 		acted_on: HashAndNumber&lt;Block&gt;,
-	) -&gt; bool {
+	) -&gt; EnactmentAction&lt;Block&gt; {
 		<span class="kw">let </span>(from, acted_on) = (from.hash, acted_on.hash);
 
 		<span class="kw">let </span>v = tree_route(from, acted_on)
@@ -1024,9 +1161,12 @@
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
 		state
-			.update(<span class="kw-2">&amp;</span>ChainEvent::Finalized { hash: acted_on, tree_route: v.into() }, <span class="kw-2">&amp;</span>tree_route)
+			.update(
+				<span class="kw-2">&amp;</span>ChainEvent::Finalized { hash: acted_on, tree_route: v.into() },
+				<span class="kw-2">&amp;</span>tree_route,
+				<span class="kw-2">&amp;</span>block_hash_to_block_number,
+			)
 			.unwrap()
-			.is_some()
 	}
 
 	<span class="kw">fn </span>assert_es_eq(
@@ -1050,51 +1190,51 @@
 		//   B2-C2-D2-E2
 
 		</span><span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), d1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d1(), a());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, d1(), e1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), a());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), d2());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, d2(), e1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), b2());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), b1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), d2());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), d2());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), c2());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), c1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d2(), d2());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, d2(), e2());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e2(), d2());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, d2(), e2());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleFinalization));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e2(), e2());
 	}
 
@@ -1106,27 +1246,27 @@
 		<span class="comment">// A-B1-C1-D1-E1
 
 		</span><span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), b1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, b1(), a());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, b1(), c1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, c1(), a());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, c1(), d1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d1(), a());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, d1(), e1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), a());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), c1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleFinalization));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), c1());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, c1(), e1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleFinalization));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), e1());
 	}
 
@@ -1138,11 +1278,11 @@
 		<span class="comment">// A-B1-C1-D1-E1
 
 		</span><span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), e1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), a());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), b1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleFinalization));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), b1());
 	}
 
@@ -1154,11 +1294,11 @@
 		<span class="comment">// A-B1-C1-D1-E1
 
 		</span><span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), e1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), e1());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, e1(), b1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), e1());
 	}
 
@@ -1174,11 +1314,11 @@
 		//   B2-C2-D2-E2
 
 		</span><span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), e1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), e1());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, e1(), e2());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), e1());
 	}
 
@@ -1190,19 +1330,19 @@
 		<span class="comment">// A-B1-C1-D1-E1
 
 		</span><span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), b1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, b1(), a());
 
 		<span class="kw">let </span>result = trigger_finalized(<span class="kw-2">&amp;mut </span>es, a(), d1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, d1(), d1());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), e1());
-		<span class="macro">assert!</span>(result);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), d1());
 
 		<span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), c1());
-		<span class="macro">assert_eq!</span>(result, <span class="bool-val">false</span>);
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
 		assert_es_eq(<span class="kw-2">&amp;</span>es, e1(), d1());
 	}
 
@@ -1222,6 +1362,28 @@
 
 		es.force_update(<span class="kw-2">&amp;</span>ChainEvent::Finalized { hash: b1().hash, tree_route: Arc::from([]) });
 		assert_es_eq(<span class="kw-2">&amp;</span>es, a(), b1());
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>test_enactment_skip_long_enacted_path() {
+		sp_tracing::try_init_simple();
+		<span class="kw">let </span><span class="kw-2">mut </span>es = EnactmentState::new(a().hash, a().hash);
+
+		<span class="comment">// A-B1-C1-..-X1
+		</span><span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, a(), x1());
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::Skip));
+		assert_es_eq(<span class="kw-2">&amp;</span>es, x1(), a());
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>test_enactment_proceed_with_enacted_path_at_threshold() {
+		sp_tracing::try_init_simple();
+		<span class="kw">let </span><span class="kw-2">mut </span>es = EnactmentState::new(b1().hash, b1().hash);
+
+		<span class="comment">// A-B1-C1-..-X1
+		</span><span class="kw">let </span>result = trigger_new_best_block(<span class="kw-2">&amp;mut </span>es, b1(), x1());
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(result, EnactmentAction::HandleEnactment { .. }));
+		assert_es_eq(<span class="kw-2">&amp;</span>es, x1(), b1());
 	}
 }
 </code></pre></div>
