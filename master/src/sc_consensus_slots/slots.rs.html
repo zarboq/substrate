@@ -178,6 +178,13 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -201,7 +208,7 @@
 //! This is used instead of `futures_timer::Interval` because it was unreliable.
 
 </span><span class="kw">use super</span>::{InherentDataProviderExt, Slot, LOG_TARGET};
-<span class="kw">use </span>sp_consensus::{Error, SelectChain};
+<span class="kw">use </span>sp_consensus::SelectChain;
 <span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentDataProvider};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT};
 
@@ -270,7 +277,7 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Slots&lt;Block, SC, IDP&gt; {
 	last_slot: Slot,
 	slot_duration: Duration,
-	inner_delay: <span class="prelude-ty">Option</span>&lt;Delay&gt;,
+	until_next_slot: <span class="prelude-ty">Option</span>&lt;Delay&gt;,
 	create_inherent_data_providers: IDP,
 	select_chain: SC,
 	_phantom: std::marker::PhantomData&lt;Block&gt;,
@@ -286,7 +293,7 @@
 		Slots {
 			last_slot: <span class="number">0</span>.into(),
 			slot_duration,
-			inner_delay: <span class="prelude-val">None</span>,
+			until_next_slot: <span class="prelude-val">None</span>,
 			create_inherent_data_providers,
 			select_chain,
 			_phantom: Default::default(),
@@ -302,26 +309,22 @@
 	IDP::InherentDataProviders: <span class="kw">crate</span>::InherentDataProviderExt,
 {
 	<span class="doccomment">/// Returns a future that fires when the next slot starts.
-	</span><span class="kw">pub async fn </span>next_slot(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SlotInfo&lt;Block&gt;, Error&gt; {
+	</span><span class="kw">pub async fn </span>next_slot(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; SlotInfo&lt;Block&gt; {
 		<span class="kw">loop </span>{
-			<span class="self">self</span>.inner_delay = <span class="kw">match </span><span class="self">self</span>.inner_delay.take() {
-				<span class="prelude-val">None </span>=&gt; {
-					<span class="comment">// schedule wait.
+			<span class="comment">// Wait for slot timeout
+			</span><span class="self">self</span>.until_next_slot
+				.take()
+				.unwrap_or_else(|| {
+					<span class="comment">// Schedule first timeout.
 					</span><span class="kw">let </span>wait_dur = time_until_next_slot(<span class="self">self</span>.slot_duration);
-					<span class="prelude-val">Some</span>(Delay::new(wait_dur))
-				},
-				<span class="prelude-val">Some</span>(d) =&gt; <span class="prelude-val">Some</span>(d),
-			};
+					Delay::new(wait_dur)
+				})
+				.<span class="kw">await</span>;
 
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(inner_delay) = <span class="self">self</span>.inner_delay.take() {
-				inner_delay.<span class="kw">await</span>;
-			}
-			<span class="comment">// timeout has fired.
+			<span class="comment">// Schedule delay for next slot.
+			</span><span class="kw">let </span>wait_dur = time_until_next_slot(<span class="self">self</span>.slot_duration);
+			<span class="self">self</span>.until_next_slot = <span class="prelude-val">Some</span>(Delay::new(wait_dur));
 
-			</span><span class="kw">let </span>ends_in = time_until_next_slot(<span class="self">self</span>.slot_duration);
-
-			<span class="comment">// reschedule delay for next slot.
-			</span><span class="self">self</span>.inner_delay = <span class="prelude-val">Some</span>(Delay::new(ends_in));
 			<span class="kw">let </span>chain_head = <span class="kw">match </span><span class="self">self</span>.select_chain.best_chain().<span class="kw">await </span>{
 				<span class="prelude-val">Ok</span>(x) =&gt; x,
 				<span class="prelude-val">Err</span>(e) =&gt; {
@@ -330,30 +333,41 @@
 						<span class="string">&quot;Unable to author block in slot. No best block header: {}&quot;</span>,
 						e,
 					);
-					<span class="comment">// Let&#39;s try at the next slot..
-					</span><span class="self">self</span>.inner_delay.take();
-					<span class="kw">continue
+					<span class="comment">// Let&#39;s retry at the next slot.
+					</span><span class="kw">continue
 				</span>},
 			};
 
-			<span class="kw">let </span>inherent_data_providers = <span class="self">self
+			<span class="kw">let </span>inherent_data_providers = <span class="kw">match </span><span class="self">self
 				</span>.create_inherent_data_providers
 				.create_inherent_data_providers(chain_head.hash(), ())
-				.<span class="kw">await</span><span class="question-mark">?</span>;
+				.<span class="kw">await
+			</span>{
+				<span class="prelude-val">Ok</span>(x) =&gt; x,
+				<span class="prelude-val">Err</span>(e) =&gt; {
+					<span class="macro">log::warn!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Unable to author block in slot. Failure creating inherent data provider: {}&quot;</span>,
+						e,
+					);
+					<span class="comment">// Let&#39;s retry at the next slot.
+					</span><span class="kw">continue
+				</span>},
+			};
 
 			<span class="kw">let </span>slot = inherent_data_providers.slot();
 
-			<span class="comment">// never yield the same slot twice.
+			<span class="comment">// Never yield the same slot twice.
 			</span><span class="kw">if </span>slot &gt; <span class="self">self</span>.last_slot {
 				<span class="self">self</span>.last_slot = slot;
 
-				<span class="kw">break </span><span class="prelude-val">Ok</span>(SlotInfo::new(
+				<span class="kw">break </span>SlotInfo::new(
 					slot,
 					Box::new(inherent_data_providers),
 					<span class="self">self</span>.slot_duration,
 					chain_head,
 					<span class="prelude-val">None</span>,
-				))
+				)
 			}
 		}
 	}
