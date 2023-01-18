@@ -1281,6 +1281,79 @@
 <a href="#1281" id="1281">1281</a>
 <a href="#1282" id="1282">1282</a>
 <a href="#1283" id="1283">1283</a>
+<a href="#1284" id="1284">1284</a>
+<a href="#1285" id="1285">1285</a>
+<a href="#1286" id="1286">1286</a>
+<a href="#1287" id="1287">1287</a>
+<a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
+<a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
+<a href="#1296" id="1296">1296</a>
+<a href="#1297" id="1297">1297</a>
+<a href="#1298" id="1298">1298</a>
+<a href="#1299" id="1299">1299</a>
+<a href="#1300" id="1300">1300</a>
+<a href="#1301" id="1301">1301</a>
+<a href="#1302" id="1302">1302</a>
+<a href="#1303" id="1303">1303</a>
+<a href="#1304" id="1304">1304</a>
+<a href="#1305" id="1305">1305</a>
+<a href="#1306" id="1306">1306</a>
+<a href="#1307" id="1307">1307</a>
+<a href="#1308" id="1308">1308</a>
+<a href="#1309" id="1309">1309</a>
+<a href="#1310" id="1310">1310</a>
+<a href="#1311" id="1311">1311</a>
+<a href="#1312" id="1312">1312</a>
+<a href="#1313" id="1313">1313</a>
+<a href="#1314" id="1314">1314</a>
+<a href="#1315" id="1315">1315</a>
+<a href="#1316" id="1316">1316</a>
+<a href="#1317" id="1317">1317</a>
+<a href="#1318" id="1318">1318</a>
+<a href="#1319" id="1319">1319</a>
+<a href="#1320" id="1320">1320</a>
+<a href="#1321" id="1321">1321</a>
+<a href="#1322" id="1322">1322</a>
+<a href="#1323" id="1323">1323</a>
+<a href="#1324" id="1324">1324</a>
+<a href="#1325" id="1325">1325</a>
+<a href="#1326" id="1326">1326</a>
+<a href="#1327" id="1327">1327</a>
+<a href="#1328" id="1328">1328</a>
+<a href="#1329" id="1329">1329</a>
+<a href="#1330" id="1330">1330</a>
+<a href="#1331" id="1331">1331</a>
+<a href="#1332" id="1332">1332</a>
+<a href="#1333" id="1333">1333</a>
+<a href="#1334" id="1334">1334</a>
+<a href="#1335" id="1335">1335</a>
+<a href="#1336" id="1336">1336</a>
+<a href="#1337" id="1337">1337</a>
+<a href="#1338" id="1338">1338</a>
+<a href="#1339" id="1339">1339</a>
+<a href="#1340" id="1340">1340</a>
+<a href="#1341" id="1341">1341</a>
+<a href="#1342" id="1342">1342</a>
+<a href="#1343" id="1343">1343</a>
+<a href="#1344" id="1344">1344</a>
+<a href="#1345" id="1345">1345</a>
+<a href="#1346" id="1346">1346</a>
+<a href="#1347" id="1347">1347</a>
+<a href="#1348" id="1348">1348</a>
+<a href="#1349" id="1349">1349</a>
+<a href="#1350" id="1350">1350</a>
+<a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
+<a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1406,6 +1479,7 @@
 	StorageDeposit,
 };
 <span class="kw">use </span>scale_info::TypeInfo;
+<span class="kw">use </span>smallvec::Array;
 <span class="kw">use </span>sp_runtime::traits::{Convert, Hash, Saturating, StaticLookup, TrailingZeroInput};
 <span class="kw">use </span>sp_std::{fmt::Debug, marker::PhantomData, prelude::<span class="kw-2">*</span>};
 
@@ -1555,7 +1629,10 @@
 		/// The allowed depth is `CallStack::size() + 1`.
 		/// Therefore a size of `0` means that a contract cannot use call or instantiate.
 		/// In other words only the origin called &quot;root contract&quot; is allowed to execute then.
-		</span><span class="kw">type </span>CallStack: smallvec::Array&lt;Item = Frame&lt;<span class="self">Self</span>&gt;&gt;;
+		///
+		/// This setting along with [`MaxCodeLen`](#associatedtype.MaxCodeLen) directly affects
+		/// memory usage of your runtime.
+		</span><span class="kw">type </span>CallStack: Array&lt;Item = Frame&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The maximum number of contracts that can be pending for deletion.
 		///
@@ -1606,6 +1683,10 @@
 		<span class="doccomment">/// The maximum length of a contract code in bytes. This limit applies to the instrumented
 		/// version of the code. Therefore `instantiate_with_code` can fail even when supplying
 		/// a wasm binary below this maximum size.
+		///
+		/// The value should be chosen carefully taking into the account the overall memory limit
+		/// your runtime has, as well as the [maximum allowed callstack
+		/// depth](#associatedtype.CallStack). Look into the `integrity_test()` for some insights.
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>MaxCodeLen: Get&lt;u32&gt;;
 
@@ -1654,6 +1735,71 @@
 			} <span class="kw">else </span>{
 				T::WeightInfo::on_process_deletion_queue_batch()
 			}
+		}
+
+		<span class="kw">fn </span>integrity_test() {
+			<span class="comment">// Total runtime memory is expected to have 128Mb upper limit
+			</span><span class="kw">const </span>MAX_RUNTIME_MEM: u32 = <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">128</span>;
+			<span class="comment">// Memory limits for a single contract:
+			// Value stack size: 1Mb per contract, default defined in wasmi
+			</span><span class="kw">const </span>MAX_STACK_SIZE: u32 = <span class="number">1024 </span>* <span class="number">1024</span>;
+			<span class="comment">// Heap limit is normally 16 mempages of 64kb each = 1Mb per contract
+			</span><span class="kw">let </span>max_heap_size = T::Schedule::get().limits.max_memory_size();
+			<span class="comment">// Max call depth is CallStack::size() + 1
+			</span><span class="kw">let </span>max_call_depth = u32::try_from(T::CallStack::size().saturating_add(<span class="number">1</span>))
+				.expect(<span class="string">&quot;CallStack size is too big&quot;</span>);
+
+			<span class="comment">// Check that given configured `MaxCodeLen`, runtime heap memory limit can&#39;t be broken.
+			//
+			// In worst case, the decoded wasm contract code would be `x16` times larger than the
+			// encoded one. This is because even a single-byte wasm instruction has 16-byte size in
+			// wasmi. This gives us `MaxCodeLen*16` safety margin.
+			//
+			// Next, the pallet keeps both the original and instrumented wasm blobs for each
+			// contract, hence we add up `MaxCodeLen*2` more to the safety margin.
+			//
+			// Finally, the inefficiencies of the freeing-bump allocator
+			// being used in the client for the runtime memory allocations, could lead to possible
+			// memory allocations for contract code grow up to `x4` times in some extreme cases,
+			// which gives us total multiplier of `18*4` for `MaxCodeLen`.
+			//
+			// That being said, for every contract executed in runtime, at least `MaxCodeLen*18*4`
+			// memory should be available. Note that maximum allowed heap memory and stack size per
+			// each contract (stack frame) should also be counted.
+			//
+			// Finally, we allow 50% of the runtime memory to be utilized by the contracts call
+			// stack, keeping the rest for other facilities, such as PoV, etc.
+			//
+			// This gives us the following formula:
+			//
+			// `(MaxCodeLen * 18 * 4 + MAX_STACK_SIZE + max_heap_size) * max_call_depth &lt;
+			// MAX_RUNTIME_MEM/2`
+			//
+			// Hence the upper limit for the `MaxCodeLen` can be defined as follows:
+			</span><span class="kw">let </span>code_len_limit = MAX_RUNTIME_MEM
+				.saturating_div(<span class="number">2</span>)
+				.saturating_div(max_call_depth)
+				.saturating_sub(max_heap_size)
+				.saturating_sub(MAX_STACK_SIZE)
+				.saturating_div(<span class="number">18 </span>* <span class="number">4</span>);
+
+			<span class="macro">assert!</span>(
+				T::MaxCodeLen::get() &lt; code_len_limit,
+				<span class="string">&quot;Given `CallStack` height {:?}, `MaxCodeLen` should be set less than {:?} \
+				 (current value is {:?}), to avoid possible runtime oom issues.&quot;</span>,
+				max_call_depth,
+				code_len_limit,
+				T::MaxCodeLen::get(),
+			);
+
+			<span class="comment">// Debug buffer should at least be large enough to accomodate a simple error message
+			</span><span class="kw">const </span>MIN_DEBUG_BUF_SIZE: u32 = <span class="number">256</span>;
+			<span class="macro">assert!</span>(
+				T::MaxDebugBufferLen::get() &gt; MIN_DEBUG_BUF_SIZE,
+				<span class="string">&quot;Debug buffer should have minimum size of {} (current setting is {})&quot;</span>,
+				MIN_DEBUG_BUF_SIZE,
+				T::MaxDebugBufferLen::get(),
+			)
 		}
 	}
 
