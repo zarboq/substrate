@@ -161,7 +161,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_offchain":["",[["api",[],["http.rs","timestamp.rs"]]],["api.rs","lib.rs"]],\
 "sc_peerset":["",[],["lib.rs","peersstate.rs"]],\
 "sc_proposer_metrics":["",[],["lib.rs"]],\
-"sc_rpc":["",[["author",[],["mod.rs"]],["chain",[],["chain_full.rs","mod.rs"]],["dev",[],["mod.rs"]],["offchain",[],["mod.rs"]],["state",[],["mod.rs","state_full.rs"]],["system",[],["mod.rs"]]],["lib.rs","testing.rs"]],\
+"sc_rpc":["",[["author",[],["mod.rs"]],["chain",[],["chain_full.rs","mod.rs"]],["dev",[],["mod.rs"]],["offchain",[],["mod.rs"]],["state",[],["mod.rs","state_full.rs","utils.rs"]],["system",[],["mod.rs"]]],["lib.rs","testing.rs"]],\
 "sc_rpc_api":["",[["author",[],["error.rs","hash.rs","mod.rs"]],["chain",[],["error.rs","mod.rs"]],["child_state",[],["mod.rs"]],["dev",[],["error.rs","mod.rs"]],["offchain",[],["error.rs","mod.rs"]],["state",[],["error.rs","helpers.rs","mod.rs"]],["system",[],["error.rs","helpers.rs","mod.rs"]]],["lib.rs","policy.rs"]],\
 "sc_rpc_server":["",[],["lib.rs","middleware.rs"]],\
 "sc_rpc_spec_v2":["",[["chain_head",[],["api.rs","chain_head.rs","error.rs","event.rs","mod.rs","subscription.rs"]],["chain_spec",[],["api.rs","chain_spec.rs","mod.rs"]],["transaction",[],["api.rs","error.rs","event.rs","mod.rs","transaction.rs"]]],["lib.rs"]],\

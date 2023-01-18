@@ -3529,27 +3529,27 @@
 		<span class="prelude-val">Ok</span>(keys)
 	}
 
-	<span class="kw">fn </span>storage_keys_iter&lt;<span class="lifetime">&#39;a</span>&gt;(
+	<span class="kw">fn </span>storage_keys_iter(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>StorageKey&gt;,
+		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>StorageKey&gt;,
 		start_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>StorageKey&gt;,
-	) -&gt; sp_blockchain::Result&lt;KeyIterator&lt;<span class="lifetime">&#39;a</span>, B::State, Block&gt;&gt; {
+	) -&gt; sp_blockchain::Result&lt;KeyIterator&lt;B::State, Block&gt;&gt; {
 		<span class="kw">let </span>state = <span class="self">self</span>.state_at(hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span>start_key = start_key.or(prefix).map(|key| key.<span class="number">0</span>.clone()).unwrap_or_else(Vec::new);
-		<span class="prelude-val">Ok</span>(KeyIterator::new(state, prefix, start_key))
+		<span class="prelude-val">Ok</span>(KeyIterator::new(state, prefix.cloned(), start_key))
 	}
 
-	<span class="kw">fn </span>child_storage_keys_iter&lt;<span class="lifetime">&#39;a</span>&gt;(
+	<span class="kw">fn </span>child_storage_keys_iter(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
 		child_info: ChildInfo,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>StorageKey&gt;,
+		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>StorageKey&gt;,
 		start_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>StorageKey&gt;,
-	) -&gt; sp_blockchain::Result&lt;KeyIterator&lt;<span class="lifetime">&#39;a</span>, B::State, Block&gt;&gt; {
+	) -&gt; sp_blockchain::Result&lt;KeyIterator&lt;B::State, Block&gt;&gt; {
 		<span class="kw">let </span>state = <span class="self">self</span>.state_at(hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span>start_key = start_key.or(prefix).map(|key| key.<span class="number">0</span>.clone()).unwrap_or_else(Vec::new);
-		<span class="prelude-val">Ok</span>(KeyIterator::new_child(state, child_info, prefix, start_key))
+		<span class="prelude-val">Ok</span>(KeyIterator::new_child(state, child_info, prefix.cloned(), start_key))
 	}
 
 	<span class="kw">fn </span>storage(
