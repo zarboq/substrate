@@ -2851,7 +2851,7 @@
 	<span class="doccomment">/// Weight of calling `seal_ecdsa_recover`.
 	</span>EcdsaRecovery,
 	<span class="doccomment">/// Weight charged by a chain extension through `seal_call_chain_extension`.
-	</span>ChainExtension(u64),
+	</span>ChainExtension(Weight),
 	<span class="doccomment">/// Weight charged for calling into the runtime.
 	</span>CallRuntime(Weight),
 	<span class="doccomment">/// Weight of calling `seal_set_code_hash`
@@ -2870,7 +2870,7 @@
 	<span class="kw">fn </span>token&lt;T: Config&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, s: <span class="kw-2">&amp;</span>HostFnWeights&lt;T&gt;) -&gt; RuntimeToken {
 		<span class="kw">use </span><span class="self">self</span>::RuntimeCosts::<span class="kw-2">*</span>;
 		<span class="kw">let </span>weight = <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
-			MeteringBlock(amount) =&gt; s.gas.saturating_add(amount),
+			MeteringBlock(amount) =&gt; s.gas.saturating_add(Weight::from_ref_time(amount)),
 			CopyFromContract(len) =&gt; s.return_per_byte.saturating_mul(len.into()),
 			CopyToContract(len) =&gt; s.input_per_byte.saturating_mul(len.into()),
 			Caller =&gt; s.caller,
@@ -2933,8 +2933,8 @@
 				.hash_blake2_128
 				.saturating_add(s.hash_blake2_128_per_byte.saturating_mul(len.into())),
 			EcdsaRecovery =&gt; s.ecdsa_recover,
-			ChainExtension(amount) =&gt; amount,
-			CallRuntime(weight) =&gt; weight.ref_time(),
+			ChainExtension(weight) =&gt; weight,
+			CallRuntime(weight) =&gt; weight,
 			SetCodeHash =&gt; s.set_code_hash,
 			EcdsaToEthAddress =&gt; s.ecdsa_to_eth_address,
 			ReentrantCount =&gt; s.reentrance_count,
@@ -2944,7 +2944,7 @@
 		RuntimeToken {
 			<span class="attr">#[cfg(test)]
 			</span>_created_from: <span class="kw-2">*</span><span class="self">self</span>,
-			weight: Weight::from_ref_time(weight),
+			weight,
 		}
 	}
 }

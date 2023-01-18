@@ -1664,7 +1664,7 @@
 	{
 		<span class="doccomment">/// Deprecated version if [`Self::call`] for use in an in-storage `Call`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
-		#[pallet::weight(T::WeightInfo::call().saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight(<span class="kw-2">*</span>gas_limit)))]
+		#[pallet::weight(T::WeightInfo::call().saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight_limit(<span class="kw-2">*</span>gas_limit)))]
 		#[allow(deprecated)]
 		#[deprecated(note = <span class="string">&quot;1D weight is used in this extrinsic, please migrate to `call`&quot;</span>)]
 		</span><span class="kw">pub fn </span>call_old_weight(
@@ -1679,7 +1679,7 @@
 				origin,
 				dest,
 				value,
-				&lt;Pallet&lt;T&gt;&gt;::compat_weight(gas_limit),
+				&lt;Pallet&lt;T&gt;&gt;::compat_weight_limit(gas_limit),
 				storage_deposit_limit,
 				data,
 			)
@@ -1689,7 +1689,7 @@
 		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
 		#[pallet::weight(
 			T::WeightInfo::instantiate_with_code(code.len() <span class="kw">as </span>u32, data.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32)
-			.saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight(<span class="kw-2">*</span>gas_limit))
+			.saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight_limit(<span class="kw-2">*</span>gas_limit))
 		)]
 		#[allow(deprecated)]
 		#[deprecated(
@@ -1707,7 +1707,7 @@
 			<span class="self">Self</span>::instantiate_with_code(
 				origin,
 				value,
-				&lt;Pallet&lt;T&gt;&gt;::compat_weight(gas_limit),
+				&lt;Pallet&lt;T&gt;&gt;::compat_weight_limit(gas_limit),
 				storage_deposit_limit,
 				code,
 				data,
@@ -1718,7 +1718,7 @@
 		<span class="doccomment">/// Deprecated version if [`Self::instantiate`] for use in an in-storage `Call`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
 		#[pallet::weight(
-			T::WeightInfo::instantiate(data.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32).saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight(<span class="kw-2">*</span>gas_limit))
+			T::WeightInfo::instantiate(data.len() <span class="kw">as </span>u32, salt.len() <span class="kw">as </span>u32).saturating_add(&lt;Pallet&lt;T&gt;&gt;::compat_weight_limit(<span class="kw-2">*</span>gas_limit))
 		)]
 		#[allow(deprecated)]
 		#[deprecated(note = <span class="string">&quot;1D weight is used in this extrinsic, please migrate to `instantiate`&quot;</span>)]
@@ -1734,7 +1734,7 @@
 			<span class="self">Self</span>::instantiate(
 				origin,
 				value,
-				&lt;Pallet&lt;T&gt;&gt;::compat_weight(gas_limit),
+				&lt;Pallet&lt;T&gt;&gt;::compat_weight_limit(gas_limit),
 				storage_deposit_limit,
 				code_hash,
 				data,
@@ -2499,12 +2499,12 @@
 		&lt;T::Currency <span class="kw">as </span>Inspect&lt;AccountIdOf&lt;T&gt;&gt;&gt;::minimum_balance()
 	}
 
-	<span class="doccomment">/// Convert a 1D Weight to a 2D weight.
+	<span class="doccomment">/// Convert gas_limit from 1D Weight to a 2D Weight.
 	///
-	/// Used by backwards compatible extrinsics. We cannot just set the proof to zero
-	/// or an old `Call` will just fail.
-	</span><span class="kw">fn </span>compat_weight(gas_limit: OldWeight) -&gt; Weight {
-		Weight::from(gas_limit).set_proof_size(u64::from(T::MaxCodeLen::get()) * <span class="number">2</span>)
+	/// Used by backwards compatible extrinsics. We cannot just set the proof_size weight limit to
+	/// zero or an old `Call` will just fail with OutOfGas.
+	</span><span class="kw">fn </span>compat_weight_limit(gas_limit: OldWeight) -&gt; Weight {
+		Weight::from_parts(gas_limit.<span class="number">0</span>, u64::from(T::MaxCodeLen::get()) * <span class="number">2</span>)
 	}
 }
 
