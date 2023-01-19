@@ -376,6 +376,20 @@
 <a href="#376" id="376">376</a>
 <a href="#377" id="377">377</a>
 <a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -402,7 +416,10 @@
 	sync::Arc,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::graph::{ChainApi, ExtrinsicHash, NumberFor, Pool, ValidatedTransaction};
+<span class="kw">use crate</span>::{
+	graph::{ChainApi, ExtrinsicHash, NumberFor, Pool, ValidatedTransaction},
+	LOG_TARGET,
+};
 <span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
 <span class="kw">use </span>sp_runtime::{
 	generic::BlockId,
@@ -460,13 +477,23 @@
 	<span class="kw">for </span>(validation_result, ext_hash, ext) <span class="kw">in </span>validation_results {
 		<span class="kw">match </span>validation_result {
 			<span class="prelude-val">Ok</span>(<span class="prelude-val">Err</span>(TransactionValidityError::Invalid(err))) =&gt; {
-				<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}]: Revalidation: invalid {:?}&quot;</span>, ext_hash, err);
+				<span class="macro">log::debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;[{:?}]: Revalidation: invalid {:?}&quot;</span>,
+					ext_hash,
+					err,
+				);
 				invalid_hashes.push(ext_hash);
 			},
 			<span class="prelude-val">Ok</span>(<span class="prelude-val">Err</span>(TransactionValidityError::Unknown(err))) =&gt; {
 				<span class="comment">// skipping unknown, they might be pushed by valid or invalid transaction
 				// when latter resubmitted.
-				</span><span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}]: Unknown during revalidation: {:?}&quot;</span>, ext_hash, err);
+				</span><span class="macro">log::trace!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;[{:?}]: Unknown during revalidation: {:?}&quot;</span>,
+					ext_hash,
+					err,
+				);
 			},
 			<span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(validity)) =&gt; {
 				revalidated.insert(
@@ -483,7 +510,7 @@
 			},
 			<span class="prelude-val">Err</span>(validation_err) =&gt; {
 				<span class="macro">log::debug!</span>(
-					target: <span class="string">&quot;txpool&quot;</span>,
+					target: LOG_TARGET,
 					<span class="string">&quot;[{:?}]: Removing due to error during revalidation: {}&quot;</span>,
 					ext_hash,
 					validation_err
@@ -561,7 +588,7 @@
 			<span class="comment">// we don&#39;t add something that already scheduled for revalidation
 			</span><span class="kw">if </span><span class="self">self</span>.members.contains_key(<span class="kw-2">&amp;</span>ext_hash) {
 				<span class="macro">log::trace!</span>(
-					target: <span class="string">&quot;txpool&quot;</span>,
+					target: LOG_TARGET,
 					<span class="string">&quot;[{:?}] Skipped adding for revalidation: Already there.&quot;</span>,
 					ext_hash,
 				);
@@ -609,7 +636,7 @@
 
 					<span class="kw">if </span>batch_len &gt; <span class="number">0 </span>|| this.len() &gt; <span class="number">0 </span>{
 						<span class="macro">log::debug!</span>(
-							target: <span class="string">&quot;txpool&quot;</span>,
+							target: LOG_TARGET,
 							<span class="string">&quot;Revalidated {} transactions. Left in the queue for revalidation: {}.&quot;</span>,
 							batch_len,
 							this.len(),
@@ -626,7 +653,7 @@
 
 							<span class="kw">if </span>this.members.len() &gt; <span class="number">0 </span>{
 								<span class="macro">log::debug!</span>(
-									target: <span class="string">&quot;txpool&quot;</span>,
+									target: LOG_TARGET,
 									<span class="string">&quot;Updated revalidation queue at {:?}. Transactions: {:?}&quot;</span>,
 									this.best_block,
 									this.members,
@@ -698,14 +725,15 @@
 	) {
 		<span class="kw">if </span>transactions.len() &gt; <span class="number">0 </span>{
 			<span class="macro">log::debug!</span>(
-				target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Sent {} transactions to revalidation queue&quot;</span>,
+				target: LOG_TARGET,
+				<span class="string">&quot;Sent {} transactions to revalidation queue&quot;</span>,
 				transactions.len(),
 			);
 		}
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>to_worker) = <span class="self">self</span>.background {
 			<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = to_worker.unbounded_send(WorkerPayload { at, transactions }) {
-				<span class="macro">log::warn!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Failed to update background worker: {:?}&quot;</span>, e);
+				<span class="macro">log::warn!</span>(target: LOG_TARGET, <span class="string">&quot;Failed to update background worker: {:?}&quot;</span>, e);
 			}
 		} <span class="kw">else </span>{
 			<span class="kw">let </span>pool = <span class="self">self</span>.pool.clone();

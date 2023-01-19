@@ -692,6 +692,17 @@
 <a href="#692" id="692">692</a>
 <a href="#693" id="693">693</a>
 <a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -712,7 +723,8 @@
 
 </span><span class="doccomment">//! Substrate transaction pool implementation.
 
-</span><span class="kw">use </span>num_traits::CheckedSub;
+</span><span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
+<span class="kw">use </span>num_traits::CheckedSub;
 <span class="kw">use </span>sc_transaction_pool_api::ChainEvent;
 <span class="kw">use </span>sp_blockchain::TreeRoute;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
@@ -807,14 +819,14 @@
 		};
 
 		<span class="kw">if </span>skip_maintenance {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;skip maintain: tree_route would be too long&quot;</span>);
+			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;skip maintain: tree_route would be too long&quot;</span>);
 			<span class="self">self</span>.force_update(event);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::Skip)
 		}
 
 		<span class="comment">// block was already finalized
 		</span><span class="kw">if </span><span class="self">self</span>.recent_finalized_block == new_hash {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;handle_enactment: block already finalized&quot;</span>);
+			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;handle_enactment: block already finalized&quot;</span>);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::Skip)
 		}
 
@@ -823,9 +835,13 @@
 		</span><span class="kw">let </span>tree_route = tree_route(<span class="self">self</span>.recent_best_block, new_hash)<span class="question-mark">?</span>;
 
 		<span class="macro">log::debug!</span>(
-			target: <span class="string">&quot;txpool&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;resolve hash:{:?} finalized:{:?} tree_route:{:?} best_block:{:?} finalized_block:{:?}&quot;</span>,
-			new_hash, finalized, tree_route, <span class="self">self</span>.recent_best_block, <span class="self">self</span>.recent_finalized_block
+			new_hash,
+			finalized,
+			tree_route,
+			<span class="self">self</span>.recent_best_block,
+			<span class="self">self</span>.recent_finalized_block
 		);
 
 		<span class="comment">// check if recently finalized block is on retracted path. this could be
@@ -833,9 +849,10 @@
 		// best event for some old stale best head.
 		</span><span class="kw">if </span>tree_route.retracted().iter().any(|x| x.hash == <span class="self">self</span>.recent_finalized_block) {
 			<span class="macro">log::debug!</span>(
-				target: <span class="string">&quot;txpool&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;Recently finalized block {} would be retracted by ChainEvent {}, skipping&quot;</span>,
-				<span class="self">self</span>.recent_finalized_block, new_hash
+				<span class="self">self</span>.recent_finalized_block,
+				new_hash
 			);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::Skip)
 		}
@@ -849,7 +866,7 @@
 			// remains valid.
 			</span><span class="kw">if </span>tree_route.enacted().is_empty() {
 				<span class="macro">log::trace!</span>(
-					target: <span class="string">&quot;txpool&quot;</span>,
+					target: LOG_TARGET,
 					<span class="string">&quot;handle_enactment: no newly enacted blocks since recent best block&quot;
 				</span>);
 				<span class="kw">return </span><span class="prelude-val">Ok</span>(EnactmentAction::HandleFinalization)
@@ -870,7 +887,12 @@
 			ChainEvent::NewBestBlock { hash, .. } =&gt; <span class="self">self</span>.recent_best_block = <span class="kw-2">*</span>hash,
 			ChainEvent::Finalized { hash, .. } =&gt; <span class="self">self</span>.recent_finalized_block = <span class="kw-2">*</span>hash,
 		};
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;forced update: {:?}, {:?}&quot;</span>, <span class="self">self</span>.recent_best_block, <span class="self">self</span>.recent_finalized_block);
+		<span class="macro">log::debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;forced update: {:?}, {:?}&quot;</span>,
+			<span class="self">self</span>.recent_best_block,
+			<span class="self">self</span>.recent_finalized_block,
+		);
 	}
 }
 

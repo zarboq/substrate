@@ -816,6 +816,7 @@
 	sync::Arc,
 };
 
+<span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
 <span class="kw">use </span>log::{debug, trace};
 <span class="kw">use </span>sc_transaction_pool_api::error;
 <span class="kw">use </span>serde::Serialize;
@@ -1107,7 +1108,7 @@ qed
 				}
 
 				<span class="comment">// add to removed
-				</span><span class="macro">trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Removed as part of the subtree.&quot;</span>, hash);
+				</span><span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Removed as part of the subtree.&quot;</span>, hash);
 				removed.push(tx.transaction.transaction);
 			}
 		}
@@ -1314,7 +1315,7 @@ qed
 	</span><span class="kw">pub fn </span>report_invalid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tx: <span class="kw-2">&amp;</span>Arc&lt;Transaction&lt;Hash, Ex&gt;&gt;) {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(to_report) = <span class="self">self</span>.all.get(<span class="kw-2">&amp;</span>tx.hash) {
 			<span class="macro">debug!</span>(
-				target: <span class="string">&quot;txpool&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;[{:?}] Reported as invalid. Will skip sub-chains while iterating.&quot;</span>,
 				to_report.transaction.transaction.hash
 			);
@@ -1337,9 +1338,8 @@ qed
 			<span class="comment">// Check if the transaction was marked invalid.
 			</span><span class="kw">if </span><span class="self">self</span>.invalid.contains(hash) {
 				<span class="macro">debug!</span>(
-					target: <span class="string">&quot;txpool&quot;</span>,
-					<span class="string">&quot;[{:?}] Skipping invalid child transaction while iterating.&quot;</span>,
-					hash
+					target: LOG_TARGET,
+					<span class="string">&quot;[{:?}] Skipping invalid child transaction while iterating.&quot;</span>, hash,
 				);
 				<span class="kw">continue
 			</span>}

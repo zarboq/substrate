@@ -140,6 +140,12 @@
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -160,6 +166,7 @@
 
 </span><span class="kw">use </span>std::{collections::HashMap, fmt::Debug, hash};
 
+<span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
 <span class="kw">use </span>linked_hash_map::LinkedHashMap;
 <span class="kw">use </span>log::{debug, trace};
 <span class="kw">use </span>serde::Serialize;
@@ -209,13 +216,13 @@
 
 	<span class="doccomment">/// Notify the listeners about extrinsic broadcast.
 	</span><span class="kw">pub fn </span>broadcasted(<span class="kw-2">&amp;mut </span><span class="self">self</span>, hash: <span class="kw-2">&amp;</span>H, peers: Vec&lt;String&gt;) {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Broadcasted&quot;</span>, hash);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Broadcasted&quot;</span>, hash);
 		<span class="self">self</span>.fire(hash, |watcher| watcher.broadcast(peers));
 	}
 
 	<span class="doccomment">/// New transaction was added to the ready pool or promoted from the future pool.
 	</span><span class="kw">pub fn </span>ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tx: <span class="kw-2">&amp;</span>H, old: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>H&gt;) {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Ready (replaced with {:?})&quot;</span>, tx, old);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Ready (replaced with {:?})&quot;</span>, tx, old);
 		<span class="self">self</span>.fire(tx, |watcher| watcher.ready());
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(old) = old {
 			<span class="self">self</span>.fire(old, |watcher| watcher.usurped(tx.clone()));
@@ -224,13 +231,13 @@
 
 	<span class="doccomment">/// New transaction was added to the future pool.
 	</span><span class="kw">pub fn </span>future(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tx: <span class="kw-2">&amp;</span>H) {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Future&quot;</span>, tx);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Future&quot;</span>, tx);
 		<span class="self">self</span>.fire(tx, |watcher| watcher.future());
 	}
 
 	<span class="doccomment">/// Transaction was dropped from the pool because of the limit.
 	</span><span class="kw">pub fn </span>dropped(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tx: <span class="kw-2">&amp;</span>H, by: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>H&gt;) {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Dropped (replaced with {:?})&quot;</span>, tx, by);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Dropped (replaced with {:?})&quot;</span>, tx, by);
 		<span class="self">self</span>.fire(tx, |watcher| <span class="kw">match </span>by {
 			<span class="prelude-val">Some</span>(t) =&gt; watcher.usurped(t.clone()),
 			<span class="prelude-val">None </span>=&gt; watcher.dropped(),
@@ -239,13 +246,13 @@
 
 	<span class="doccomment">/// Transaction was removed as invalid.
 	</span><span class="kw">pub fn </span>invalid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tx: <span class="kw-2">&amp;</span>H) {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Extrinsic invalid&quot;</span>, tx);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Extrinsic invalid&quot;</span>, tx);
 		<span class="self">self</span>.fire(tx, |watcher| watcher.invalid());
 	}
 
 	<span class="doccomment">/// Transaction was pruned from the pool.
 	</span><span class="kw">pub fn </span>pruned(<span class="kw-2">&amp;mut </span><span class="self">self</span>, block_hash: BlockHash&lt;C&gt;, tx: <span class="kw-2">&amp;</span>H) {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Pruned at {:?}&quot;</span>, tx, block_hash);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Pruned at {:?}&quot;</span>, tx, block_hash);
 		<span class="comment">// Get the transactions included in the given block hash.
 		</span><span class="kw">let </span>txs = <span class="self">self</span>.finality_watchers.entry(block_hash).or_insert(<span class="macro">vec!</span>[]);
 		txs.push(tx.clone());
@@ -276,7 +283,12 @@
 	</span><span class="kw">pub fn </span>finalized(<span class="kw-2">&amp;mut </span><span class="self">self</span>, block_hash: BlockHash&lt;C&gt;) {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(hashes) = <span class="self">self</span>.finality_watchers.remove(<span class="kw-2">&amp;</span>block_hash) {
 			<span class="kw">for </span>(tx_index, hash) <span class="kw">in </span>hashes.into_iter().enumerate() {
-				<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Sent finalization event (block {:?})&quot;</span>, hash, block_hash);
+				<span class="macro">log::debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;[{:?}] Sent finalization event (block {:?})&quot;</span>,
+					hash,
+					block_hash,
+				);
 				<span class="self">self</span>.fire(<span class="kw-2">&amp;</span>hash, |watcher| watcher.finalized(block_hash, tx_index))
 			}
 		}

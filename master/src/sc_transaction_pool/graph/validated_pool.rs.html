@@ -655,6 +655,13 @@
 <a href="#655" id="655">655</a>
 <a href="#656" id="656">656</a>
 <a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -679,6 +686,7 @@
 	sync::Arc,
 };
 
+<span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
 <span class="kw">use </span>futures::channel::mpsc::{channel, Sender};
 <span class="kw">use </span>parking_lot::{Mutex, RwLock};
 <span class="kw">use </span>sc_transaction_pool_api::{error, PoolStatus, ReadyTransactions};
@@ -856,7 +864,7 @@
 						<span class="prelude-val">Err</span>(e) =&gt;
 							<span class="kw">if </span>e.is_full() {
 								<span class="macro">log::warn!</span>(
-									target: <span class="string">&quot;txpool&quot;</span>,
+									target: LOG_TARGET,
 									<span class="string">&quot;[{:?}] Trying to notify an import but the channel is full&quot;</span>,
 									hash,
 								);
@@ -887,15 +895,17 @@
 		<span class="kw">let </span>ready_limit = <span class="kw-2">&amp;</span><span class="self">self</span>.options.ready;
 		<span class="kw">let </span>future_limit = <span class="kw-2">&amp;</span><span class="self">self</span>.options.future;
 
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Pool Status: {:?}&quot;</span>, status);
+		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Pool Status: {:?}&quot;</span>, status);
 		<span class="kw">if </span>ready_limit.is_exceeded(status.ready, status.ready_bytes) ||
 			future_limit.is_exceeded(status.future, status.future_bytes)
 		{
 			<span class="macro">log::debug!</span>(
-				target: <span class="string">&quot;txpool&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;Enforcing limits ({}/{}kB ready, {}/{}kB future&quot;</span>,
-				ready_limit.count, ready_limit.total_bytes / <span class="number">1024</span>,
-				future_limit.count, future_limit.total_bytes / <span class="number">1024</span>,
+				ready_limit.count,
+				ready_limit.total_bytes / <span class="number">1024</span>,
+				future_limit.count,
+				future_limit.total_bytes / <span class="number">1024</span>,
 			);
 
 			<span class="comment">// clean up the pool
@@ -911,7 +921,7 @@
 				removed
 			};
 			<span class="kw">if </span>!removed.is_empty() {
-				<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Enforcing limits: {} dropped&quot;</span>, removed.len());
+				<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Enforcing limits: {} dropped&quot;</span>, removed.len());
 			}
 
 			<span class="comment">// run notifications
@@ -1042,7 +1052,7 @@
 								// unknown to caller =&gt; let&#39;s just notify listeners (and issue debug
 								// message)
 								</span><span class="macro">log::warn!</span>(
-									target: <span class="string">&quot;txpool&quot;</span>,
+									target: LOG_TARGET,
 									<span class="string">&quot;[{:?}] Removing invalid transaction from update: {}&quot;</span>,
 									hash,
 									err,
@@ -1252,14 +1262,14 @@
 			<span class="kw">return </span><span class="macro">vec!</span>[]
 		}
 
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Removing invalid transactions: {:?}&quot;</span>, hashes);
+		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Removing invalid transactions: {:?}&quot;</span>, hashes);
 
 		<span class="comment">// temporarily ban invalid transactions
 		</span><span class="self">self</span>.rotator.ban(<span class="kw-2">&amp;</span>Instant::now(), hashes.iter().cloned());
 
 		<span class="kw">let </span>invalid = <span class="self">self</span>.pool.write().remove_subtree(hashes);
 
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Removed invalid transactions: {:?}&quot;</span>, invalid);
+		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Removed invalid transactions: {:?}&quot;</span>, invalid);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>listener = <span class="self">self</span>.listener.write();
 		<span class="kw">for </span>tx <span class="kw">in </span><span class="kw-2">&amp;</span>invalid {
@@ -1286,7 +1296,11 @@
 
 	<span class="doccomment">/// Notify all watchers that transactions in the block with hash have been finalized
 	</span><span class="kw">pub async fn </span>on_block_finalized(<span class="kw-2">&amp;</span><span class="self">self</span>, block_hash: BlockHash&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), B::Error&gt; {
-		<span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Attempting to notify watchers of finalization for {}&quot;</span>, block_hash);
+		<span class="macro">log::trace!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Attempting to notify watchers of finalization for {}&quot;</span>,
+			block_hash,
+		);
 		<span class="self">self</span>.listener.write().finalized(block_hash);
 		<span class="prelude-val">Ok</span>(())
 	}

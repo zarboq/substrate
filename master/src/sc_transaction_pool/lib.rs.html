@@ -789,6 +789,8 @@
 <a href="#789" id="789">789</a>
 <a href="#790" id="790">790</a>
 <a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -858,6 +860,8 @@
 
 <span class="kw">use </span>sp_blockchain::{HashAndNumber, TreeRoute};
 
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;txpool&quot;</span>;
+
 <span class="kw">type </span>BoxedReadyIterator&lt;Hash, Data&gt; =
 	Box&lt;<span class="kw">dyn </span>ReadyTransactions&lt;Item = Arc&lt;graph::base_pool::Transaction&lt;Hash, Data&gt;&gt;&gt; + Send&gt;;
 
@@ -907,7 +911,7 @@
 		<span class="kw">while </span>idx &lt; <span class="self">self</span>.pollers.len() {
 			<span class="kw">if </span><span class="self">self</span>.pollers[idx].<span class="number">0 </span>&lt;= number {
 				<span class="kw">let </span>poller_sender = <span class="self">self</span>.pollers.swap_remove(idx);
-				<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Sending ready signal at block {}&quot;</span>, number);
+				<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Sending ready signal at block {}&quot;</span>, number);
 				<span class="kw">let _ </span>= poller_sender.<span class="number">1</span>.send(iterator_factory());
 			} <span class="kw">else </span>{
 				idx += <span class="number">1</span>;
@@ -1127,7 +1131,7 @@
 		}
 
 		<span class="kw">if </span><span class="self">self</span>.ready_poll.lock().updated_at() &gt;= at {
-			<span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Transaction pool already processed block  #{}&quot;</span>, at);
+			<span class="macro">log::trace!</span>(target: LOG_TARGET, <span class="string">&quot;Transaction pool already processed block  #{}&quot;</span>, at);
 			<span class="kw">let </span>iterator: ReadyIteratorFor&lt;PoolApi&gt; = Box::new(<span class="self">self</span>.pool.validated_pool().ready());
 			<span class="kw">return async move </span>{ iterator }.boxed()
 		}
@@ -1345,16 +1349,16 @@
 
 	<span class="kw">let </span>hashes = extrinsics.iter().map(|tx| pool.hash_of(tx)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-	<span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Pruning transactions: {:?}&quot;</span>, hashes);
+	<span class="macro">log::trace!</span>(target: LOG_TARGET, <span class="string">&quot;Pruning transactions: {:?}&quot;</span>, hashes);
 
 	<span class="kw">let </span>header = <span class="kw">match </span>api.block_header(block_hash) {
 		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(h)) =&gt; h,
 		<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Could not find header for {:?}.&quot;</span>, block_hash);
+			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Could not find header for {:?}.&quot;</span>, block_hash);
 			<span class="kw">return </span>hashes
 		},
 		<span class="prelude-val">Err</span>(e) =&gt; {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Error retrieving header for {:?}: {}&quot;</span>, block_hash, e);
+			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Error retrieving header for {:?}: {}&quot;</span>, block_hash, e);
 			<span class="kw">return </span>hashes
 		},
 	};
@@ -1378,7 +1382,7 @@
 	/// (that have already been enacted) and resubmits transactions that were
 	/// retracted.
 	</span><span class="kw">async fn </span>handle_enactment(<span class="kw-2">&amp;</span><span class="self">self</span>, tree_route: TreeRoute&lt;Block&gt;) {
-		<span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;handle_enactment tree_route: {tree_route:?}&quot;</span>);
+		<span class="macro">log::trace!</span>(target: LOG_TARGET, <span class="string">&quot;handle_enactment tree_route: {tree_route:?}&quot;</span>);
 		<span class="kw">let </span>pool = <span class="self">self</span>.pool.clone();
 		<span class="kw">let </span>api = <span class="self">self</span>.api.clone();
 
@@ -1386,7 +1390,7 @@
 			<span class="prelude-val">Some</span>(HashAndNumber { hash, number }) =&gt; (hash, number),
 			<span class="prelude-val">None </span>=&gt; {
 				<span class="macro">log::warn!</span>(
-					target: <span class="string">&quot;txpool&quot;</span>,
+					target: LOG_TARGET,
 					<span class="string">&quot;Skipping ChainEvent - no last block in tree route {:?}&quot;</span>,
 					tree_route,
 				);
@@ -1457,7 +1461,7 @@
 
 					<span class="kw">if </span>!contains {
 						<span class="macro">log::debug!</span>(
-							target: <span class="string">&quot;txpool&quot;</span>,
+							target: LOG_TARGET,
 							<span class="string">&quot;[{:?}]: Resubmitting from retracted block {:?}&quot;</span>,
 							tx_hash,
 							hash,
@@ -1482,7 +1486,7 @@
 				.<span class="kw">await
 			</span>{
 				<span class="macro">log::debug!</span>(
-					target: <span class="string">&quot;txpool&quot;</span>,
+					target: LOG_TARGET,
 					<span class="string">&quot;[{:?}] Error re-submitting transactions: {}&quot;</span>,
 					hash,
 					e,
@@ -1533,7 +1537,7 @@
 
 		<span class="kw">match </span>result {
 			<span class="prelude-val">Err</span>(msg) =&gt; {
-				<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;{msg}&quot;</span>);
+				<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;{msg}&quot;</span>);
 				<span class="self">self</span>.enactment_state.lock().force_update(<span class="kw-2">&amp;</span>event);
 			},
 			<span class="prelude-val">Ok</span>(EnactmentAction::Skip) =&gt; <span class="kw">return</span>,
@@ -1545,7 +1549,7 @@
 
 		<span class="kw">if let </span>ChainEvent::Finalized { hash, tree_route } = event {
 			<span class="macro">log::trace!</span>(
-				target: <span class="string">&quot;txpool&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;on-finalized enacted: {tree_route:?}, previously finalized: \
 				{prev_finalized_block:?}&quot;</span>,
 			);
@@ -1553,7 +1557,7 @@
 			<span class="kw">for </span>hash <span class="kw">in </span>tree_route.iter().chain(std::iter::once(<span class="kw-2">&amp;</span>hash)) {
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="self">self</span>.pool.validated_pool().on_block_finalized(<span class="kw-2">*</span>hash).<span class="kw">await </span>{
 					<span class="macro">log::warn!</span>(
-						target: <span class="string">&quot;txpool&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;Error occurred while attempting to notify watchers about finalization {}: {}&quot;</span>,
 						hash, e
 					)

@@ -1052,6 +1052,11 @@
 <a href="#1052" id="1052">1052</a>
 <a href="#1053" id="1053">1053</a>
 <a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1072,6 +1077,7 @@
 
 </span><span class="kw">use </span>std::{collections::HashMap, sync::Arc, time::Duration};
 
+<span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
 <span class="kw">use </span>futures::{channel::mpsc::Receiver, Future};
 <span class="kw">use </span>sc_transaction_pool_api::error;
 <span class="kw">use </span>sp_blockchain::TreeRoute;
@@ -1262,7 +1268,8 @@
 	) {
 		<span class="kw">let </span>now = Instant::now();
 		<span class="self">self</span>.validated_pool.resubmit(revalidated_transactions);
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>,
+		<span class="macro">log::debug!</span>(
+			target: LOG_TARGET,
 			<span class="string">&quot;Resubmitted. Took {} ms. Status: {:?}&quot;</span>,
 			now.elapsed().as_millis(),
 			<span class="self">self</span>.validated_pool.status()
@@ -1303,7 +1310,7 @@
 		extrinsics: <span class="kw-2">&amp;</span>[ExtrinsicFor&lt;B&gt;],
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), B::Error&gt; {
 		<span class="macro">log::debug!</span>(
-			target: <span class="string">&quot;txpool&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;Starting pruning of block {:?} (extrinsics: {})&quot;</span>,
 			at,
 			extrinsics.len()
@@ -1341,7 +1348,10 @@
 							future_tags.extend(validity.provides);
 						}
 					} <span class="kw">else </span>{
-						<span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;txpool is empty, skipping validation for block {at:?}&quot;</span>);
+						<span class="macro">log::trace!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;txpool is empty, skipping validation for block {at:?}&quot;</span>,
+						);
 					}
 				},
 			}
@@ -1377,7 +1387,7 @@
 		tags: <span class="kw">impl </span>IntoIterator&lt;Item = Tag&gt;,
 		known_imported_hashes: <span class="kw">impl </span>IntoIterator&lt;Item = ExtrinsicHash&lt;B&gt;&gt; + Clone,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), B::Error&gt; {
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Pruning at {:?}&quot;</span>, at);
+		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Pruning at {:?}&quot;</span>, at);
 		<span class="comment">// Prune all transactions that provide given tags
 		</span><span class="kw">let </span>prune_status = <span class="self">self</span>.validated_pool.prune_tags(tags)<span class="question-mark">?</span>;
 
@@ -1396,7 +1406,7 @@
 		<span class="kw">let </span>reverified_transactions =
 			<span class="self">self</span>.verify(at, pruned_transactions, CheckBannedBeforeVerify::Yes).<span class="kw">await</span><span class="question-mark">?</span>;
 
-		<span class="macro">log::trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;Pruning at {:?}. Resubmitting transactions.&quot;</span>, at);
+		<span class="macro">log::trace!</span>(target: LOG_TARGET, <span class="string">&quot;Pruning at {:?}. Resubmitting transactions.&quot;</span>, at);
 		<span class="comment">// And finally - submit reverified transactions back to the pool
 
 		</span><span class="self">self</span>.validated_pool.resubmit_pruned(

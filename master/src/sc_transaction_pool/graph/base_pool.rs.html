@@ -1040,6 +1040,10 @@
 <a href="#1040" id="1040">1040</a>
 <a href="#1041" id="1041">1041</a>
 <a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1064,6 +1068,7 @@
 
 </span><span class="kw">use </span>std::{cmp::Ordering, collections::HashSet, fmt, hash, sync::Arc};
 
+<span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
 <span class="kw">use </span>log::{debug, trace, warn};
 <span class="kw">use </span>sc_transaction_pool_api::{error, InPoolTransaction, PoolStatus};
 <span class="kw">use </span>serde::Serialize;
@@ -1314,9 +1319,9 @@
 		}
 
 		<span class="kw">let </span>tx = WaitingTransaction::new(tx, <span class="self">self</span>.ready.provided_tags(), <span class="kw-2">&amp;</span><span class="self">self</span>.recently_pruned);
-		<span class="macro">trace!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] {:?}&quot;</span>, tx.transaction.hash, tx);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] {:?}&quot;</span>, tx.transaction.hash, tx);
 		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;txpool&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;[{:?}] Importing to {}&quot;</span>,
 			tx.transaction.hash,
 			<span class="kw">if </span>tx.is_ready() { <span class="string">&quot;ready&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;future&quot; </span>}
@@ -1370,7 +1375,7 @@
 				<span class="comment">// transaction failed to be imported.
 				</span><span class="prelude-val">Err</span>(e) =&gt;
 					<span class="kw">if </span>first {
-						<span class="macro">debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Error importing: {:?}&quot;</span>, current_hash, e);
+						<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Error importing: {:?}&quot;</span>, current_hash, e);
 						<span class="kw">return </span><span class="prelude-val">Err</span>(e)
 					} <span class="kw">else </span>{
 						failed.push(current_hash);
@@ -1389,7 +1394,7 @@
 			// since they depend on each other and will never get to the best iterator.
 			</span><span class="self">self</span>.ready.remove_subtree(<span class="kw-2">&amp;</span>promoted);
 
-			<span class="macro">debug!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Cycle detected, bailing.&quot;</span>, hash);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Cycle detected, bailing.&quot;</span>, hash);
 			<span class="kw">return </span><span class="prelude-val">Err</span>(error::Error::CycleDetected)
 		}
 
@@ -1532,7 +1537,10 @@
 			<span class="kw">match </span><span class="self">self</span>.import_to_ready(tx) {
 				<span class="prelude-val">Ok</span>(res) =&gt; promoted.push(res),
 				<span class="prelude-val">Err</span>(e) =&gt; {
-					<span class="macro">warn!</span>(target: <span class="string">&quot;txpool&quot;</span>, <span class="string">&quot;[{:?}] Failed to promote during pruning: {:?}&quot;</span>, hash, e);
+					<span class="macro">warn!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;[{:?}] Failed to promote during pruning: {:?}&quot;</span>, hash, e,
+					);
 					failed.push(hash)
 				},
 			}
