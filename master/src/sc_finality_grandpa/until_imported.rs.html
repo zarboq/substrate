@@ -1038,6 +1038,7 @@
 <a href="#1038" id="1038">1038</a>
 <a href="#1039" id="1039">1039</a>
 <a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1633,16 +1634,17 @@
 		<span class="kw">fn </span>import_header(<span class="kw-2">&amp;</span><span class="self">self</span>, header: Header) {
 			<span class="kw">let </span>hash = header.hash();
 			<span class="kw">let </span>number = <span class="kw-2">*</span>header.number();
-
+			<span class="kw">let </span>(tx, _rx) = tracing_unbounded(<span class="string">&quot;unpin-worker-channel&quot;</span>, <span class="number">10_000</span>);
 			<span class="self">self</span>.known_blocks.lock().insert(hash, number);
 			<span class="self">self</span>.sender
-				.unbounded_send(BlockImportNotification {
+				.unbounded_send(BlockImportNotification::&lt;Block&gt;::new(
 					hash,
-					origin: BlockOrigin::File,
+					BlockOrigin::File,
 					header,
-					is_new_best: <span class="bool-val">false</span>,
-					tree_route: <span class="prelude-val">None</span>,
-				})
+					<span class="bool-val">false</span>,
+					<span class="prelude-val">None</span>,
+					tx,
+				))
 				.unwrap();
 		}
 	}

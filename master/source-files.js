@@ -132,7 +132,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_chain_spec_derive":["",[],["impls.rs","lib.rs"]],\
 "sc_cli":["",[["commands",[],["build_spec_cmd.rs","chain_info_cmd.rs","check_block_cmd.rs","export_blocks_cmd.rs","export_state_cmd.rs","generate.rs","generate_node_key.rs","import_blocks_cmd.rs","insert_key.rs","inspect_key.rs","inspect_node_key.rs","key.rs","mod.rs","purge_chain_cmd.rs","revert_cmd.rs","run_cmd.rs","sign.rs","utils.rs","vanity.rs","verify.rs"]],["params",[],["database_params.rs","import_params.rs","keystore_params.rs","mod.rs","network_params.rs","node_key_params.rs","offchain_worker_params.rs","pruning_params.rs","shared_params.rs","transaction_pool_params.rs"]]],["arg_enums.rs","config.rs","error.rs","lib.rs","runner.rs"]],\
 "sc_client_api":["",[["notifications",[],["registry.rs"]]],["backend.rs","call_executor.rs","client.rs","execution_extensions.rs","in_mem.rs","leaves.rs","lib.rs","notifications.rs","proof_provider.rs"]],\
-"sc_client_db":["",[],["bench.rs","children.rs","lib.rs","offchain.rs","parity_db.rs","record_stats_state.rs","stats.rs","upgrade.rs","utils.rs"]],\
+"sc_client_db":["",[],["bench.rs","children.rs","lib.rs","offchain.rs","parity_db.rs","pinned_blocks_cache.rs","record_stats_state.rs","stats.rs","upgrade.rs","utils.rs"]],\
 "sc_consensus":["",[["import_queue",[],["basic_queue.rs","buffered_link.rs","mock.rs"]]],["block_import.rs","import_queue.rs","lib.rs","longest_chain.rs","metrics.rs","shared_data.rs"]],\
 "sc_consensus_aura":["",[],["import_queue.rs","lib.rs"]],\
 "sc_consensus_babe":["",[],["authorship.rs","aux_schema.rs","lib.rs","migration.rs","verification.rs"]],\

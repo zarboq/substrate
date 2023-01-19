@@ -471,6 +471,9 @@
 <a href="#471" id="471">471</a>
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -514,7 +517,7 @@
 <span class="kw">use </span>sc_client_api::BlockchainEvents;
 <span class="kw">use </span>sc_service::client::{ClientConfig, LocalCallExecutor};
 <span class="kw">use </span>serde::Deserialize;
-<span class="kw">use </span>sp_core::storage::ChildInfo;
+<span class="kw">use </span>sp_core::{storage::ChildInfo, testing::TaskExecutor};
 <span class="kw">use </span>sp_runtime::{codec::Encode, traits::Block <span class="kw">as </span>BlockT, OpaqueExtrinsic};
 <span class="kw">use </span>std::{
 	collections::{HashMap, HashSet},
@@ -535,7 +538,7 @@
 }
 
 <span class="doccomment">/// A builder for creating a test client instance.
-</span><span class="kw">pub struct </span>TestClientBuilder&lt;Block: BlockT, ExecutorDispatch, Backend, G: GenesisInit&gt; {
+</span><span class="kw">pub struct </span>TestClientBuilder&lt;Block: BlockT, ExecutorDispatch, Backend: <span class="lifetime">&#39;static</span>, G: GenesisInit&gt; {
 	execution_strategies: ExecutionStrategies,
 	genesis_init: G,
 	<span class="doccomment">/// The key is an unprefixed storage key, this only contains
@@ -710,9 +713,12 @@
 		)
 		.expect(<span class="string">&quot;Creates genesis block builder&quot;</span>);
 
+		<span class="kw">let </span>spawn_handle = Box::new(TaskExecutor::new());
+
 		<span class="kw">let </span>client = client::Client::new(
 			<span class="self">self</span>.backend.clone(),
 			executor,
+			spawn_handle,
 			genesis_block_builder,
 			<span class="self">self</span>.fork_blocks,
 			<span class="self">self</span>.bad_blocks,
