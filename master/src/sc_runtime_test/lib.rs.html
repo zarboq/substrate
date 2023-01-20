@@ -337,6 +337,41 @@
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
 </pre><pre class="rust"><code><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 
 </span><span class="comment">// Make the WASM binary available.
@@ -368,6 +403,8 @@
 	print,
 	traits::{BlakeTwo256, Hash},
 };
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">use </span>sp_runtime_interface::pack_ptr_and_len;
 
 <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
 	<span class="attr">#[allow(dead_code)]
@@ -376,6 +413,10 @@
 	<span class="attr">#[allow(dead_code)]
 	</span><span class="kw">fn </span>yet_another_missing_external();
 }
+
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="doccomment">/// The size of a WASM page in bytes.
+</span><span class="kw">const </span>WASM_PAGE_SIZE: usize = <span class="number">65536</span>;
 
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
 </span><span class="doccomment">/// Mutable static variables should be always observed to have
@@ -431,7 +472,7 @@
 		</span><span class="kw">let </span>heap_ptr = heap_base <span class="kw">as </span>usize;
 
 		<span class="comment">// Find the next wasm page boundary.
-		</span><span class="kw">let </span>heap_ptr = round_up_to(heap_ptr, <span class="number">65536</span>);
+		</span><span class="kw">let </span>heap_ptr = round_up_to(heap_ptr, WASM_PAGE_SIZE);
 
 		<span class="comment">// Make it an actual pointer
 		</span><span class="kw">let </span>heap_ptr = heap_ptr <span class="kw">as </span><span class="kw-2">*mut </span>u8;
@@ -675,6 +716,35 @@
 		<span class="comment">// Mainly a test that the macro is working when we have a return statement here.
 		</span><span class="kw">return </span><span class="number">1234</span>;
 	}
+}
+
+<span class="comment">// Returns a huge len. It should result in an error, and not an allocation.
+</span><span class="attr">#[no_mangle]
+#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>test_return_huge_len(_params: <span class="kw-2">*const </span>u8, _len: usize) -&gt; u64 {
+	pack_ptr_and_len(<span class="number">0</span>, u32::MAX)
+}
+
+<span class="comment">// Returns an offset right at the edge of the wasm memory boundary. With length 0, it should
+// succeed.
+</span><span class="attr">#[no_mangle]
+#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>test_return_max_memory_offset(_params: <span class="kw-2">*const </span>u8, _len: usize) -&gt; u64 {
+	pack_ptr_and_len((core::arch::wasm32::memory_size(<span class="number">0</span>) * WASM_PAGE_SIZE) <span class="kw">as </span>u32, <span class="number">0</span>)
+}
+
+<span class="comment">// Returns an offset right at the edge of the wasm memory boundary. With length 1, it should fail.
+</span><span class="attr">#[no_mangle]
+#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>test_return_max_memory_offset_plus_one(_params: <span class="kw-2">*const </span>u8, _len: usize) -&gt; u64 {
+	pack_ptr_and_len((core::arch::wasm32::memory_size(<span class="number">0</span>) * WASM_PAGE_SIZE) <span class="kw">as </span>u32, <span class="number">1</span>)
+}
+
+<span class="comment">// Returns an output that overflows the u32 range. It should result in an error.
+</span><span class="attr">#[no_mangle]
+#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>test_return_overflow(_params: <span class="kw-2">*const </span>u8, _len: usize) -&gt; u64 {
+	pack_ptr_and_len(u32::MAX, <span class="number">1</span>)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sc_runtime_test" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
