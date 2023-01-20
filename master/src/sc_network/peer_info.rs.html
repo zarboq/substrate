@@ -417,6 +417,8 @@
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -508,7 +510,9 @@
 	</span><span class="kw">pub fn </span>new(user_agent: String, local_public_key: PublicKey) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>identify = {
 			<span class="kw">let </span>cfg = IdentifyConfig::new(<span class="string">&quot;/substrate/1.0&quot;</span>.to_string(), local_public_key)
-				.with_agent_version(user_agent);
+				.with_agent_version(user_agent)
+				<span class="comment">// We don&#39;t need any peer information cached.
+				</span>.with_cache_size(<span class="number">0</span>);
 			Identify::new(cfg)
 		};
 
@@ -601,10 +605,10 @@
 		IntoConnectionHandler::select(<span class="self">self</span>.ping.new_handler(), <span class="self">self</span>.identify.new_handler())
 	}
 
-	<span class="kw">fn </span>addresses_of_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer_id: <span class="kw-2">&amp;</span>PeerId) -&gt; Vec&lt;Multiaddr&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>list = <span class="self">self</span>.ping.addresses_of_peer(peer_id);
-		list.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.identify.addresses_of_peer(peer_id));
-		list
+	<span class="kw">fn </span>addresses_of_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>PeerId) -&gt; Vec&lt;Multiaddr&gt; {
+		<span class="comment">// Only `Discovery::addresses_of_peer` must be returning addresses to ensure that we
+		// don&#39;t return unwanted addresses.
+		</span>Vec::new()
 	}
 
 	<span class="kw">fn </span>on_swarm_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: FromSwarm&lt;<span class="self">Self</span>::ConnectionHandler&gt;) {
