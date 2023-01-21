@@ -737,14 +737,6 @@
 <a href="#737" id="737">737</a>
 <a href="#738" id="738">738</a>
 <a href="#739" id="739">739</a>
-<a href="#740" id="740">740</a>
-<a href="#741" id="741">741</a>
-<a href="#742" id="742">742</a>
-<a href="#743" id="743">743</a>
-<a href="#744" id="744">744</a>
-<a href="#745" id="745">745</a>
-<a href="#746" id="746">746</a>
-<a href="#747" id="747">747</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -1338,11 +1330,7 @@
 /// Optionally accepts a path to a `scratch_directory` to use to benchmark the
 /// disk. Also accepts the `requirements` for the hardware benchmark and a
 /// boolean to specify if the node is an authority.
-</span><span class="kw">pub fn </span>gather_hwbench(
-	scratch_directory: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Path&gt;,
-	requirements: Requirements,
-	is_authority: bool,
-) -&gt; HwBench {
+</span><span class="kw">pub fn </span>gather_hwbench(scratch_directory: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Path&gt;) -&gt; HwBench {
 	<span class="attr">#[allow(unused_mut)]
 	</span><span class="kw">let </span><span class="kw-2">mut </span>hwbench = HwBench {
 		cpu_hashrate_score: benchmark_cpu(DEFAULT_CPU_EXECUTION_LIMIT),
@@ -1372,43 +1360,39 @@
 			};
 	}
 
-	<span class="kw">if </span>is_authority {
-		ensure_requirements(hwbench.clone(), requirements);
-	}
-
 	hwbench
 }
 
-<span class="kw">fn </span>ensure_requirements(hwbench: HwBench, requirements: Requirements) {
-	<span class="kw">let </span><span class="kw-2">mut </span>failed = <span class="number">0</span>;
-	<span class="kw">for </span>requirement <span class="kw">in </span>requirements.<span class="number">0</span>.iter() {
-		<span class="kw">match </span>requirement.metric {
-			Metric::Blake2256 =&gt;
-				<span class="kw">if </span>requirement.minimum &gt; hwbench.cpu_hashrate_score {
-					failed += <span class="number">1</span>;
-				},
-			Metric::MemCopy =&gt;
-				<span class="kw">if </span>requirement.minimum &gt; hwbench.memory_memcpy_score {
-					failed += <span class="number">1</span>;
-				},
-			Metric::DiskSeqWrite =&gt;
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(score) = hwbench.disk_sequential_write_score {
-					<span class="kw">if </span>requirement.minimum &gt; score {
-						failed += <span class="number">1</span>;
-					}
-				},
-			Metric::DiskRndWrite =&gt;
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(score) = hwbench.disk_random_write_score {
-					<span class="kw">if </span>requirement.minimum &gt; score {
-						failed += <span class="number">1</span>;
-					}
-				},
-			Metric::Sr25519Verify =&gt; {},
+<span class="kw">impl </span>Requirements {
+	<span class="doccomment">/// Whether the hardware requirements are met by the provided benchmark results.
+	</span><span class="kw">pub fn </span>check_hardware(<span class="kw-2">&amp;</span><span class="self">self</span>, hwbench: <span class="kw-2">&amp;</span>HwBench) -&gt; bool {
+		<span class="kw">for </span>requirement <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.iter() {
+			<span class="kw">match </span>requirement.metric {
+				Metric::Blake2256 =&gt;
+					<span class="kw">if </span>requirement.minimum &gt; hwbench.cpu_hashrate_score {
+						<span class="kw">return </span><span class="bool-val">false
+					</span>},
+				Metric::MemCopy =&gt;
+					<span class="kw">if </span>requirement.minimum &gt; hwbench.memory_memcpy_score {
+						<span class="kw">return </span><span class="bool-val">false
+					</span>},
+				Metric::DiskSeqWrite =&gt;
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(score) = hwbench.disk_sequential_write_score {
+						<span class="kw">if </span>requirement.minimum &gt; score {
+							<span class="kw">return </span><span class="bool-val">false
+						</span>}
+					},
+				Metric::DiskRndWrite =&gt;
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(score) = hwbench.disk_random_write_score {
+						<span class="kw">if </span>requirement.minimum &gt; score {
+							<span class="kw">return </span><span class="bool-val">false
+						</span>}
+					},
+				Metric::Sr25519Verify =&gt; {},
+			}
 		}
-	}
-	<span class="kw">if </span>failed != <span class="number">0 </span>{
-		<span class="macro">log::warn!</span>(<span class="string">&quot;⚠️  Your hardware performance score was less than expected for role &#39;Authority&#39;. See https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware&quot;</span>);
-	}
+		<span class="bool-val">true
+	</span>}
 }
 
 <span class="attr">#[cfg(test)]

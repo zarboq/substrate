@@ -818,7 +818,6 @@
 <a href="#818" id="818">818</a>
 <a href="#819" id="819">819</a>
 <a href="#820" id="820">820</a>
-<a href="#821" id="821">821</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1139,18 +1138,12 @@
 		<span class="kw-2">&amp;</span>sc_consensus_babe::BabeLink&lt;Block&gt;,
 	),
 ) -&gt; <span class="prelude-ty">Result</span>&lt;NewFullBase, ServiceError&gt; {
-	<span class="kw">let </span>hwbench = <span class="kw">if </span>!disable_hardware_benchmarks {
-		config.database.path().map(|database_path| {
+	<span class="kw">let </span>hwbench = (!disable_hardware_benchmarks)
+		.then_some(config.database.path().map(|database_path| {
 			<span class="kw">let _ </span>= std::fs::create_dir_all(<span class="kw-2">&amp;</span>database_path);
-			sc_sysinfo::gather_hwbench(
-				<span class="prelude-val">Some</span>(database_path),
-				SUBSTRATE_REFERENCE_HARDWARE.clone(),
-				config.role.is_authority(),
-			)
-		})
-	} <span class="kw">else </span>{
-		<span class="prelude-val">None
-	</span>};
+			sc_sysinfo::gather_hwbench(<span class="prelude-val">Some</span>(database_path))
+		}))
+		.flatten();
 
 	<span class="kw">let </span>sc_service::PartialComponents {
 		client,
@@ -1224,6 +1217,11 @@
 
 	<span class="kw">if let </span><span class="prelude-val">Some</span>(hwbench) = hwbench {
 		sc_sysinfo::print_hwbench(<span class="kw-2">&amp;</span>hwbench);
+		<span class="kw">if </span>!SUBSTRATE_REFERENCE_HARDWARE.check_hardware(<span class="kw-2">&amp;</span>hwbench) &amp;&amp; role.is_authority() {
+			<span class="macro">log::warn!</span>(
+				<span class="string">&quot;⚠️  The hardware does not meet the minimal requirements for role &#39;Authority&#39;.&quot;
+			</span>);
+		}
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>telemetry) = telemetry {
 			<span class="kw">let </span>telemetry_handle = telemetry.handle();
