@@ -1739,6 +1739,14 @@
 <a href="#1739" id="1739">1739</a>
 <a href="#1740" id="1740">1740</a>
 <a href="#1741" id="1741">1741</a>
+<a href="#1742" id="1742">1742</a>
+<a href="#1743" id="1743">1743</a>
+<a href="#1744" id="1744">1744</a>
+<a href="#1745" id="1745">1745</a>
+<a href="#1746" id="1746">1746</a>
+<a href="#1747" id="1747">1747</a>
+<a href="#1748" id="1748">1748</a>
+<a href="#1749" id="1749">1749</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -3244,13 +3252,21 @@
 	<span class="doccomment">/// Assert the given `event` exists.
 	</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, test))]
 	</span><span class="kw">pub fn </span>assert_has_event(event: T::RuntimeEvent) {
-		<span class="macro">assert!</span>(<span class="self">Self</span>::events().iter().any(|record| record.event == event))
+		<span class="kw">let </span>events = <span class="self">Self</span>::events();
+		<span class="macro">assert!</span>(
+			events.iter().any(|record| record.event == event),
+			<span class="string">&quot;expected event {event:?} not found in events {events:?}&quot;</span>,
+		);
 	}
 
 	<span class="doccomment">/// Assert the last event equal to the given `event`.
 	</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, test))]
 	</span><span class="kw">pub fn </span>assert_last_event(event: T::RuntimeEvent) {
-		<span class="macro">assert_eq!</span>(<span class="self">Self</span>::events().last().expect(<span class="string">&quot;events expected&quot;</span>).event, event);
+		<span class="kw">let </span>last_event = <span class="self">Self</span>::events().last().expect(<span class="string">&quot;events expected&quot;</span>).event.clone();
+		<span class="macro">assert_eq!</span>(
+			last_event, event,
+			<span class="string">&quot;expected event {event:?} is not equal to the last event {last_event:?}&quot;</span>,
+		);
 	}
 
 	<span class="doccomment">/// Return the chain&#39;s current runtime version.
