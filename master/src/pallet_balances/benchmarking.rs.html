@@ -220,9 +220,42 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
-// Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2023 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
@@ -242,22 +275,25 @@
 </span><span class="attr">#![cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
-
-<span class="kw">use </span>frame_benchmarking::{account, benchmarks_instance_pallet, whitelisted_caller};
-<span class="kw">use </span>frame_system::RawOrigin;
-<span class="kw">use </span>sp_runtime::traits::Bounded;
-
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>Balances;
+
+<span class="kw">use </span>frame_benchmarking::{account, impl_benchmark_test_suite, whitelisted_caller};
+<span class="kw">use </span>frame_support::benchmarking::<span class="kw-2">*</span>;
+<span class="kw">use </span>frame_system::RawOrigin;
 
 <span class="kw">const </span>SEED: u32 = <span class="number">0</span>;
 <span class="comment">// existential deposit multiplier
 </span><span class="kw">const </span>ED_MULTIPLIER: u32 = <span class="number">10</span>;
 
-<span class="macro">benchmarks_instance_pallet! </span>{
+<span class="attr">#[instance_benchmarks]
+</span><span class="kw">mod </span>benchmarks {
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+
 	<span class="comment">// Benchmark `transfer` extrinsic with the worst possible conditions:
 	// * Transfer will kill the sender account.
 	// * Transfer will create the recipient account.
-	</span>transfer {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>transfer() {
 		<span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
 		<span class="kw">let </span>caller = whitelisted_caller();
 
@@ -269,53 +305,66 @@
 		// and reap this user.
 		</span><span class="kw">let </span>recipient: T::AccountId = account(<span class="string">&quot;recipient&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>recipient_lookup = T::Lookup::unlookup(recipient.clone());
-		<span class="kw">let </span>transfer_amount = existential_deposit.saturating_mul((ED_MULTIPLIER - <span class="number">1</span>).into()) + <span class="number">1u32</span>.into();
-	}: transfer(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount)
-	verify {
+		<span class="kw">let </span>transfer_amount =
+			existential_deposit.saturating_mul((ED_MULTIPLIER - <span class="number">1</span>).into()) + <span class="number">1u32</span>.into();
+
+		<span class="attr">#[extrinsic_call]
+		</span><span class="kw">_</span>(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount);
+
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>caller), Zero::zero());
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>recipient), transfer_amount);
 	}
 
 	<span class="comment">// Benchmark `transfer` with the best possible condition:
 	// * Both accounts exist and will continue to exist.
-	</span><span class="attr">#[extra]
-	</span>transfer_best_case {
+	</span><span class="attr">#[benchmark(extra)]
+	</span><span class="kw">fn </span>transfer_best_case() {
 		<span class="kw">let </span>caller = whitelisted_caller();
 		<span class="kw">let </span>recipient: T::AccountId = account(<span class="string">&quot;recipient&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>recipient_lookup = T::Lookup::unlookup(recipient.clone());
 
-		<span class="comment">// Give the sender account max funds for transfer (their account will never reasonably be killed).
-		</span><span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::Balance::max_value());
+		<span class="comment">// Give the sender account max funds for transfer (their account will never reasonably be
+		// killed).
+		</span><span class="kw">let _ </span>=
+			&lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::Balance::max_value());
 
 		<span class="comment">// Give the recipient account existential deposit (thus their account already exists).
 		</span><span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
-		<span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>recipient, existential_deposit);
+		<span class="kw">let _ </span>=
+			&lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>recipient, existential_deposit);
 		<span class="kw">let </span>transfer_amount = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
-	}: transfer(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount)
-	verify {
+
+		<span class="attr">#[extrinsic_call]
+		</span>transfer(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount);
+
 		<span class="macro">assert!</span>(!Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>caller).is_zero());
 		<span class="macro">assert!</span>(!Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>recipient).is_zero());
 	}
 
 	<span class="comment">// Benchmark `transfer_keep_alive` with the worst possible condition:
 	// * The recipient account is created.
-	</span>transfer_keep_alive {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>transfer_keep_alive() {
 		<span class="kw">let </span>caller = whitelisted_caller();
 		<span class="kw">let </span>recipient: T::AccountId = account(<span class="string">&quot;recipient&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>recipient_lookup = T::Lookup::unlookup(recipient.clone());
 
 		<span class="comment">// Give the sender account max funds, thus a transfer will not kill account.
-		</span><span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::Balance::max_value());
+		</span><span class="kw">let _ </span>=
+			&lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::Balance::max_value());
 		<span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
 		<span class="kw">let </span>transfer_amount = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
-	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount)
-	verify {
+
+		<span class="attr">#[extrinsic_call]
+		</span><span class="kw">_</span>(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount);
+
 		<span class="macro">assert!</span>(!Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>caller).is_zero());
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>recipient), transfer_amount);
 	}
 
 	<span class="comment">// Benchmark `set_balance` coming from ROOT account. This always creates an account.
-	</span>set_balance_creating {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>set_balance_creating() {
 		<span class="kw">let </span>user: T::AccountId = account(<span class="string">&quot;user&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>user_lookup = T::Lookup::unlookup(user.clone());
 
@@ -323,14 +372,17 @@
 		</span><span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
 		<span class="kw">let </span>balance_amount = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
 		<span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>user, balance_amount);
-	}: set_balance(RawOrigin::Root, user_lookup, balance_amount, balance_amount)
-	verify {
+
+		<span class="attr">#[extrinsic_call]
+		</span>set_balance(RawOrigin::Root, user_lookup, balance_amount, balance_amount);
+
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>user), balance_amount);
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::reserved_balance(<span class="kw-2">&amp;</span>user), balance_amount);
 	}
 
 	<span class="comment">// Benchmark `set_balance` coming from ROOT account. This always kills an account.
-	</span>set_balance_killing {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>set_balance_killing() {
 		<span class="kw">let </span>user: T::AccountId = account(<span class="string">&quot;user&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>user_lookup = T::Lookup::unlookup(user.clone());
 
@@ -338,15 +390,18 @@
 		</span><span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
 		<span class="kw">let </span>balance_amount = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
 		<span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>user, balance_amount);
-	}: set_balance(RawOrigin::Root, user_lookup, Zero::zero(), Zero::zero())
-	verify {
+
+		<span class="attr">#[extrinsic_call]
+		</span>set_balance(RawOrigin::Root, user_lookup, Zero::zero(), Zero::zero());
+
 		<span class="macro">assert!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>user).is_zero());
 	}
 
 	<span class="comment">// Benchmark `force_transfer` extrinsic with the worst possible conditions:
 	// * Transfer will kill the sender account.
 	// * Transfer will create the recipient account.
-	</span>force_transfer {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>force_transfer() {
 		<span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
 		<span class="kw">let </span>source: T::AccountId = account(<span class="string">&quot;source&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>source_lookup = T::Lookup::unlookup(source.clone());
@@ -355,12 +410,16 @@
 		</span><span class="kw">let </span>balance = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
 		<span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>source, balance);
 
-		<span class="comment">// Transfer `e - 1` existential deposits + 1 unit, which guarantees to create one account, and reap this user.
+		<span class="comment">// Transfer `e - 1` existential deposits + 1 unit, which guarantees to create one account,
+		// and reap this user.
 		</span><span class="kw">let </span>recipient: T::AccountId = account(<span class="string">&quot;recipient&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>recipient_lookup = T::Lookup::unlookup(recipient.clone());
-		<span class="kw">let </span>transfer_amount = existential_deposit.saturating_mul((ED_MULTIPLIER - <span class="number">1</span>).into()) + <span class="number">1u32</span>.into();
-	}: force_transfer(RawOrigin::Root, source_lookup, recipient_lookup, transfer_amount)
-	verify {
+		<span class="kw">let </span>transfer_amount =
+			existential_deposit.saturating_mul((ED_MULTIPLIER - <span class="number">1</span>).into()) + <span class="number">1u32</span>.into();
+
+		<span class="attr">#[extrinsic_call]
+		</span><span class="kw">_</span>(RawOrigin::Root, source_lookup, recipient_lookup, transfer_amount);
+
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>source), Zero::zero());
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>recipient), transfer_amount);
 	}
@@ -368,11 +427,10 @@
 	<span class="comment">// This benchmark performs the same operation as `transfer` in the worst case scenario,
 	// but additionally introduces many new users into the storage, increasing the the merkle
 	// trie and PoV size.
-	</span><span class="attr">#[extra]
-	</span>transfer_increasing_users {
+	</span><span class="attr">#[benchmark(extra)]
+	</span><span class="kw">fn </span>transfer_increasing_users(u: Linear&lt;<span class="number">0</span>, <span class="number">1_000</span>&gt;) {
 		<span class="comment">// 1_000 is not very much, but this upper bound can be controlled by the CLI.
-		</span><span class="kw">let </span>u <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1_000</span>;
-		<span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
+		</span><span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
 		<span class="kw">let </span>caller = whitelisted_caller();
 
 		<span class="comment">// Give some multiple of the existential deposit
@@ -383,17 +441,20 @@
 		// and reap this user.
 		</span><span class="kw">let </span>recipient: T::AccountId = account(<span class="string">&quot;recipient&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>recipient_lookup = T::Lookup::unlookup(recipient.clone());
-		<span class="kw">let </span>transfer_amount = existential_deposit.saturating_mul((ED_MULTIPLIER - <span class="number">1</span>).into()) + <span class="number">1u32</span>.into();
+		<span class="kw">let </span>transfer_amount =
+			existential_deposit.saturating_mul((ED_MULTIPLIER - <span class="number">1</span>).into()) + <span class="number">1u32</span>.into();
 
 		<span class="comment">// Create a bunch of users in storage.
-		</span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0 </span>.. u {
+		</span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..u {
 			<span class="comment">// The `account` function uses `blake2_256` to generate unique accounts, so these
 			// should be quite random and evenly distributed in the trie.
 			</span><span class="kw">let </span>new_user: T::AccountId = account(<span class="string">&quot;new_user&quot;</span>, i, SEED);
 			<span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>new_user, balance);
 		}
-	}: transfer(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount)
-	verify {
+
+		<span class="attr">#[extrinsic_call]
+		</span>transfer(RawOrigin::Signed(caller.clone()), recipient_lookup, transfer_amount);
+
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>caller), Zero::zero());
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>recipient), transfer_amount);
 	}
@@ -401,7 +462,8 @@
 	<span class="comment">// Benchmark `transfer_all` with the worst possible condition:
 	// * The recipient account is created
 	// * The sender is killed
-	</span>transfer_all {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>transfer_all() {
 		<span class="kw">let </span>caller = whitelisted_caller();
 		<span class="kw">let </span>recipient: T::AccountId = account(<span class="string">&quot;recipient&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>recipient_lookup = T::Lookup::unlookup(recipient.clone());
@@ -410,13 +472,16 @@
 		</span><span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
 		<span class="kw">let </span>balance = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
 		<span class="kw">let _ </span>= &lt;Balances&lt;T, I&gt; <span class="kw">as </span>Currency&lt;<span class="kw">_</span>&gt;&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>caller, balance);
-	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), recipient_lookup, <span class="bool-val">false</span>)
-	verify {
+
+		<span class="attr">#[extrinsic_call]
+		</span><span class="kw">_</span>(RawOrigin::Signed(caller.clone()), recipient_lookup, <span class="bool-val">false</span>);
+
 		<span class="macro">assert!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>caller).is_zero());
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>recipient), balance);
 	}
 
-	force_unreserve {
+	<span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>force_unreserve() {
 		<span class="kw">let </span>user: T::AccountId = account(<span class="string">&quot;user&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>user_lookup = T::Lookup::unlookup(user.clone());
 
@@ -430,17 +495,18 @@
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::reserved_balance(<span class="kw-2">&amp;</span>user), balance);
 		<span class="macro">assert!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>user).is_zero());
 
-	}: <span class="kw">_</span>(RawOrigin::Root, user_lookup, balance)
-	verify {
+		<span class="attr">#[extrinsic_call]
+		</span><span class="kw">_</span>(RawOrigin::Root, user_lookup, balance);
+
 		<span class="macro">assert!</span>(Balances::&lt;T, I&gt;::reserved_balance(<span class="kw-2">&amp;</span>user).is_zero());
 		<span class="macro">assert_eq!</span>(Balances::&lt;T, I&gt;::free_balance(<span class="kw-2">&amp;</span>user), balance);
 	}
 
-	<span class="macro">impl_benchmark_test_suite!</span>(
+	<span class="macro">impl_benchmark_test_suite! </span>{
 		Balances,
 		<span class="kw">crate</span>::tests_composite::ExtBuilder::default().build(),
 		<span class="kw">crate</span>::tests_composite::Test,
-	)
+	}
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="pallet_balances" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

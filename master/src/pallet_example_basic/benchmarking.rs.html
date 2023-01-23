@@ -77,6 +77,34 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -94,12 +122,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="doccomment">//! Benchmarking for pallet-example-basic.
+</span><span class="doccomment">//! Benchmarking for `pallet-example-basic`.
 
+</span><span class="comment">// Only enable this module for benchmarking.
 </span><span class="attr">#![cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 
 </span><span class="kw">use crate</span>::<span class="kw-2">*</span>;
-<span class="kw">use </span>frame_benchmarking::{benchmarks, whitelisted_caller};
+<span class="kw">use </span>frame_benchmarking::{impl_benchmark_test_suite, whitelisted_caller};
+<span class="kw">use </span>frame_support::benchmarking::{benchmarks, Linear};
 <span class="kw">use </span>frame_system::RawOrigin;
 
 <span class="comment">// To actually run this benchmark on pallet-example-basic, we need to put this pallet into the
@@ -112,15 +142,20 @@
 
 // Details on using the benchmarks macro can be seen at:
 //   https://paritytech.github.io/substrate/master/frame_benchmarking/trait.Benchmarking.html#tymethod.benchmarks
-</span><span class="macro">benchmarks! </span>{
+</span><span class="attr">#[benchmarks]
+</span><span class="kw">mod </span>benchmarks {
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+
 	<span class="comment">// This will measure the execution time of `set_dummy`.
-	</span>set_dummy_benchmark {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>set_dummy_benchmark() {
 		<span class="comment">// This is the benchmark setup phase.
 		// `set_dummy` is a constant time function, hence we hard-code some random value here.
 		</span><span class="kw">let </span>value = <span class="number">1000u32</span>.into();
-	}: set_dummy(RawOrigin::Root, value) <span class="comment">// The execution phase is just running `set_dummy` extrinsic call
-	</span>verify {
-		<span class="comment">// This is the optional benchmark verification phase, asserting certain states.
+		<span class="attr">#[extrinsic_call]
+		</span>set_dummy(RawOrigin::Root, value); <span class="comment">// The execution phase is just running `set_dummy` extrinsic call
+
+		// This is the optional benchmark verification phase, asserting certain states.
 		</span><span class="macro">assert_eq!</span>(Pallet::&lt;T&gt;::dummy(), <span class="prelude-val">Some</span>(value))
 	}
 
@@ -128,22 +163,43 @@
 	// The benchmark execution phase is shorthanded. When the name of the benchmark case is the same
 	// as the extrinsic call. `_(...)` is used to represent the extrinsic name.
 	// The benchmark verification phase is omitted.
-	</span>accumulate_dummy {
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>accumulate_dummy() {
 		<span class="kw">let </span>value = <span class="number">1000u32</span>.into();
 		<span class="comment">// The caller account is whitelisted for DB reads/write by the benchmarking macro.
 		</span><span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-	}: <span class="kw">_</span>(RawOrigin::Signed(caller), value)
+
+		<span class="comment">// You can use `_` if the name of the Call matches the benchmark name.
+		</span><span class="attr">#[extrinsic_call]
+		</span><span class="kw">_</span>(RawOrigin::Signed(caller), value);
+	}
+
+	<span class="doccomment">/// You can write helper functions in here since its a normal Rust module.
+	</span><span class="kw">fn </span>setup_vector(len: u32) -&gt; Vec&lt;u32&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>vector = Vec::&lt;u32&gt;::new();
+		<span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..len).rev() {
+			vector.push(i);
+		}
+		vector
+	}
 
 	<span class="comment">// This will measure the execution time of sorting a vector.
-	</span>sort_vector {
-		<span class="kw">let </span>x <span class="kw">in </span><span class="number">0 </span>.. <span class="number">10000</span>;
-		<span class="kw">let </span><span class="kw-2">mut </span>m = Vec::&lt;u32&gt;::new();
-		<span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..x).rev() {
-			m.push(i);
+	//
+	// Define `x` as a linear component with range `[0, =10_000]`. This means that the benchmarking
+	// will assume that the weight grows at a linear rate depending on `x`.
+	</span><span class="attr">#[benchmark]
+	</span><span class="kw">fn </span>sort_vector(x: Linear&lt;<span class="number">0</span>, <span class="number">10_000</span>&gt;) {
+		<span class="kw">let </span><span class="kw-2">mut </span>vector = setup_vector(x);
+
+		<span class="comment">// The benchmark execution phase could also be a closure with custom code:
+		</span><span class="attr">#[block]
+		</span>{
+			vector.sort();
 		}
-	}: {
-		<span class="comment">// The benchmark execution phase could also be a closure with custom code
-		</span>m.sort();
+
+		<span class="comment">// Check that it was sorted correctly. This will not be benchmarked and is just for
+		// verification.
+		</span>vector.windows(<span class="number">2</span>).for_each(|w| <span class="macro">assert!</span>(w[<span class="number">0</span>] &lt;= w[<span class="number">1</span>]));
 	}
 
 	<span class="comment">// This line generates test cases for benchmarking, and could be run by:
@@ -154,7 +210,7 @@
 	//
 	// The line generates three steps per benchmark, with repeat=1 and the three steps are
 	//   [low, mid, high] of the range.
-	</span><span class="macro">impl_benchmark_test_suite!</span>(Pallet, <span class="kw">crate</span>::tests::new_test_ext(), <span class="kw">crate</span>::tests::Test)
+	</span><span class="macro">impl_benchmark_test_suite!</span>(Pallet, <span class="kw">crate</span>::tests::new_test_ext(), <span class="kw">crate</span>::tests::Test);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="pallet_example_basic" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
