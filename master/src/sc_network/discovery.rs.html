@@ -1235,7 +1235,7 @@
 	local_peer_id: PeerId,
 	permanent_addresses: Vec&lt;(PeerId, Multiaddr)&gt;,
 	dht_random_walk: bool,
-	allow_private_ipv4: bool,
+	allow_private_ip: bool,
 	allow_non_globals_in_dht: bool,
 	discovery_only_if_under_num: u64,
 	enable_mdns: bool,
@@ -1250,7 +1250,7 @@
 			local_peer_id: local_public_key.to_peer_id(),
 			permanent_addresses: Vec::new(),
 			dht_random_walk: <span class="bool-val">true</span>,
-			allow_private_ipv4: <span class="bool-val">true</span>,
+			allow_private_ip: <span class="bool-val">true</span>,
 			allow_non_globals_in_dht: <span class="bool-val">false</span>,
 			discovery_only_if_under_num: std::u64::MAX,
 			enable_mdns: <span class="bool-val">false</span>,
@@ -1281,9 +1281,9 @@
 		<span class="self">self
 	</span>}
 
-	<span class="doccomment">/// Should private IPv4 addresses be reported?
-	</span><span class="kw">pub fn </span>allow_private_ipv4(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: bool) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
-		<span class="self">self</span>.allow_private_ipv4 = value;
+	<span class="doccomment">/// Should private IPv4/IPv6 addresses be reported?
+	</span><span class="kw">pub fn </span>allow_private_ip(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: bool) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
+		<span class="self">self</span>.allow_private_ip = value;
 		<span class="self">self
 	</span>}
 
@@ -1328,7 +1328,7 @@
 			local_peer_id,
 			permanent_addresses,
 			dht_random_walk,
-			allow_private_ipv4,
+			allow_private_ip,
 			allow_non_globals_in_dht,
 			discovery_only_if_under_num,
 			enable_mdns,
@@ -1370,7 +1370,7 @@
 			pending_events: VecDeque::new(),
 			local_peer_id,
 			num_connections: <span class="number">0</span>,
-			allow_private_ipv4,
+			allow_private_ip,
 			discovery_only_if_under_num,
 			mdns: <span class="kw">if </span>enable_mdns {
 				<span class="kw">match </span>TokioMdns::new(mdns::Config::default()) {
@@ -1417,9 +1417,9 @@
 	</span>local_peer_id: PeerId,
 	<span class="doccomment">/// Number of nodes we&#39;re currently connected to.
 	</span>num_connections: u64,
-	<span class="doccomment">/// If false, `addresses_of_peer` won&#39;t return any private IPv4 address, except for the ones
-	/// stored in `permanent_addresses` or `ephemeral_addresses`.
-	</span>allow_private_ipv4: bool,
+	<span class="doccomment">/// If false, `addresses_of_peer` won&#39;t return any private IPv4/IPv6 address, except for the
+	/// ones stored in `permanent_addresses` or `ephemeral_addresses`.
+	</span>allow_private_ip: bool,
 	<span class="doccomment">/// Number of active connections over which we interrupt the discovery process.
 	</span>discovery_only_if_under_num: u64,
 	<span class="doccomment">/// Should non-global addresses be added to the DHT?
@@ -1645,7 +1645,7 @@
 				list_to_filter.extend(mdns.addresses_of_peer(peer_id));
 			}
 
-			<span class="kw">if </span>!<span class="self">self</span>.allow_private_ipv4 {
+			<span class="kw">if </span>!<span class="self">self</span>.allow_private_ip {
 				list_to_filter.retain(|addr| <span class="kw">match </span>addr.iter().next() {
 					<span class="prelude-val">Some</span>(Protocol::Ip4(addr)) <span class="kw">if </span>!IpNetwork::from(addr).is_global() =&gt; <span class="bool-val">false</span>,
 					<span class="prelude-val">Some</span>(Protocol::Ip6(addr)) <span class="kw">if </span>!IpNetwork::from(addr).is_global() =&gt; <span class="bool-val">false</span>,
@@ -2086,7 +2086,7 @@
 					<span class="kw">let </span><span class="kw-2">mut </span>config = DiscoveryConfig::new(keypair.public());
 					config
 						.with_permanent_addresses(first_swarm_peer_id_and_addr.clone())
-						.allow_private_ipv4(<span class="bool-val">true</span>)
+						.allow_private_ip(<span class="bool-val">true</span>)
 						.allow_non_globals_in_dht(<span class="bool-val">true</span>)
 						.discovery_limit(<span class="number">50</span>)
 						.with_kademlia(genesis_hash, fork_id, <span class="kw-2">&amp;</span>protocol_id);
@@ -2204,7 +2204,7 @@
 			<span class="kw">let </span>keypair = Keypair::generate_ed25519();
 			<span class="kw">let </span><span class="kw-2">mut </span>config = DiscoveryConfig::new(keypair.public());
 			config
-				.allow_private_ipv4(<span class="bool-val">true</span>)
+				.allow_private_ip(<span class="bool-val">true</span>)
 				.allow_non_globals_in_dht(<span class="bool-val">true</span>)
 				.discovery_limit(<span class="number">50</span>)
 				.with_kademlia(supported_genesis_hash, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>supported_protocol_id);
