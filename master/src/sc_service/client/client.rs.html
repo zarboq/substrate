@@ -2152,6 +2152,9 @@
 <a href="#2152" id="2152">2152</a>
 <a href="#2153" id="2153">2153</a>
 <a href="#2154" id="2154">2154</a>
+<a href="#2155" id="2155">2155</a>
+<a href="#2156" id="2156">2156</a>
+<a href="#2157" id="2157">2157</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2647,7 +2650,8 @@
 
 	<span class="doccomment">/// Get the RuntimeVersion at a given block.
 	</span><span class="kw">pub fn </span>runtime_version_at(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; sp_blockchain::Result&lt;RuntimeVersion&gt; {
-		CallExecutor::runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>.executor, id)
+		<span class="kw">let </span>hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(id)<span class="question-mark">?</span>;
+		CallExecutor::runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>.executor, hash)
 	}
 
 	<span class="doccomment">/// Apply a checked and validated block to an operation. If a justification is provided
@@ -3395,7 +3399,7 @@
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; sp_blockchain::Result&lt;(Vec&lt;u8&gt;, StorageProof)&gt; {
-		<span class="self">self</span>.executor.prove_execution(<span class="kw-2">&amp;</span>BlockId::Hash(hash), method, call_data)
+		<span class="self">self</span>.executor.prove_execution(hash, method, call_data)
 	}
 
 	<span class="kw">fn </span>read_proof_collection(
@@ -3880,9 +3884,10 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		params: CallApiAtParams&lt;Block, B::State&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_api::ApiError&gt; {
+		<span class="kw">let </span>at_hash = <span class="self">self</span>.expect_block_hash_from_id(params.at)<span class="question-mark">?</span>;
 		<span class="self">self</span>.executor
 			.contextual_call(
-				params.at,
+				at_hash,
 				params.function,
 				<span class="kw-2">&amp;</span>params.arguments,
 				params.overlayed_changes,
@@ -3894,7 +3899,8 @@
 	}
 
 	<span class="kw">fn </span>runtime_version_at(<span class="kw-2">&amp;</span><span class="self">self</span>, at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeVersion, sp_api::ApiError&gt; {
-		CallExecutor::runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>.executor, at).map_err(Into::into)
+		<span class="kw">let </span>hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
+		CallExecutor::runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>.executor, hash).map_err(Into::into)
 	}
 
 	<span class="kw">fn </span>state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::StateBackend, sp_api::ApiError&gt; {

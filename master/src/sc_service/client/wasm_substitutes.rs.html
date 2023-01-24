@@ -185,10 +185,7 @@
 <span class="kw">use </span>sc_executor::RuntimeVersionOf;
 <span class="kw">use </span>sp_blockchain::{HeaderBackend, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>sp_core::traits::{FetchRuntimeCode, RuntimeCode, WrappedRuntimeCode};
-<span class="kw">use </span>sp_runtime::{
-	generic::BlockId,
-	traits::{Block <span class="kw">as </span>BlockT, NumberFor},
-};
+<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
 <span class="kw">use </span>sp_state_machine::BasicExternalities;
 <span class="kw">use </span>sp_version::RuntimeVersion;
 <span class="kw">use </span>std::{
@@ -217,10 +214,13 @@
 		RuntimeCode { code_fetcher: <span class="self">self</span>, hash: <span class="self">self</span>.hash.clone(), heap_pages }
 	}
 
-	<span class="doccomment">/// Returns `true` when the substitute matches for the given `block_id`.
-	</span><span class="kw">fn </span>matches(<span class="kw-2">&amp;</span><span class="self">self</span>, block_id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;, backend: <span class="kw-2">&amp;</span><span class="kw">impl </span>backend::Backend&lt;Block&gt;) -&gt; bool {
-		<span class="kw">let </span>requested_block_number =
-			backend.blockchain().block_number_from_id(block_id).ok().flatten();
+	<span class="doccomment">/// Returns `true` when the substitute matches for the given `hash`.
+	</span><span class="kw">fn </span>matches(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
+		backend: <span class="kw-2">&amp;</span><span class="kw">impl </span>backend::Backend&lt;Block&gt;,
+	) -&gt; bool {
+		<span class="kw">let </span>requested_block_number = backend.blockchain().number(hash).ok().flatten();
 
 		<span class="prelude-val">Some</span>(<span class="self">self</span>.block_number) &lt;= requested_block_number
 	}
@@ -310,10 +310,10 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		spec: u32,
 		pages: <span class="prelude-ty">Option</span>&lt;u64&gt;,
-		block_id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
+		hash: Block::Hash,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;(RuntimeCode&lt;<span class="lifetime">&#39;_</span>&gt;, RuntimeVersion)&gt; {
 		<span class="kw">let </span>s = <span class="self">self</span>.substitutes.get(<span class="kw-2">&amp;</span>spec)<span class="question-mark">?</span>;
-		s.matches(block_id, <span class="kw-2">&amp;*</span><span class="self">self</span>.backend)
+		s.matches(hash, <span class="kw-2">&amp;*</span><span class="self">self</span>.backend)
 			.then(|| (s.runtime_code(pages), s.version.clone()))
 	}
 

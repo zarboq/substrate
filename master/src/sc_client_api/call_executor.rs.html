@@ -116,7 +116,7 @@
 </span><span class="doccomment">//! A method call executor interface.
 
 </span><span class="kw">use </span>sc_executor::{RuntimeVersion, RuntimeVersionOf};
-<span class="kw">use </span>sp_runtime::{generic::BlockId, traits::Block <span class="kw">as </span>BlockT};
+<span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 <span class="kw">use </span>sp_state_machine::{ExecutionStrategy, OverlayedChanges, StorageProof};
 <span class="kw">use </span>std::cell::RefCell;
 
@@ -151,7 +151,7 @@
 	/// No changes are made.
 	</span><span class="kw">fn </span>call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;,
+		at_hash: B::Hash,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 		strategy: ExecutionStrategy,
@@ -164,7 +164,7 @@
 	/// of the execution context.
 	</span><span class="kw">fn </span>contextual_call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		at: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;,
+		at_hash: B::Hash,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 		changes: <span class="kw-2">&amp;</span>RefCell&lt;OverlayedChanges&gt;,
@@ -180,14 +180,14 @@
 	<span class="doccomment">/// Extract RuntimeVersion of given block
 	///
 	/// No changes are made.
-	</span><span class="kw">fn </span>runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeVersion, sp_blockchain::Error&gt;;
+	</span><span class="kw">fn </span>runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>, at_hash: B::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeVersion, sp_blockchain::Error&gt;;
 
 	<span class="doccomment">/// Prove the execution of the given `method`.
 	///
 	/// No changes are made.
 	</span><span class="kw">fn </span>prove_execution(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		at: <span class="kw-2">&amp;</span>BlockId&lt;B&gt;,
+		at_hash: B::Hash,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, StorageProof), sp_blockchain::Error&gt;;

@@ -490,10 +490,6 @@
 <a href="#490" id="490">490</a>
 <a href="#491" id="491">491</a>
 <a href="#492" id="492">492</a>
-<a href="#493" id="493">493</a>
-<a href="#494" id="494">494</a>
-<a href="#495" id="495">495</a>
-<a href="#496" id="496">496</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -577,13 +573,13 @@
 	</span><span class="kw">fn </span>check_override&lt;<span class="lifetime">&#39;a</span>&gt;(
 		<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
 		onchain_code: RuntimeCode&lt;<span class="lifetime">&#39;a</span>&gt;,
-		id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
+		hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
 	) -&gt; sp_blockchain::Result&lt;(RuntimeCode&lt;<span class="lifetime">&#39;a</span>&gt;, RuntimeVersion)&gt;
 	<span class="kw">where
 		</span>Block: BlockT,
 		B: backend::Backend&lt;Block&gt;,
 	{
-		<span class="kw">let </span>on_chain_version = <span class="self">self</span>.on_chain_runtime_version(id)<span class="question-mark">?</span>;
+		<span class="kw">let </span>on_chain_version = <span class="self">self</span>.on_chain_runtime_version(hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span>code_and_version = <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="self">self</span>.wasm_override.as_ref().as_ref().and_then(|o| {
 			o.get(
 				<span class="kw-2">&amp;</span>on_chain_version.spec_version,
@@ -591,18 +587,18 @@
 				<span class="kw-2">&amp;</span>on_chain_version.spec_name,
 			)
 		}) {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;wasm_overrides&quot;</span>, <span class="string">&quot;using WASM override for block {}&quot;</span>, id);
+			<span class="macro">log::debug!</span>(target: <span class="string">&quot;wasm_overrides&quot;</span>, <span class="string">&quot;using WASM override for block {}&quot;</span>, hash);
 			d
 		} <span class="kw">else if let </span><span class="prelude-val">Some</span>(s) =
 			<span class="self">self</span>.wasm_substitutes
-				.get(on_chain_version.spec_version, onchain_code.heap_pages, id)
+				.get(on_chain_version.spec_version, onchain_code.heap_pages, hash)
 		{
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;wasm_substitutes&quot;</span>, <span class="string">&quot;Using WASM substitute for block {:?}&quot;</span>, id);
+			<span class="macro">log::debug!</span>(target: <span class="string">&quot;wasm_substitutes&quot;</span>, <span class="string">&quot;Using WASM substitute for block {:?}&quot;</span>, hash);
 			s
 		} <span class="kw">else </span>{
 			<span class="macro">log::debug!</span>(
 				target: <span class="string">&quot;wasm_overrides&quot;</span>,
-				<span class="string">&quot;Neither WASM override nor substitute available for block {id}, using onchain code&quot;</span>,
+				<span class="string">&quot;Neither WASM override nor substitute available for block {hash}, using onchain code&quot;</span>,
 			);
 			(onchain_code, on_chain_version)
 		};
@@ -611,14 +607,10 @@
 	}
 
 	<span class="doccomment">/// Returns the on chain runtime version.
-	</span><span class="kw">fn </span>on_chain_runtime_version(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
-	) -&gt; sp_blockchain::Result&lt;RuntimeVersion&gt; {
+	</span><span class="kw">fn </span>on_chain_runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; sp_blockchain::Result&lt;RuntimeVersion&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>overlay = OverlayedChanges::default();
 
-		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(id)<span class="question-mark">?</span>;
-		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
+		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>cache = StorageTransactionCache::&lt;Block, B::State&gt;::default();
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = Ext::new(<span class="kw-2">&amp;mut </span>overlay, <span class="kw-2">&amp;mut </span>cache, <span class="kw-2">&amp;</span>state, <span class="prelude-val">None</span>);
 		<span class="kw">let </span>state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(<span class="kw-2">&amp;</span>state);
@@ -662,21 +654,21 @@
 
 	<span class="kw">fn </span>call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
+		at_hash: Block::Hash,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 		strategy: ExecutionStrategy,
 	) -&gt; sp_blockchain::Result&lt;Vec&lt;u8&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>changes = OverlayedChanges::default();
-		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
-		<span class="kw">let </span>at_number = <span class="self">self</span>.backend.blockchain().expect_block_number_from_id(at)<span class="question-mark">?</span>;
+		<span class="kw">let </span>at_number =
+			<span class="self">self</span>.backend.blockchain().expect_block_number_from_id(<span class="kw-2">&amp;</span>BlockId::Hash(at_hash))<span class="question-mark">?</span>;
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(<span class="kw-2">&amp;</span>state);
 		<span class="kw">let </span>runtime_code =
 			state_runtime_code.runtime_code().map_err(sp_blockchain::Error::RuntimeCode)<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>runtime_code = <span class="self">self</span>.check_override(runtime_code, at)<span class="question-mark">?</span>.<span class="number">0</span>;
+		<span class="kw">let </span>runtime_code = <span class="self">self</span>.check_override(runtime_code, at_hash)<span class="question-mark">?</span>.<span class="number">0</span>;
 
 		<span class="kw">let </span>extensions = <span class="self">self</span>.execution_extensions.extensions(
 			at_hash,
@@ -702,7 +694,7 @@
 
 	<span class="kw">fn </span>contextual_call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
+		at_hash: Block::Hash,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 		changes: <span class="kw-2">&amp;</span>RefCell&lt;OverlayedChanges&gt;,
@@ -712,8 +704,8 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_blockchain::Error&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>storage_transaction_cache = storage_transaction_cache.map(|c| c.borrow_mut());
 
-		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
-		<span class="kw">let </span>at_number = <span class="self">self</span>.backend.blockchain().expect_block_number_from_id(at)<span class="question-mark">?</span>;
+		<span class="kw">let </span>at_number =
+			<span class="self">self</span>.backend.blockchain().expect_block_number_from_id(<span class="kw-2">&amp;</span>BlockId::Hash(at_hash))<span class="question-mark">?</span>;
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>(execution_manager, extensions) =
@@ -728,7 +720,7 @@
 
 		<span class="kw">let </span>runtime_code =
 			state_runtime_code.runtime_code().map_err(sp_blockchain::Error::RuntimeCode)<span class="question-mark">?</span>;
-		<span class="kw">let </span>runtime_code = <span class="self">self</span>.check_override(runtime_code, at)<span class="question-mark">?</span>.<span class="number">0</span>;
+		<span class="kw">let </span>runtime_code = <span class="self">self</span>.check_override(runtime_code, at_hash)<span class="question-mark">?</span>.<span class="number">0</span>;
 
 		<span class="kw">match </span>recorder {
 			<span class="prelude-val">Some</span>(recorder) =&gt; {
@@ -771,24 +763,23 @@
 		.map_err(Into::into)
 	}
 
-	<span class="kw">fn </span>runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; sp_blockchain::Result&lt;RuntimeVersion&gt; {
-		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(id)<span class="question-mark">?</span>;
+	<span class="kw">fn </span>runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>, at_hash: Block::Hash) -&gt; sp_blockchain::Result&lt;RuntimeVersion&gt; {
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span>state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(<span class="kw-2">&amp;</span>state);
 
 		<span class="kw">let </span>runtime_code =
 			state_runtime_code.runtime_code().map_err(sp_blockchain::Error::RuntimeCode)<span class="question-mark">?</span>;
-		<span class="self">self</span>.check_override(runtime_code, id).map(|(<span class="kw">_</span>, v)| v)
+		<span class="self">self</span>.check_override(runtime_code, at_hash).map(|(<span class="kw">_</span>, v)| v)
 	}
 
 	<span class="kw">fn </span>prove_execution(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;,
+		at_hash: Block::Hash,
 		method: <span class="kw-2">&amp;</span>str,
 		call_data: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; sp_blockchain::Result&lt;(Vec&lt;u8&gt;, StorageProof)&gt; {
-		<span class="kw">let </span>at_hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
-		<span class="kw">let </span>at_number = <span class="self">self</span>.backend.blockchain().expect_block_number_from_id(at)<span class="question-mark">?</span>;
+		<span class="kw">let </span>at_number =
+			<span class="self">self</span>.backend.blockchain().expect_block_number_from_id(<span class="kw-2">&amp;</span>BlockId::Hash(at_hash))<span class="question-mark">?</span>;
 		<span class="kw">let </span>state = <span class="self">self</span>.backend.state_at(at_hash)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>trie_backend = state.as_trie_backend();
@@ -796,7 +787,7 @@
 		<span class="kw">let </span>state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(trie_backend);
 		<span class="kw">let </span>runtime_code =
 			state_runtime_code.runtime_code().map_err(sp_blockchain::Error::RuntimeCode)<span class="question-mark">?</span>;
-		<span class="kw">let </span>runtime_code = <span class="self">self</span>.check_override(runtime_code, at)<span class="question-mark">?</span>.<span class="number">0</span>;
+		<span class="kw">let </span>runtime_code = <span class="self">self</span>.check_override(runtime_code, at_hash)<span class="question-mark">?</span>.<span class="number">0</span>;
 
 		sp_state_machine::prove_execution_on_trie_backend(
 			trie_backend,
@@ -836,7 +827,7 @@
 	E: CodeExecutor + RuntimeVersionOf + Clone + <span class="lifetime">&#39;static</span>,
 	Block: BlockT,
 {
-	<span class="kw">fn </span>runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>, at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;sp_version::RuntimeVersion, String&gt; {
+	<span class="kw">fn </span>runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>, at: Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;sp_version::RuntimeVersion, String&gt; {
 		CallExecutor::runtime_version(<span class="self">self</span>, at).map_err(|e| e.to_string())
 	}
 }
@@ -855,6 +846,7 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+	<span class="kw">use </span>backend::Backend;
 	<span class="kw">use </span>sc_client_api::in_mem;
 	<span class="kw">use </span>sc_executor::{NativeElseWasmExecutor, WasmExecutionMethod};
 	<span class="kw">use </span>sp_core::{
@@ -928,7 +920,7 @@
 		};
 
 		<span class="kw">let </span>check = call_executor
-			.check_override(onchain_code, <span class="kw-2">&amp;</span>BlockId::Number(Default::default()))
+			.check_override(onchain_code, backend.blockchain().info().genesis_hash)
 			.expect(<span class="string">&quot;RuntimeCode override&quot;</span>)
 			.<span class="number">0</span>;
 
