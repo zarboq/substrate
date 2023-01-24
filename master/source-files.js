@@ -169,6 +169,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_service":["",[["chain_ops",[],["check_block.rs","export_blocks.rs","export_raw_state.rs","import_blocks.rs","mod.rs","revert_chain.rs"]],["client",[],["block_rules.rs","call_executor.rs","client.rs","genesis.rs","mod.rs","wasm_override.rs","wasm_substitutes.rs"]],["task_manager",[],["mod.rs","prometheus_future.rs"]]],["builder.rs","config.rs","error.rs","lib.rs","metrics.rs"]],\
 "sc_service_test":["",[],["lib.rs"]],\
 "sc_state_db":["",[],["lib.rs","noncanonical.rs","pruning.rs"]],\
+"sc_storage_monitor":["",[],["lib.rs"]],\
 "sc_sync_state_rpc":["",[],["lib.rs"]],\
 "sc_sysinfo":["",[],["lib.rs","sysinfo.rs","sysinfo_linux.rs"]],\
 "sc_telemetry":["",[],["endpoints.rs","error.rs","lib.rs","node.rs","transport.rs"]],\

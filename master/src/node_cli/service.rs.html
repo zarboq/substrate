@@ -818,6 +818,13 @@
 <a href="#818" id="818">818</a>
 <a href="#819" id="819">819</a>
 <a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -840,7 +847,8 @@
 
 </span><span class="doccomment">//! Service implementation. Specialized wrapper over substrate service.
 
-</span><span class="kw">use </span>codec::Encode;
+</span><span class="kw">use </span><span class="kw">crate</span>::Cli;
+<span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 <span class="kw">use </span>frame_system_rpc_runtime_api::AccountNonceApi;
 <span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
@@ -1376,12 +1384,18 @@
 }
 
 <span class="doccomment">/// Builds a new service for a full client.
-</span><span class="kw">pub fn </span>new_full(
-	config: Configuration,
-	disable_hardware_benchmarks: bool,
-) -&gt; <span class="prelude-ty">Result</span>&lt;TaskManager, ServiceError&gt; {
-	new_full_base(config, disable_hardware_benchmarks, |<span class="kw">_</span>, <span class="kw">_</span>| ())
-		.map(|NewFullBase { task_manager, .. }| task_manager)
+</span><span class="kw">pub fn </span>new_full(config: Configuration, cli: Cli) -&gt; <span class="prelude-ty">Result</span>&lt;TaskManager, ServiceError&gt; {
+	<span class="kw">let </span>database_source = config.database.clone();
+	<span class="kw">let </span>task_manager = new_full_base(config, cli.no_hardware_benchmarks, |<span class="kw">_</span>, <span class="kw">_</span>| ())
+		.map(|NewFullBase { task_manager, .. }| task_manager)<span class="question-mark">?</span>;
+
+	sc_storage_monitor::StorageMonitorService::try_spawn(
+		cli.storage_monitor,
+		database_source,
+		<span class="kw-2">&amp;</span>task_manager.spawn_essential_handle(),
+	)<span class="question-mark">?</span>;
+
+	<span class="prelude-val">Ok</span>(task_manager)
 }
 
 <span class="attr">#[cfg(test)]
