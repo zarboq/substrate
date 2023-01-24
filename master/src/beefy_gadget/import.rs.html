@@ -164,6 +164,11 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -201,6 +206,7 @@
 <span class="kw">use crate</span>::{
 	communication::notification::BeefyVersionedFinalityProofSender,
 	justification::{decode_and_verify_finality_proof, BeefyVersionedFinalityProof},
+	LOG_TARGET,
 };
 
 <span class="doccomment">/// A block-import handler for BEEFY.
@@ -304,16 +310,20 @@
 			(<span class="prelude-val">Some</span>(encoded), ImportResult::Imported(<span class="kw">_</span>)) =&gt; {
 				<span class="kw">if let </span><span class="prelude-val">Ok</span>(proof) = <span class="self">self</span>.decode_and_verify(<span class="kw-2">&amp;</span>encoded, number, hash) {
 					<span class="comment">// The proof is valid and the block is imported and final, we can import.
-					</span><span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 import justif {:?} for block number {:?}.&quot;</span>, proof, number);
+					</span><span class="macro">debug!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;🥩 import justif {:?} for block number {:?}.&quot;</span>, proof, number
+					);
 					<span class="comment">// Send the justification to the BEEFY voter for processing.
 					</span><span class="self">self</span>.justification_sender
 						.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(proof))
 						.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
 				} <span class="kw">else </span>{
 					<span class="macro">debug!</span>(
-						target: <span class="string">&quot;beefy&quot;</span>,
+						target: LOG_TARGET,
 						<span class="string">&quot;🥩 error decoding justification: {:?} for imported block {:?}&quot;</span>,
-						encoded, number,
+						encoded,
+						number,
 					);
 				}
 			},

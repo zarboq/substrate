@@ -1530,6 +1530,26 @@
 <a href="#1530" id="1530">1530</a>
 <a href="#1531" id="1531">1531</a>
 <a href="#1532" id="1532">1532</a>
+<a href="#1533" id="1533">1533</a>
+<a href="#1534" id="1534">1534</a>
+<a href="#1535" id="1535">1535</a>
+<a href="#1536" id="1536">1536</a>
+<a href="#1537" id="1537">1537</a>
+<a href="#1538" id="1538">1538</a>
+<a href="#1539" id="1539">1539</a>
+<a href="#1540" id="1540">1540</a>
+<a href="#1541" id="1541">1541</a>
+<a href="#1542" id="1542">1542</a>
+<a href="#1543" id="1543">1543</a>
+<a href="#1544" id="1544">1544</a>
+<a href="#1545" id="1545">1545</a>
+<a href="#1546" id="1546">1546</a>
+<a href="#1547" id="1547">1547</a>
+<a href="#1548" id="1548">1548</a>
+<a href="#1549" id="1549">1549</a>
+<a href="#1550" id="1550">1550</a>
+<a href="#1551" id="1551">1551</a>
+<a href="#1552" id="1552">1552</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -1559,7 +1579,7 @@
 	metric_inc, metric_set,
 	metrics::Metrics,
 	round::Rounds,
-	BeefyVoterLinks,
+	BeefyVoterLinks, LOG_TARGET,
 };
 <span class="kw">use </span>beefy_primitives::{
 	crypto::{AuthorityId, Signature},
@@ -1661,7 +1681,7 @@
 				</span>min_block_delta: min_block_delta.max(<span class="number">1</span>),
 			})
 		} <span class="kw">else </span>{
-			<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Invalid sessions queue: {:?}.&quot;</span>, sessions);
+			<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Invalid sessions queue: {:?}.&quot;</span>, sessions);
 			<span class="prelude-val">None
 		</span>}
 	}
@@ -1759,7 +1779,7 @@
 		<span class="kw">let </span>rounds = <span class="kw">if let </span><span class="prelude-val">Some</span>(r) = <span class="self">self</span>.sessions.front() {
 			r
 		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 No voting round started&quot;</span>);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 No voting round started&quot;</span>);
 			<span class="kw">return </span><span class="prelude-val">None
 		</span>};
 
@@ -1767,7 +1787,7 @@
 		</span><span class="kw">let </span>target =
 			vote_target(best_grandpa, best_beefy, rounds.session_start(), <span class="self">self</span>.min_block_delta);
 		<span class="macro">trace!</span>(
-			target: <span class="string">&quot;beefy&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;🥩 best beefy: #{:?}, best finalized: #{:?}, current_vote_target: {:?}&quot;</span>,
 			best_beefy,
 			best_grandpa,
@@ -1937,7 +1957,7 @@
 
 		<span class="kw">if </span>store.intersection(<span class="kw-2">&amp;</span>active).count() == <span class="number">0 </span>{
 			<span class="kw">let </span>msg = <span class="string">&quot;no authority public key found in store&quot;</span>.to_string();
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 for block {:?} {}&quot;</span>, block, msg);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 for block {:?} {}&quot;</span>, block, msg);
 			<span class="prelude-val">Err</span>(Error::Keystore(msg))
 		} <span class="kw">else </span>{
 			<span class="prelude-val">Ok</span>(())
@@ -1950,13 +1970,14 @@
 		validator_set: ValidatorSet&lt;AuthorityId&gt;,
 		new_session_start: NumberFor&lt;B&gt;,
 	) {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 New active validator set: {:?}&quot;</span>, validator_set);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 New active validator set: {:?}&quot;</span>, validator_set);
 
 		<span class="comment">// BEEFY should finalize a mandatory block during each session.
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(active_session) = <span class="self">self</span>.active_rounds() {
 			<span class="kw">if </span>!active_session.mandatory_done() {
 				<span class="macro">debug!</span>(
-					target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 New session {} while active session {} is still lagging.&quot;</span>,
+					target: LOG_TARGET,
+					<span class="string">&quot;🥩 New session {} while active session {} is still lagging.&quot;</span>,
 					validator_set.id(),
 					active_session.validator_set_id(),
 				);
@@ -1964,7 +1985,7 @@
 			}
 		}
 
-		<span class="kw">if </span><span class="macro">log_enabled!</span>(target: <span class="string">&quot;beefy&quot;</span>, log::Level::Debug) {
+		<span class="kw">if </span><span class="macro">log_enabled!</span>(target: LOG_TARGET, log::Level::Debug) {
 			<span class="comment">// verify the new validator set - only do it if we&#39;re also logging the warning
 			</span><span class="kw">let _ </span>= <span class="self">self</span>.verify_validator_set(<span class="kw-2">&amp;</span>new_session_start, <span class="kw-2">&amp;</span>validator_set);
 		}
@@ -1975,14 +1996,15 @@
 			.add_session(Rounds::new(new_session_start, validator_set));
 		<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_validator_set_id, id);
 		<span class="macro">info!</span>(
-			target: <span class="string">&quot;beefy&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;🥩 New Rounds for validator set id: {:?} with session_start {:?}&quot;</span>,
-			id, new_session_start
+			id,
+			new_session_start
 		);
 	}
 
 	<span class="kw">fn </span>handle_finality_notification(<span class="kw-2">&amp;mut </span><span class="self">self</span>, notification: <span class="kw-2">&amp;</span>FinalityNotification&lt;B&gt;) {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Finality notification: {:?}&quot;</span>, notification);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Finality notification: {:?}&quot;</span>, notification);
 		<span class="kw">let </span>header = <span class="kw-2">&amp;</span>notification.header;
 
 		<span class="kw">if </span><span class="kw-2">*</span>header.number() &gt; <span class="self">self</span>.best_grandpa_block() {
@@ -2023,14 +2045,17 @@
 				<span class="bool-val">false</span>,
 			)<span class="question-mark">?</span>,
 			RoundAction::Enqueue =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer vote for round: {:?}.&quot;</span>, block_num);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer vote for round: {:?}.&quot;</span>, block_num);
 				<span class="kw">if </span><span class="self">self</span>.pending_votes.len() &lt; MAX_BUFFERED_VOTE_ROUNDS {
 					<span class="kw">let </span>votes_vec = <span class="self">self</span>.pending_votes.entry(block_num).or_default();
 					<span class="kw">if </span>votes_vec.try_push(vote).is_err() {
-						<span class="macro">warn!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer vote dropped for round: {:?}&quot;</span>, block_num)
+						<span class="macro">warn!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;🥩 Buffer vote dropped for round: {:?}&quot;</span>, block_num
+						)
 					}
 				} <span class="kw">else </span>{
-					<span class="macro">warn!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer vote dropped for round: {:?}.&quot;</span>, block_num);
+					<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer vote dropped for round: {:?}.&quot;</span>, block_num);
 				}
 			},
 			RoundAction::Drop =&gt; (),
@@ -2052,15 +2077,18 @@
 		<span class="kw">let </span>best_grandpa = <span class="self">self</span>.best_grandpa_block();
 		<span class="kw">match </span><span class="self">self</span>.voting_oracle().triage_round(block_num, best_grandpa)<span class="question-mark">? </span>{
 			RoundAction::Process =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Process justification for round: {:?}.&quot;</span>, block_num);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Process justification for round: {:?}.&quot;</span>, block_num);
 				<span class="self">self</span>.finalize(justification)<span class="question-mark">?
 			</span>},
 			RoundAction::Enqueue =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer justification for round: {:?}.&quot;</span>, block_num);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer justification for round: {:?}.&quot;</span>, block_num);
 				<span class="kw">if </span><span class="self">self</span>.pending_justifications.len() &lt; MAX_BUFFERED_JUSTIFICATIONS {
 					<span class="self">self</span>.pending_justifications.entry(block_num).or_insert(justification);
 				} <span class="kw">else </span>{
-					<span class="macro">warn!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Buffer justification dropped for round: {:?}.&quot;</span>, block_num);
+					<span class="macro">warn!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;🥩 Buffer justification dropped for round: {:?}.&quot;</span>, block_num
+					);
 				}
 			},
 			RoundAction::Drop =&gt; (),
@@ -2098,7 +2126,10 @@
 
 				<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_round_concluded, block_num);
 
-				<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Round #{} concluded, finality_proof: {:?}.&quot;</span>, round.<span class="number">1</span>, finality_proof);
+				<span class="macro">info!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;🥩 Round #{} concluded, finality_proof: {:?}.&quot;</span>, round.<span class="number">1</span>, finality_proof
+				);
 
 				<span class="comment">// We created the `finality_proof` and know to be valid.
 				// New state is persisted after finalization.
@@ -2159,7 +2190,10 @@
 					<span class="self">self</span>.backend
 						.append_justification(hash, (BEEFY_ENGINE_ID, finality_proof.encode()))
 				}) {
-				<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Error {:?} on appending justification: {:?}&quot;</span>, e, finality_proof);
+				<span class="macro">error!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;🥩 Error {:?} on appending justification: {:?}&quot;</span>, e, finality_proof
+				);
 			}
 
 			<span class="self">self</span>.links
@@ -2167,7 +2201,7 @@
 				.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(finality_proof))
 				.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
 		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Can&#39;t set best beefy to older: {}&quot;</span>, block_num);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Can&#39;t set best beefy to older: {}&quot;</span>, block_num);
 		}
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2198,9 +2232,9 @@
 		</span><span class="kw">if </span>!<span class="self">self</span>.pending_justifications.is_empty() {
 			<span class="kw">let </span>justifs_to_handle = to_process_for(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pending_justifications, interval, _ph);
 			<span class="kw">for </span>(num, justification) <span class="kw">in </span>justifs_to_handle.into_iter() {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Handle buffered justification for: {:?}.&quot;</span>, num);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Handle buffered justification for: {:?}.&quot;</span>, num);
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.finalize(justification) {
-					<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Error finalizing block: {}&quot;</span>, err);
+					<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error finalizing block: {}&quot;</span>, err);
 				}
 			}
 			<span class="comment">// Possibly new interval after processing justifications.
@@ -2211,14 +2245,14 @@
 		</span><span class="kw">if </span>!<span class="self">self</span>.pending_votes.is_empty() {
 			<span class="kw">let </span>votes_to_handle = to_process_for(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pending_votes, interval, _ph);
 			<span class="kw">for </span>(num, votes) <span class="kw">in </span>votes_to_handle.into_iter() {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Handle buffered votes for: {:?}.&quot;</span>, num);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Handle buffered votes for: {:?}.&quot;</span>, num);
 				<span class="kw">for </span>v <span class="kw">in </span>votes.into_iter() {
 					<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(
 						(v.commitment.payload, v.commitment.block_number),
 						(v.id, v.signature),
 						<span class="bool-val">false</span>,
 					) {
-						<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Error handling buffered vote: {}&quot;</span>, err);
+						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error handling buffered vote: {}&quot;</span>, err);
 					};
 				}
 			}
@@ -2243,7 +2277,7 @@
 	///
 	/// Also handle this self vote by calling `self.handle_vote()` for it.
 	</span><span class="kw">fn </span>do_vote(<span class="kw-2">&amp;mut </span><span class="self">self</span>, target_number: NumberFor&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Try voting on {}&quot;</span>, target_number);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Try voting on {}&quot;</span>, target_number);
 
 		<span class="comment">// Most of the time we get here, `target` is actually `best_grandpa`,
 		// avoid getting header from backend in that case.
@@ -2275,7 +2309,7 @@
 		<span class="kw">let </span>payload = <span class="kw">if let </span><span class="prelude-val">Some</span>(hash) = <span class="self">self</span>.payload_provider.payload(<span class="kw-2">&amp;</span>target_header) {
 			hash
 		} <span class="kw">else </span>{
-			<span class="macro">warn!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 No MMR root digest found for: {:?}&quot;</span>, target_hash);
+			<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 No MMR root digest found for: {:?}&quot;</span>, target_hash);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 		};
 
@@ -2285,16 +2319,22 @@
 			.active_rounds_mut()
 			.ok_or(Error::UninitSession)<span class="question-mark">?</span>;
 		<span class="kw">if </span>!rounds.should_self_vote(<span class="kw-2">&amp;</span>(payload.clone(), target_number)) {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Don&#39;t double vote for block number: {:?}&quot;</span>, target_number);
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;🥩 Don&#39;t double vote for block number: {:?}&quot;</span>, target_number
+			);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 		}
 		<span class="kw">let </span>(validators, validator_set_id) = (rounds.validators(), rounds.validator_set_id());
 
 		<span class="kw">let </span>authority_id = <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = <span class="self">self</span>.key_store.authority_id(validators) {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Local authority id: {:?}&quot;</span>, id);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Local authority id: {:?}&quot;</span>, id);
 			id
 		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Missing validator id - can&#39;t vote for: {:?}&quot;</span>, target_hash);
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;🥩 Missing validator id - can&#39;t vote for: {:?}&quot;</span>, target_hash
+			);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 		};
 
@@ -2304,13 +2344,13 @@
 		<span class="kw">let </span>signature = <span class="kw">match </span><span class="self">self</span>.key_store.sign(<span class="kw-2">&amp;</span>authority_id, <span class="kw-2">&amp;</span>encoded_commitment) {
 			<span class="prelude-val">Ok</span>(sig) =&gt; sig,
 			<span class="prelude-val">Err</span>(err) =&gt; {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Error signing commitment: {:?}&quot;</span>, err);
+				<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error signing commitment: {:?}&quot;</span>, err);
 				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 			},
 		};
 
 		<span class="macro">trace!</span>(
-			target: <span class="string">&quot;beefy&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;🥩 Produced signature using {:?}, is_valid: {:?}&quot;</span>,
 			authority_id,
 			BeefyKeystore::verify(<span class="kw-2">&amp;</span>authority_id, <span class="kw-2">&amp;</span>signature, <span class="kw-2">&amp;</span>encoded_commitment)
@@ -2322,14 +2362,14 @@
 
 		<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_votes_sent);
 
-		<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Sent vote message: {:?}&quot;</span>, message);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Sent vote message: {:?}&quot;</span>, message);
 
 		<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(
 			(message.commitment.payload, message.commitment.block_number),
 			(message.id, message.signature),
 			<span class="bool-val">true</span>,
 		) {
-			<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Error handling self vote: {}&quot;</span>, err);
+			<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error handling self vote: {}&quot;</span>, err);
 		}
 
 		<span class="self">self</span>.gossip_engine.gossip_message(topic::&lt;B&gt;(), encoded_message, <span class="bool-val">false</span>);
@@ -2340,14 +2380,14 @@
 	<span class="kw">fn </span>process_new_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
 		<span class="comment">// Handle pending justifications and/or votes for now GRANDPA finalized blocks.
 		</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_pending_justif_and_votes() {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
 		}
 
 		<span class="comment">// Don&#39;t bother voting or requesting justifications during major sync.
 		</span><span class="kw">if </span>!<span class="self">self</span>.network.is_major_syncing() {
 			<span class="comment">// There were external events, &#39;state&#39; is changed, author a vote if needed/possible.
 			</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_to_vote() {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
+				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
 			}
 			<span class="comment">// If the current target is a mandatory block,
 			// make sure there&#39;s also an on-demand justification request out for it.
@@ -2367,13 +2407,17 @@
 		<span class="kw-2">mut </span>block_import_justif: Fuse&lt;NotificationReceiver&lt;BeefyVersionedFinalityProof&lt;B&gt;&gt;&gt;,
 		<span class="kw-2">mut </span>finality_notifications: Fuse&lt;FinalityNotifications&lt;B&gt;&gt;,
 	) {
-		<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 run BEEFY worker, best grandpa: #{:?}.&quot;</span>, <span class="self">self</span>.best_grandpa_block());
+		<span class="macro">info!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;🥩 run BEEFY worker, best grandpa: #{:?}.&quot;</span>,
+			<span class="self">self</span>.best_grandpa_block()
+		);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>votes = Box::pin(
 			<span class="self">self</span>.gossip_engine
 				.messages_for(topic::&lt;B&gt;())
 				.filter_map(|notification| <span class="kw">async move </span>{
-					<span class="macro">trace!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Got vote message: {:?}&quot;</span>, notification);
+					<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Got vote message: {:?}&quot;</span>, notification);
 
 					VoteMessage::&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;::decode(
 						<span class="kw-2">&amp;mut &amp;</span>notification.message[..],
@@ -2395,7 +2439,7 @@
 				<span class="comment">// Use `select_biased!` to prioritize order below.
 				// Make sure to pump gossip engine.
 				</span><span class="kw">_ </span>= gossip_engine =&gt; {
-					<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Gossip engine has terminated, closing worker.&quot;</span>);
+					<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Gossip engine has terminated, closing worker.&quot;</span>);
 					<span class="kw">return</span>;
 				},
 				<span class="comment">// Process finality notifications first since these drive the voter.
@@ -2403,7 +2447,7 @@
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(notification) = notification {
 						<span class="self">self</span>.handle_finality_notification(<span class="kw-2">&amp;</span>notification);
 					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Finality stream terminated, closing worker.&quot;</span>);
+						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Finality stream terminated, closing worker.&quot;</span>);
 						<span class="kw">return</span>;
 					}
 				},
@@ -2411,7 +2455,7 @@
 				</span>justif = <span class="self">self</span>.on_demand_justifications.next().fuse() =&gt; {
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(justif) = justif {
 						<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.triage_incoming_justif(justif) {
-							<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
+							<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
 						}
 					}
 				},
@@ -2420,10 +2464,10 @@
 						<span class="comment">// Block import justifications have already been verified to be valid
 						// by `BeefyBlockImport`.
 						</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.triage_incoming_justif(justif) {
-							<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
+							<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
 						}
 					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Block import stream terminated, closing worker.&quot;</span>);
+						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Block import stream terminated, closing worker.&quot;</span>);
 						<span class="kw">return</span>;
 					}
 				},
@@ -2432,10 +2476,10 @@
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(vote) = vote {
 						<span class="comment">// Votes have already been verified to be valid by the gossip validator.
 						</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.triage_incoming_vote(vote) {
-							<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, err);
+							<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
 						}
 					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Votes gossiping stream terminated, closing worker.&quot;</span>);
+						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Votes gossiping stream terminated, closing worker.&quot;</span>);
 						<span class="kw">return</span>;
 					}
 				},
@@ -2469,18 +2513,14 @@
 	<span class="comment">// if the mandatory block (session_start) does not have a beefy justification yet,
 	// we vote on it
 	</span><span class="kw">let </span>target = <span class="kw">if </span>best_beefy &lt; session_start {
-		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;beefy&quot;</span>,
-			<span class="string">&quot;🥩 vote target - mandatory block: #{:?}&quot;</span>,
-			session_start,
-		);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 vote target - mandatory block: #{:?}&quot;</span>, session_start,);
 		session_start
 	} <span class="kw">else </span>{
 		<span class="kw">let </span>diff = best_grandpa.saturating_sub(best_beefy) + <span class="number">1u32</span>.into();
 		<span class="kw">let </span>diff = diff.saturated_into::&lt;u32&gt;() / <span class="number">2</span>;
 		<span class="kw">let </span>target = best_beefy + min_delta.max(diff.next_power_of_two()).into();
 		<span class="macro">trace!</span>(
-			target: <span class="string">&quot;beefy&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;🥩 vote target - diff: {:?}, next_power_of_two: {:?}, target block: #{:?}&quot;</span>,
 			diff,
 			diff.next_power_of_two(),

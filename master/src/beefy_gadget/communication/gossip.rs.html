@@ -468,6 +468,9 @@
 <a href="#468" id="468">468</a>
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -498,7 +501,7 @@
 <span class="kw">use </span>parking_lot::{Mutex, RwLock};
 <span class="kw">use </span>wasm_timer::Instant;
 
-<span class="kw">use crate</span>::{communication::peers::KnownPeers, keystore::BeefyKeystore};
+<span class="kw">use crate</span>::{communication::peers::KnownPeers, keystore::BeefyKeystore, LOG_TARGET};
 <span class="kw">use </span>beefy_primitives::{
 	crypto::{Public, Signature},
 	VoteMessage,
@@ -592,7 +595,7 @@
 	///
 	/// Noting round will start a live `round`.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>note_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;) {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 About to note gossip round #{}&quot;</span>, round);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 About to note gossip round #{}&quot;</span>, round);
 		<span class="self">self</span>.known_votes.write().insert(round);
 	}
 
@@ -600,7 +603,7 @@
 	///
 	/// This can be called once round is complete so we stop gossiping for it.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>conclude_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;) {
-		<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 About to drop gossip round #{}&quot;</span>, round);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 About to drop gossip round #{}&quot;</span>, round);
 		<span class="self">self</span>.known_votes.write().conclude(round);
 	}
 }
@@ -644,7 +647,10 @@
 				<span class="kw">return </span>ValidationResult::ProcessAndKeep(<span class="self">self</span>.topic)
 			} <span class="kw">else </span>{
 				<span class="comment">// TODO: report peer
-				</span><span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Bad signature on message: {:?}, from: {:?}&quot;</span>, msg, sender);
+				</span><span class="macro">debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;🥩 Bad signature on message: {:?}, from: {:?}&quot;</span>, msg, sender
+				);
 			}
 		}
 
@@ -662,7 +668,7 @@
 			<span class="kw">let </span>round = msg.commitment.block_number;
 			<span class="kw">let </span>expired = !known_votes.is_live(<span class="kw-2">&amp;</span>round);
 
-			<span class="macro">trace!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Message for round #{} expired: {}&quot;</span>, round, expired);
+			<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Message for round #{} expired: {}&quot;</span>, round, expired);
 
 			expired
 		})
@@ -696,7 +702,7 @@
 			<span class="kw">let </span>round = msg.commitment.block_number;
 			<span class="kw">let </span>allowed = known_votes.is_live(<span class="kw-2">&amp;</span>round);
 
-			<span class="macro">trace!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Message for round #{} allowed: {}&quot;</span>, round, allowed);
+			<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Message for round #{} allowed: {}&quot;</span>, round, allowed);
 
 			allowed
 		})

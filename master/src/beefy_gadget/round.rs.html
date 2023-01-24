@@ -452,6 +452,8 @@
 <a href="#452" id="452">452</a>
 <a href="#453" id="453">453</a>
 <a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -470,7 +472,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>beefy_primitives::{
+</span><span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
+
+<span class="kw">use </span>beefy_primitives::{
 	crypto::{Public, Signature},
 	ValidatorSet, ValidatorSetId,
 };
@@ -576,11 +580,11 @@
 	) -&gt; bool {
 		<span class="kw">let </span>num = round.<span class="number">1</span>;
 		<span class="kw">if </span>num &lt; <span class="self">self</span>.session_start || <span class="prelude-val">Some</span>(num) &lt;= <span class="self">self</span>.best_done {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 received vote for old stale round {:?}, ignoring&quot;</span>, num);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 received vote for old stale round {:?}, ignoring&quot;</span>, num);
 			<span class="bool-val">false
 		</span>} <span class="kw">else if </span>!<span class="self">self</span>.validators().iter().any(|id| vote.<span class="number">0 </span>== <span class="kw-2">*</span>id) {
 			<span class="macro">debug!</span>(
-				target: <span class="string">&quot;beefy&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;🥩 received vote {:?} from validator that is not in the validator set, ignoring&quot;</span>,
 				vote
 			);
@@ -599,7 +603,7 @@
 			.get(round)
 			.map(|tracker| tracker.is_done(threshold(<span class="self">self</span>.validator_set.len())))
 			.unwrap_or(<span class="bool-val">false</span>);
-		<span class="macro">trace!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Round #{} done: {}&quot;</span>, round.<span class="number">1</span>, done);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Round #{} done: {}&quot;</span>, round.<span class="number">1</span>, done);
 
 		<span class="kw">if </span>done {
 			<span class="kw">let </span>signatures = <span class="self">self</span>.rounds.remove(round)<span class="question-mark">?</span>.votes;
@@ -619,7 +623,7 @@
 		</span><span class="self">self</span>.rounds.retain(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, number), <span class="kw">_</span>| number &gt; round_num);
 		<span class="self">self</span>.mandatory_done = <span class="self">self</span>.mandatory_done || round_num == <span class="self">self</span>.session_start;
 		<span class="self">self</span>.best_done = <span class="self">self</span>.best_done.max(<span class="prelude-val">Some</span>(round_num));
-		<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Concluded round #{}&quot;</span>, round_num);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Concluded round #{}&quot;</span>, round_num);
 	}
 }
 

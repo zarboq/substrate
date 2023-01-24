@@ -487,6 +487,13 @@
 <a href="#487" id="487">487</a>
 <a href="#488" id="488">488</a>
 <a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -563,6 +570,8 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
+
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;beefy&quot;</span>;
 
 <span class="doccomment">/// A convenience BEEFY client trait that defines all the type bounds a BEEFY client
 /// has to satisfy. Ideally that should actually be a trait alias. Unfortunately as
@@ -741,11 +750,11 @@
 		prometheus_registry.as_ref().map(metrics::Metrics::register).and_then(
 			|result| <span class="kw">match </span>result {
 				<span class="prelude-val">Ok</span>(metrics) =&gt; {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Registered metrics&quot;</span>);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Registered metrics&quot;</span>);
 					<span class="prelude-val">Some</span>(metrics)
 				},
 				<span class="prelude-val">Err</span>(err) =&gt; {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Failed to register metrics: {:?}&quot;</span>, err);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Failed to register metrics: {:?}&quot;</span>, err);
 					<span class="prelude-val">None
 				</span>},
 			},
@@ -765,7 +774,7 @@
 			}) {
 			<span class="prelude-val">Ok</span>(state) =&gt; state,
 			<span class="prelude-val">Err</span>(e) =&gt; {
-				<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;Error: {:?}. Terminating.&quot;</span>, e);
+				<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;Error: {:?}. Terminating.&quot;</span>, e);
 				<span class="kw">return
 			</span>},
 		};
@@ -810,7 +819,7 @@
 		</span>state.set_best_grandpa(best_grandpa);
 		<span class="comment">// Overwrite persisted data with newly provided `min_block_delta`.
 		</span>state.set_min_block_delta(min_block_delta);
-		<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Loading BEEFY voter state from db: {:?}.&quot;</span>, state);
+		<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Loading BEEFY voter state from db: {:?}.&quot;</span>, state);
 		<span class="prelude-val">Ok</span>(state)
 	} <span class="kw">else </span>{
 		initialize_voter_state(backend, runtime, best_grandpa, min_block_delta)
@@ -846,7 +855,7 @@
 			.map(|justifs| justifs.get(BEEFY_ENGINE_ID).is_some())
 		{
 			<span class="macro">info!</span>(
-				target: <span class="string">&quot;beefy&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;🥩 Initialize BEEFY voter at last BEEFY finalized block: {:?}.&quot;</span>,
 				<span class="kw-2">*</span>header.number()
 			);
@@ -871,10 +880,11 @@
 			<span class="kw">let </span>genesis_set = expect_validator_set(runtime, BlockId::hash(header.hash()))
 				.and_then(genesis_set_sanity_check)<span class="question-mark">?</span>;
 			<span class="macro">info!</span>(
-				target: <span class="string">&quot;beefy&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;🥩 Loading BEEFY voter state from genesis on what appears to be first startup. \
 				Starting voting rounds at block {:?}, genesis validator set {:?}.&quot;</span>,
-				genesis_num, genesis_set,
+				genesis_num,
+				genesis_set,
 			);
 
 			sessions.push_front(Rounds::new(genesis_num, genesis_set));
@@ -883,7 +893,11 @@
 		</span>}
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(active) = worker::find_authorities_change::&lt;B&gt;(<span class="kw-2">&amp;</span>header) {
-			<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Marking block {:?} as BEEFY Mandatory.&quot;</span>, <span class="kw-2">*</span>header.number());
+			<span class="macro">info!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;🥩 Marking block {:?} as BEEFY Mandatory.&quot;</span>,
+				<span class="kw-2">*</span>header.number()
+			);
 			sessions.push_front(Rounds::new(<span class="kw-2">*</span>header.number(), active));
 		}
 
@@ -896,7 +910,7 @@
 			.flatten()
 			.ok_or_else(|| {
 				<span class="kw">let </span>msg = <span class="macro">format!</span>(<span class="string">&quot;{}. Could not initialize BEEFY voter.&quot;</span>, parent_hash);
-				<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 {}&quot;</span>, msg);
+				<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, msg);
 				ClientError::Consensus(sp_consensus::Error::StateUnavailable(msg))
 			})<span class="question-mark">?</span>;
 
@@ -921,7 +935,7 @@
 	R: ProvideRuntimeApi&lt;B&gt;,
 	R::Api: BeefyApi&lt;B&gt;,
 {
-	<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 BEEFY gadget waiting for BEEFY pallet to become available...&quot;</span>);
+	<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 BEEFY gadget waiting for BEEFY pallet to become available...&quot;</span>);
 	<span class="kw">loop </span>{
 		<span class="macro">futures::select! </span>{
 			notif = finality.next() =&gt; {
@@ -933,7 +947,7 @@
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(active) = runtime.runtime_api().validator_set(<span class="kw-2">&amp;</span>at).ok().flatten() {
 					<span class="comment">// Beefy pallet available, return best grandpa at the time.
 					</span><span class="macro">info!</span>(
-						target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 BEEFY pallet available: block {:?} validator set {:?}&quot;</span>,
+						target: LOG_TARGET, <span class="string">&quot;🥩 BEEFY pallet available: block {:?} validator set {:?}&quot;</span>,
 						notif.header.number(), active
 					);
 					<span class="kw">return </span><span class="prelude-val">Ok</span>(notif.header)
@@ -945,7 +959,7 @@
 		}
 	}
 	<span class="kw">let </span>err_msg = <span class="string">&quot;🥩 Gossip engine has unexpectedly terminated.&quot;</span>.into();
-	<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;{}&quot;</span>, err_msg);
+	<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;{}&quot;</span>, err_msg);
 	<span class="prelude-val">Err</span>(ClientError::Backend(err_msg))
 }
 
@@ -955,7 +969,7 @@
 	<span class="kw">if </span>active.id() == GENESIS_AUTHORITY_SET_ID {
 		<span class="prelude-val">Ok</span>(active)
 	} <span class="kw">else </span>{
-		<span class="macro">error!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Unexpected ID for genesis validator set {:?}.&quot;</span>, active);
+		<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Unexpected ID for genesis validator set {:?}.&quot;</span>, active);
 		<span class="prelude-val">Err</span>(ClientError::Backend(<span class="string">&quot;BEEFY Genesis sanity check failed.&quot;</span>.into()))
 	}
 }

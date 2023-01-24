@@ -228,7 +228,7 @@
 <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
 <span class="kw">use </span><span class="kw">crate</span>::communication::request_response::{
-	on_demand_justifications_protocol_config, Error, JustificationRequest,
+	on_demand_justifications_protocol_config, Error, JustificationRequest, BEEFY_SYNC_LOG_TARGET,
 };
 
 <span class="doccomment">/// A request coming in, including a sender for sending responses.
@@ -372,21 +372,21 @@
 
 	<span class="doccomment">/// Run [`BeefyJustifsRequestHandler`].
 	</span><span class="kw">pub async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>) {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;beefy::sync&quot;</span>, <span class="string">&quot;🥩 Running BeefyJustifsRequestHandler&quot;</span>);
+		<span class="macro">trace!</span>(target: BEEFY_SYNC_LOG_TARGET, <span class="string">&quot;🥩 Running BeefyJustifsRequestHandler&quot;</span>);
 
 		<span class="kw">while let </span><span class="prelude-val">Ok</span>(request) = <span class="self">self</span>.request_receiver.recv(|| <span class="macro">vec!</span>[]).<span class="kw">await </span>{
 			<span class="kw">let </span>peer = request.peer;
 			<span class="kw">match </span><span class="self">self</span>.handle_request(request) {
 				<span class="prelude-val">Ok</span>(()) =&gt; {
 					<span class="macro">debug!</span>(
-						target: <span class="string">&quot;beefy::sync&quot;</span>,
+						target: BEEFY_SYNC_LOG_TARGET,
 						<span class="string">&quot;🥩 Handled BEEFY justification request from {:?}.&quot;</span>, peer
 					)
 				},
 				<span class="prelude-val">Err</span>(e) =&gt; {
 					<span class="comment">// TODO (issue #12293): apply reputation changes here based on error type.
 					</span><span class="macro">debug!</span>(
-						target: <span class="string">&quot;beefy::sync&quot;</span>,
+						target: BEEFY_SYNC_LOG_TARGET,
 						<span class="string">&quot;🥩 Failed to handle BEEFY justification request from {:?}: {}&quot;</span>, peer, e,
 					)
 				},

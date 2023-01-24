@@ -123,7 +123,7 @@
 
 </span><span class="doccomment">//! Schema for BEEFY state persisted in the aux-db.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::worker::PersistedState;
+</span><span class="kw">use crate</span>::{worker::PersistedState, LOG_TARGET};
 <span class="kw">use </span>codec::{Decode, Encode};
 <span class="kw">use </span>log::{info, trace};
 <span class="kw">use </span>sc_client_api::{backend::AuxStore, Backend};
@@ -136,7 +136,7 @@
 <span class="kw">const </span>CURRENT_VERSION: u32 = <span class="number">1</span>;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>write_current_version&lt;B: AuxStore&gt;(backend: <span class="kw-2">&amp;</span>B) -&gt; ClientResult&lt;()&gt; {
-	<span class="macro">info!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 write aux schema version {:?}&quot;</span>, CURRENT_VERSION);
+	<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 write aux schema version {:?}&quot;</span>, CURRENT_VERSION);
 	AuxStore::insert_aux(backend, <span class="kw-2">&amp;</span>[(VERSION_KEY, CURRENT_VERSION.encode().as_slice())], <span class="kw-2">&amp;</span>[])
 }
 
@@ -145,7 +145,7 @@
 	backend: <span class="kw-2">&amp;</span>B,
 	state: <span class="kw-2">&amp;</span>PersistedState&lt;Block&gt;,
 ) -&gt; ClientResult&lt;()&gt; {
-	<span class="macro">trace!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 persisting {:?}&quot;</span>, state);
+	<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 persisting {:?}&quot;</span>, state);
 	backend.insert_aux(<span class="kw-2">&amp;</span>[(WORKER_STATE, state.encode().as_slice())], <span class="kw-2">&amp;</span>[])
 }
 

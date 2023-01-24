@@ -227,6 +227,13 @@
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -261,7 +268,7 @@
 <span class="kw">use </span>std::{collections::VecDeque, result::Result, sync::Arc};
 
 <span class="kw">use crate</span>::{
-	communication::request_response::{Error, JustificationRequest},
+	communication::request_response::{Error, JustificationRequest, BEEFY_SYNC_LOG_TARGET},
 	justification::{decode_and_verify_finality_proof, BeefyVersionedFinalityProof},
 	KnownPeers,
 };
@@ -325,10 +332,8 @@
 
 	<span class="kw">fn </span>request_from_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer: PeerId, req_info: RequestInfo&lt;B&gt;) {
 		<span class="macro">debug!</span>(
-			target: <span class="string">&quot;beefy::sync&quot;</span>,
-			<span class="string">&quot;🥩 requesting justif #{:?} from peer {:?}&quot;</span>,
-			req_info.block,
-			peer,
+			target: BEEFY_SYNC_LOG_TARGET,
+			<span class="string">&quot;🥩 requesting justif #{:?} from peer {:?}&quot;</span>, req_info.block, peer,
 		);
 
 		<span class="kw">let </span>payload = JustificationRequest::&lt;B&gt; { begin: req_info.block }.encode();
@@ -361,7 +366,10 @@
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(peer) = <span class="self">self</span>.try_next_peer() {
 			<span class="self">self</span>.request_from_peer(peer, RequestInfo { block, active_set });
 		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy::sync&quot;</span>, <span class="string">&quot;🥩 no good peers to request justif #{:?} from&quot;</span>, block);
+			<span class="macro">debug!</span>(
+				target: BEEFY_SYNC_LOG_TARGET,
+				<span class="string">&quot;🥩 no good peers to request justif #{:?} from&quot;</span>, block
+			);
 		}
 	}
 
@@ -370,8 +378,8 @@
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.state {
 			State::AwaitingResponse(<span class="kw">_</span>, req_info, <span class="kw">_</span>) <span class="kw">if </span>req_info.block &lt;= block =&gt; {
 				<span class="macro">debug!</span>(
-					target: <span class="string">&quot;beefy::sync&quot;</span>, <span class="string">&quot;🥩 cancel pending request for justification #{:?}&quot;</span>,
-					req_info.block
+					target: BEEFY_SYNC_LOG_TARGET,
+					<span class="string">&quot;🥩 cancel pending request for justification #{:?}&quot;</span>, req_info.block
 				);
 				<span class="self">self</span>.state = State::Idle;
 			},
@@ -388,17 +396,21 @@
 		response
 			.map_err(|e| {
 				<span class="macro">debug!</span>(
-					target: <span class="string">&quot;beefy::sync&quot;</span>,
+					target: BEEFY_SYNC_LOG_TARGET,
 					<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} hung up: {:?}&quot;</span>,
-					req_info.block, peer, e
+					req_info.block,
+					peer,
+					e
 				);
 				Error::InvalidResponse
 			})<span class="question-mark">?
 			</span>.map_err(|e| {
 				<span class="macro">debug!</span>(
-					target: <span class="string">&quot;beefy::sync&quot;</span>,
+					target: BEEFY_SYNC_LOG_TARGET,
 					<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} error: {:?}&quot;</span>,
-					req_info.block, peer, e
+					req_info.block,
+					peer,
+					e
 				);
 				Error::InvalidResponse
 			})
@@ -410,7 +422,7 @@
 				)
 				.map_err(|e| {
 					<span class="macro">debug!</span>(
-						target: <span class="string">&quot;beefy::sync&quot;</span>,
+						target: BEEFY_SYNC_LOG_TARGET,
 						<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} responded with invalid proof: {:?}&quot;</span>,
 						req_info.block, peer, e
 					);
@@ -442,14 +454,16 @@
 				</span><span class="kw">if let </span><span class="prelude-val">Some</span>(peer) = <span class="self">self</span>.try_next_peer() {
 					<span class="self">self</span>.request_from_peer(peer, req_info);
 				} <span class="kw">else </span>{
-					<span class="macro">warn!</span>(target: <span class="string">&quot;beefy::sync&quot;</span>, <span class="string">&quot;🥩 ran out of peers to request justif #{:?} from&quot;</span>, block);
+					<span class="macro">warn!</span>(
+						target: BEEFY_SYNC_LOG_TARGET,
+						<span class="string">&quot;🥩 ran out of peers to request justif #{:?} from&quot;</span>, block
+					);
 				}
 			})
 			.map(|proof| {
 				<span class="macro">debug!</span>(
-					target: <span class="string">&quot;beefy::sync&quot;</span>,
-					<span class="string">&quot;🥩 received valid on-demand justif #{:?} from {:?}&quot;</span>,
-					block, peer
+					target: BEEFY_SYNC_LOG_TARGET,
+					<span class="string">&quot;🥩 received valid on-demand justif #{:?} from {:?}&quot;</span>, block, peer
 				);
 				proof
 			})
