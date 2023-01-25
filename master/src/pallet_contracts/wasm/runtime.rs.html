@@ -2596,6 +2596,22 @@
 <a href="#2596" id="2596">2596</a>
 <a href="#2597" id="2597">2597</a>
 <a href="#2598" id="2598">2598</a>
+<a href="#2599" id="2599">2599</a>
+<a href="#2600" id="2600">2600</a>
+<a href="#2601" id="2601">2601</a>
+<a href="#2602" id="2602">2602</a>
+<a href="#2603" id="2603">2603</a>
+<a href="#2604" id="2604">2604</a>
+<a href="#2605" id="2605">2605</a>
+<a href="#2606" id="2606">2606</a>
+<a href="#2607" id="2607">2607</a>
+<a href="#2608" id="2608">2608</a>
+<a href="#2609" id="2609">2609</a>
+<a href="#2610" id="2610">2610</a>
+<a href="#2611" id="2611">2611</a>
+<a href="#2612" id="2612">2612</a>
+<a href="#2613" id="2613">2613</a>
+<a href="#2614" id="2614">2614</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2635,6 +2651,22 @@
 <span class="doccomment">/// The maximum nesting depth a contract can use when encoding types.
 </span><span class="kw">const </span>MAX_DECODE_NESTING: u32 = <span class="number">256</span>;
 
+<span class="doccomment">/// Passed to [`Environment`] to determine whether it should expose deprecated interfaces.
+</span><span class="kw">pub enum </span>AllowDeprecatedInterface {
+	<span class="doccomment">/// No deprecated interfaces are exposed.
+	</span>No,
+	<span class="doccomment">/// Deprecated interfaces are exposed.
+	</span>Yes,
+}
+
+<span class="doccomment">/// Passed to [`Environment`] to determine whether it should expose unstable interfaces.
+</span><span class="kw">pub enum </span>AllowUnstableInterface {
+	<span class="doccomment">/// No unstable interfaces are exposed.
+	</span>No,
+	<span class="doccomment">/// Unstable interfaces are exposed.
+	</span>Yes,
+}
+
 <span class="doccomment">/// Trait implemented by the [`define_env`](pallet_contracts_proc_macro::define_env) macro for the
 /// emitted `Env` struct.
 </span><span class="kw">pub trait </span>Environment&lt;HostState&gt; {
@@ -2643,14 +2675,15 @@
 	</span><span class="kw">fn </span>define(
 		store: <span class="kw-2">&amp;mut </span>Store&lt;HostState&gt;,
 		linker: <span class="kw-2">&amp;mut </span>Linker&lt;HostState&gt;,
-		allow_unstable: bool,
+		allow_unstable: AllowUnstableInterface,
+		allow_deprecated: AllowDeprecatedInterface,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), LinkerError&gt;;
 }
 
 <span class="doccomment">/// Type of a storage key.
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">enum </span>KeyType {
-	<span class="doccomment">/// Deprecated fix sized key `[u8;32]`.
+	<span class="doccomment">/// Legacy fix sized key `[u8;32]`.
 	</span>Fix,
 	<span class="doccomment">/// Variable sized key used in transparent hashing,
 	/// cannot be larger than MaxStorageKeyLen.
@@ -2689,12 +2722,8 @@
 	</span>CalleeReverted = <span class="number">2</span>,
 	<span class="doccomment">/// The passed key does not exist in storage.
 	</span>KeyNotFound = <span class="number">3</span>,
-	<span class="doccomment">/// Deprecated and no longer returned: There is only the minimum balance.
-	</span>_BelowSubsistenceThreshold = <span class="number">4</span>,
 	<span class="doccomment">/// See [`Error::TransferFailed`].
 	</span>TransferFailed = <span class="number">5</span>,
-	<span class="doccomment">/// Deprecated and no longer returned: Endowment is no longer required.
-	</span>_EndowmentTooLow = <span class="number">6</span>,
 	<span class="doccomment">/// No code could be found at the supplied code hash.
 	</span>CodeNotFound = <span class="number">7</span>,
 	<span class="doccomment">/// The contract that was called is no contract (a plain account).
@@ -3878,7 +3907,7 @@
 
 	<span class="doccomment">/// Make a call to another contract.
 	///
-	/// # Deprecation
+	/// # New version available
 	///
 	/// This is equivalent to calling the newer version of this function with
 	/// `flags` set to `ALLOW_REENTRY`. See the newer version for documentation.
@@ -4016,7 +4045,7 @@
 
 	<span class="doccomment">/// Instantiate a contract with the specified code hash.
 	///
-	/// # Deprecation
+	/// # New version available
 	///
 	/// This is equivalent to calling the newer version of this function. The newer version
 	/// drops the now unnecessary length fields.
@@ -4136,7 +4165,7 @@
 
 	<span class="doccomment">/// Remove the calling account and transfer remaining balance.
 	///
-	/// # Deprecation
+	/// # New version available
 	///
 	/// This is equivalent to calling the newer version of this function. The newer version
 	/// drops the now unnecessary length fields.
@@ -4477,12 +4506,8 @@
 	/// space at `out_ptr` is less than the size of the value a trap is triggered.
 	///
 	/// The data is encoded as `T::Hash`.
-	///
-	/// # Deprecation
-	///
-	/// This function is deprecated. Users should migrate to the [`super::seal1::Api::random()`]
-	/// version.
 	</span><span class="attr">#[prefixed_alias]
+	#[deprecated]
 	</span><span class="kw">fn </span>random(
 		ctx: <span class="kw">_</span>,
 		memory: <span class="kw">_</span>,
@@ -4529,6 +4554,7 @@
 	/// commitment.
 	</span><span class="attr">#[version(<span class="number">1</span>)]
 	#[prefixed_alias]
+	#[deprecated]
 	</span><span class="kw">fn </span>random(
 		ctx: <span class="kw">_</span>,
 		memory: <span class="kw">_</span>,
@@ -4599,10 +4625,11 @@
 	/// `out_ptr`. This call overwrites it with the size of the value. If the available
 	/// space at `out_ptr` is less than the size of the value a trap is triggered.
 	///
-	/// # Deprecation
+	/// # Note
 	///
 	/// There is no longer a tombstone deposit. This function always returns `0`.
 	</span><span class="attr">#[prefixed_alias]
+	#[deprecated]
 	</span><span class="kw">fn </span>tombstone_deposit(
 		ctx: <span class="kw">_</span>,
 		memory: <span class="kw">_</span>,
@@ -4628,6 +4655,7 @@
 	/// The state rent functionality was removed. This is stub only exists for
 	/// backwards compatiblity
 	</span><span class="attr">#[prefixed_alias]
+	#[deprecated]
 	</span><span class="kw">fn </span>restore_to(
 		ctx: <span class="kw">_</span>,
 		memory: <span class="kw">_</span>,
@@ -4652,6 +4680,7 @@
 	/// backwards compatiblity
 	</span><span class="attr">#[version(<span class="number">1</span>)]
 	#[prefixed_alias]
+	#[deprecated]
 	</span><span class="kw">fn </span>restore_to(
 		ctx: <span class="kw">_</span>,
 		memory: <span class="kw">_</span>,
@@ -4663,6 +4692,59 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
 		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
+	}
+
+	<span class="doccomment">/// Was used to set rent allowance of the contract.
+	///
+	/// # Note
+	///
+	/// The state rent functionality was removed. This is stub only exists for
+	/// backwards compatiblity.
+	</span><span class="attr">#[prefixed_alias]
+	#[deprecated]
+	</span><span class="kw">fn </span>set_rent_allowance(
+		ctx: <span class="kw">_</span>,
+		memory: <span class="kw">_</span>,
+		_value_ptr: u32,
+		_value_len: u32,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
+		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(())
+	}
+
+	<span class="doccomment">/// Was used to set rent allowance of the contract.
+	///
+	/// # Note
+	///
+	/// The state rent functionality was removed. This is stub only exists for
+	/// backwards compatiblity.
+	</span><span class="attr">#[version(<span class="number">1</span>)]
+	#[prefixed_alias]
+	#[deprecated]
+	</span><span class="kw">fn </span>set_rent_allowance(ctx: <span class="kw">_</span>, _memory: <span class="kw">_</span>, _value_ptr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
+		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(())
+	}
+
+	<span class="doccomment">/// Was used to store the rent allowance into the supplied buffer.
+	///
+	/// # Note
+	///
+	/// The state rent functionality was removed. This is stub only exists for
+	/// backwards compatiblity.
+	</span><span class="attr">#[prefixed_alias]
+	#[deprecated]
+	</span><span class="kw">fn </span>rent_allowance(ctx: <span class="kw">_</span>, memory: <span class="kw">_</span>, out_ptr: u32, out_len_ptr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
+		ctx.charge_gas(RuntimeCosts::Balance)<span class="question-mark">?</span>;
+		<span class="kw">let </span>rent_allowance = &lt;BalanceOf&lt;E::T&gt;&gt;::max_value().encode();
+		<span class="prelude-val">Ok</span>(ctx.write_sandbox_output(
+			memory,
+			out_ptr,
+			out_len_ptr,
+			<span class="kw-2">&amp;</span>rent_allowance,
+			<span class="bool-val">false</span>,
+			already_charged,
+		)<span class="question-mark">?</span>)
 	}
 
 	<span class="doccomment">/// Deposit a contract event with the data buffer and optional list of topics. There is a limit
@@ -4706,56 +4788,6 @@
 		ctx.ext.deposit_event(topics, event_data);
 
 		<span class="prelude-val">Ok</span>(())
-	}
-
-	<span class="doccomment">/// Was used to set rent allowance of the contract.
-	///
-	/// # Note
-	///
-	/// The state rent functionality was removed. This is stub only exists for
-	/// backwards compatiblity.
-	</span><span class="attr">#[prefixed_alias]
-	</span><span class="kw">fn </span>set_rent_allowance(
-		ctx: <span class="kw">_</span>,
-		memory: <span class="kw">_</span>,
-		_value_ptr: u32,
-		_value_len: u32,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(())
-	}
-
-	<span class="doccomment">/// Was used to set rent allowance of the contract.
-	///
-	/// # Note
-	///
-	/// The state rent functionality was removed. This is stub only exists for
-	/// backwards compatiblity.
-	</span><span class="attr">#[version(<span class="number">1</span>)]
-	#[prefixed_alias]
-	</span><span class="kw">fn </span>set_rent_allowance(ctx: <span class="kw">_</span>, _memory: <span class="kw">_</span>, _value_ptr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(())
-	}
-
-	<span class="doccomment">/// Was used to store the rent allowance into the supplied buffer.
-	///
-	/// # Note
-	///
-	/// The state rent functionality was removed. This is stub only exists for
-	/// backwards compatiblity.
-	</span><span class="attr">#[prefixed_alias]
-	</span><span class="kw">fn </span>rent_allowance(ctx: <span class="kw">_</span>, memory: <span class="kw">_</span>, out_ptr: u32, out_len_ptr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::Balance)<span class="question-mark">?</span>;
-		<span class="kw">let </span>rent_allowance = &lt;BalanceOf&lt;E::T&gt;&gt;::max_value().encode();
-		<span class="prelude-val">Ok</span>(ctx.write_sandbox_output(
-			memory,
-			out_ptr,
-			out_len_ptr,
-			<span class="kw-2">&amp;</span>rent_allowance,
-			<span class="bool-val">false</span>,
-			already_charged,
-		)<span class="question-mark">?</span>)
 	}
 
 	<span class="doccomment">/// Stores the current block number of the current contract into the supplied buffer.

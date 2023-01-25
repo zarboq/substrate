@@ -713,6 +713,47 @@
 <a href="#713" id="713">713</a>
 <a href="#714" id="714">714</a>
 <a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -877,6 +918,8 @@
 	returns: HostFnReturn,
 	is_stable: bool,
 	alias_to: <span class="prelude-ty">Option</span>&lt;String&gt;,
+	<span class="doccomment">/// Formulating the predicate inverted makes the expression using it simpler.
+	</span>not_deprecated: bool,
 }
 
 <span class="kw">enum </span>HostFnReturn {
@@ -914,13 +957,14 @@
 
 		<span class="comment">// process attributes
 		</span><span class="kw">let </span>msg =
-			<span class="string">&quot;only #[version(&lt;u8&gt;)], #[unstable] and #[prefixed_alias] attributes are allowed.&quot;</span>;
+			<span class="string">&quot;only #[version(&lt;u8&gt;)], #[unstable], #[prefixed_alias] and #[deprecated] attributes are allowed.&quot;</span>;
 		<span class="kw">let </span>span = item.span();
 		<span class="kw">let </span><span class="kw-2">mut </span>attrs = item.attrs.clone();
 		attrs.retain(|a| !a.path.is_ident(<span class="string">&quot;doc&quot;</span>));
 		<span class="kw">let </span><span class="kw-2">mut </span>maybe_module = <span class="prelude-val">None</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>is_stable = <span class="bool-val">true</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>alias_to = <span class="prelude-val">None</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>not_deprecated = <span class="bool-val">true</span>;
 		<span class="kw">while let </span><span class="prelude-val">Some</span>(attr) = attrs.pop() {
 			<span class="kw">let </span>ident = attr.path.get_ident().ok_or(err(span, msg))<span class="question-mark">?</span>.to_string();
 			<span class="kw">match </span>ident.as_str() {
@@ -945,12 +989,22 @@
 						item.sig.ident.span(),
 					);
 				},
+				<span class="string">&quot;deprecated&quot; </span>=&gt; {
+					<span class="kw">if </span>!not_deprecated {
+						<span class="kw">return </span><span class="prelude-val">Err</span>(err(span, <span class="string">&quot;#[deprecated] can only be specified once&quot;</span>))
+					}
+					not_deprecated = <span class="bool-val">false</span>;
+				},
 				<span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(err(span, msg)),
 			}
 		}
 		<span class="kw">let </span>name = item.sig.ident.to_string();
 
-		<span class="comment">// process arguments: The first and second arg are treated differently (ctx, memory)
+		<span class="kw">if </span>!(is_stable || not_deprecated) {
+			<span class="kw">return </span><span class="prelude-val">Err</span>(err(span, <span class="string">&quot;#[deprecated] is mutually exclusive with #[unstable]&quot;</span>))
+		}
+
+		<span class="comment">// process arguments: The first and second args are treated differently (ctx, memory)
 		// they must exist and be `ctx: _` and `memory: _`.
 		</span><span class="kw">let </span>msg = <span class="string">&quot;Every function must start with two inferred parameters: ctx: _ and memory: _&quot;</span>;
 		<span class="kw">let </span>special_args = item
@@ -1045,6 +1099,7 @@
 							returns,
 							is_stable,
 							alias_to,
+							not_deprecated,
 						})
 					},
 					<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err(span, <span class="kw-2">&amp;</span>msg)),
@@ -1225,7 +1280,12 @@
 	<span class="macro">quote! </span>{
 		<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, E: Ext&gt; <span class="kw">crate</span>::wasm::Environment&lt;<span class="kw">crate</span>::wasm::runtime::Runtime&lt;<span class="lifetime">&#39;a</span>, E&gt;&gt; <span class="kw">for </span>Env
 		{
-			<span class="kw">fn </span>define(store: <span class="kw-2">&amp;mut </span>::wasmi::Store&lt;<span class="kw">crate</span>::wasm::Runtime&lt;E&gt;&gt;, linker: <span class="kw-2">&amp;mut </span>::wasmi::Linker&lt;<span class="kw">crate</span>::wasm::Runtime&lt;E&gt;&gt;, allow_unstable: bool) -&gt; <span class="prelude-ty">Result</span>&lt;(), ::wasmi::errors::LinkerError&gt; {
+			<span class="kw">fn </span>define(
+				store: <span class="kw-2">&amp;mut </span>::wasmi::Store&lt;<span class="kw">crate</span>::wasm::Runtime&lt;E&gt;&gt;,
+				linker: <span class="kw-2">&amp;mut </span>::wasmi::Linker&lt;<span class="kw">crate</span>::wasm::Runtime&lt;E&gt;&gt;,
+				allow_unstable: AllowUnstableInterface,
+				allow_deprecated: AllowDeprecatedInterface,
+			) -&gt; <span class="prelude-ty">Result</span>&lt;(),::wasmi::errors::LinkerError&gt; {
 				#impls
 				<span class="prelude-val">Ok</span>(())
 			}
@@ -1233,7 +1293,12 @@
 
 		<span class="kw">impl </span><span class="kw">crate</span>::wasm::Environment&lt;()&gt; <span class="kw">for </span>Env
 		{
-			<span class="kw">fn </span>define(store: <span class="kw-2">&amp;mut </span>::wasmi::Store&lt;()&gt;, linker: <span class="kw-2">&amp;mut </span>::wasmi::Linker&lt;()&gt;, allow_unstable: bool) -&gt; <span class="prelude-ty">Result</span>&lt;(), ::wasmi::errors::LinkerError&gt; {
+			<span class="kw">fn </span>define(
+				store: <span class="kw-2">&amp;mut </span>::wasmi::Store&lt;()&gt;,
+				linker: <span class="kw-2">&amp;mut </span>::wasmi::Linker&lt;()&gt;,
+				allow_unstable: AllowUnstableInterface,
+				allow_deprecated: AllowDeprecatedInterface,
+			) -&gt; <span class="prelude-ty">Result</span>&lt;(), ::wasmi::errors::LinkerError&gt; {
 				#dummy_impls
 				<span class="prelude-val">Ok</span>(())
 			}
@@ -1257,6 +1322,7 @@
 			<span class="kw-2">&amp;</span>f.item.sig.output
 		);
 		<span class="kw">let </span>is_stable = f.is_stable;
+		<span class="kw">let </span>not_deprecated = f.not_deprecated;
 
 		<span class="comment">// If we don&#39;t expand blocks (implementing for `()`) we change a few things:
 		// - We replace any code by unreachable!
@@ -1297,9 +1363,13 @@
 		};
 
 		<span class="macro">quote! </span>{
-			<span class="comment">// We need to allow unstable functions when runtime benchmarks are performed because
-			// we generate the weights even when those interfaces are not enabled.
-			</span><span class="kw">if </span><span class="macro">::core::cfg!</span>(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>) || #is_stable || allow_unstable {
+			<span class="comment">// We need to allow all interfaces when runtime benchmarks are performed because
+			// we generate the weights even when those interfaces are not enabled. This
+			// is necessary as the decision whether we allow unstable or deprecated functions
+			// is a decision made at runtime. Generation of the weights happens statically.
+			</span><span class="kw">if </span><span class="macro">::core::cfg!</span>(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>) ||
+				((#is_stable || __allow_unstable__) &amp;&amp; (#not_deprecated || __allow_deprecated__))
+			{
 				#allow_unused
 				linker.define(#module, #name, ::wasmi::Func::wrap(<span class="kw-2">&amp;mut*</span>store, |<span class="kw-2">mut </span>__caller__: ::wasmi::Caller&lt;#host_state&gt;, #( #params, )<span class="kw-2">*</span>| -&gt; #wasm_output {
 					<span class="kw">let </span><span class="kw-2">mut </span>func = #inner;
@@ -1311,6 +1381,8 @@
 		}
 	});
 	<span class="macro">quote! </span>{
+		<span class="kw">let </span>__allow_unstable__ = <span class="macro">matches!</span>(allow_unstable, AllowUnstableInterface::Yes);
+		<span class="kw">let </span>__allow_deprecated__ = <span class="macro">matches!</span>(allow_deprecated, AllowDeprecatedInterface::Yes);
 		#( #impls )*
 	}
 }
@@ -1405,6 +1477,16 @@
 /// additional `pallet_contracts::api_doc::seal0`, `pallet_contracts::api_doc::seal1`,
 /// `...` modules each having its `Api` trait containing functions holding documentation for every
 /// host function defined by the macro.
+///
+/// # Deprecated Interfaces
+///
+/// An interface can be annotated with `#[deprecated]`. It is mutually exclusive with `#[unstable]`.
+/// Deprecated interfaces have the following properties:
+/// 	- New contract codes utilizing those interfaces cannot be uploaded.
+/// 	- New contracts from existing codes utilizing those interfaces cannot be instantiated.
+/// - Existing contracts containing those interfaces still work.
+///
+/// Those interfaces will eventually be removed.
 ///
 /// To build up these docs, run:
 ///

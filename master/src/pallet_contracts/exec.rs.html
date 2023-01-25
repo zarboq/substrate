@@ -3441,6 +3441,37 @@
 <a href="#3441" id="3441">3441</a>
 <a href="#3442" id="3442">3442</a>
 <a href="#3443" id="3443">3443</a>
+<a href="#3444" id="3444">3444</a>
+<a href="#3445" id="3445">3445</a>
+<a href="#3446" id="3446">3446</a>
+<a href="#3447" id="3447">3447</a>
+<a href="#3448" id="3448">3448</a>
+<a href="#3449" id="3449">3449</a>
+<a href="#3450" id="3450">3450</a>
+<a href="#3451" id="3451">3451</a>
+<a href="#3452" id="3452">3452</a>
+<a href="#3453" id="3453">3453</a>
+<a href="#3454" id="3454">3454</a>
+<a href="#3455" id="3455">3455</a>
+<a href="#3456" id="3456">3456</a>
+<a href="#3457" id="3457">3457</a>
+<a href="#3458" id="3458">3458</a>
+<a href="#3459" id="3459">3459</a>
+<a href="#3460" id="3460">3460</a>
+<a href="#3461" id="3461">3461</a>
+<a href="#3462" id="3462">3462</a>
+<a href="#3463" id="3463">3463</a>
+<a href="#3464" id="3464">3464</a>
+<a href="#3465" id="3465">3465</a>
+<a href="#3466" id="3466">3466</a>
+<a href="#3467" id="3467">3467</a>
+<a href="#3468" id="3468">3468</a>
+<a href="#3469" id="3469">3469</a>
+<a href="#3470" id="3470">3470</a>
+<a href="#3471" id="3471">3471</a>
+<a href="#3472" id="3472">3472</a>
+<a href="#3473" id="3473">3473</a>
+<a href="#3474" id="3474">3474</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -6881,6 +6912,37 @@
 				<span class="prelude-val">None</span>,
 				Determinism::Deterministic
 			));
+		});
+	}
+
+	<span class="doccomment">/// This works even though random interface is deprecated, as the check to ban deprecated
+	/// functions happens in the wasm stack which is mocked for exec tests.
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>randomness_works() {
+		<span class="kw">let </span>subject = <span class="string">b&quot;nice subject&quot;</span>.as_ref();
+		<span class="kw">let </span>code_hash = MockLoader::insert(Call, <span class="kw">move </span>|ctx, <span class="kw">_</span>| {
+			<span class="kw">let </span>rand = &lt;Test <span class="kw">as </span>Config&gt;::Randomness::random(subject);
+			<span class="macro">assert_eq!</span>(rand, ctx.ext.random(subject));
+			exec_success()
+		});
+
+		ExtBuilder::default().build().execute_with(|| {
+			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
+			place_contract(<span class="kw-2">&amp;</span>BOB, code_hash);
+
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(<span class="number">0</span>), <span class="number">0</span>).unwrap();
+			<span class="kw">let </span>result = MockStack::run_call(
+				ALICE,
+				BOB,
+				<span class="kw-2">&amp;mut </span>GasMeter::&lt;Test&gt;::new(GAS_LIMIT),
+				<span class="kw-2">&amp;mut </span>storage_meter,
+				<span class="kw-2">&amp;</span>schedule,
+				<span class="number">0</span>,
+				<span class="macro">vec!</span>[],
+				<span class="prelude-val">None</span>,
+				Determinism::Deterministic,
+			);
+			<span class="macro">assert_matches!</span>(result, <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
 		});
 	}
 }
