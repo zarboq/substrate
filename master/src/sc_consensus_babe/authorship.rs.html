@@ -314,6 +314,17 @@
 <a href="#314" id="314">314</a>
 <a href="#315" id="315">315</a>
 <a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -336,6 +347,7 @@
 
 </span><span class="kw">use </span><span class="kw">super</span>::Epoch;
 <span class="kw">use </span>codec::Encode;
+<span class="kw">use </span>sc_consensus_epochs::Epoch <span class="kw">as </span>EpochT;
 <span class="kw">use </span>schnorrkel::{keys::PublicKey, vrf::VRFInOut};
 <span class="kw">use </span>sp_application_crypto::AppKey;
 <span class="kw">use </span>sp_consensus_babe::{
@@ -451,18 +463,23 @@
 	keystore: <span class="kw-2">&amp;</span>SyncCryptoStorePtr,
 	author_secondary_vrf: bool,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(PreDigest, AuthorityId)&gt; {
-	<span class="kw">let </span>Epoch { authorities, randomness, epoch_index, .. } = epoch;
+	<span class="kw">let </span>Epoch { authorities, randomness, <span class="kw-2">mut </span>epoch_index, .. } = epoch;
 
 	<span class="kw">if </span>authorities.is_empty() {
 		<span class="kw">return </span><span class="prelude-val">None
 	</span>}
+
+	<span class="kw">if </span>epoch.end_slot() &lt;= slot {
+		<span class="comment">// Slot doesn&#39;t strictly belong to the epoch, create a clone with fixed values.
+		</span>epoch_index = epoch.clone_for_slot(slot).epoch_index;
+	}
 
 	<span class="kw">let </span>expected_author = secondary_slot_author(slot, authorities, <span class="kw-2">*</span>randomness)<span class="question-mark">?</span>;
 
 	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
 		<span class="kw">if </span>authority_id == expected_author {
 			<span class="kw">let </span>pre_digest = <span class="kw">if </span>author_secondary_vrf {
-				<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, <span class="kw-2">*</span>epoch_index);
+				<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, epoch_index);
 				<span class="kw">let </span>result = SyncCryptoStore::sr25519_vrf_sign(
 					<span class="kw-2">&amp;**</span>keystore,
 					AuthorityId::ID,
@@ -554,11 +571,16 @@
 	keystore: <span class="kw-2">&amp;</span>SyncCryptoStorePtr,
 	keys: <span class="kw-2">&amp;</span>[(AuthorityId, usize)],
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(PreDigest, AuthorityId)&gt; {
-	<span class="kw">let </span>Epoch { authorities, randomness, epoch_index, .. } = epoch;
+	<span class="kw">let </span>Epoch { authorities, randomness, <span class="kw-2">mut </span>epoch_index, .. } = epoch;
+
+	<span class="kw">if </span>epoch.end_slot() &lt;= slot {
+		<span class="comment">// Slot doesn&#39;t strictly belong to the epoch, create a clone with fixed values.
+		</span>epoch_index = epoch.clone_for_slot(slot).epoch_index;
+	}
 
 	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
-		<span class="kw">let </span>transcript = make_transcript(randomness, slot, <span class="kw-2">*</span>epoch_index);
-		<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, <span class="kw-2">*</span>epoch_index);
+		<span class="kw">let </span>transcript = make_transcript(randomness, slot, epoch_index);
+		<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, epoch_index);
 		<span class="kw">let </span>result = SyncCryptoStore::sr25519_vrf_sign(
 			<span class="kw-2">&amp;**</span>keystore,
 			AuthorityId::ID,

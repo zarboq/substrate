@@ -925,9 +925,6 @@
 <a href="#925" id="925">925</a>
 <a href="#926" id="926">926</a>
 <a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1284,18 +1281,15 @@
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(check_issuer) = maybe_check_issuer {
 				<span class="macro">ensure!</span>(check_issuer == details.issuer, Error::&lt;T, I&gt;::NoPermission);
 			}
-			<span class="macro">debug_assert!</span>(
-				T::Balance::max_value() - details.supply &gt;= amount,
-				<span class="string">&quot;checked in prep; qed&quot;
-			</span>);
+			<span class="macro">debug_assert!</span>(details.supply.checked_add(<span class="kw-2">&amp;</span>amount).is_some(), <span class="string">&quot;checked in prep; qed&quot;</span>);
+
 			details.supply = details.supply.saturating_add(amount);
+
 			<span class="prelude-val">Ok</span>(())
 		})<span class="question-mark">?</span>;
-		<span class="self">Self</span>::deposit_event(Event::Issued {
-			asset_id: id,
-			owner: beneficiary.clone(),
-			total_supply: amount,
-		});
+
+		<span class="self">Self</span>::deposit_event(Event::Issued { asset_id: id, owner: beneficiary.clone(), amount });
+
 		<span class="prelude-val">Ok</span>(())
 	}
 

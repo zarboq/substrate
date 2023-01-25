@@ -1905,6 +1905,21 @@
 <a href="#1905" id="1905">1905</a>
 <a href="#1906" id="1906">1906</a>
 <a href="#1907" id="1907">1907</a>
+<a href="#1908" id="1908">1908</a>
+<a href="#1909" id="1909">1909</a>
+<a href="#1910" id="1910">1910</a>
+<a href="#1911" id="1911">1911</a>
+<a href="#1912" id="1912">1912</a>
+<a href="#1913" id="1913">1913</a>
+<a href="#1914" id="1914">1914</a>
+<a href="#1915" id="1915">1915</a>
+<a href="#1916" id="1916">1916</a>
+<a href="#1917" id="1917">1917</a>
+<a href="#1918" id="1918">1918</a>
+<a href="#1919" id="1919">1919</a>
+<a href="#1920" id="1920">1920</a>
+<a href="#1921" id="1921">1921</a>
+<a href="#1922" id="1922">1922</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -2116,8 +2131,9 @@
 }
 
 <span class="kw">impl </span>Epoch {
-	<span class="doccomment">/// Create the genesis epoch (epoch #0). This is defined to start at the slot of
-	/// the first block, so that has to be provided.
+	<span class="doccomment">/// Create the genesis epoch (epoch #0).
+	///
+	/// This is defined to start at the slot of the first block, so that has to be provided.
 	</span><span class="kw">pub fn </span>genesis(genesis_config: <span class="kw-2">&amp;</span>BabeConfiguration, slot: Slot) -&gt; Epoch {
 		Epoch {
 			epoch_index: <span class="number">0</span>,
@@ -2130,6 +2146,38 @@
 				allowed_slots: genesis_config.allowed_slots,
 			},
 		}
+	}
+
+	<span class="doccomment">/// Clone and tweak epoch information to refer to the specified slot.
+	///
+	/// All the information which depends on the slot value is recomputed and assigned
+	/// to the returned epoch instance.
+	///
+	/// The `slot` must be greater than or equal the original epoch start slot,
+	/// if is less this operation is equivalent to a simple clone.
+	</span><span class="kw">pub fn </span>clone_for_slot(<span class="kw-2">&amp;</span><span class="self">self</span>, slot: Slot) -&gt; Epoch {
+		<span class="kw">let </span><span class="kw-2">mut </span>epoch = <span class="self">self</span>.clone();
+
+		<span class="kw">let </span>skipped_epochs = <span class="kw-2">*</span>slot.saturating_sub(<span class="self">self</span>.start_slot) / <span class="self">self</span>.duration;
+
+		<span class="kw">let </span>epoch_index = epoch.epoch_index.checked_add(skipped_epochs).expect(
+			<span class="string">&quot;epoch number is u64; it should be strictly smaller than number of slots; \
+				slots relate in some way to wall clock time; \
+				if u64 is not enough we should crash for safety; qed.&quot;</span>,
+		);
+
+		<span class="kw">let </span>start_slot = skipped_epochs
+			.checked_mul(epoch.duration)
+			.and_then(|skipped_slots| epoch.start_slot.checked_add(skipped_slots))
+			.expect(
+				<span class="string">&quot;slot number is u64; it should relate in some way to wall clock time; \
+				 if u64 is not enough we should crash for safety; qed.&quot;</span>,
+			);
+
+		epoch.epoch_index = epoch_index;
+		epoch.start_slot = Slot::from(start_slot);
+
+		epoch
 	}
 }
 
@@ -3447,45 +3495,27 @@
 				};
 
 				<span class="kw">if </span>viable_epoch.as_ref().end_slot() &lt;= slot {
-					<span class="comment">// some epochs must have been skipped as our current slot
-					// fits outside the current epoch. we will figure out
-					// which epoch it belongs to and we will re-use the same
-					// data for that epoch
-					</span><span class="kw">let </span><span class="kw-2">mut </span>epoch_data = viable_epoch.as_mut();
-					<span class="kw">let </span>skipped_epochs =
-						<span class="kw-2">*</span>slot.saturating_sub(epoch_data.start_slot) / epoch_data.duration;
-
-					<span class="comment">// NOTE: notice that we are only updating a local copy of the `Epoch`, this
+					<span class="comment">// Some epochs must have been skipped as our current slot fits outside the
+					// current epoch. We will figure out which epoch it belongs to and we will
+					// re-use the same data for that epoch.
+					// Notice that we are only updating a local copy of the `Epoch`, this
 					// makes it so that when we insert the next epoch into `EpochChanges` below
 					// (after incrementing it), it will use the correct epoch index and start slot.
-					// we do not update the original epoch that will be re-used because there might
+					// We do not update the original epoch that will be re-used because there might
 					// be other forks (that we haven&#39;t imported) where the epoch isn&#39;t skipped, and
-					// to import those forks we want to keep the original epoch data. not updating
+					// to import those forks we want to keep the original epoch data. Not updating
 					// the original epoch works because when we search the tree for which epoch to
 					// use for a given slot, we will search in-depth with the predicate
 					// `epoch.start_slot &lt;= slot` which will still match correctly without updating
 					// `start_slot` to the correct value as below.
-					</span><span class="kw">let </span>epoch_index = epoch_data.epoch_index.checked_add(skipped_epochs).expect(
-						<span class="string">&quot;epoch number is u64; it should be strictly smaller than number of slots; \
-						slots relate in some way to wall clock time; \
-						if u64 is not enough we should crash for safety; qed.&quot;</span>,
-					);
-
-					<span class="kw">let </span>start_slot = skipped_epochs
-						.checked_mul(epoch_data.duration)
-						.and_then(|skipped_slots| epoch_data.start_slot.checked_add(skipped_slots))
-						.expect(
-							<span class="string">&quot;slot number is u64; it should relate in some way to wall clock time; \
-							 if u64 is not enough we should crash for safety; qed.&quot;</span>,
-						);
+					</span><span class="kw">let </span>epoch = viable_epoch.as_mut();
+					<span class="kw">let </span>prev_index = epoch.epoch_index;
+					<span class="kw-2">*</span>epoch = epoch.clone_for_slot(slot);
 
 					<span class="macro">warn!</span>(
 						target: LOG_TARGET,
-						<span class="string">&quot;👶 Epoch(s) skipped: from {} to {}&quot;</span>, epoch_data.epoch_index, epoch_index,
+						<span class="string">&quot;👶 Epoch(s) skipped: from {} to {}&quot;</span>, prev_index, epoch.epoch_index,
 					);
-
-					epoch_data.epoch_index = epoch_index;
-					epoch_data.start_slot = Slot::from(start_slot);
 				}
 
 				<span class="macro">log!</span>(
