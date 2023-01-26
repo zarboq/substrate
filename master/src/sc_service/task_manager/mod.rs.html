@@ -530,6 +530,25 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -661,12 +680,20 @@
 			</span>GroupName::Default =&gt; DEFAULT_GROUP_NAME,
 		};
 
+		<span class="kw">let </span>task_type_label = <span class="kw">match </span>task_type {
+			TaskType::Blocking =&gt; <span class="string">&quot;blocking&quot;</span>,
+			TaskType::Async =&gt; <span class="string">&quot;async&quot;</span>,
+		};
+
 		<span class="comment">// Note that we increase the started counter here and not within the future. This way,
 		// we could properly visualize on Prometheus situations where the spawning doesn&#39;t work.
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="kw-2">&amp;</span><span class="self">self</span>.metrics {
-			metrics.tasks_spawned.with_label_values(<span class="kw-2">&amp;</span>[name, group]).inc();
+			metrics.tasks_spawned.with_label_values(<span class="kw-2">&amp;</span>[name, group, task_type_label]).inc();
 			<span class="comment">// We do a dummy increase in order for the task to show up in metrics.
-			</span>metrics.tasks_ended.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;finished&quot;</span>, group]).inc_by(<span class="number">0</span>);
+			</span>metrics
+				.tasks_ended
+				.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;finished&quot;</span>, group, task_type_label])
+				.inc_by(<span class="number">0</span>);
 		}
 
 		<span class="kw">let </span>future = <span class="kw">async move </span>{
@@ -677,8 +704,10 @@
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = metrics {
 				<span class="comment">// Add some wrappers around `task`.
 				</span><span class="kw">let </span>task = {
-					<span class="kw">let </span>poll_duration = metrics.poll_duration.with_label_values(<span class="kw-2">&amp;</span>[name, group]);
-					<span class="kw">let </span>poll_start = metrics.poll_start.with_label_values(<span class="kw-2">&amp;</span>[name, group]);
+					<span class="kw">let </span>poll_duration =
+						metrics.poll_duration.with_label_values(<span class="kw-2">&amp;</span>[name, group, task_type_label]);
+					<span class="kw">let </span>poll_start =
+						metrics.poll_start.with_label_values(<span class="kw-2">&amp;</span>[name, group, task_type_label]);
 					<span class="kw">let </span>inner =
 						prometheus_future::with_poll_durations(poll_duration, poll_start, task);
 					<span class="comment">// The logic of `AssertUnwindSafe` here is ok considering that we throw
@@ -689,15 +718,24 @@
 
 				<span class="kw">match </span>select(on_exit, task).<span class="kw">await </span>{
 					Either::Right((<span class="prelude-val">Err</span>(payload), <span class="kw">_</span>)) =&gt; {
-						metrics.tasks_ended.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;panic&quot;</span>, group]).inc();
+						metrics
+							.tasks_ended
+							.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;panic&quot;</span>, group, task_type_label])
+							.inc();
 						panic::resume_unwind(payload)
 					},
 					Either::Right((<span class="prelude-val">Ok</span>(()), <span class="kw">_</span>)) =&gt; {
-						metrics.tasks_ended.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;finished&quot;</span>, group]).inc();
+						metrics
+							.tasks_ended
+							.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;finished&quot;</span>, group, task_type_label])
+							.inc();
 					},
 					Either::Left(((), <span class="kw">_</span>)) =&gt; {
 						<span class="comment">// The `on_exit` has triggered.
-						</span>metrics.tasks_ended.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;interrupted&quot;</span>, group]).inc();
+						</span>metrics
+							.tasks_ended
+							.with_label_values(<span class="kw-2">&amp;</span>[name, <span class="string">&quot;interrupted&quot;</span>, group, task_type_label])
+							.inc();
 					},
 				}
 			} <span class="kw">else </span>{
@@ -965,28 +1003,28 @@
 					buckets: exponential_buckets(<span class="number">0.001</span>, <span class="number">4.0</span>, <span class="number">9</span>)
 						.expect(<span class="string">&quot;function parameters are constant and always valid; qed&quot;</span>),
 				},
-				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;task_group&quot;</span>]
+				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;task_group&quot;</span>, <span class="string">&quot;kind&quot;</span>]
 			)<span class="question-mark">?</span>, registry)<span class="question-mark">?</span>,
 			poll_start: register(CounterVec::new(
 				Opts::new(
 					<span class="string">&quot;substrate_tasks_polling_started_total&quot;</span>,
 					<span class="string">&quot;Total number of times we started invoking Future::poll&quot;
 				</span>),
-				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;task_group&quot;</span>]
+				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;task_group&quot;</span>, <span class="string">&quot;kind&quot;</span>]
 			)<span class="question-mark">?</span>, registry)<span class="question-mark">?</span>,
 			tasks_spawned: register(CounterVec::new(
 				Opts::new(
 					<span class="string">&quot;substrate_tasks_spawned_total&quot;</span>,
 					<span class="string">&quot;Total number of tasks that have been spawned on the Service&quot;
 				</span>),
-				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;task_group&quot;</span>]
+				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;task_group&quot;</span>, <span class="string">&quot;kind&quot;</span>]
 			)<span class="question-mark">?</span>, registry)<span class="question-mark">?</span>,
 			tasks_ended: register(CounterVec::new(
 				Opts::new(
 					<span class="string">&quot;substrate_tasks_ended_total&quot;</span>,
 					<span class="string">&quot;Total number of tasks for which Future::poll has returned Ready(()) or panicked&quot;
 				</span>),
-				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;reason&quot;</span>, <span class="string">&quot;task_group&quot;</span>]
+				<span class="kw-2">&amp;</span>[<span class="string">&quot;task_name&quot;</span>, <span class="string">&quot;reason&quot;</span>, <span class="string">&quot;task_group&quot;</span>, <span class="string">&quot;kind&quot;</span>]
 			)<span class="question-mark">?</span>, registry)<span class="question-mark">?</span>,
 		})
 	}
