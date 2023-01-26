@@ -852,6 +852,9 @@
 <a href="#852" id="852">852</a>
 <a href="#853" id="853">853</a>
 <a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1466,11 +1469,14 @@
 		}
 	}
 
-	<span class="kw">fn </span>length_to_fee(length: u32) -&gt; BalanceOf&lt;T&gt; {
+	<span class="doccomment">/// Compute the length portion of a fee by invoking the configured `LengthToFee` impl.
+	</span><span class="kw">pub fn </span>length_to_fee(length: u32) -&gt; BalanceOf&lt;T&gt; {
 		T::LengthToFee::weight_to_fee(<span class="kw-2">&amp;</span>Weight::from_ref_time(length <span class="kw">as </span>u64))
 	}
 
-	<span class="kw">fn </span>weight_to_fee(weight: Weight) -&gt; BalanceOf&lt;T&gt; {
+	<span class="doccomment">/// Compute the unadjusted portion of the weight fee by invoking the configured `WeightToFee`
+	/// impl. Note that the input `weight` is capped by the maximum block weight before computation.
+	</span><span class="kw">pub fn </span>weight_to_fee(weight: Weight) -&gt; BalanceOf&lt;T&gt; {
 		<span class="comment">// cap the weight to the maximum defined in runtime, otherwise it will be the
 		// `Bounded` maximum of its data type, which is not desired.
 		</span><span class="kw">let </span>capped_weight = weight.min(T::BlockWeights::get().max_block);
