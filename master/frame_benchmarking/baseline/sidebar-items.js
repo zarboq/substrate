@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["TEST_KEY_TYPE_ID",""]],"struct":[["Pallet",""]],"trait":[["Config",""]]};
+window.SIDEBAR_ITEMS = {"struct":[["Pallet",""]],"trait":[["Config",""]],"type":[["SignerId",""]]};

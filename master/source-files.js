@@ -11,6 +11,7 @@ var sourcesIndex = JSON.parse('{\
 "fork_tree":["",[],["lib.rs"]],\
 "frame_benchmarking":["",[],["analysis.rs","baseline.rs","lib.rs","utils.rs"]],\
 "frame_benchmarking_cli":["",[["block",[],["bench.rs","cmd.rs","mod.rs"]],["extrinsic",[],["bench.rs","cmd.rs","extrinsic_factory.rs","mod.rs"]],["machine",[],["hardware.rs","mod.rs"]],["overhead",[],["cmd.rs","mod.rs","template.rs"]],["pallet",[],["command.rs","mod.rs","writer.rs"]],["shared",[],["mod.rs","record.rs","stats.rs","weight_params.rs"]],["storage",[],["cmd.rs","mod.rs","read.rs","template.rs","write.rs"]]],["lib.rs"]],\
+"frame_benchmarking_pallet_pov":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "frame_election_provider_solution_type":["",[],["codec.rs","from_assignment_helpers.rs","index_assignment.rs","lib.rs","single_page.rs"]],\
 "frame_election_provider_support":["",[],["lib.rs","onchain.rs","traits.rs","weights.rs"]],\
 "frame_executive":["",[],["lib.rs"]],\

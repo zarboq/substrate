@@ -671,6 +671,10 @@
 <a href="#671" id="671">671</a>
 <a href="#672" id="672">672</a>
 <a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1279,11 +1283,15 @@
 			<span class="kw">let </span>proof_recorder_root = <span class="self">self</span>.proof_recorder_root.get();
 			<span class="kw">if </span>proof_recorder_root == Default::default() || proof_size == <span class="number">1 </span>{
 				<span class="comment">// empty trie
-				</span>proof_size
+				</span><span class="macro">log::debug!</span>(target: <span class="string">&quot;benchmark&quot;</span>, <span class="string">&quot;Some proof size: {}&quot;</span>, <span class="kw-2">&amp;</span>proof_size);
+				proof_size
 			} <span class="kw">else </span>{
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(size) = proof.encoded_compact_size::&lt;HashFor&lt;B&gt;&gt;(proof_recorder_root) {
 					size <span class="kw">as </span>u32
-				} <span class="kw">else </span>{
+				} <span class="kw">else if </span>proof_recorder_root == <span class="self">self</span>.root.get() {
+					<span class="macro">log::debug!</span>(target: <span class="string">&quot;benchmark&quot;</span>, <span class="string">&quot;No changes - no proof&quot;</span>);
+					<span class="number">0
+				</span>} <span class="kw">else </span>{
 					<span class="macro">panic!</span>(
 						<span class="string">&quot;proof rec root {:?}, root {:?}, genesis {:?}, rec_len {:?}&quot;</span>,
 						<span class="self">self</span>.proof_recorder_root.get(),

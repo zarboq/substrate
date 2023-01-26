@@ -173,6 +173,29 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -278,6 +301,14 @@
 	</span><span class="attr">#[arg(long)]
 	</span><span class="kw">pub </span>output_analysis: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
+	<span class="doccomment">/// Which analysis function to use when analyzing measured proof sizes.
+	</span><span class="attr">#[arg(long, default_value(<span class="string">&quot;median-slopes&quot;</span>))]
+	</span><span class="kw">pub </span>output_pov_analysis: <span class="prelude-ty">Option</span>&lt;String&gt;,
+
+	<span class="doccomment">/// The PoV estimation mode of a benchmark if no `pov_mode` attribute is present.
+	</span><span class="attr">#[arg(long, default_value(<span class="string">&quot;max-encoded-len&quot;</span>), value_enum)]
+	</span><span class="kw">pub </span>default_pov_mode: command::PovEstimationMode,
+
 	<span class="doccomment">/// Set the heap pages while running benchmarks. If not set, the default value from the client
 	/// is used.
 	</span><span class="attr">#[arg(long)]
@@ -291,10 +322,6 @@
 	/// construction.
 	</span><span class="attr">#[arg(long)]
 	</span><span class="kw">pub </span>extra: bool,
-
-	<span class="doccomment">/// Estimate PoV size.
-	</span><span class="attr">#[arg(long)]
-	</span><span class="kw">pub </span>record_proof: bool,
 
 	<span class="attr">#[allow(missing_docs)]
 	#[clap(flatten)]
@@ -341,6 +368,25 @@
 	/// template for that purpose.
 	</span><span class="attr">#[arg(long)]
 	</span><span class="kw">pub </span>no_storage_info: bool,
+
+	<span class="doccomment">/// The assumed default maximum size of any `StorageMap`.
+	///
+	/// When the maximum size of a map is not defined by the runtime developer,
+	/// this value is used as a worst case scenario. It will affect the calculated worst case
+	/// PoV size for accessing a value in a map, since the PoV will need to include the trie
+	/// nodes down to the underlying value.
+	</span><span class="attr">#[clap(long = <span class="string">&quot;map-size&quot;</span>, default_value = <span class="string">&quot;1000000&quot;</span>)]
+	</span><span class="kw">pub </span>worst_case_map_values: u32,
+
+	<span class="doccomment">/// Adjust the PoV estimation by adding additional trie layers to it.
+	///
+	/// This should be set to `log16(n)` where `n` is the number of top-level storage items in the
+	/// runtime, eg. `StorageMap`s and `StorageValue`s. A value of 2 to 3 is usually sufficient.
+	/// Each layer will result in an additional 495 bytes PoV per distinct top-level access.
+	/// Therefore multiple `StorageMap` accesses only suffer from this increase once. The exact
+	/// number of storage items depends on the runtime and the deployed pallets.
+	</span><span class="attr">#[clap(long, default_value = <span class="string">&quot;0&quot;</span>)]
+	</span><span class="kw">pub </span>additional_trie_layers: u8,
 
 	<span class="doccomment">/// A path to a `.json` file with existing benchmark results generated with `--json` or
 	/// `--json-file`. When specified the benchmarks are not actually executed, and the data for
