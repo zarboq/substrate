@@ -498,6 +498,46 @@
 <a href="#498" id="498">498</a>
 <a href="#499" id="499">499</a>
 <a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -586,12 +626,9 @@
 		traits::{Defensive, ReservableCurrency, StorageVersion},
 	};
 	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
-	<span class="kw">use </span>sp_runtime::{
-		traits::{Saturating, Zero},
-		DispatchResult,
-	};
+	<span class="kw">use </span>sp_runtime::{traits::Zero, DispatchResult};
 	<span class="kw">use </span>sp_staking::{EraIndex, StakingInterface};
-	<span class="kw">use </span>sp_std::{collections::btree_set::BTreeSet, prelude::<span class="kw-2">*</span>, vec::Vec};
+	<span class="kw">use </span>sp_std::{prelude::<span class="kw-2">*</span>, vec::Vec};
 	<span class="kw">pub use </span>weights::WeightInfo;
 
 	<span class="attr">#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
@@ -638,6 +675,14 @@
 
 		<span class="doccomment">/// The weight information of this pallet.
 		</span><span class="kw">type </span>WeightInfo: WeightInfo;
+
+		<span class="doccomment">/// Maximum value for `ErasToCheckPerBlock`. This should be as close as possible, but more
+		/// than the actual value, in order to have accurate benchmarks.
+		</span><span class="kw">type </span>MaxErasToCheckPerBlock: Get&lt;u32&gt;;
+
+		<span class="doccomment">/// Use only for benchmarking.
+		</span><span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
+		</span><span class="kw">type </span>MaxBackersPerValidator: Get&lt;u32&gt;;
 	}
 
 	<span class="doccomment">/// The current &quot;head of the queue&quot; being unstaked.
@@ -673,11 +718,11 @@
 		</span>InternalError,
 		<span class="doccomment">/// A batch was partially checked for the given eras, but the process did not finish.
 		</span>BatchChecked { eras: Vec&lt;EraIndex&gt; },
-		<span class="doccomment">/// A batch was terminated.
+		<span class="doccomment">/// A batch of a given size was terminated.
 		///
 		/// This is always follows by a number of `Unstaked` or `Slashed` events, marking the end
 		/// of the batch. A new batch will be created upon next block.
-		</span>BatchFinished,
+		</span>BatchFinished { size: u32 },
 	}
 
 	<span class="attr">#[pallet::error]
@@ -707,6 +752,31 @@
 			}
 
 			<span class="self">Self</span>::do_on_idle(remaining_weight)
+		}
+
+		<span class="kw">fn </span>integrity_test() {
+			<span class="macro">sp_std::if_std! </span>{
+				sp_io::TestExternalities::new_empty().execute_with(|| {
+					<span class="comment">// ensure that the value of `ErasToCheckPerBlock` is less than
+					// `T::MaxErasToCheckPerBlock`.
+					</span><span class="macro">assert!</span>(
+						ErasToCheckPerBlock::&lt;T&gt;::get() &lt;= T::MaxErasToCheckPerBlock::get(),
+						<span class="string">&quot;the value of `ErasToCheckPerBlock` is greater than `T::MaxErasToCheckPerBlock`&quot;</span>,
+					);
+				});
+			}
+		}
+
+		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+			<span class="comment">// ensure that the value of `ErasToCheckPerBlock` is less than
+			// `T::MaxErasToCheckPerBlock`.
+			</span><span class="macro">assert!</span>(
+				ErasToCheckPerBlock::&lt;T&gt;::get() &lt;= T::MaxErasToCheckPerBlock::get(),
+				<span class="string">&quot;the value of `ErasToCheckPerBlock` is greater than `T::MaxErasToCheckPerBlock`&quot;</span>,
+			);
+
+			<span class="prelude-val">Ok</span>(())
 		}
 	}
 
@@ -788,9 +858,10 @@
 		/// Dispatch origin must be signed by the [`Config::ControlOrigin`].
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::control())]
-		</span><span class="kw">pub fn </span>control(origin: OriginFor&lt;T&gt;, unchecked_eras_to_check: EraIndex) -&gt; DispatchResult {
+		</span><span class="kw">pub fn </span>control(origin: OriginFor&lt;T&gt;, eras_to_check: EraIndex) -&gt; DispatchResult {
 			<span class="kw">let _ </span>= T::ControlOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
-			ErasToCheckPerBlock::&lt;T&gt;::put(unchecked_eras_to_check);
+			<span class="macro">ensure!</span>(eras_to_check &lt;= T::MaxErasToCheckPerBlock::get(), Error::&lt;T&gt;::CallNotAllowed);
+			ErasToCheckPerBlock::&lt;T&gt;::put(eras_to_check);
 			<span class="prelude-val">Ok</span>(())
 		}
 	}
@@ -824,27 +895,38 @@
 		/// found out to have no eras to check. At the end of a check cycle, even if they are fully
 		/// checked, we don&#39;t finish the process.
 		</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_on_idle(remaining_weight: Weight) -&gt; Weight {
-			<span class="kw">let </span><span class="kw-2">mut </span>eras_to_check_per_block = ErasToCheckPerBlock::&lt;T&gt;::get();
+			<span class="comment">// any weight that is unaccounted for
+			</span><span class="kw">let </span><span class="kw-2">mut </span>unaccounted_weight = Weight::from_ref_time(<span class="number">0</span>);
+
+			<span class="kw">let </span>eras_to_check_per_block = ErasToCheckPerBlock::&lt;T&gt;::get();
 			<span class="kw">if </span>eras_to_check_per_block.is_zero() {
-				<span class="kw">return </span>T::DbWeight::get().reads(<span class="number">1</span>)
+				<span class="kw">return </span>T::DbWeight::get().reads(<span class="number">1</span>).saturating_add(unaccounted_weight)
 			}
 
 			<span class="comment">// NOTE: here we&#39;re assuming that the number of validators has only ever increased,
 			// meaning that the number of exposures to check is either this per era, or less.
 			</span><span class="kw">let </span>validator_count = T::Staking::desired_validator_count();
+			<span class="kw">let </span>(next_batch_size, reads_from_queue) = Head::&lt;T&gt;::get()
+				.map_or((Queue::&lt;T&gt;::count().min(T::BatchSize::get()), <span class="bool-val">true</span>), |head| {
+					(head.stashes.len() <span class="kw">as </span>u32, <span class="bool-val">false</span>)
+				});
 
 			<span class="comment">// determine the number of eras to check. This is based on both `ErasToCheckPerBlock`
 			// and `remaining_weight` passed on to us from the runtime executive.
-			</span><span class="kw">let </span>max_weight = |v, u| {
-				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_check(v * u)
-					.max(&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_unstake())
+			</span><span class="kw">let </span>max_weight = |v, b| {
+				<span class="comment">// NOTE: this potentially under-counts by up to `BatchSize` reads from the queue.
+				</span>&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_check(v, b)
+					.max(&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_unstake(b))
+					.saturating_add(<span class="kw">if </span>reads_from_queue {
+						T::DbWeight::get().reads(next_batch_size.into())
+					} <span class="kw">else </span>{
+						Zero::zero()
+					})
 			};
-			<span class="kw">while </span>max_weight(validator_count, eras_to_check_per_block).any_gt(remaining_weight) {
-				eras_to_check_per_block.saturating_dec();
-				<span class="kw">if </span>eras_to_check_per_block.is_zero() {
-					<span class="macro">log!</span>(debug, <span class="string">&quot;early existing because eras_to_check_per_block is zero&quot;</span>);
-					<span class="kw">return </span>T::DbWeight::get().reads(<span class="number">2</span>)
-				}
+
+			<span class="kw">if </span>max_weight(validator_count, next_batch_size).any_gt(remaining_weight) {
+				<span class="macro">log!</span>(debug, <span class="string">&quot;early exit because eras_to_check_per_block is zero&quot;</span>);
+				<span class="kw">return </span>T::DbWeight::get().reads(<span class="number">3</span>).saturating_add(unaccounted_weight)
 			}
 
 			<span class="kw">if </span>T::Staking::election_ongoing() {
@@ -852,7 +934,7 @@
 				// there is an ongoing election -- we better not do anything. Imagine someone is not
 				// exposed anywhere in the last era, and the snapshot for the election is already
 				// taken. In this time period, we don&#39;t want to accidentally unstake them.
-				</span><span class="kw">return </span>T::DbWeight::get().reads(<span class="number">2</span>)
+				</span><span class="kw">return </span>T::DbWeight::get().reads(<span class="number">4</span>).saturating_add(unaccounted_weight)
 			}
 
 			<span class="kw">let </span>UnstakeRequest { stashes, <span class="kw-2">mut </span>checked } = <span class="kw">match </span>Head::&lt;T&gt;::take().or_else(|| {
@@ -862,6 +944,9 @@
 					.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 					.try_into()
 					.expect(<span class="string">&quot;take ensures bound is met; qed&quot;</span>);
+				unaccounted_weight.saturating_accrue(
+					T::DbWeight::get().reads_writes(stashes.len() <span class="kw">as </span>u64, stashes.len() <span class="kw">as </span>u64),
+				);
 				<span class="kw">if </span>stashes.is_empty() {
 					<span class="prelude-val">None
 				</span>} <span class="kw">else </span>{
@@ -877,10 +962,11 @@
 
 			<span class="macro">log!</span>(
 				debug,
-				<span class="string">&quot;checking {:?} stashes, eras_to_check_per_block = {:?}, remaining_weight = {:?}&quot;</span>,
+				<span class="string">&quot;checking {:?} stashes, eras_to_check_per_block = {:?}, checked {:?}, remaining_weight = {:?}&quot;</span>,
 				stashes.len(),
 				eras_to_check_per_block,
-				remaining_weight
+				checked,
+				remaining_weight,
 			);
 
 			<span class="comment">// the range that we&#39;re allowed to check in this round.
@@ -931,11 +1017,10 @@
 				}
 			};
 
-			<span class="kw">let </span>check_stash = |stash, deposit, eras_checked: <span class="kw-2">&amp;mut </span>BTreeSet&lt;EraIndex&gt;| {
-				<span class="kw">let </span>is_exposed = unchecked_eras_to_check.iter().any(|e| {
-					eras_checked.insert(<span class="kw-2">*</span>e);
-					T::Staking::is_exposed_in_era(<span class="kw-2">&amp;</span>stash, e)
-				});
+			<span class="kw">let </span>check_stash = |stash, deposit| {
+				<span class="kw">let </span>is_exposed = unchecked_eras_to_check
+					.iter()
+					.any(|e| T::Staking::is_exposed_in_era(<span class="kw-2">&amp;</span>stash, e));
 
 				<span class="kw">if </span>is_exposed {
 					T::Currency::slash_reserved(<span class="kw-2">&amp;</span>stash, deposit);
@@ -948,20 +1033,16 @@
 			};
 
 			<span class="kw">if </span>unchecked_eras_to_check.is_empty() {
-				<span class="comment">// `stash` is not exposed in any era now -- we can let go of them now.
-				</span>stashes.into_iter().for_each(|(stash, deposit)| unstake_stash(stash, deposit));
-				<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::BatchFinished);
-				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_unstake()
+				<span class="comment">// `stashes` are not exposed in any era now -- we can let go of them now.
+				</span><span class="kw">let </span>size = stashes.len() <span class="kw">as </span>u32;
+				stashes.into_iter().for_each(|(stash, deposit)| unstake_stash(stash, deposit));
+				<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::BatchFinished { size });
+				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_unstake(size).saturating_add(unaccounted_weight)
 			} <span class="kw">else </span>{
-				<span class="comment">// eras checked so far.
-				</span><span class="kw">let </span><span class="kw-2">mut </span>eras_checked = BTreeSet::&lt;EraIndex&gt;::new();
-
 				<span class="kw">let </span>pre_length = stashes.len();
 				<span class="kw">let </span>stashes: BoundedVec&lt;(T::AccountId, BalanceOf&lt;T&gt;), T::BatchSize&gt; = stashes
 					.into_iter()
-					.filter(|(stash, deposit)| {
-						check_stash(stash.clone(), <span class="kw-2">*</span>deposit, <span class="kw-2">&amp;mut </span>eras_checked)
-					})
+					.filter(|(stash, deposit)| check_stash(stash.clone(), <span class="kw-2">*</span>deposit))
 					.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 					.try_into()
 					.expect(<span class="string">&quot;filter can only lessen the length; still in bound; qed&quot;</span>);
@@ -969,8 +1050,8 @@
 
 				<span class="macro">log!</span>(
 					debug,
-					<span class="string">&quot;checked {:?} eras, pre stashes: {:?}, post: {:?}&quot;</span>,
-					eras_checked.len(),
+					<span class="string">&quot;checked {:?}, pre stashes: {:?}, post: {:?}&quot;</span>,
+					unchecked_eras_to_check,
 					pre_length,
 					post_length,
 				);
@@ -978,7 +1059,7 @@
 				<span class="kw">match </span>checked.try_extend(unchecked_eras_to_check.clone().into_iter()) {
 					<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt;
 						<span class="kw">if </span>stashes.is_empty() {
-							<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::BatchFinished);
+							<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::BatchFinished { size: <span class="number">0 </span>});
 						} <span class="kw">else </span>{
 							Head::&lt;T&gt;::put(UnstakeRequest { stashes, checked });
 							<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::BatchChecked {
@@ -991,9 +1072,8 @@
 					},
 				}
 
-				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_check(
-					validator_count * eras_checked.len() <span class="kw">as </span>u32,
-				)
+				&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::on_idle_check(validator_count, pre_length <span class="kw">as </span>u32)
+					.saturating_add(unaccounted_weight)
 			}
 		}
 	}

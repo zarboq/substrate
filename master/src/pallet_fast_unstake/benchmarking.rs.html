@@ -232,13 +232,11 @@
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">const </span>USER_SEED: u32 = <span class="number">0</span>;
-<span class="kw">const </span>DEFAULT_BACKER_PER_VALIDATOR: u32 = <span class="number">128</span>;
-<span class="kw">const </span>MAX_VALIDATORS: u32 = <span class="number">128</span>;
 
 <span class="kw">type </span>CurrencyOf&lt;T&gt; = &lt;T <span class="kw">as </span>Config&gt;::Currency;
 
-<span class="kw">fn </span>create_unexposed_nominators&lt;T: Config&gt;() -&gt; Vec&lt;T::AccountId&gt; {
-	(<span class="number">0</span>..T::BatchSize::get())
+<span class="kw">fn </span>create_unexposed_batch&lt;T: Config&gt;(batch_size: u32) -&gt; Vec&lt;T::AccountId&gt; {
+	(<span class="number">0</span>..batch_size)
 		.map(|i| {
 			<span class="kw">let </span>account =
 				frame_benchmarking::account::&lt;T::AccountId&gt;(<span class="string">&quot;unexposed_nominator&quot;</span>, i, USER_SEED);
@@ -277,7 +275,7 @@
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
 	<span class="kw">for </span>era <span class="kw">in </span><span class="number">0</span>..=until {
-		<span class="kw">let </span>others = (<span class="number">0</span>..DEFAULT_BACKER_PER_VALIDATOR)
+		<span class="kw">let </span>others = (<span class="number">0</span>..T::MaxBackersPerValidator::get())
 			.map(|s| {
 				<span class="kw">let </span>who = frame_benchmarking::account::&lt;T::AccountId&gt;(<span class="string">&quot;nominator&quot;</span>, era, s);
 				<span class="kw">let </span>value = ed;
@@ -298,8 +296,10 @@
 <span class="macro">benchmarks! </span>{
 	<span class="comment">// on_idle, we don&#39;t check anyone, but fully unbond them.
 	</span>on_idle_unstake {
+		<span class="kw">let </span>b <span class="kw">in </span><span class="number">1 </span>.. T::BatchSize::get();
+
 		ErasToCheckPerBlock::&lt;T&gt;::put(<span class="number">1</span>);
-		<span class="kw">for </span>who <span class="kw">in </span>create_unexposed_nominators::&lt;T&gt;() {
+		<span class="kw">for </span>who <span class="kw">in </span>create_unexposed_batch::&lt;T&gt;(b).into_iter() {
 			<span class="macro">assert_ok!</span>(FastUnstake::&lt;T&gt;::register_fast_unstake(
 				RawOrigin::Signed(who.clone()).into(),
 			));
@@ -315,7 +315,7 @@
 				checked,
 				stashes,
 				..
-			}) <span class="kw">if </span>checked.len() == <span class="number">1 </span>&amp;&amp; stashes.len() <span class="kw">as </span>u32 == T::BatchSize::get()
+			}) <span class="kw">if </span>checked.len() == <span class="number">1 </span>&amp;&amp; stashes.len() <span class="kw">as </span>u32 == b
 		));
 	}
 	: {
@@ -324,25 +324,23 @@
 	verify {
 		<span class="macro">assert!</span>(<span class="macro">matches!</span>(
 			fast_unstake_events::&lt;T&gt;().last(),
-			<span class="prelude-val">Some</span>(Event::BatchFinished)
+			<span class="prelude-val">Some</span>(Event::BatchFinished { size: b })
 		));
 	}
 
-	<span class="comment">// on_idle, when we check some number of eras,
+	<span class="comment">// on_idle, when we check some number of eras and the queue is already set.
 	</span>on_idle_check {
-		<span class="comment">// number of eras multiplied by validators in that era.
-		</span><span class="kw">let </span>x <span class="kw">in </span>(T::Staking::bonding_duration() * <span class="number">1</span>) .. (T::Staking::bonding_duration() * MAX_VALIDATORS);
-
-		<span class="kw">let </span>u = T::Staking::bonding_duration();
-		<span class="kw">let </span>v = x / u;
+		<span class="kw">let </span>v <span class="kw">in </span><span class="number">1 </span>.. <span class="number">256</span>;
+		<span class="kw">let </span>b <span class="kw">in </span><span class="number">1 </span>.. T::BatchSize::get();
+		<span class="kw">let </span>u = T::MaxErasToCheckPerBlock::get().min(T::Staking::bonding_duration());
 
 		ErasToCheckPerBlock::&lt;T&gt;::put(u);
 		T::Staking::set_current_era(u);
 
-		<span class="comment">// setup staking with v validators and u eras of data (0..=u)
+		<span class="comment">// setup staking with v validators and u eras of data (0..=u+1)
 		</span>setup_staking::&lt;T&gt;(v, u);
 
-		<span class="kw">let </span>stashes = create_unexposed_nominators::&lt;T&gt;().into_iter().map(|s| {
+		<span class="kw">let </span>stashes = create_unexposed_batch::&lt;T&gt;(b).into_iter().map(|s| {
 			<span class="macro">assert_ok!</span>(FastUnstake::&lt;T&gt;::register_fast_unstake(
 				RawOrigin::Signed(s.clone()).into(),
 			));
@@ -351,6 +349,8 @@
 
 		<span class="comment">// no one is queued thus far.
 		</span><span class="macro">assert_eq!</span>(Head::&lt;T&gt;::get(), <span class="prelude-val">None</span>);
+
+		Head::&lt;T&gt;::put(UnstakeRequest { stashes: stashes.clone().try_into().unwrap(), checked: Default::default() });
 	}
 	: {
 		on_idle_full_block::&lt;T&gt;();
@@ -368,7 +368,7 @@
 
 	register_fast_unstake {
 		ErasToCheckPerBlock::&lt;T&gt;::put(<span class="number">1</span>);
-		<span class="kw">let </span>who = create_unexposed_nominators::&lt;T&gt;().get(<span class="number">0</span>).cloned().unwrap();
+		<span class="kw">let </span>who = create_unexposed_batch::&lt;T&gt;(<span class="number">1</span>).get(<span class="number">0</span>).cloned().unwrap();
 		<span class="macro">whitelist_account!</span>(who);
 		<span class="macro">assert_eq!</span>(Queue::&lt;T&gt;::count(), <span class="number">0</span>);
 
@@ -380,7 +380,7 @@
 
 	deregister {
 		ErasToCheckPerBlock::&lt;T&gt;::put(<span class="number">1</span>);
-		<span class="kw">let </span>who = create_unexposed_nominators::&lt;T&gt;().get(<span class="number">0</span>).cloned().unwrap();
+		<span class="kw">let </span>who = create_unexposed_batch::&lt;T&gt;(<span class="number">1</span>).get(<span class="number">0</span>).cloned().unwrap();
 		<span class="macro">assert_ok!</span>(FastUnstake::&lt;T&gt;::register_fast_unstake(
 			RawOrigin::Signed(who.clone()).into(),
 		));
@@ -395,7 +395,7 @@
 	control {
 		<span class="kw">let </span>origin = &lt;T <span class="kw">as </span>Config&gt;::ControlOrigin::successful_origin();
 	}
-	: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, <span class="number">128</span>)
+	: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, T::MaxErasToCheckPerBlock::get())
 	verify {}
 
 	<span class="macro">impl_benchmark_test_suite!</span>(Pallet, <span class="kw">crate</span>::mock::ExtBuilder::default().build(), <span class="kw">crate</span>::mock::Runtime)
