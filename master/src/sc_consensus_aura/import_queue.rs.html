@@ -429,7 +429,6 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -618,16 +617,15 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		<span class="kw-2">mut </span>block: BlockImportParams&lt;B, ()&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(BlockImportParams&lt;B, ()&gt;, <span class="prelude-ty">Option</span>&lt;Vec&lt;(CacheKeyId, Vec&lt;u8&gt;)&gt;&gt;), String&gt; {
-		<span class="comment">// When importing whole state we don&#39;t verify the seal as the state is not available.
-		</span><span class="kw">if </span>block.with_state() {
-			<span class="kw">return </span><span class="prelude-val">Ok</span>((block, Default::default()))
-		}
-
-		<span class="comment">// Skip checks that include execution, if being told so.
+		<span class="comment">// Skip checks that include execution, if being told so or when importing only state.
 		//
 		// This is done for example when gap syncing and it is expected that the block after the gap
 		// was checked/chosen properly, e.g. by warp syncing to this block using a finality proof.
-		</span><span class="kw">if </span>block.state_action.skip_execution_checks() {
+		// Or when we are importing state only and can not verify the seal.
+		</span><span class="kw">if </span>block.with_state() || block.state_action.skip_execution_checks() {
+			<span class="comment">// When we are importing only the state of a block, it will be the best block.
+			</span>block.fork_choice = <span class="prelude-val">Some</span>(ForkChoiceStrategy::Custom(block.with_state()));
+
 			<span class="kw">return </span><span class="prelude-val">Ok</span>((block, Default::default()))
 		}
 
