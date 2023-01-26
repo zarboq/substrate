@@ -849,10 +849,10 @@
 
 	<span class="comment">// add the weight. If class is unlimited, use saturating add instead of checked one.
 	</span><span class="kw">if </span>limit_per_class.max_total.is_none() &amp;&amp; limit_per_class.reserved.is_none() {
-		all_weight.add(extrinsic_weight, info.class)
+		all_weight.accrue(extrinsic_weight, info.class)
 	} <span class="kw">else </span>{
 		all_weight
-			.checked_add(extrinsic_weight, info.class)
+			.checked_accrue(extrinsic_weight, info.class)
 			.map_err(|<span class="kw">_</span>| InvalidTransaction::ExhaustsResources)<span class="question-mark">?</span>;
 	}
 
@@ -943,7 +943,7 @@
 		<span class="kw">let </span>unspent = post_info.calc_unspent(info);
 		<span class="kw">if </span>unspent.any_gt(Weight::zero()) {
 			<span class="kw">crate</span>::BlockWeight::&lt;T&gt;::mutate(|current_weight| {
-				current_weight.sub(unspent, info.class);
+				current_weight.reduce(unspent, info.class);
 			})
 		}
 
