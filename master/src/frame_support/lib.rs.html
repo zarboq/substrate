@@ -2747,6 +2747,69 @@
 <a href="#2747" id="2747">2747</a>
 <a href="#2748" id="2748">2748</a>
 <a href="#2749" id="2749">2749</a>
+<a href="#2750" id="2750">2750</a>
+<a href="#2751" id="2751">2751</a>
+<a href="#2752" id="2752">2752</a>
+<a href="#2753" id="2753">2753</a>
+<a href="#2754" id="2754">2754</a>
+<a href="#2755" id="2755">2755</a>
+<a href="#2756" id="2756">2756</a>
+<a href="#2757" id="2757">2757</a>
+<a href="#2758" id="2758">2758</a>
+<a href="#2759" id="2759">2759</a>
+<a href="#2760" id="2760">2760</a>
+<a href="#2761" id="2761">2761</a>
+<a href="#2762" id="2762">2762</a>
+<a href="#2763" id="2763">2763</a>
+<a href="#2764" id="2764">2764</a>
+<a href="#2765" id="2765">2765</a>
+<a href="#2766" id="2766">2766</a>
+<a href="#2767" id="2767">2767</a>
+<a href="#2768" id="2768">2768</a>
+<a href="#2769" id="2769">2769</a>
+<a href="#2770" id="2770">2770</a>
+<a href="#2771" id="2771">2771</a>
+<a href="#2772" id="2772">2772</a>
+<a href="#2773" id="2773">2773</a>
+<a href="#2774" id="2774">2774</a>
+<a href="#2775" id="2775">2775</a>
+<a href="#2776" id="2776">2776</a>
+<a href="#2777" id="2777">2777</a>
+<a href="#2778" id="2778">2778</a>
+<a href="#2779" id="2779">2779</a>
+<a href="#2780" id="2780">2780</a>
+<a href="#2781" id="2781">2781</a>
+<a href="#2782" id="2782">2782</a>
+<a href="#2783" id="2783">2783</a>
+<a href="#2784" id="2784">2784</a>
+<a href="#2785" id="2785">2785</a>
+<a href="#2786" id="2786">2786</a>
+<a href="#2787" id="2787">2787</a>
+<a href="#2788" id="2788">2788</a>
+<a href="#2789" id="2789">2789</a>
+<a href="#2790" id="2790">2790</a>
+<a href="#2791" id="2791">2791</a>
+<a href="#2792" id="2792">2792</a>
+<a href="#2793" id="2793">2793</a>
+<a href="#2794" id="2794">2794</a>
+<a href="#2795" id="2795">2795</a>
+<a href="#2796" id="2796">2796</a>
+<a href="#2797" id="2797">2797</a>
+<a href="#2798" id="2798">2798</a>
+<a href="#2799" id="2799">2799</a>
+<a href="#2800" id="2800">2800</a>
+<a href="#2801" id="2801">2801</a>
+<a href="#2802" id="2802">2802</a>
+<a href="#2803" id="2803">2803</a>
+<a href="#2804" id="2804">2804</a>
+<a href="#2805" id="2805">2805</a>
+<a href="#2806" id="2806">2806</a>
+<a href="#2807" id="2807">2807</a>
+<a href="#2808" id="2808">2808</a>
+<a href="#2809" id="2809">2809</a>
+<a href="#2810" id="2810">2810</a>
+<a href="#2811" id="2811">2811</a>
+<a href="#2812" id="2812">2812</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -3623,6 +3686,7 @@
 
 	<span class="macro">decl_storage! </span>{
 		<span class="kw">trait </span>Store <span class="kw">for </span>Module&lt;T: Config&gt; <span class="kw">as </span>Test {
+			<span class="kw">pub </span>Value get(<span class="kw">fn </span>value): u64;
 			<span class="kw">pub </span>Data get(<span class="kw">fn </span>data) build(|<span class="kw">_</span>| <span class="macro">vec!</span>[(<span class="number">15u32</span>, <span class="number">42u64</span>)]):
 				map hasher(twox_64_concat) u32 =&gt; u64;
 			<span class="kw">pub </span>OptionLinkedMap: map hasher(blake2_128_concat) u32 =&gt; <span class="prelude-ty">Option</span>&lt;u32&gt;;
@@ -3692,6 +3756,61 @@
 				&lt;T <span class="kw">as </span>Config&gt;::BlockNumber,
 				&lt;T <span class="kw">as </span>Config&gt;::BlockNumber,
 			&gt;;
+		});
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>storage_value_mutate_exists_should_work() {
+		new_test_ext().execute_with(|| {
+			<span class="attr">#[<span class="kw">crate</span>::storage_alias]
+			</span><span class="kw">pub type </span>Value = StorageValue&lt;Test, u32&gt;;
+
+			<span class="macro">assert!</span>(!Value::exists());
+
+			Value::mutate_exists(|v| <span class="kw-2">*</span>v = <span class="prelude-val">Some</span>(<span class="number">1</span>));
+			<span class="macro">assert!</span>(Value::exists());
+			<span class="macro">assert_eq!</span>(Value::get(), <span class="prelude-val">Some</span>(<span class="number">1</span>));
+
+			<span class="comment">// removed if mutated to `None`
+			</span>Value::mutate_exists(|v| <span class="kw-2">*</span>v = <span class="prelude-val">None</span>);
+			<span class="macro">assert!</span>(!Value::exists());
+		});
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>storage_value_try_mutate_exists_should_work() {
+		new_test_ext().execute_with(|| {
+			<span class="attr">#[<span class="kw">crate</span>::storage_alias]
+			</span><span class="kw">pub type </span>Value = StorageValue&lt;Test, u32&gt;;
+
+			<span class="kw">type </span>TestResult = result::Result&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
+
+			<span class="macro">assert!</span>(!Value::exists());
+
+			<span class="comment">// mutated if `Ok`
+			</span><span class="macro">assert_ok!</span>(Value::try_mutate_exists(|v| -&gt; TestResult {
+				<span class="kw-2">*</span>v = <span class="prelude-val">Some</span>(<span class="number">1</span>);
+				<span class="prelude-val">Ok</span>(())
+			}));
+			<span class="macro">assert!</span>(Value::exists());
+			<span class="macro">assert_eq!</span>(Value::get(), <span class="prelude-val">Some</span>(<span class="number">1</span>));
+
+			<span class="comment">// no-op if `Err`
+			</span><span class="macro">assert_noop!</span>(
+				Value::try_mutate_exists(|v| -&gt; TestResult {
+					<span class="kw-2">*</span>v = <span class="prelude-val">Some</span>(<span class="number">2</span>);
+					<span class="prelude-val">Err</span>(<span class="string">&quot;nah&quot;</span>)
+				}),
+				<span class="string">&quot;nah&quot;
+			</span>);
+			<span class="macro">assert_eq!</span>(Value::get(), <span class="prelude-val">Some</span>(<span class="number">1</span>));
+
+			<span class="comment">// removed if mutated to`None`
+			</span><span class="macro">assert_ok!</span>(Value::try_mutate_exists(|v| -&gt; TestResult {
+				<span class="kw-2">*</span>v = <span class="prelude-val">None</span>;
+				<span class="prelude-val">Ok</span>(())
+			}));
+			<span class="macro">assert!</span>(!Value::exists());
 		});
 	}
 
@@ -4006,6 +4125,13 @@
 		PalletStorageMetadata {
 			prefix: <span class="string">&quot;Test&quot;</span>,
 			entries: <span class="macro">vec!</span>[
+				StorageEntryMetadata {
+					name: <span class="string">&quot;Value&quot;</span>,
+					modifier: StorageEntryModifier::Default,
+					ty: StorageEntryType::Plain(scale_info::meta_type::&lt;u64&gt;()),
+					default: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>],
+					docs: <span class="macro">vec!</span>[],
+				},
 				StorageEntryMetadata {
 					name: <span class="string">&quot;Data&quot;</span>,
 					modifier: StorageEntryModifier::Default,
