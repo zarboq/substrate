@@ -142,7 +142,6 @@ var sourcesIndex = JSON.parse('{\
 "sc_consensus_manual_seal":["",[["consensus",[],["aura.rs","babe.rs","timestamp.rs"]]],["consensus.rs","error.rs","finalize_block.rs","lib.rs","rpc.rs","seal_block.rs"]],\
 "sc_consensus_pow":["",[],["lib.rs","worker.rs"]],\
 "sc_consensus_slots":["",[],["aux_schema.rs","lib.rs","slots.rs"]],\
-"sc_consensus_uncles":["",[],["lib.rs"]],\
 "sc_executor":["",[],["lib.rs","native_executor.rs","wasm_runtime.rs"]],\
 "sc_executor_common":["",[["runtime_blob",[],["data_segments_snapshot.rs","globals_snapshot.rs","mod.rs","runtime_blob.rs"]]],["error.rs","lib.rs","util.rs","wasm_runtime.rs"]],\
 "sc_executor_wasmi":["",[],["lib.rs"]],\
@@ -185,7 +184,6 @@ var sourcesIndex = JSON.parse('{\
 "sp_application_crypto_test":["",[],["lib.rs"]],\
 "sp_arithmetic":["",[],["biguint.rs","fixed_point.rs","helpers_128bit.rs","lib.rs","per_things.rs","rational.rs","traits.rs"]],\
 "sp_authority_discovery":["",[],["lib.rs"]],\
-"sp_authorship":["",[],["lib.rs"]],\
 "sp_beefy":["",[],["commitment.rs","lib.rs","mmr.rs","payload.rs","witness.rs"]],\
 "sp_block_builder":["",[],["lib.rs"]],\
 "sp_blockchain":["",[],["backend.rs","error.rs","header_metadata.rs","lib.rs"]],\

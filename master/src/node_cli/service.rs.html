@@ -817,14 +817,6 @@
 <a href="#817" id="817">817</a>
 <a href="#818" id="818">818</a>
 <a href="#819" id="819">819</a>
-<a href="#820" id="820">820</a>
-<a href="#821" id="821">821</a>
-<a href="#822" id="822">822</a>
-<a href="#823" id="823">823</a>
-<a href="#824" id="824">824</a>
-<a href="#825" id="825">825</a>
-<a href="#826" id="826">826</a>
-<a href="#827" id="827">827</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1049,10 +1041,7 @@
 					slot_duration,
 				);
 
-			<span class="kw">let </span>uncles =
-				sp_authorship::InherentDataProvider::&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header&gt;::check_inherents();
-
-			<span class="prelude-val">Ok</span>((slot, timestamp, uncles))
+			<span class="prelude-val">Ok</span>((slot, timestamp))
 		},
 		<span class="kw-2">&amp;</span>task_manager.spawn_essential_handle(),
 		config.prometheus_registry(),
@@ -1267,11 +1256,6 @@
 			create_inherent_data_providers: <span class="kw">move </span>|parent, ()| {
 				<span class="kw">let </span>client_clone = client_clone.clone();
 				<span class="kw">async move </span>{
-					<span class="kw">let </span>uncles = sc_consensus_uncles::create_uncles_inherent_data_provider(
-						<span class="kw-2">&amp;*</span>client_clone,
-						parent,
-					)<span class="question-mark">?</span>;
-
 					<span class="kw">let </span>timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
 					<span class="kw">let </span>slot =
@@ -1286,7 +1270,7 @@
 							<span class="kw-2">&amp;</span>parent,
 						)<span class="question-mark">?</span>;
 
-					<span class="prelude-val">Ok</span>((slot, timestamp, uncles, storage_proof))
+					<span class="prelude-val">Ok</span>((slot, timestamp, storage_proof))
 				}
 			},
 			force_authoring,
