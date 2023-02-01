@@ -137,6 +137,9 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -160,7 +163,7 @@
 
 </span><span class="kw">use super</span>::{Pallet <span class="kw">as </span>Treasury, <span class="kw-2">*</span>};
 
-<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet};
+<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, BenchmarkError};
 <span class="kw">use </span>frame_support::{
 	dispatch::UnfilteredDispatchable,
 	ensure,
@@ -238,7 +241,8 @@
 			beneficiary_lookup
 		)<span class="question-mark">?</span>;
 		<span class="kw">let </span>proposal_id = Treasury::&lt;T, <span class="kw">_</span>&gt;::proposal_count() - <span class="number">1</span>;
-		<span class="kw">let </span>reject_origin = T::RejectOrigin::successful_origin();
+		<span class="kw">let </span>reject_origin =
+			T::RejectOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(reject_origin, proposal_id)
 
 	approve_proposal {
@@ -251,7 +255,8 @@
 			beneficiary_lookup
 		)<span class="question-mark">?</span>;
 		<span class="kw">let </span>proposal_id = Treasury::&lt;T, <span class="kw">_</span>&gt;::proposal_count() - <span class="number">1</span>;
-		<span class="kw">let </span>approve_origin = T::ApproveOrigin::successful_origin();
+		<span class="kw">let </span>approve_origin =
+			T::ApproveOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(approve_origin, proposal_id)
 
 	remove_approval {
@@ -263,7 +268,8 @@
 		)<span class="question-mark">?</span>;
 		<span class="kw">let </span>proposal_id = Treasury::&lt;T, <span class="kw">_</span>&gt;::proposal_count() - <span class="number">1</span>;
 		Treasury::&lt;T, I&gt;::approve_proposal(RawOrigin::Root.into(), proposal_id)<span class="question-mark">?</span>;
-		<span class="kw">let </span>reject_origin = T::RejectOrigin::successful_origin();
+		<span class="kw">let </span>reject_origin =
+			T::RejectOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(reject_origin, proposal_id)
 
 	on_initialize_proposals {

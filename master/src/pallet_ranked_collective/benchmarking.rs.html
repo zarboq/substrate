@@ -162,6 +162,19 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -185,7 +198,9 @@
 <span class="attr">#[allow(unused_imports)]
 </span><span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>RankedCollective;
 
-<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, whitelisted_caller};
+<span class="kw">use </span>frame_benchmarking::v1::{
+	account, benchmarks_instance_pallet, whitelisted_caller, BenchmarkError,
+};
 <span class="kw">use </span>frame_support::{assert_ok, dispatch::UnfilteredDispatchable};
 <span class="kw">use </span>frame_system::RawOrigin <span class="kw">as </span>SystemOrigin;
 
@@ -199,13 +214,15 @@
 	<span class="kw">let </span>who = account::&lt;T::AccountId&gt;(<span class="string">&quot;member&quot;</span>, MemberCount::&lt;T, I&gt;::get(<span class="number">0</span>), SEED);
 	<span class="kw">let </span>who_lookup = T::Lookup::unlookup(who.clone());
 	<span class="macro">assert_ok!</span>(Pallet::&lt;T, I&gt;::add_member(
-		T::PromoteOrigin::successful_origin(),
-		who_lookup.clone()
+		T::PromoteOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;PromoteOrigin has no successful origin required for the benchmark&quot;</span>),
+		who_lookup.clone(),
 	));
 	<span class="kw">for _ in </span><span class="number">0</span>..rank {
 		<span class="macro">assert_ok!</span>(Pallet::&lt;T, I&gt;::promote_member(
-			T::PromoteOrigin::successful_origin(),
-			who_lookup.clone()
+			T::PromoteOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;PromoteOrigin has no successful origin required for the benchmark&quot;</span>),
+			who_lookup.clone(),
 		));
 	}
 	who
@@ -215,7 +232,8 @@
 	add_member {
 		<span class="kw">let </span>who = account::&lt;T::AccountId&gt;(<span class="string">&quot;member&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>who_lookup = T::Lookup::unlookup(who.clone());
-		<span class="kw">let </span>origin = T::PromoteOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::PromoteOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::add_member { who: who_lookup };
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
@@ -231,7 +249,8 @@
 		<span class="kw">let </span>who_lookup = T::Lookup::unlookup(who.clone());
 		<span class="kw">let </span>last = make_member::&lt;T, I&gt;(rank);
 		<span class="kw">let </span>last_index = (<span class="number">0</span>..=rank).map(|r| IdToIndex::&lt;T, I&gt;::get(r, <span class="kw-2">&amp;</span>last).unwrap()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>origin = T::DemoteOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::DemoteOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::remove_member { who: who_lookup, min_rank: rank };
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
@@ -247,7 +266,8 @@
 		<span class="kw">let </span>rank = r <span class="kw">as </span>u16;
 		<span class="kw">let </span>who = make_member::&lt;T, I&gt;(rank);
 		<span class="kw">let </span>who_lookup = T::Lookup::unlookup(who.clone());
-		<span class="kw">let </span>origin = T::PromoteOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::PromoteOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::promote_member { who: who_lookup };
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
@@ -263,7 +283,8 @@
 		<span class="kw">let </span>who_lookup = T::Lookup::unlookup(who.clone());
 		<span class="kw">let </span>last = make_member::&lt;T, I&gt;(rank);
 		<span class="kw">let </span>last_index = IdToIndex::&lt;T, I&gt;::get(rank, <span class="kw-2">&amp;</span>last).unwrap();
-		<span class="kw">let </span>origin = T::DemoteOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::DemoteOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::demote_member { who: who_lookup };
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
@@ -279,14 +300,19 @@
 	vote {
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
 		<span class="kw">let </span>caller_lookup = T::Lookup::unlookup(caller.clone());
-		<span class="macro">assert_ok!</span>(Pallet::&lt;T, I&gt;::add_member(T::PromoteOrigin::successful_origin(), caller_lookup.clone()));
+		<span class="macro">assert_ok!</span>(Pallet::&lt;T, I&gt;::add_member(
+			T::PromoteOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;PromoteOrigin has no successful origin required for the benchmark&quot;</span>),
+			caller_lookup.clone(),
+		));
 		<span class="comment">// Create a poll
 		</span><span class="kw">let </span>class = T::Polls::classes().into_iter().next().unwrap();
 		<span class="kw">let </span>rank = T::MinRankOfClass::convert(class.clone());
 		<span class="kw">for _ in </span><span class="number">0</span>..rank {
 			<span class="macro">assert_ok!</span>(Pallet::&lt;T, I&gt;::promote_member(
-				T::PromoteOrigin::successful_origin(),
-				caller_lookup.clone()
+				T::PromoteOrigin::try_successful_origin()
+					.expect(<span class="string">&quot;PromoteOrigin has no successful origin required for the benchmark&quot;</span>),
+				caller_lookup.clone(),
 			));
 		}
 

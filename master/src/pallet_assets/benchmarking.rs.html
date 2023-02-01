@@ -469,6 +469,10 @@
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -492,7 +496,7 @@
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span>frame_benchmarking::v1::{
-	account, benchmarks_instance_pallet, whitelist_account, whitelisted_caller,
+	account, benchmarks_instance_pallet, whitelist_account, whitelisted_caller, BenchmarkError,
 };
 <span class="kw">use </span>frame_support::{
 	dispatch::UnfilteredDispatchable,
@@ -606,7 +610,8 @@
 <span class="macro">benchmarks_instance_pallet! </span>{
 	create {
 		<span class="kw">let </span>asset_id = default_asset_id::&lt;T, I&gt;();
-		<span class="kw">let </span>origin = T::CreateOrigin::successful_origin(<span class="kw-2">&amp;</span>asset_id.into());
+		<span class="kw">let </span>origin = T::CreateOrigin::try_successful_origin(<span class="kw-2">&amp;</span>asset_id.into())
+			.map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>caller = T::CreateOrigin::ensure_origin(origin, <span class="kw-2">&amp;</span>asset_id.into()).unwrap();
 		<span class="kw">let </span>caller_lookup = T::Lookup::unlookup(caller.clone());
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, DepositBalanceOf::&lt;T, I&gt;::max_value());
@@ -833,7 +838,8 @@
 
 		<span class="kw">let </span>(asset_id, <span class="kw">_</span>, <span class="kw">_</span>) = create_default_asset::&lt;T, I&gt;(<span class="bool-val">true</span>);
 
-		<span class="kw">let </span>origin = T::ForceOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::ForceOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::force_set_metadata {
 			id: asset_id,
 			name: name.clone(),
@@ -853,7 +859,8 @@
 		<span class="kw">let </span>origin = SystemOrigin::Signed(caller).into();
 		Assets::&lt;T, I&gt;::set_metadata(origin, asset_id, dummy.clone(), dummy, <span class="number">12</span>)<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>origin = T::ForceOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::ForceOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::force_clear_metadata { id: asset_id };
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
@@ -863,7 +870,8 @@
 	force_asset_status {
 		<span class="kw">let </span>(asset_id, caller, caller_lookup) = create_default_asset::&lt;T, I&gt;(<span class="bool-val">true</span>);
 
-		<span class="kw">let </span>origin = T::ForceOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::ForceOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::force_asset_status {
 			id: asset_id,
 			owner: caller_lookup.clone(),

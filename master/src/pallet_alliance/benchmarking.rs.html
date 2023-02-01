@@ -805,6 +805,13 @@
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -832,7 +839,7 @@
 	prelude::<span class="kw-2">*</span>,
 };
 
-<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet};
+<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, BenchmarkError};
 <span class="kw">use </span>frame_support::traits::{EnsureOrigin, Get, UnfilteredDispatchable};
 <span class="kw">use </span>frame_system::{Pallet <span class="kw">as </span>System, RawOrigin <span class="kw">as </span>SystemOrigin};
 
@@ -1388,7 +1395,8 @@
 		<span class="kw">let </span>rule = rule(<span class="string">b&quot;hello world&quot;</span>);
 
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::set_rule { rule: rule.clone() };
-		<span class="kw">let </span>origin = T::AdminOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::AdminOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
 		<span class="macro">assert_eq!</span>(Alliance::&lt;T, I&gt;::rule(), <span class="prelude-val">Some</span>(rule.clone()));
@@ -1401,7 +1409,8 @@
 		<span class="kw">let </span>announcement = announcement(<span class="string">b&quot;hello world&quot;</span>);
 
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::announce { announcement: announcement.clone() };
-		<span class="kw">let </span>origin = T::AnnouncementOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::AnnouncementOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
 		<span class="macro">assert!</span>(Alliance::&lt;T, I&gt;::announcements().contains(<span class="kw-2">&amp;</span>announcement));
@@ -1416,7 +1425,8 @@
 		Announcements::&lt;T, I&gt;::put(announcements);
 
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::remove_announcement { announcement: announcement.clone() };
-		<span class="kw">let </span>origin = T::AnnouncementOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::AnnouncementOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
 		<span class="macro">assert!</span>(Alliance::&lt;T, I&gt;::announcements().is_empty());
@@ -1472,7 +1482,8 @@
 
 		<span class="kw">let </span>ally1_lookup = T::Lookup::unlookup(ally1.clone());
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::elevate_ally { ally: ally1_lookup };
-		<span class="kw">let </span>origin = T::MembershipManager::successful_origin();
+		<span class="kw">let </span>origin =
+			T::MembershipManager::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
 		<span class="macro">assert!</span>(!Alliance::&lt;T, I&gt;::is_ally(<span class="kw-2">&amp;</span>ally1));
@@ -1532,7 +1543,8 @@
 
 		<span class="kw">let </span>fellow2_lookup = T::Lookup::unlookup(fellow2.clone());
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::kick_member { who: fellow2_lookup };
-		<span class="kw">let </span>origin = T::MembershipManager::successful_origin();
+		<span class="kw">let </span>origin =
+			T::MembershipManager::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
 		<span class="macro">assert!</span>(!Alliance::&lt;T, I&gt;::is_member(<span class="kw-2">&amp;</span>fellow2));
@@ -1561,7 +1573,8 @@
 		unscrupulous_list.extend(websites.into_iter().map(UnscrupulousItem::Website));
 
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::add_unscrupulous_items { items: unscrupulous_list.clone() };
-		<span class="kw">let </span>origin = T::AnnouncementOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::AnnouncementOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::UnscrupulousItemAdded { items: unscrupulous_list }.into());
@@ -1591,7 +1604,8 @@
 		unscrupulous_list.extend(websites.into_iter().map(UnscrupulousItem::Website));
 
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::remove_unscrupulous_items { items: unscrupulous_list.clone() };
-		<span class="kw">let </span>origin = T::AnnouncementOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::AnnouncementOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::UnscrupulousItemRemoved { items: unscrupulous_list }.into());

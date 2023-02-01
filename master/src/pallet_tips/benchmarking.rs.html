@@ -201,6 +201,9 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -222,7 +225,9 @@
 
 </span><span class="attr">#![cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 
-</span><span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, whitelisted_caller};
+</span><span class="kw">use </span>frame_benchmarking::v1::{
+	account, benchmarks_instance_pallet, whitelisted_caller, BenchmarkError,
+};
 <span class="kw">use </span>frame_support::ensure;
 <span class="kw">use </span>frame_system::RawOrigin;
 <span class="kw">use </span>sp_runtime::traits::Saturating;
@@ -399,7 +404,8 @@
 		<span class="kw">let </span>reason_hash = T::Hashing::hash(<span class="kw-2">&amp;</span>reason[..]);
 		<span class="kw">let </span>hash = T::Hashing::hash_of(<span class="kw-2">&amp;</span>(<span class="kw-2">&amp;</span>reason_hash, <span class="kw-2">&amp;</span>beneficiary));
 		<span class="macro">ensure!</span>(Tips::&lt;T, I&gt;::contains_key(hash), <span class="string">&quot;tip does not exist&quot;</span>);
-		<span class="kw">let </span>reject_origin = T::RejectOrigin::successful_origin();
+		<span class="kw">let </span>reject_origin =
+			T::RejectOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(reject_origin, hash)
 
 	<span class="macro">impl_benchmark_test_suite!</span>(TipsMod, <span class="kw">crate</span>::tests::new_test_ext(), <span class="kw">crate</span>::tests::Test);

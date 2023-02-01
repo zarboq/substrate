@@ -821,6 +821,21 @@
 <a href="#821" id="821">821</a>
 <a href="#822" id="822">822</a>
 <a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1185,15 +1200,17 @@
 <span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 </span><span class="kw">mod </span>benchmark {
 	<span class="kw">use super</span>::{Pallet <span class="kw">as </span>Membership, <span class="kw-2">*</span>};
-	<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, whitelist};
+	<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, whitelist, BenchmarkError};
 	<span class="kw">use </span>frame_support::{assert_ok, traits::EnsureOrigin};
 	<span class="kw">use </span>frame_system::RawOrigin;
 
 	<span class="kw">const </span>SEED: u32 = <span class="number">0</span>;
 
 	<span class="kw">fn </span>set_members&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt;(members: Vec&lt;T::AccountId&gt;, prime: <span class="prelude-ty">Option</span>&lt;usize&gt;) {
-		<span class="kw">let </span>reset_origin = T::ResetOrigin::successful_origin();
-		<span class="kw">let </span>prime_origin = T::PrimeOrigin::successful_origin();
+		<span class="kw">let </span>reset_origin = T::ResetOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;ResetOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>prime_origin = T::PrimeOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;PrimeOrigin has no successful origin required for the benchmark&quot;</span>);
 
 		<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::reset_members(reset_origin, members.clone()));
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(prime) = prime.map(|i| members[i].clone()) {
@@ -1213,9 +1230,11 @@
 			<span class="kw">let </span>new_member = account::&lt;T::AccountId&gt;(<span class="string">&quot;add&quot;</span>, m, SEED);
 			<span class="kw">let </span>new_member_lookup = T::Lookup::unlookup(new_member.clone());
 		}: {
-			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::add_member(T::AddOrigin::successful_origin(), new_member_lookup));
-		}
-		verify {
+			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::add_member(
+				T::AddOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+				new_member_lookup,
+			));
+		} verify {
 			<span class="macro">assert!</span>(&lt;Members&lt;T, I&gt;&gt;::get().contains(<span class="kw-2">&amp;</span>new_member));
 			<span class="attr">#[cfg(test)] </span><span class="kw">crate</span>::tests::clean();
 		}
@@ -1231,7 +1250,10 @@
 			<span class="kw">let </span>to_remove = members.first().cloned().unwrap();
 			<span class="kw">let </span>to_remove_lookup = T::Lookup::unlookup(to_remove.clone());
 		}: {
-			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::remove_member(T::RemoveOrigin::successful_origin(), to_remove_lookup));
+			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::remove_member(
+				T::RemoveOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+				to_remove_lookup,
+			));
 		} verify {
 			<span class="macro">assert!</span>(!&lt;Members&lt;T, I&gt;&gt;::get().contains(<span class="kw-2">&amp;</span>to_remove));
 			<span class="comment">// prime is rejigged
@@ -1251,7 +1273,7 @@
 			<span class="kw">let </span>remove_lookup = T::Lookup::unlookup(remove.clone());
 		}: {
 			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::swap_member(
-				T::SwapOrigin::successful_origin(),
+				T::SwapOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
 				remove_lookup,
 				add_lookup,
 			));
@@ -1271,7 +1293,10 @@
 			set_members::&lt;T, I&gt;(members.clone(), <span class="prelude-val">Some</span>(members.len() - <span class="number">1</span>));
 			<span class="kw">let </span><span class="kw-2">mut </span>new_members = (m..<span class="number">2</span><span class="kw-2">*</span>m).map(|i| account(<span class="string">&quot;member&quot;</span>, i, SEED)).collect::&lt;Vec&lt;T::AccountId&gt;&gt;();
 		}: {
-			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::reset_members(T::ResetOrigin::successful_origin(), new_members.clone()));
+			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::reset_members(
+				T::ResetOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+				new_members.clone(),
+			));
 		} verify {
 			new_members.sort();
 			<span class="macro">assert_eq!</span>(&lt;Members&lt;T, I&gt;&gt;::get(), new_members);
@@ -1308,7 +1333,10 @@
 			<span class="kw">let </span>prime_lookup = T::Lookup::unlookup(prime.clone());
 			set_members::&lt;T, I&gt;(members, <span class="prelude-val">None</span>);
 		}: {
-			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::set_prime(T::PrimeOrigin::successful_origin(), prime_lookup));
+			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::set_prime(
+				T::PrimeOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+				prime_lookup,
+			));
 		} verify {
 			<span class="macro">assert!</span>(&lt;Prime&lt;T, I&gt;&gt;::get().is_some());
 			<span class="macro">assert!</span>(&lt;T::MembershipChanged&gt;::get_prime().is_some());
@@ -1321,7 +1349,9 @@
 			<span class="kw">let </span>prime = members.last().cloned().unwrap();
 			set_members::&lt;T, I&gt;(members, <span class="prelude-val">None</span>);
 		}: {
-			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::clear_prime(T::PrimeOrigin::successful_origin()));
+			<span class="macro">assert_ok!</span>(&lt;Membership&lt;T, I&gt;&gt;::clear_prime(
+				T::PrimeOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+			));
 		} verify {
 			<span class="macro">assert!</span>(&lt;Prime&lt;T, I&gt;&gt;::get().is_none());
 			<span class="macro">assert!</span>(&lt;T::MembershipChanged&gt;::get_prime().is_none());

@@ -556,6 +556,87 @@
 <a href="#556" id="556">556</a>
 <a href="#557" id="557">557</a>
 <a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
@@ -578,7 +659,9 @@
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>Referenda;
 <span class="kw">use </span>assert_matches::assert_matches;
-<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, whitelist_account};
+<span class="kw">use </span>frame_benchmarking::v1::{
+	account, benchmarks_instance_pallet, whitelist_account, BenchmarkError,
+};
 <span class="kw">use </span>frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
@@ -606,8 +689,7 @@
 	T::Preimages::bound(call).unwrap()
 }
 
-<span class="kw">fn </span>create_referendum&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt;() -&gt; (T::RuntimeOrigin, ReferendumIndex) {
-	<span class="kw">let </span>origin: T::RuntimeOrigin = T::SubmitOrigin::successful_origin();
+<span class="kw">fn </span>create_referendum&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt;(origin: T::RuntimeOrigin) -&gt; ReferendumIndex {
 	<span class="kw">if let </span><span class="prelude-val">Ok</span>(caller) = frame_system::ensure_signed(origin.clone()) {
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, BalanceOf::&lt;T, I&gt;::max_value());
 		<span class="macro">whitelist_account!</span>(caller);
@@ -619,7 +701,7 @@
 	<span class="kw">let </span>call = <span class="kw">crate</span>::Call::&lt;T, I&gt;::submit { proposal_origin, proposal, enactment_moment };
 	<span class="macro">assert_ok!</span>(call.dispatch_bypass_filter(origin.clone()));
 	<span class="kw">let </span>index = ReferendumCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
-	(origin, index)
+	index
 }
 
 <span class="kw">fn </span>place_deposit&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt;(index: ReferendumIndex) {
@@ -633,6 +715,7 @@
 }
 
 <span class="kw">fn </span>fill_queue&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt;(
+	origin: T::RuntimeOrigin,
 	index: ReferendumIndex,
 	spaces: u32,
 	pass_after: u32,
@@ -640,7 +723,7 @@
 	<span class="comment">// First, create enough other referendums to fill the track.
 	</span><span class="kw">let </span><span class="kw-2">mut </span>others = <span class="macro">vec!</span>[];
 	<span class="kw">for _ in </span><span class="number">0</span>..info::&lt;T, I&gt;(index).max_deciding {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		place_deposit::&lt;T, I&gt;(index);
 		others.push(index);
 	}
@@ -648,7 +731,7 @@
 	<span class="comment">// We will also need enough referenda which are queued and passing, we want `MaxQueued - 1`
 	// in order to force the maximum amount of work to insert ours into the queue.
 	</span><span class="kw">for _ in </span>spaces..T::MaxQueued::get() {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		place_deposit::&lt;T, I&gt;(index);
 		make_passing_after::&lt;T, I&gt;(index, Perbill::from_percent(pass_after));
 		others.push(index);
@@ -752,7 +835,8 @@
 
 <span class="macro">benchmarks_instance_pallet! </span>{
 	submit {
-		<span class="kw">let </span>origin: T::RuntimeOrigin = T::SubmitOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">if let </span><span class="prelude-val">Ok</span>(caller) = frame_system::ensure_signed(origin.clone()) {
 			T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, BalanceOf::&lt;T, I&gt;::max_value());
 			<span class="macro">whitelist_account!</span>(caller);
@@ -768,15 +852,19 @@
 	}
 
 	place_decision_deposit_preparing {
-		<span class="kw">let </span>(origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 	}: place_decision_deposit&lt;T::RuntimeOrigin&gt;(origin, index)
 	verify {
 		<span class="macro">assert!</span>(Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().decision_deposit.is_some());
 	}
 
 	place_decision_deposit_queued {
-		<span class="kw">let </span>(origin, index) = create_referendum::&lt;T, I&gt;();
-		fill_queue::&lt;T, I&gt;(index, <span class="number">1</span>, <span class="number">90</span>);
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
+		fill_queue::&lt;T, I&gt;(origin.clone(), index, <span class="number">1</span>, <span class="number">90</span>);
 	}: place_decision_deposit&lt;T::RuntimeOrigin&gt;(origin, index)
 	verify {
 		<span class="kw">let </span>track = Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().track;
@@ -785,8 +873,10 @@
 	}
 
 	place_decision_deposit_not_queued {
-		<span class="kw">let </span>(origin, index) = create_referendum::&lt;T, I&gt;();
-		fill_queue::&lt;T, I&gt;(index, <span class="number">0</span>, <span class="number">90</span>);
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
+		fill_queue::&lt;T, I&gt;(origin.clone(), index, <span class="number">0</span>, <span class="number">90</span>);
 		<span class="kw">let </span>track = Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().track;
 		<span class="macro">assert_eq!</span>(TrackQueue::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track).len() <span class="kw">as </span>u32, T::MaxQueued::get());
 		<span class="macro">assert!</span>(TrackQueue::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track).into_iter().all(|(i, <span class="kw">_</span>)| i != index));
@@ -797,7 +887,9 @@
 	}
 
 	place_decision_deposit_passing {
-		<span class="kw">let </span>(origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		skip_prepare_period::&lt;T, I&gt;(index);
 		make_passing::&lt;T, I&gt;(index);
 	}: place_decision_deposit&lt;T::RuntimeOrigin&gt;(origin, index)
@@ -806,7 +898,9 @@
 	}
 
 	place_decision_deposit_failing {
-		<span class="kw">let </span>(origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		skip_prepare_period::&lt;T, I&gt;(index);
 	}: place_decision_deposit&lt;T::RuntimeOrigin&gt;(origin, index)
 	verify {
@@ -814,19 +908,31 @@
 	}
 
 	refund_decision_deposit {
-		<span class="kw">let </span>(origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		place_deposit::&lt;T, I&gt;(index);
-		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(T::CancelOrigin::successful_origin(), index));
+		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(
+			T::CancelOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;CancelOrigin has no successful origin required for the benchmark&quot;</span>),
+			index,
+		));
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, index)
 	verify {
 		<span class="macro">assert_matches!</span>(ReferendumInfoFor::&lt;T, I&gt;::get(index), <span class="prelude-val">Some</span>(ReferendumInfo::Cancelled(<span class="kw">_</span>, <span class="kw">_</span>, <span class="prelude-val">None</span>)));
 	}
 
 	refund_submission_deposit {
-		<span class="kw">let </span>(origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin =
+			T::SubmitOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		<span class="kw">let </span>caller = frame_system::ensure_signed(origin.clone()).unwrap();
 		<span class="kw">let </span>balance = T::Currency::free_balance(<span class="kw-2">&amp;</span>caller);
-		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(T::CancelOrigin::successful_origin(), index));
+		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(
+			T::CancelOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;CancelOrigin has no successful origin required for the benchmark&quot;</span>),
+			index,
+		));
 		<span class="macro">assert_matches!</span>(ReferendumInfoFor::&lt;T, I&gt;::get(index), <span class="prelude-val">Some</span>(ReferendumInfo::Cancelled(<span class="kw">_</span>, <span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="kw">_</span>)));
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, index)
 	verify {
@@ -837,28 +943,42 @@
 	}
 
 	cancel {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
-	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(T::CancelOrigin::successful_origin(), index)
-	verify {
+	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(
+		T::CancelOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		index
+	) verify {
 		<span class="macro">assert_matches!</span>(ReferendumInfoFor::&lt;T, I&gt;::get(index), <span class="prelude-val">Some</span>(ReferendumInfo::Cancelled(..)));
 	}
 
 	kill {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
-	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(T::KillOrigin::successful_origin(), index)
-	verify {
+	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(
+		T::KillOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		index
+	) verify {
 		<span class="macro">assert_matches!</span>(ReferendumInfoFor::&lt;T, I&gt;::get(index), <span class="prelude-val">Some</span>(ReferendumInfo::Killed(..)));
 	}
 
 	one_fewer_deciding_queue_empty {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
 		nudge::&lt;T, I&gt;(index);
 		<span class="kw">let </span>track = Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().track;
-		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(T::CancelOrigin::successful_origin(), index));
+		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(
+			T::CancelOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;CancelOrigin has no successful origin required for the benchmark&quot;</span>),
+			index,
+		));
 		<span class="macro">assert_eq!</span>(DecidingCount::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track), <span class="number">1</span>);
 	}: one_fewer_deciding(RawOrigin::Root, track)
 	verify {
@@ -866,11 +986,17 @@
 	}
 
 	one_fewer_deciding_failing {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		<span class="comment">// No spaces free in the queue.
-		</span><span class="kw">let </span>queued = fill_queue::&lt;T, I&gt;(index, <span class="number">0</span>, <span class="number">90</span>);
+		</span><span class="kw">let </span>queued = fill_queue::&lt;T, I&gt;(origin, index, <span class="number">0</span>, <span class="number">90</span>);
 		<span class="kw">let </span>track = Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().track;
-		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(T::CancelOrigin::successful_origin(), queued[<span class="number">0</span>]));
+		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(
+			T::CancelOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;CancelOrigin has no successful origin required for the benchmark&quot;</span>),
+			queued[<span class="number">0</span>],
+		));
 		<span class="macro">assert_eq!</span>(TrackQueue::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track).len() <span class="kw">as </span>u32, T::MaxQueued::get());
 		<span class="kw">let </span>deciding_count = DecidingCount::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track);
 	}: one_fewer_deciding(RawOrigin::Root, track)
@@ -885,11 +1011,17 @@
 	}
 
 	one_fewer_deciding_passing {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		<span class="comment">// No spaces free in the queue.
-		</span><span class="kw">let </span>queued = fill_queue::&lt;T, I&gt;(index, <span class="number">0</span>, <span class="number">0</span>);
+		</span><span class="kw">let </span>queued = fill_queue::&lt;T, I&gt;(origin, index, <span class="number">0</span>, <span class="number">0</span>);
 		<span class="kw">let </span>track = Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().track;
-		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(T::CancelOrigin::successful_origin(), queued[<span class="number">0</span>]));
+		<span class="macro">assert_ok!</span>(Referenda::&lt;T, I&gt;::cancel(
+			T::CancelOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;CancelOrigin has no successful origin required for the benchmark&quot;</span>),
+			queued[<span class="number">0</span>],
+		));
 		<span class="macro">assert_eq!</span>(TrackQueue::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track).len() <span class="kw">as </span>u32, T::MaxQueued::get());
 		<span class="kw">let </span>deciding_count = DecidingCount::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track);
 	}: one_fewer_deciding(RawOrigin::Root, track)
@@ -904,10 +1036,12 @@
 	}
 
 	nudge_referendum_requeued_insertion {
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
 		<span class="comment">// First create our referendum and place the deposit. It will be failing.
-		</span><span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		</span><span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		place_deposit::&lt;T, I&gt;(index);
-		fill_queue::&lt;T, I&gt;(index, <span class="number">0</span>, <span class="number">90</span>);
+		fill_queue::&lt;T, I&gt;(origin, index, <span class="number">0</span>, <span class="number">90</span>);
 
 		<span class="comment">// Now nudge ours, with the track now full and the queue full of referenda with votes,
 		// ours will not be in the queue.
@@ -925,10 +1059,12 @@
 	}
 
 	nudge_referendum_requeued_slide {
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
 		<span class="comment">// First create our referendum and place the deposit. It will be failing.
-		</span><span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		</span><span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		place_deposit::&lt;T, I&gt;(index);
-		fill_queue::&lt;T, I&gt;(index, <span class="number">1</span>, <span class="number">90</span>);
+		fill_queue::&lt;T, I&gt;(origin, index, <span class="number">1</span>, <span class="number">90</span>);
 
 		<span class="comment">// Now nudge ours, with the track now full, ours will be queued, but with no votes, it
 		// will have the worst position.
@@ -951,10 +1087,12 @@
 		// free and this failing. It would result in `QUEUE_SIZE - 1` items being shifted for the
 		// insertion at the beginning.
 
-		// First create our referendum and place the deposit. It will be failing.
-		</span><span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		</span><span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="comment">// First create our referendum and place the deposit. It will be failing.
+		</span><span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		place_deposit::&lt;T, I&gt;(index);
-		fill_queue::&lt;T, I&gt;(index, <span class="number">1</span>, <span class="number">0</span>);
+		fill_queue::&lt;T, I&gt;(origin, index, <span class="number">1</span>, <span class="number">0</span>);
 
 		<span class="kw">let </span>track = Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().track;
 		<span class="macro">assert_eq!</span>(TrackQueue::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track).len() <span class="kw">as </span>u32, T::MaxQueued::get() - <span class="number">1</span>);
@@ -968,10 +1106,12 @@
 	}
 
 	nudge_referendum_not_queued {
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
 		<span class="comment">// First create our referendum and place the deposit. It will be failing.
-		</span><span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		</span><span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin.clone());
 		place_deposit::&lt;T, I&gt;(index);
-		fill_queue::&lt;T, I&gt;(index, <span class="number">0</span>, <span class="number">0</span>);
+		fill_queue::&lt;T, I&gt;(origin, index, <span class="number">0</span>, <span class="number">0</span>);
 
 		<span class="kw">let </span>track = Referenda::&lt;T, I&gt;::ensure_ongoing(index).unwrap().track;
 		<span class="macro">assert_eq!</span>(TrackQueue::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>track).len() <span class="kw">as </span>u32, T::MaxQueued::get());
@@ -985,7 +1125,9 @@
 	}
 
 	nudge_referendum_no_deposit {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		skip_prepare_period::&lt;T, I&gt;(index);
 	}: nudge_referendum(RawOrigin::Root, index)
 	verify {
@@ -994,7 +1136,9 @@
 	}
 
 	nudge_referendum_preparing {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 	}: nudge_referendum(RawOrigin::Root, index)
 	verify {
@@ -1003,7 +1147,9 @@
 	}
 
 	nudge_referendum_timed_out {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		skip_timeout_period::&lt;T, I&gt;(index);
 	}: nudge_referendum(RawOrigin::Root, index)
 	verify {
@@ -1012,7 +1158,9 @@
 	}
 
 	nudge_referendum_begin_deciding_failing {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
 	}: nudge_referendum(RawOrigin::Root, index)
@@ -1021,7 +1169,9 @@
 	}
 
 	nudge_referendum_begin_deciding_passing {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		make_passing::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
@@ -1031,7 +1181,9 @@
 	}
 
 	nudge_referendum_begin_confirming {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
 		nudge::&lt;T, I&gt;(index);
@@ -1043,7 +1195,9 @@
 	}
 
 	nudge_referendum_end_confirming {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
 		make_passing::&lt;T, I&gt;(index);
@@ -1056,7 +1210,9 @@
 	}
 
 	nudge_referendum_continue_not_confirming {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
 		nudge::&lt;T, I&gt;(index);
@@ -1070,7 +1226,9 @@
 	}
 
 	nudge_referendum_continue_confirming {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		make_passing::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
@@ -1083,7 +1241,9 @@
 	}
 
 	nudge_referendum_approved {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
 		make_passing::&lt;T, I&gt;(index);
@@ -1096,7 +1256,9 @@
 	}
 
 	nudge_referendum_rejected {
-		<span class="kw">let </span>(_origin, index) = create_referendum::&lt;T, I&gt;();
+		<span class="kw">let </span>origin = T::SubmitOrigin::try_successful_origin()
+			.expect(<span class="string">&quot;SubmitOrigin has no successful origin required for the benchmark&quot;</span>);
+		<span class="kw">let </span>index = create_referendum::&lt;T, I&gt;(origin);
 		place_deposit::&lt;T, I&gt;(index);
 		skip_prepare_period::&lt;T, I&gt;(index);
 		make_failing::&lt;T, I&gt;(index);

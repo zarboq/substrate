@@ -165,6 +165,64 @@
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
 <a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -185,7 +243,7 @@
 </span><span class="doccomment">//! Preimage pallet benchmarking.
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
-<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks, whitelist_account};
+<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks, whitelist_account, BenchmarkError};
 <span class="kw">use </span>frame_support::assert_ok;
 <span class="kw">use </span>frame_system::RawOrigin;
 <span class="kw">use </span>sp_runtime::traits::Bounded;
@@ -229,7 +287,11 @@
 		<span class="kw">let </span>caller = funded_account::&lt;T&gt;(<span class="string">&quot;caller&quot;</span>, <span class="number">0</span>);
 		<span class="macro">whitelist_account!</span>(caller);
 		<span class="kw">let </span>(preimage, hash) = sized_preimage_and_hash::&lt;T&gt;(s);
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(T::ManagerOrigin::successful_origin(), hash));
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			hash,
+		));
 	}: note_preimage(RawOrigin::Signed(caller), preimage)
 	verify {
 		<span class="macro">assert!</span>(Preimage::&lt;T&gt;::have_preimage(<span class="kw-2">&amp;</span>hash));
@@ -238,9 +300,15 @@
 	</span>note_no_deposit_preimage {
 		<span class="kw">let </span>s <span class="kw">in </span><span class="number">0 </span>.. MAX_SIZE;
 		<span class="kw">let </span>(preimage, hash) = sized_preimage_and_hash::&lt;T&gt;(s);
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(T::ManagerOrigin::successful_origin(), hash));
-	}: note_preimage&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), preimage)
-	verify {
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			hash,
+		));
+	}: note_preimage&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		preimage
+	) verify {
 		<span class="macro">assert!</span>(Preimage::&lt;T&gt;::have_preimage(<span class="kw-2">&amp;</span>hash));
 	}
 
@@ -257,9 +325,15 @@
 	<span class="comment">// Cheap unnote - will not unreserve since there&#39;s no deposit held.
 	</span>unnote_no_deposit_preimage {
 		<span class="kw">let </span>(preimage, hash) = preimage_and_hash::&lt;T&gt;();
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::note_preimage(T::ManagerOrigin::successful_origin(), preimage));
-	}: unnote_preimage&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::note_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			preimage,
+		));
+	}: unnote_preimage&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="macro">assert!</span>(!Preimage::&lt;T&gt;::have_preimage(<span class="kw-2">&amp;</span>hash));
 	}
 
@@ -269,8 +343,10 @@
 		<span class="kw">let </span>noter = funded_account::&lt;T&gt;(<span class="string">&quot;noter&quot;</span>, <span class="number">0</span>);
 		<span class="macro">whitelist_account!</span>(noter);
 		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::note_preimage(RawOrigin::Signed(noter.clone()).into(), preimage));
-	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="kw">let </span>deposit = T::BaseDeposit::get() + T::ByteDeposit::get() * MAX_SIZE.into();
 		<span class="kw">let </span>s = RequestStatus::Requested { deposit: <span class="prelude-val">Some</span>((noter, deposit)), count: <span class="number">1</span>, len: <span class="prelude-val">Some</span>(MAX_SIZE) };
 		<span class="macro">assert_eq!</span>(StatusFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>hash), <span class="prelude-val">Some</span>(s));
@@ -278,26 +354,40 @@
 	<span class="comment">// Cheap request - would unreserve the deposit but none was held.
 	</span>request_no_deposit_preimage {
 		<span class="kw">let </span>(preimage, hash) = preimage_and_hash::&lt;T&gt;();
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::note_preimage(T::ManagerOrigin::successful_origin(), preimage));
-	}: request_preimage&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::note_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			preimage,
+		));
+	}: request_preimage&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="kw">let </span>s = RequestStatus::Requested { deposit: <span class="prelude-val">None</span>, count: <span class="number">2</span>, len: <span class="prelude-val">Some</span>(MAX_SIZE) };
 		<span class="macro">assert_eq!</span>(StatusFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>hash), <span class="prelude-val">Some</span>(s));
 	}
 	<span class="comment">// Cheap request - the preimage is not yet noted, so deposit to unreserve.
 	</span>request_unnoted_preimage {
 		<span class="kw">let </span>(<span class="kw">_</span>, hash) = preimage_and_hash::&lt;T&gt;();
-	}: request_preimage&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+	}: request_preimage&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="kw">let </span>s = RequestStatus::Requested { deposit: <span class="prelude-val">None</span>, count: <span class="number">1</span>, len: <span class="prelude-val">None </span>};
 		<span class="macro">assert_eq!</span>(StatusFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>hash), <span class="prelude-val">Some</span>(s));
 	}
 	<span class="comment">// Cheap request - the preimage is already requested, so just a counter bump.
 	</span>request_requested_preimage {
 		<span class="kw">let </span>(<span class="kw">_</span>, hash) = preimage_and_hash::&lt;T&gt;();
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(T::ManagerOrigin::successful_origin(), hash));
-	}: request_preimage&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			hash,
+		));
+	}: request_preimage&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="kw">let </span>s = RequestStatus::Requested { deposit: <span class="prelude-val">None</span>, count: <span class="number">2</span>, len: <span class="prelude-val">None </span>};
 		<span class="macro">assert_eq!</span>(StatusFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>hash), <span class="prelude-val">Some</span>(s));
 	}
@@ -305,27 +395,53 @@
 	<span class="comment">// Expensive unrequest - last reference and it&#39;s noted, so will destroy the preimage.
 	</span>unrequest_preimage {
 		<span class="kw">let </span>(preimage, hash) = preimage_and_hash::&lt;T&gt;();
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(T::ManagerOrigin::successful_origin(), hash));
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::note_preimage(T::ManagerOrigin::successful_origin(), preimage));
-	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			hash,
+		));
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::note_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			preimage,
+		));
+	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="macro">assert_eq!</span>(StatusFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>hash), <span class="prelude-val">None</span>);
 	}
 	<span class="comment">// Cheap unrequest - last reference, but it&#39;s not noted.
 	</span>unrequest_unnoted_preimage {
 		<span class="kw">let </span>(<span class="kw">_</span>, hash) = preimage_and_hash::&lt;T&gt;();
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(T::ManagerOrigin::successful_origin(), hash));
-	}: unrequest_preimage&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			hash,
+		));
+	}: unrequest_preimage&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="macro">assert_eq!</span>(StatusFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>hash), <span class="prelude-val">None</span>);
 	}
 	<span class="comment">// Cheap unrequest - not the last reference.
 	</span>unrequest_multi_referenced_preimage {
 		<span class="kw">let </span>(<span class="kw">_</span>, hash) = preimage_and_hash::&lt;T&gt;();
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(T::ManagerOrigin::successful_origin(), hash));
-		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(T::ManagerOrigin::successful_origin(), hash));
-	}: unrequest_preimage&lt;T::RuntimeOrigin&gt;(T::ManagerOrigin::successful_origin(), hash)
-	verify {
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			hash,
+		));
+		<span class="macro">assert_ok!</span>(Preimage::&lt;T&gt;::request_preimage(
+			T::ManagerOrigin::try_successful_origin()
+				.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>),
+			hash,
+		));
+	}: unrequest_preimage&lt;T::RuntimeOrigin&gt;(
+		T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>,
+		hash
+	) verify {
 		<span class="kw">let </span>s = RequestStatus::Requested { deposit: <span class="prelude-val">None</span>, count: <span class="number">1</span>, len: <span class="prelude-val">None </span>};
 		<span class="macro">assert_eq!</span>(StatusFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>hash), <span class="prelude-val">Some</span>(s));
 	}

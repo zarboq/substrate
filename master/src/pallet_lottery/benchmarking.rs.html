@@ -169,6 +169,10 @@
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -192,7 +196,7 @@
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks, whitelisted_caller};
+<span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
 <span class="kw">use </span>frame_support::{
 	storage::bounded_vec::BoundedVec,
 	traits::{EnsureOrigin, OnInitialize},
@@ -214,7 +218,8 @@
 	];
 	<span class="comment">// Last call will be the match for worst case scenario.
 	</span>calls.push(frame_system::Call::&lt;T&gt;::remark { remark: <span class="macro">vec!</span>[] }.into());
-	<span class="kw">let </span>origin = T::ManagerOrigin::successful_origin();
+	<span class="kw">let </span>origin = T::ManagerOrigin::try_successful_origin()
+		.expect(<span class="string">&quot;ManagerOrigin has no successful origin required for the benchmark&quot;</span>);
 	Lottery::&lt;T&gt;::set_calls(origin.clone(), calls)<span class="question-mark">?</span>;
 	Lottery::&lt;T&gt;::start_lottery(origin, price, length, delay, repeat)<span class="question-mark">?</span>;
 	<span class="prelude-val">Ok</span>(())
@@ -247,7 +252,8 @@
 	set_calls {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::MaxCalls::get() <span class="kw">as </span>u32;
 		<span class="kw">let </span>calls = <span class="macro">vec!</span>[frame_system::Call::&lt;T&gt;::remark { remark: <span class="macro">vec!</span>[] }.into(); n <span class="kw">as </span>usize];
-		<span class="kw">let </span>origin = T::ManagerOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="macro">assert!</span>(CallIndices::&lt;T&gt;::get().is_empty());
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, calls)
 	verify {
@@ -260,7 +266,8 @@
 		<span class="kw">let </span>price = BalanceOf::&lt;T&gt;::max_value();
 		<span class="kw">let </span>end = <span class="number">10u32</span>.into();
 		<span class="kw">let </span>payout = <span class="number">5u32</span>.into();
-		<span class="kw">let </span>origin = T::ManagerOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, price, end, payout, <span class="bool-val">true</span>)
 	verify {
 		<span class="macro">assert!</span>(<span class="kw">crate</span>::Lottery::&lt;T&gt;::get().is_some());
@@ -269,7 +276,8 @@
 	stop_repeat {
 		setup_lottery::&lt;T&gt;(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
 		<span class="macro">assert_eq!</span>(<span class="kw">crate</span>::Lottery::&lt;T&gt;::get().unwrap().repeat, <span class="bool-val">true</span>);
-		<span class="kw">let </span>origin = T::ManagerOrigin::successful_origin();
+		<span class="kw">let </span>origin =
+			T::ManagerOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin)
 	verify {
 		<span class="macro">assert_eq!</span>(<span class="kw">crate</span>::Lottery::&lt;T&gt;::get().unwrap().repeat, <span class="bool-val">false</span>);
