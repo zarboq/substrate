@@ -250,6 +250,7 @@
 <a href="#250" id="250">250</a>
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -273,6 +274,7 @@
 
 </span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>codec::{Decode, Encode};
+<span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_runtime::{
 	traits::{Saturating, Zero},
 	DispatchError, RuntimeDebug,
@@ -283,7 +285,7 @@
 <span class="doccomment">/// Result type of a `bare_call` or `bare_instantiate` call.
 ///
 /// It contains the execution result together with some auxiliary information.
-</span><span class="attr">#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+</span><span class="attr">#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo)]
 </span><span class="kw">pub struct </span>ContractResult&lt;R, Balance&gt; {
 	<span class="doccomment">/// How much weight was consumed during execution.
 	</span><span class="kw">pub </span>gas_consumed: Weight,
@@ -338,7 +340,7 @@
 </span><span class="kw">pub type </span>GetStorageResult = <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, ContractAccessError&gt;;
 
 <span class="doccomment">/// The possible errors that can happen querying the storage of a contract.
-</span><span class="attr">#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+</span><span class="attr">#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo)]
 </span><span class="kw">pub enum </span>ContractAccessError {
 	<span class="doccomment">/// The given address doesn&#39;t point to a contract.
 	</span>DoesntExist,
@@ -348,7 +350,7 @@
 
 <span class="macro">bitflags! </span>{
 	<span class="doccomment">/// Flags used by a contract to customize exit behaviour.
-	</span><span class="attr">#[derive(Encode, Decode)]
+	</span><span class="attr">#[derive(Encode, Decode, TypeInfo)]
 	</span><span class="kw">pub struct </span>ReturnFlags: u32 {
 		<span class="doccomment">/// If this bit is set all changes made by the contract execution are rolled back.
 		</span><span class="kw">const </span>REVERT = <span class="number">0x0000_0001</span>;
@@ -356,7 +358,7 @@
 }
 
 <span class="doccomment">/// Output of a contract call or instantiation which ran to completion.
-</span><span class="attr">#[derive(PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+</span><span class="attr">#[derive(PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 </span><span class="kw">pub struct </span>ExecReturnValue {
 	<span class="doccomment">/// Flags passed along by `seal_return`. Empty when `seal_return` was never called.
 	</span><span class="kw">pub </span>flags: ReturnFlags,
@@ -372,7 +374,7 @@
 }
 
 <span class="doccomment">/// The result of a successful contract instantiation.
-</span><span class="attr">#[derive(PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+</span><span class="attr">#[derive(PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 </span><span class="kw">pub struct </span>InstantiateReturnValue&lt;AccountId&gt; {
 	<span class="doccomment">/// The output of the called constructor.
 	</span><span class="kw">pub </span>result: ExecReturnValue,
@@ -381,7 +383,7 @@
 }
 
 <span class="doccomment">/// The result of succesfully uploading a contract.
-</span><span class="attr">#[derive(PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+</span><span class="attr">#[derive(PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 </span><span class="kw">pub struct </span>CodeUploadReturnValue&lt;CodeHash, Balance&gt; {
 	<span class="doccomment">/// The key under which the new code is stored.
 	</span><span class="kw">pub </span>code_hash: CodeHash,
@@ -390,7 +392,7 @@
 }
 
 <span class="doccomment">/// Reference to an existing code hash or a new wasm module.
-</span><span class="attr">#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+</span><span class="attr">#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo)]
 </span><span class="kw">pub enum </span>Code&lt;Hash&gt; {
 	<span class="doccomment">/// A wasm module as raw bytes.
 	</span>Upload(Vec&lt;u8&gt;),
@@ -405,7 +407,7 @@
 }
 
 <span class="doccomment">/// The amount of balance that was either charged or refunded in order to pay for storage.
-</span><span class="attr">#[derive(Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, Clone)]
+</span><span class="attr">#[derive(Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, Clone, TypeInfo)]
 </span><span class="kw">pub enum </span>StorageDeposit&lt;Balance&gt; {
 	<span class="doccomment">/// The transaction reduced storage consumption.
 	///
