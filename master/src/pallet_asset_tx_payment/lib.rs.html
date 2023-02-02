@@ -312,6 +312,8 @@
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -448,8 +450,8 @@
 		/// has been paid by `who` in an asset `asset_id`.
 		</span>AssetTxFeePaid {
 			who: T::AccountId,
-			actual_fee: BalanceOf&lt;T&gt;,
-			tip: BalanceOf&lt;T&gt;,
+			actual_fee: AssetBalanceOf&lt;T&gt;,
+			tip: AssetBalanceOf&lt;T&gt;,
 			asset_id: <span class="prelude-ty">Option</span>&lt;ChargeAssetIdOf&lt;T&gt;&gt;,
 		},
 	}
@@ -598,18 +600,20 @@
 					<span class="kw">let </span>actual_fee = pallet_transaction_payment::Pallet::&lt;T&gt;::compute_actual_fee(
 						len <span class="kw">as </span>u32, info, post_info, tip,
 					);
-					T::OnChargeAssetTransaction::correct_and_deposit_fee(
-						<span class="kw-2">&amp;</span>who,
-						info,
-						post_info,
-						actual_fee.into(),
-						tip.into(),
-						already_withdrawn.into(),
-					)<span class="question-mark">?</span>;
+
+					<span class="kw">let </span>(converted_fee, converted_tip) =
+						T::OnChargeAssetTransaction::correct_and_deposit_fee(
+							<span class="kw-2">&amp;</span>who,
+							info,
+							post_info,
+							actual_fee.into(),
+							tip.into(),
+							already_withdrawn.into(),
+						)<span class="question-mark">?</span>;
 					Pallet::&lt;T&gt;::deposit_event(Event::&lt;T&gt;::AssetTxFeePaid {
 						who,
-						actual_fee,
-						tip,
+						actual_fee: converted_fee,
+						tip: converted_tip,
 						asset_id,
 					});
 				},
