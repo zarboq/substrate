@@ -943,8 +943,7 @@
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">fn </span>try_successful_origin() -&gt; <span class="prelude-ty">Result</span>&lt;T::RuntimeOrigin, ()&gt; {
-		<span class="kw">let </span>who = IndexToId::&lt;T, I&gt;::get(MIN_RANK, <span class="number">0</span>).ok_or(())<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(frame_system::RawOrigin::Signed(who).into())
+		EnsureRankedMember::&lt;T, I, MIN_RANK&gt;::try_successful_origin()
 	}
 }
 
@@ -966,8 +965,7 @@
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">fn </span>try_successful_origin() -&gt; <span class="prelude-ty">Result</span>&lt;T::RuntimeOrigin, ()&gt; {
-		<span class="kw">let </span>who = IndexToId::&lt;T, I&gt;::get(MIN_RANK, <span class="number">0</span>).ok_or(())<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(frame_system::RawOrigin::Signed(who).into())
+		EnsureRankedMember::&lt;T, I, MIN_RANK&gt;::try_successful_origin()
 	}
 }
 
@@ -989,7 +987,9 @@
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">fn </span>try_successful_origin() -&gt; <span class="prelude-ty">Result</span>&lt;T::RuntimeOrigin, ()&gt; {
-		<span class="kw">let </span>who = IndexToId::&lt;T, I&gt;::get(MIN_RANK, <span class="number">0</span>).ok_or(())<span class="question-mark">?</span>;
+		<span class="kw">let </span>who = frame_benchmarking::account::&lt;T::AccountId&gt;(<span class="string">&quot;successful_origin&quot;</span>, <span class="number">0</span>, <span class="number">0</span>);
+		<span class="kw">crate</span>::Pallet::&lt;T, I&gt;::do_add_member_to_rank(who.clone(), MIN_RANK)
+			.expect(<span class="string">&quot;Could not add members for benchmarks&quot;</span>);
 		<span class="prelude-val">Ok</span>(frame_system::RawOrigin::Signed(who).into())
 	}
 }
