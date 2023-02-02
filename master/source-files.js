@@ -2,8 +2,8 @@ var sourcesIndex = JSON.parse('{\
 "bags_list":["",[],["main.rs"]],\
 "beefy_gadget":["",[["communication",[["request_response",[],["incoming_requests_handler.rs","mod.rs","outgoing_requests_engine.rs"]]],["gossip.rs","mod.rs","notification.rs","peers.rs"]]],["aux_schema.rs","error.rs","import.rs","justification.rs","keystore.rs","lib.rs","metrics.rs","round.rs","worker.rs"]],\
 "beefy_gadget_rpc":["",[],["lib.rs","notification.rs"]],\
-"beefy_merkle_tree":["",[],["lib.rs"]],\
 "biguint":["",[],["biguint.rs"]],\
+"binary_merkle_tree":["",[],["lib.rs"]],\
 "call":["",[],["call.rs"]],\
 "chain_spec_builder":["",[],["main.rs"]],\
 "compact":["",[],["compact.rs"]],\

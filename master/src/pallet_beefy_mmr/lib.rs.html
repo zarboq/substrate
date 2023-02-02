@@ -207,6 +207,20 @@
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -409,11 +423,25 @@
 			.map(T::BeefyAuthorityToMerkleLeaf::convert)
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		<span class="kw">let </span>len = beefy_addresses.len() <span class="kw">as </span>u32;
-		<span class="kw">let </span>root = beefy_merkle_tree::merkle_root::&lt;&lt;T <span class="kw">as </span>pallet_mmr::Config&gt;::Hashing, <span class="kw">_</span>&gt;(
+		<span class="kw">let </span>root = binary_merkle_tree::merkle_root::&lt;&lt;T <span class="kw">as </span>pallet_mmr::Config&gt;::Hashing, <span class="kw">_</span>&gt;(
 			beefy_addresses,
 		)
 		.into();
 		BeefyAuthoritySet { id, len, root }
+	}
+}
+
+<span class="macro">sp_api::decl_runtime_apis! </span>{
+	<span class="doccomment">/// API useful for BEEFY light clients.
+	</span><span class="kw">pub trait </span>BeefyMmrApi&lt;H&gt;
+	<span class="kw">where
+		</span>BeefyAuthoritySet&lt;H&gt;: sp_api::Decode,
+	{
+		<span class="doccomment">/// Return the currently active BEEFY authority set proof.
+		</span><span class="kw">fn </span>authority_set_proof() -&gt; BeefyAuthoritySet&lt;H&gt;;
+
+		<span class="doccomment">/// Return the next/queued BEEFY authority set proof.
+		</span><span class="kw">fn </span>next_authority_set_proof() -&gt; BeefyNextAuthoritySet&lt;H&gt;;
 	}
 }
 </code></pre></div>

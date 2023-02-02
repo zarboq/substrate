@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `frame/beefy-mmr/primitives/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-3dd8914bdd6e2ce5.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-1469fca9efc07bcb.css"><link rel="stylesheet" disabled href="../../static.files/dark-e9b7e5d8ba0dc980.css"><link rel="stylesheet" disabled href="../../static.files/ayu-0c1cf144240c9f40.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-799a64abec831f72.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../beefy_merkle_tree/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `utils/binary-merkle-tree/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-3dd8914bdd6e2ce5.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-1469fca9efc07bcb.css"><link rel="stylesheet" disabled href="../../static.files/dark-e9b7e5d8ba0dc980.css"><link rel="stylesheet" disabled href="../../static.files/ayu-0c1cf144240c9f40.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-799a64abec831f72.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../binary_merkle_tree/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -815,17 +815,6 @@
 <a href="#815" id="815">815</a>
 <a href="#816" id="816">816</a>
 <a href="#817" id="817">817</a>
-<a href="#818" id="818">818</a>
-<a href="#819" id="819">819</a>
-<a href="#820" id="820">820</a>
-<a href="#821" id="821">821</a>
-<a href="#822" id="822">822</a>
-<a href="#823" id="823">823</a>
-<a href="#824" id="824">824</a>
-<a href="#825" id="825">825</a>
-<a href="#826" id="826">826</a>
-<a href="#827" id="827">827</a>
-<a href="#828" id="828">828</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -859,40 +848,42 @@
 //! efficient by removing the need to track which side each intermediate hash is concatenated on.
 //!
 //! If the number of leaves is not even, last leaf (hash of) is promoted to the upper layer.
+</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">extern crate </span>alloc;
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">use </span>alloc::vec;
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+</span><span class="kw">use </span>alloc::vec::Vec;
 
-</span><span class="kw">pub use </span>sp_runtime::traits::Keccak256;
-<span class="kw">use </span>sp_runtime::{app_crypto::sp_core, sp_std, traits::Hash <span class="kw">as </span>HashT};
-<span class="kw">use </span>sp_std::{vec, vec::Vec};
-
-<span class="kw">use </span>beefy_primitives::mmr::{BeefyAuthoritySet, BeefyNextAuthoritySet};
+<span class="kw">use </span>hash_db::Hasher;
 
 <span class="doccomment">/// Construct a root hash of a Binary Merkle Tree created from given leaves.
 ///
 /// See crate-level docs for details about Merkle Tree construction.
 ///
 /// In case an empty list of leaves is passed the function returns a 0-filled hash.
-</span><span class="kw">pub fn </span>merkle_root&lt;H, I&gt;(leaves: I) -&gt; H::Output
+</span><span class="kw">pub fn </span>merkle_root&lt;H, I&gt;(leaves: I) -&gt; H::Out
 <span class="kw">where
-	</span>H: HashT,
-	H::Output: Default + AsRef&lt;[u8]&gt; + PartialOrd,
+	</span>H: Hasher,
+	H::Out: Default + AsRef&lt;[u8]&gt; + PartialOrd,
 	I: IntoIterator,
 	I::Item: AsRef&lt;[u8]&gt;,
 {
-	<span class="kw">let </span>iter = leaves.into_iter().map(|l| &lt;H <span class="kw">as </span>HashT&gt;::hash(l.as_ref()));
+	<span class="kw">let </span>iter = leaves.into_iter().map(|l| &lt;H <span class="kw">as </span>Hasher&gt;::hash(l.as_ref()));
 	merkelize::&lt;H, <span class="kw">_</span>, <span class="kw">_</span>&gt;(iter, <span class="kw-2">&amp;mut </span>()).into()
 }
 
-<span class="kw">fn </span>merkelize&lt;H, V, I&gt;(leaves: I, visitor: <span class="kw-2">&amp;mut </span>V) -&gt; H::Output
+<span class="kw">fn </span>merkelize&lt;H, V, I&gt;(leaves: I, visitor: <span class="kw-2">&amp;mut </span>V) -&gt; H::Out
 <span class="kw">where
-	</span>H: HashT,
-	H::Output: Default + AsRef&lt;[u8]&gt; + PartialOrd,
-	V: Visitor&lt;H::Output&gt;,
-	I: Iterator&lt;Item = H::Output&gt;,
+	</span>H: Hasher,
+	H::Out: Default + AsRef&lt;[u8]&gt; + PartialOrd,
+	V: Visitor&lt;H::Out&gt;,
+	I: Iterator&lt;Item = H::Out&gt;,
 {
 	<span class="kw">let </span>upper = Vec::with_capacity((leaves.size_hint().<span class="number">1</span>.unwrap_or(<span class="number">0</span>).saturating_add(<span class="number">1</span>)) / <span class="number">2</span>);
 	<span class="kw">let </span><span class="kw-2">mut </span>next = <span class="kw">match </span>merkelize_row::&lt;H, <span class="kw">_</span>, <span class="kw">_</span>&gt;(leaves, upper, visitor) {
 		<span class="prelude-val">Ok</span>(root) =&gt; <span class="kw">return </span>root,
-		<span class="prelude-val">Err</span>(next) <span class="kw">if </span>next.is_empty() =&gt; <span class="kw">return </span>H::Output::default(),
+		<span class="prelude-val">Err</span>(next) <span class="kw">if </span>next.is_empty() =&gt; <span class="kw">return </span>H::Out::default(),
 		<span class="prelude-val">Err</span>(next) =&gt; next,
 	};
 
@@ -967,17 +958,17 @@
 /// # Panic
 ///
 /// The function will panic if given `leaf_index` is greater than the number of leaves.
-</span><span class="kw">pub fn </span>merkle_proof&lt;H, I, T&gt;(leaves: I, leaf_index: usize) -&gt; MerkleProof&lt;H::Output, T&gt;
+</span><span class="kw">pub fn </span>merkle_proof&lt;H, I, T&gt;(leaves: I, leaf_index: usize) -&gt; MerkleProof&lt;H::Out, T&gt;
 <span class="kw">where
-	</span>H: HashT,
-	H::Output: Default + Copy + AsRef&lt;[u8]&gt; + PartialOrd,
+	</span>H: Hasher,
+	H::Out: Default + Copy + AsRef&lt;[u8]&gt; + PartialOrd,
 	I: IntoIterator&lt;Item = T&gt;,
 	I::IntoIter: ExactSizeIterator,
 	T: AsRef&lt;[u8]&gt;,
 {
 	<span class="kw">let </span><span class="kw-2">mut </span>leaf = <span class="prelude-val">None</span>;
 	<span class="kw">let </span>iter = leaves.into_iter().enumerate().map(|(idx, l)| {
-		<span class="kw">let </span>hash = &lt;H <span class="kw">as </span>HashT&gt;::hash(l.as_ref());
+		<span class="kw">let </span>hash = &lt;H <span class="kw">as </span>Hasher&gt;::hash(l.as_ref());
 		<span class="kw">if </span>idx == leaf_index {
 			leaf = <span class="prelude-val">Some</span>(l);
 		}
@@ -1062,28 +1053,28 @@
 ///
 /// The proof must not contain the root hash.
 </span><span class="kw">pub fn </span>verify_proof&lt;<span class="lifetime">&#39;a</span>, H, P, L&gt;(
-	root: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>H::Output,
+	root: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>H::Out,
 	proof: P,
 	number_of_leaves: usize,
 	leaf_index: usize,
 	leaf: L,
 ) -&gt; bool
 <span class="kw">where
-	</span>H: HashT,
-	H::Output: PartialEq + AsRef&lt;[u8]&gt; + PartialOrd,
-	P: IntoIterator&lt;Item = H::Output&gt;,
-	L: Into&lt;Leaf&lt;<span class="lifetime">&#39;a</span>, H::Output&gt;&gt;,
+	</span>H: Hasher,
+	H::Out: PartialEq + AsRef&lt;[u8]&gt; + PartialOrd,
+	P: IntoIterator&lt;Item = H::Out&gt;,
+	L: Into&lt;Leaf&lt;<span class="lifetime">&#39;a</span>, H::Out&gt;&gt;,
 {
 	<span class="kw">if </span>leaf_index &gt;= number_of_leaves {
 		<span class="kw">return </span><span class="bool-val">false
 	</span>}
 
 	<span class="kw">let </span>leaf_hash = <span class="kw">match </span>leaf.into() {
-		Leaf::Value(content) =&gt; &lt;H <span class="kw">as </span>HashT&gt;::hash(content),
+		Leaf::Value(content) =&gt; &lt;H <span class="kw">as </span>Hasher&gt;::hash(content),
 		Leaf::Hash(hash) =&gt; hash,
 	};
 
-	<span class="kw">let </span>hash_len = &lt;H <span class="kw">as </span>sp_core::Hasher&gt;::LENGTH;
+	<span class="kw">let </span>hash_len = &lt;H <span class="kw">as </span>Hasher&gt;::LENGTH;
 	<span class="kw">let </span><span class="kw-2">mut </span>combined = <span class="macro">vec!</span>[<span class="number">0_u8</span>; hash_len * <span class="number">2</span>];
 	<span class="kw">let </span>computed = proof.into_iter().fold(leaf_hash, |a, b| {
 		<span class="kw">if </span>a &lt; b {
@@ -1093,7 +1084,7 @@
 			combined[..hash_len].copy_from_slice(<span class="kw-2">&amp;</span>b.as_ref());
 			combined[hash_len..].copy_from_slice(<span class="kw-2">&amp;</span>a.as_ref());
 		}
-		<span class="kw">let </span>hash = &lt;H <span class="kw">as </span>HashT&gt;::hash(<span class="kw-2">&amp;</span>combined);
+		<span class="kw">let </span>hash = &lt;H <span class="kw">as </span>Hasher&gt;::hash(<span class="kw-2">&amp;</span>combined);
 		<span class="attr">#[cfg(feature = <span class="string">&quot;debug&quot;</span>)]
 		</span><span class="macro">log::debug!</span>(
 			<span class="string">&quot;[verify_proof]: (a, b) {:?}, {:?} =&gt; {:?} ({:?}) hash&quot;</span>,
@@ -1115,20 +1106,20 @@
 /// empty iterator) an `Err` with the inner nodes of upper layer is returned.
 </span><span class="kw">fn </span>merkelize_row&lt;H, V, I&gt;(
 	<span class="kw-2">mut </span>iter: I,
-	<span class="kw-2">mut </span>next: Vec&lt;H::Output&gt;,
+	<span class="kw-2">mut </span>next: Vec&lt;H::Out&gt;,
 	visitor: <span class="kw-2">&amp;mut </span>V,
-) -&gt; <span class="prelude-ty">Result</span>&lt;H::Output, Vec&lt;H::Output&gt;&gt;
+) -&gt; <span class="prelude-ty">Result</span>&lt;H::Out, Vec&lt;H::Out&gt;&gt;
 <span class="kw">where
-	</span>H: HashT,
-	H::Output: AsRef&lt;[u8]&gt; + PartialOrd,
-	V: Visitor&lt;H::Output&gt;,
-	I: Iterator&lt;Item = H::Output&gt;,
+	</span>H: Hasher,
+	H::Out: AsRef&lt;[u8]&gt; + PartialOrd,
+	V: Visitor&lt;H::Out&gt;,
+	I: Iterator&lt;Item = H::Out&gt;,
 {
 	<span class="attr">#[cfg(feature = <span class="string">&quot;debug&quot;</span>)]
 	</span><span class="macro">log::debug!</span>(<span class="string">&quot;[merkelize_row]&quot;</span>);
 	next.clear();
 
-	<span class="kw">let </span>hash_len = &lt;H <span class="kw">as </span>sp_core::Hasher&gt;::LENGTH;
+	<span class="kw">let </span>hash_len = &lt;H <span class="kw">as </span>Hasher&gt;::LENGTH;
 	<span class="kw">let </span><span class="kw-2">mut </span>index = <span class="number">0</span>;
 	<span class="kw">let </span><span class="kw-2">mut </span>combined = <span class="macro">vec!</span>[<span class="number">0_u8</span>; hash_len * <span class="number">2</span>];
 	<span class="kw">loop </span>{
@@ -1154,7 +1145,7 @@
 					combined[hash_len..].copy_from_slice(a.as_ref());
 				}
 
-				next.push(&lt;H <span class="kw">as </span>HashT&gt;::hash(<span class="kw-2">&amp;</span>combined));
+				next.push(&lt;H <span class="kw">as </span>Hasher&gt;::hash(<span class="kw-2">&amp;</span>combined));
 			},
 			<span class="comment">// Odd number of items. Promote the item to the upper layer.
 			</span>(<span class="prelude-val">Some</span>(a), <span class="prelude-val">None</span>) <span class="kw">if </span>!next.is_empty() =&gt; {
@@ -1175,24 +1166,11 @@
 	}
 }
 
-<span class="macro">sp_api::decl_runtime_apis! </span>{
-	<span class="doccomment">/// API useful for BEEFY light clients.
-	</span><span class="kw">pub trait </span>BeefyMmrApi&lt;H&gt;
-	<span class="kw">where
-		</span>BeefyAuthoritySet&lt;H&gt;: sp_api::Decode,
-	{
-		<span class="doccomment">/// Return the currently active BEEFY authority set proof.
-		</span><span class="kw">fn </span>authority_set_proof() -&gt; BeefyAuthoritySet&lt;H&gt;;
-
-		<span class="doccomment">/// Return the next/queued BEEFY authority set proof.
-		</span><span class="kw">fn </span>next_authority_set_proof() -&gt; BeefyNextAuthoritySet&lt;H&gt;;
-	}
-}
-
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span><span class="kw">crate</span>::sp_core::H256;
+	<span class="kw">use </span>sp_core::H256;
+	<span class="kw">use </span>sp_runtime::traits::Keccak256;
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>should_generate_empty_root() {
@@ -1655,4 +1633,4 @@
 	}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="beefy_merkle_tree" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="binary_merkle_tree" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
