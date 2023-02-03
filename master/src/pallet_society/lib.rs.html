@@ -1842,6 +1842,10 @@
 <a href="#1842" id="1842">1842</a>
 <a href="#1843" id="1843">1843</a>
 <a href="#1844" id="1844">1844</a>
+<a href="#1845" id="1845">1845</a>
+<a href="#1846" id="1846">1846</a>
+<a href="#1847" id="1847">1847</a>
+<a href="#1848" id="1848">1848</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -2357,6 +2361,8 @@
 		</span>Unfounded { founder: T::AccountId },
 		<span class="doccomment">/// Some funds were deposited into the society account.
 		</span>Deposit { value: BalanceOf&lt;T, I&gt; },
+		<span class="doccomment">/// A group of members has been choosen as Skeptics
+		</span>SkepticsChosen { skeptics: Vec&lt;T::AccountId&gt; },
 	}
 
 	<span class="doccomment">/// The first member.
@@ -3454,12 +3460,14 @@
 
 		<span class="comment">// Select sqrt(n) random members from the society and make them skeptics.
 		</span><span class="kw">let </span>pick_member =
-			|<span class="kw">_</span>| pick_item(<span class="kw-2">&amp;mut </span>rng, <span class="kw-2">&amp;</span>members[..]).expect(<span class="string">&quot;exited if members empty; qed&quot;</span>);
-		<span class="kw">for </span>skeptic <span class="kw">in </span>(<span class="number">0</span>..members.len().integer_sqrt()).map(pick_member) {
+			|<span class="kw">_</span>| pick_item(<span class="kw-2">&amp;mut </span>rng, <span class="kw-2">&amp;</span>members[..]).expect(<span class="string">&quot;exited if members empty; qed&quot;</span>).clone();
+		<span class="kw">let </span>skeptics = (<span class="number">0</span>..members.len().integer_sqrt()).map(pick_member).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+		skeptics.iter().for_each(|skeptic| {
 			<span class="kw">for </span>Bid { who: c, .. } <span class="kw">in </span>candidates.iter() {
 				&lt;Votes&lt;T, I&gt;&gt;::insert(c, skeptic, Vote::Skeptic);
 			}
-		}
+		});
+		<span class="self">Self</span>::deposit_event(Event::&lt;T, I&gt;::SkepticsChosen { skeptics });
 	}
 
 	<span class="doccomment">/// Attempt to slash the payout of some member. Return the total amount that was deducted.
