@@ -143,7 +143,7 @@
 <span class="kw">use </span>sc_executor_common::error::WasmError;
 <span class="kw">use </span>sp_wasm_interface::{FunctionContext, HostFunctions};
 <span class="kw">use </span>std::collections::HashMap;
-<span class="kw">use </span>wasmtime::{ExternType, FuncType, ImportType, Linker, Module, Trap};
+<span class="kw">use </span>wasmtime::{ExternType, FuncType, ImportType, Linker, Module};
 
 <span class="doccomment">/// Goes over all imports of a module and prepares the given linker for instantiation of the module.
 /// Returns an error if there are imports that cannot be satisfied.
@@ -190,7 +190,7 @@
 				<span class="macro">log::debug!</span>(<span class="string">&quot;Missing import: &#39;{}&#39; {:?}&quot;</span>, name, func_ty);
 				linker
 					.func_new(<span class="string">&quot;env&quot;</span>, <span class="kw-2">&amp;</span>name, func_ty.clone(), <span class="kw">move </span>|<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>| {
-						<span class="prelude-val">Err</span>(Trap::new(error.clone()))
+					    <span class="prelude-val">Err</span>(anyhow::Error::msg(error.clone()))
 					})
 					.expect(<span class="string">&quot;adding a missing import stub can only fail when the item already exists, and it is missing here; qed&quot;</span>);
 			}

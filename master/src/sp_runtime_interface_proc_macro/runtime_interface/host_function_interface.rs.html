@@ -812,14 +812,14 @@
 		registry.register_static(
 			#crate_::sp_wasm_interface::Function::name(<span class="kw-2">&amp;</span>#struct_name),
 			|<span class="kw-2">mut </span>caller: #crate_::sp_wasm_interface::wasmtime::Caller&lt;T::State&gt;, #(#ffi_args_prototype),<span class="kw-2">*</span>|
-				-&gt; std::result::Result&lt;#ffi_return_ty, #crate_::sp_wasm_interface::wasmtime::Trap&gt;
+				-&gt; std::result::Result&lt;#ffi_return_ty, #crate_::sp_wasm_interface::anyhow::Error&gt;
 			{
 				T::with_function_context(caller, <span class="kw">move </span>|__function_context__| {
 					<span class="kw">let </span>result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
 						#struct_name::call(
 							__function_context__,
 							#(#ffi_names,)*
-						).map_err(#crate_::sp_wasm_interface::wasmtime::Trap::new)
+						).map_err(#crate_::sp_wasm_interface::anyhow::Error::msg)
 					}));
 					<span class="kw">match </span>result {
 						<span class="prelude-val">Ok</span>(result) =&gt; result,
@@ -832,7 +832,7 @@
 								} <span class="kw">else </span>{
 									<span class="string">&quot;host code panicked while being called by the runtime&quot;</span>.to_owned()
 								};
-							<span class="kw">return </span><span class="prelude-val">Err</span>(#crate_::sp_wasm_interface::wasmtime::Trap::new(message));
+							<span class="kw">return </span><span class="prelude-val">Err</span>(#crate_::sp_wasm_interface::anyhow::Error::msg(message));
 						}
 					}
 				})

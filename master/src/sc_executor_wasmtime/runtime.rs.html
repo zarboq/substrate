@@ -808,8 +808,6 @@
 <a href="#808" id="808">808</a>
 <a href="#809" id="809">809</a>
 <a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1178,29 +1176,27 @@ directory = \&quot;{cache_dir}\&quot;
 			MAX_WASM_PAGES
 		};
 
-		config.allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling {
-			strategy: wasmtime::PoolingAllocationStrategy::ReuseAffinity,
-
+		<span class="kw">let </span><span class="kw-2">mut </span>pooling_config = wasmtime::PoolingAllocationConfig::default();
+		pooling_config
+			.strategy(wasmtime::PoolingAllocationStrategy::ReuseAffinity)
 			<span class="comment">// Pooling needs a bunch of hard limits to be set; if we go over
 			// any of these then the instantiation will fail.
-			</span>instance_limits: wasmtime::InstanceLimits {
-				<span class="comment">// Current minimum values for kusama (as of 2022-04-14):
-				//   size: 32384
-				//   table_elements: 1249
-				//   memory_pages: 2070
-				</span>size: <span class="number">128 </span>* <span class="number">1024</span>,
-				table_elements: <span class="number">8192</span>,
-				memory_pages,
+			//
+			// Current minimum values for kusama (as of 2022-04-14):
+			//   size: 32384
+			//   table_elements: 1249
+			//   memory_pages: 2070
+			</span>.instance_size(<span class="number">128 </span>* <span class="number">1024</span>)
+			.instance_table_elements(<span class="number">8192</span>)
+			.instance_memory_pages(memory_pages)
+			<span class="comment">// We can only have a single of those.
+			</span>.instance_tables(<span class="number">1</span>)
+			.instance_memories(<span class="number">1</span>)
+			<span class="comment">// This determines how many instances of the module can be
+			// instantiated in parallel from the same `Module`.
+			</span>.instance_count(<span class="number">32</span>);
 
-				<span class="comment">// We can only have a single of those.
-				</span>tables: <span class="number">1</span>,
-				memories: <span class="number">1</span>,
-
-				<span class="comment">// This determines how many instances of the module can be
-				// instantiated in parallel from the same `Module`.
-				</span>count: <span class="number">32</span>,
-			},
-		});
+		config.allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(pooling_config));
 	}
 
 	<span class="prelude-val">Ok</span>(config)
