@@ -1137,6 +1137,12 @@
 <a href="#1137" id="1137">1137</a>
 <a href="#1138" id="1138">1138</a>
 <a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
+<a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1216,7 +1222,7 @@
 <span class="kw">use </span>sp_core::hexdisplay::HexDisplay;
 <span class="kw">use </span>std::{
 	cmp,
-	collections::{HashMap, HashSet, VecDeque},
+	collections::{hash_map::Entry, HashMap, HashSet, VecDeque},
 	num::NonZeroUsize,
 	task::{Context, Poll},
 	time::Duration,
@@ -1457,14 +1463,16 @@
 	/// If we didn&#39;t know this address before, also generates a `Discovered` event.
 	</span><span class="kw">pub fn </span>add_known_address(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer_id: PeerId, addr: Multiaddr) {
 		<span class="kw">let </span>addrs_list = <span class="self">self</span>.ephemeral_addresses.entry(peer_id).or_default();
-		<span class="kw">if </span>!addrs_list.iter().any(|a| <span class="kw-2">*</span>a == addr) {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(k) = <span class="self">self</span>.kademlia.as_mut() {
-				k.add_address(<span class="kw-2">&amp;</span>peer_id, addr.clone());
-			}
+		<span class="kw">if </span>addrs_list.contains(<span class="kw-2">&amp;</span>addr) {
+			<span class="kw">return
+		</span>}
 
-			<span class="self">self</span>.pending_events.push_back(DiscoveryOut::Discovered(peer_id));
-			addrs_list.push(addr);
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(k) = <span class="self">self</span>.kademlia.as_mut() {
+			k.add_address(<span class="kw-2">&amp;</span>peer_id, addr.clone());
 		}
+
+		<span class="self">self</span>.pending_events.push_back(DiscoveryOut::Discovered(peer_id));
+		addrs_list.push(addr);
 	}
 
 	<span class="doccomment">/// Add a self-reported address of a remote peer to the k-buckets of the DHT
@@ -1595,7 +1603,7 @@
 
 	<span class="doccomment">/// The DHT yielded results for the record request.
 	///
-	/// Returning the result grouped in (key, value) pairs as well as the request duration..
+	/// Returning the result grouped in (key, value) pairs as well as the request duration.
 	</span>ValueFound(Vec&lt;(record::Key, Vec&lt;u8&gt;)&gt;, Duration),
 
 	<span class="doccomment">/// The record requested was not found in the DHT.
@@ -1674,9 +1682,13 @@
 			FromSwarm::DialFailure(e @ DialFailure { peer_id, error, .. }) =&gt; {
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(peer_id) = peer_id {
 					<span class="kw">if let </span>DialError::Transport(errors) = error {
-						<span class="kw">if let </span><span class="prelude-val">Some</span>(list) = <span class="self">self</span>.ephemeral_addresses.get_mut(<span class="kw-2">&amp;</span>peer_id) {
+						<span class="kw">if let </span>Entry::Occupied(<span class="kw-2">mut </span>entry) = <span class="self">self</span>.ephemeral_addresses.entry(peer_id)
+						{
 							<span class="kw">for </span>(addr, _error) <span class="kw">in </span>errors {
-								list.retain(|a| a != addr);
+								entry.get_mut().retain(|a| a != addr);
+							}
+							<span class="kw">if </span>entry.get().is_empty() {
+								entry.remove();
 							}
 						}
 					}
