@@ -74,6 +74,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_identity":["",[],["benchmarking.rs","lib.rs","types.rs","weights.rs"]],\
 "pallet_im_online":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_indices":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
+"pallet_insecure_randomness_collective_flip":["",[],["lib.rs"]],\
 "pallet_lottery":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_membership":["",[["migrations",[],["mod.rs","v4.rs"]]],["lib.rs","weights.rs"]],\
 "pallet_message_queue":["",[],["benchmarking.rs","lib.rs","mock_helpers.rs","weights.rs"]],\
@@ -91,7 +92,6 @@ var sourcesIndex = JSON.parse('{\
 "pallet_offences_benchmarking":["",[],["lib.rs"]],\
 "pallet_preimage":["",[],["benchmarking.rs","lib.rs","migration.rs","weights.rs"]],\
 "pallet_proxy":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
-"pallet_randomness_collective_flip":["",[],["lib.rs"]],\
 "pallet_ranked_collective":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_recovery":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_referenda":["",[],["benchmarking.rs","branch.rs","lib.rs","migration.rs","types.rs","weights.rs"]],\
