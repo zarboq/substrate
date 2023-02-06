@@ -453,7 +453,6 @@
 <a href="#453" id="453">453</a>
 <a href="#454" id="454">454</a>
 <a href="#455" id="455">455</a>
-<a href="#456" id="456">456</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -475,38 +474,32 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
 
 <span class="kw">use </span>beefy_primitives::{
-	crypto::{Public, Signature},
-	ValidatorSet, ValidatorSetId,
+	crypto::{AuthorityId, Public, Signature},
+	Commitment, SignedCommitment, ValidatorSet, ValidatorSetId, VoteMessage,
 };
 <span class="kw">use </span>codec::{Decode, Encode};
-<span class="kw">use </span>log::{debug, trace};
+<span class="kw">use </span>log::debug;
 <span class="kw">use </span>sp_runtime::traits::{Block, NumberFor};
-<span class="kw">use </span>std::{collections::BTreeMap, hash::Hash};
+<span class="kw">use </span>std::collections::BTreeMap;
 
 <span class="doccomment">/// Tracks for each round which validators have voted/signed and
 /// whether the local `self` validator has voted/signed.
 ///
 /// Does not do any validation on votes or signatures, layers above need to handle that (gossip).
 </span><span class="attr">#[derive(Debug, Decode, Default, Encode, PartialEq)]
-</span><span class="kw">struct </span>RoundTracker {
-	self_vote: bool,
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>RoundTracker {
 	votes: BTreeMap&lt;Public, Signature&gt;,
 }
 
 <span class="kw">impl </span>RoundTracker {
-	<span class="kw">fn </span>add_vote(<span class="kw-2">&amp;mut </span><span class="self">self</span>, vote: (Public, Signature), self_vote: bool) -&gt; bool {
+	<span class="kw">fn </span>add_vote(<span class="kw-2">&amp;mut </span><span class="self">self</span>, vote: (Public, Signature)) -&gt; bool {
 		<span class="kw">if </span><span class="self">self</span>.votes.contains_key(<span class="kw-2">&amp;</span>vote.<span class="number">0</span>) {
 			<span class="kw">return </span><span class="bool-val">false
 		</span>}
 
-		<span class="self">self</span>.self_vote = <span class="self">self</span>.self_vote || self_vote;
 		<span class="self">self</span>.votes.insert(vote.<span class="number">0</span>, vote.<span class="number">1</span>);
 		<span class="bool-val">true
 	</span>}
-
-	<span class="kw">fn </span>has_self_vote(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-		<span class="self">self</span>.self_vote
-	}
 
 	<span class="kw">fn </span>is_done(<span class="kw-2">&amp;</span><span class="self">self</span>, threshold: usize) -&gt; bool {
 		<span class="self">self</span>.votes.len() &gt;= threshold
@@ -519,27 +512,37 @@
 	authorities - faulty
 }
 
+<span class="attr">#[derive(Debug, PartialEq)]
+</span><span class="kw">pub enum </span>VoteImportResult&lt;B: Block&gt; {
+	<span class="prelude-val">Ok</span>,
+	RoundConcluded(SignedCommitment&lt;NumberFor&lt;B&gt;, Signature&gt;),
+	Equivocation, <span class="comment">/* TODO: (EquivocationProof&lt;NumberFor&lt;B&gt;, Public, Signature&gt;) */
+	</span>Invalid,
+	Stale,
+}
+
 <span class="doccomment">/// Keeps track of all voting rounds (block numbers) within a session.
 /// Only round numbers &gt; `best_done` are of interest, all others are considered stale.
 ///
 /// Does not do any validation on votes or signatures, layers above need to handle that (gossip).
 </span><span class="attr">#[derive(Debug, Decode, Encode, PartialEq)]
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Rounds&lt;Payload, B: Block&gt; {
-	rounds: BTreeMap&lt;(Payload, NumberFor&lt;B&gt;), RoundTracker&gt;,
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Rounds&lt;B: Block&gt; {
+	rounds: BTreeMap&lt;Commitment&lt;NumberFor&lt;B&gt;&gt;, RoundTracker&gt;,
+	previous_votes: BTreeMap&lt;(Public, NumberFor&lt;B&gt;), VoteMessage&lt;NumberFor&lt;B&gt;, Public, Signature&gt;&gt;,
 	session_start: NumberFor&lt;B&gt;,
 	validator_set: ValidatorSet&lt;Public&gt;,
 	mandatory_done: bool,
 	best_done: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;P, B&gt; Rounds&lt;P, B&gt;
+<span class="kw">impl</span>&lt;B&gt; Rounds&lt;B&gt;
 <span class="kw">where
-	</span>P: Ord + Hash + Clone,
-	B: Block,
+	</span>B: Block,
 {
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(session_start: NumberFor&lt;B&gt;, validator_set: ValidatorSet&lt;Public&gt;) -&gt; <span class="self">Self </span>{
 		Rounds {
 			rounds: BTreeMap::new(),
+			previous_votes: BTreeMap::new(),
 			session_start,
 			validator_set,
 			mandatory_done: <span class="bool-val">false</span>,
@@ -567,60 +570,77 @@
 		<span class="self">self</span>.mandatory_done
 	}
 
-	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>should_self_vote(<span class="kw-2">&amp;</span><span class="self">self</span>, round: <span class="kw-2">&amp;</span>(P, NumberFor&lt;B&gt;)) -&gt; bool {
-		<span class="prelude-val">Some</span>(round.<span class="number">1</span>) &gt; <span class="self">self</span>.best_done &amp;&amp;
-			<span class="self">self</span>.rounds.get(round).map(|tracker| !tracker.has_self_vote()).unwrap_or(<span class="bool-val">true</span>)
-	}
-
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>add_vote(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		round: <span class="kw-2">&amp;</span>(P, NumberFor&lt;B&gt;),
-		vote: (Public, Signature),
-		self_vote: bool,
-	) -&gt; bool {
-		<span class="kw">let </span>num = round.<span class="number">1</span>;
+		vote: VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;,
+	) -&gt; VoteImportResult&lt;B&gt; {
+		<span class="kw">let </span>num = vote.commitment.block_number;
+		<span class="kw">let </span>vote_key = (vote.id.clone(), num);
+
 		<span class="kw">if </span>num &lt; <span class="self">self</span>.session_start || <span class="prelude-val">Some</span>(num) &lt;= <span class="self">self</span>.best_done {
 			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 received vote for old stale round {:?}, ignoring&quot;</span>, num);
-			<span class="bool-val">false
-		</span>} <span class="kw">else if </span>!<span class="self">self</span>.validators().iter().any(|id| vote.<span class="number">0 </span>== <span class="kw-2">*</span>id) {
+			<span class="kw">return </span>VoteImportResult::Stale
+		} <span class="kw">else if </span>vote.commitment.validator_set_id != <span class="self">self</span>.validator_set_id() {
+			<span class="macro">debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;🥩 expected set_id {:?}, ignoring vote {:?}.&quot;</span>,
+				<span class="self">self</span>.validator_set_id(),
+				vote,
+			);
+			<span class="kw">return </span>VoteImportResult::Invalid
+		} <span class="kw">else if </span>!<span class="self">self</span>.validators().iter().any(|id| <span class="kw-2">&amp;</span>vote.id == id) {
 			<span class="macro">debug!</span>(
 				target: LOG_TARGET,
 				<span class="string">&quot;🥩 received vote {:?} from validator that is not in the validator set, ignoring&quot;</span>,
 				vote
 			);
-			<span class="bool-val">false
-		</span>} <span class="kw">else </span>{
-			<span class="self">self</span>.rounds.entry(round.clone()).or_default().add_vote(vote, self_vote)
+			<span class="kw">return </span>VoteImportResult::Invalid
 		}
+
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(previous_vote) = <span class="self">self</span>.previous_votes.get(<span class="kw-2">&amp;</span>vote_key) {
+			<span class="comment">// is the same public key voting for a different payload?
+			</span><span class="kw">if </span>previous_vote.commitment.payload != vote.commitment.payload {
+				<span class="macro">debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;🥩 detected equivocated vote: 1st: {:?}, 2nd: {:?}&quot;</span>, previous_vote, vote
+				);
+				<span class="comment">// TODO: build `EquivocationProof` and return it here.
+				</span><span class="kw">return </span>VoteImportResult::Equivocation
+			}
+		} <span class="kw">else </span>{
+			<span class="comment">// this is the first vote sent by `id` for `num`, all good
+			</span><span class="self">self</span>.previous_votes.insert(vote_key, vote.clone());
+		}
+
+		<span class="comment">// add valid vote
+		</span><span class="kw">let </span>round = <span class="self">self</span>.rounds.entry(vote.commitment.clone()).or_default();
+		<span class="kw">if </span>round.add_vote((vote.id, vote.signature)) &amp;&amp;
+			round.is_done(threshold(<span class="self">self</span>.validator_set.len()))
+		{
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(round) = <span class="self">self</span>.rounds.remove_entry(<span class="kw-2">&amp;</span>vote.commitment) {
+				<span class="kw">return </span>VoteImportResult::RoundConcluded(<span class="self">self</span>.signed_commitment(round))
+			}
+		}
+		VoteImportResult::Ok
 	}
 
-	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>should_conclude(
+	<span class="kw">fn </span>signed_commitment(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		round: <span class="kw-2">&amp;</span>(P, NumberFor&lt;B&gt;),
-	) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;<span class="prelude-ty">Option</span>&lt;Signature&gt;&gt;&gt; {
-		<span class="kw">let </span>done = <span class="self">self
-			</span>.rounds
-			.get(round)
-			.map(|tracker| tracker.is_done(threshold(<span class="self">self</span>.validator_set.len())))
-			.unwrap_or(<span class="bool-val">false</span>);
-		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Round #{} done: {}&quot;</span>, round.<span class="number">1</span>, done);
-
-		<span class="kw">if </span>done {
-			<span class="kw">let </span>signatures = <span class="self">self</span>.rounds.remove(round)<span class="question-mark">?</span>.votes;
-			<span class="prelude-val">Some</span>(
-				<span class="self">self</span>.validators()
-					.iter()
-					.map(|authority_id| signatures.get(authority_id).cloned())
-					.collect(),
-			)
-		} <span class="kw">else </span>{
-			<span class="prelude-val">None
-		</span>}
+		round: (Commitment&lt;NumberFor&lt;B&gt;&gt;, RoundTracker),
+	) -&gt; SignedCommitment&lt;NumberFor&lt;B&gt;, Signature&gt; {
+		<span class="kw">let </span>votes = round.<span class="number">1</span>.votes;
+		<span class="kw">let </span>signatures = <span class="self">self
+			</span>.validators()
+			.iter()
+			.map(|authority_id| votes.get(authority_id).cloned())
+			.collect();
+		SignedCommitment { commitment: round.<span class="number">0</span>, signatures }
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>conclude(<span class="kw-2">&amp;mut </span><span class="self">self</span>, round_num: NumberFor&lt;B&gt;) {
 		<span class="comment">// Remove this and older (now stale) rounds.
-		</span><span class="self">self</span>.rounds.retain(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, number), <span class="kw">_</span>| number &gt; round_num);
+		</span><span class="self">self</span>.rounds.retain(|commitment, <span class="kw">_</span>| commitment.block_number &gt; round_num);
+		<span class="self">self</span>.previous_votes.retain(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, number), <span class="kw">_</span>| number &gt; round_num);
 		<span class="self">self</span>.mandatory_done = <span class="self">self</span>.mandatory_done || round_num == <span class="self">self</span>.session_start;
 		<span class="self">self</span>.best_done = <span class="self">self</span>.best_done.max(<span class="prelude-val">Some</span>(round_num));
 		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Concluded round #{}&quot;</span>, round_num);
@@ -630,17 +650,18 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use </span>sc_network_test::Block;
-	<span class="kw">use </span>sp_core::H256;
 
-	<span class="kw">use </span>beefy_primitives::{crypto::Public, ValidatorSet};
+	<span class="kw">use </span>beefy_primitives::{
+		crypto::Public, keyring::Keyring, known_payloads::MMR_ROOT_ID, Commitment, Payload,
+		SignedCommitment, ValidatorSet, VoteMessage,
+	};
 
-	<span class="kw">use super</span>::{threshold, Block <span class="kw">as </span>BlockT, Hash, RoundTracker, Rounds};
-	<span class="kw">use </span><span class="kw">crate</span>::keystore::tests::Keyring;
+	<span class="kw">use super</span>::{threshold, Block <span class="kw">as </span>BlockT, RoundTracker, Rounds};
+	<span class="kw">use </span><span class="kw">crate</span>::round::VoteImportResult;
 
-	<span class="kw">impl</span>&lt;P, B&gt; Rounds&lt;P, B&gt;
+	<span class="kw">impl</span>&lt;B&gt; Rounds&lt;B&gt;
 	<span class="kw">where
-		</span>P: Ord + Hash + Clone,
-		B: BlockT,
+		</span>B: BlockT,
 	{
 		<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>test_set_mandatory_done(<span class="kw-2">&amp;mut </span><span class="self">self</span>, done: bool) {
 			<span class="self">self</span>.mandatory_done = done;
@@ -653,26 +674,18 @@
 		<span class="kw">let </span>bob_vote = (Keyring::Bob.public(), Keyring::Bob.sign(<span class="string">b&quot;I am committed&quot;</span>));
 		<span class="kw">let </span>threshold = <span class="number">2</span>;
 
-		<span class="comment">// self vote not added yet
-		</span><span class="macro">assert!</span>(!rt.has_self_vote());
-
 		<span class="comment">// adding new vote allowed
-		</span><span class="macro">assert!</span>(rt.add_vote(bob_vote.clone(), <span class="bool-val">false</span>));
+		</span><span class="macro">assert!</span>(rt.add_vote(bob_vote.clone()));
 		<span class="comment">// adding existing vote not allowed
-		</span><span class="macro">assert!</span>(!rt.add_vote(bob_vote, <span class="bool-val">false</span>));
-
-		<span class="comment">// self vote still not added yet
-		</span><span class="macro">assert!</span>(!rt.has_self_vote());
+		</span><span class="macro">assert!</span>(!rt.add_vote(bob_vote));
 
 		<span class="comment">// vote is not done
 		</span><span class="macro">assert!</span>(!rt.is_done(threshold));
 
 		<span class="kw">let </span>alice_vote = (Keyring::Alice.public(), Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>));
 		<span class="comment">// adding new vote (self vote this time) allowed
-		</span><span class="macro">assert!</span>(rt.add_vote(alice_vote, <span class="bool-val">true</span>));
+		</span><span class="macro">assert!</span>(rt.add_vote(alice_vote));
 
-		<span class="comment">// self vote registered
-		</span><span class="macro">assert!</span>(rt.has_self_vote());
 		<span class="comment">// vote is now done
 		</span><span class="macro">assert!</span>(rt.is_done(threshold));
 	}
@@ -698,7 +711,7 @@
 		.unwrap();
 
 		<span class="kw">let </span>session_start = <span class="number">1u64</span>.into();
-		<span class="kw">let </span>rounds = Rounds::&lt;H256, Block&gt;::new(session_start, validators);
+		<span class="kw">let </span>rounds = Rounds::&lt;Block&gt;::new(session_start, validators);
 
 		<span class="macro">assert_eq!</span>(<span class="number">42</span>, rounds.validator_set_id());
 		<span class="macro">assert_eq!</span>(<span class="number">1</span>, rounds.session_start());
@@ -722,65 +735,56 @@
 			Default::default(),
 		)
 		.unwrap();
-		<span class="kw">let </span>round = (H256::from_low_u64_le(<span class="number">1</span>), <span class="number">1</span>);
+		<span class="kw">let </span>validator_set_id = validators.id();
 
 		<span class="kw">let </span>session_start = <span class="number">1u64</span>.into();
-		<span class="kw">let </span><span class="kw-2">mut </span>rounds = Rounds::&lt;H256, Block&gt;::new(session_start, validators);
+		<span class="kw">let </span><span class="kw-2">mut </span>rounds = Rounds::&lt;Block&gt;::new(session_start, validators);
 
-		<span class="comment">// no self vote yet, should self vote
-		</span><span class="macro">assert!</span>(rounds.should_self_vote(<span class="kw-2">&amp;</span>round));
-
+		<span class="kw">let </span>payload = Payload::from_single_entry(MMR_ROOT_ID, <span class="macro">vec!</span>[]);
+		<span class="kw">let </span>block_number = <span class="number">1</span>;
+		<span class="kw">let </span>commitment = Commitment { block_number, payload, validator_set_id };
+		<span class="kw">let </span><span class="kw-2">mut </span>vote = VoteMessage {
+			id: Keyring::Alice.public(),
+			commitment: commitment.clone(),
+			signature: Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>),
+		};
 		<span class="comment">// add 1st good vote
-		</span><span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>round,
-			(Keyring::Alice.public(), Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">true
-		</span>));
-		<span class="comment">// round not concluded
-		</span><span class="macro">assert!</span>(rounds.should_conclude(<span class="kw-2">&amp;</span>round).is_none());
-		<span class="comment">// self vote already present, should not self vote
-		</span><span class="macro">assert!</span>(!rounds.should_self_vote(<span class="kw-2">&amp;</span>round));
+		</span><span class="macro">assert_eq!</span>(rounds.add_vote(vote.clone()), VoteImportResult::Ok);
 
-		<span class="comment">// double voting not allowed
-		</span><span class="macro">assert!</span>(!rounds.add_vote(
-			<span class="kw-2">&amp;</span>round,
-			(Keyring::Alice.public(), Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">true
-		</span>));
+		<span class="comment">// double voting (same vote), ok, no effect
+		</span><span class="macro">assert_eq!</span>(rounds.add_vote(vote.clone()), VoteImportResult::Ok);
 
+		vote.id = Keyring::Dave.public();
+		vote.signature = Keyring::Dave.sign(<span class="string">b&quot;I am committed&quot;</span>);
 		<span class="comment">// invalid vote (Dave is not a validator)
-		</span><span class="macro">assert!</span>(!rounds.add_vote(
-			<span class="kw-2">&amp;</span>round,
-			(Keyring::Dave.public(), Keyring::Dave.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">false
-		</span>));
-		<span class="macro">assert!</span>(rounds.should_conclude(<span class="kw-2">&amp;</span>round).is_none());
+		</span><span class="macro">assert_eq!</span>(rounds.add_vote(vote.clone()), VoteImportResult::Invalid);
 
+		vote.id = Keyring::Bob.public();
+		vote.signature = Keyring::Bob.sign(<span class="string">b&quot;I am committed&quot;</span>);
 		<span class="comment">// add 2nd good vote
-		</span><span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>round,
-			(Keyring::Bob.public(), Keyring::Bob.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">false
-		</span>));
-		<span class="comment">// round not concluded
-		</span><span class="macro">assert!</span>(rounds.should_conclude(<span class="kw-2">&amp;</span>round).is_none());
+		</span><span class="macro">assert_eq!</span>(rounds.add_vote(vote.clone()), VoteImportResult::Ok);
 
-		<span class="comment">// add 3rd good vote
-		</span><span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>round,
-			(Keyring::Charlie.public(), Keyring::Charlie.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">false
-		</span>));
-		<span class="comment">// round concluded
-		</span><span class="macro">assert!</span>(rounds.should_conclude(<span class="kw-2">&amp;</span>round).is_some());
-		rounds.conclude(round.<span class="number">1</span>);
+		vote.id = Keyring::Charlie.public();
+		vote.signature = Keyring::Charlie.sign(<span class="string">b&quot;I am committed&quot;</span>);
+		<span class="comment">// add 3rd good vote -&gt; round concluded -&gt; signatures present
+		</span><span class="macro">assert_eq!</span>(
+			rounds.add_vote(vote.clone()),
+			VoteImportResult::RoundConcluded(SignedCommitment {
+				commitment,
+				signatures: <span class="macro">vec!</span>[
+					<span class="prelude-val">Some</span>(Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>)),
+					<span class="prelude-val">Some</span>(Keyring::Bob.sign(<span class="string">b&quot;I am committed&quot;</span>)),
+					<span class="prelude-val">Some</span>(Keyring::Charlie.sign(<span class="string">b&quot;I am committed&quot;</span>)),
+					<span class="prelude-val">None</span>,
+				]
+			})
+		);
+		rounds.conclude(block_number);
 
+		vote.id = Keyring::Eve.public();
+		vote.signature = Keyring::Eve.sign(<span class="string">b&quot;I am committed&quot;</span>);
 		<span class="comment">// Eve is a validator, but round was concluded, adding vote disallowed
-		</span><span class="macro">assert!</span>(!rounds.add_vote(
-			<span class="kw-2">&amp;</span>round,
-			(Keyring::Eve.public(), Keyring::Eve.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">false
-		</span>));
+		</span><span class="macro">assert_eq!</span>(rounds.add_vote(vote), VoteImportResult::Stale);
 	}
 
 	<span class="attr">#[test]
@@ -792,30 +796,39 @@
 			<span class="number">42</span>,
 		)
 		.unwrap();
-		<span class="kw">let </span>alice = (Keyring::Alice.public(), Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>));
+		<span class="kw">let </span>validator_set_id = validators.id();
 
-		<span class="kw">let </span>session_start = <span class="number">10u64</span>.into();
-		<span class="kw">let </span><span class="kw-2">mut </span>rounds = Rounds::&lt;H256, Block&gt;::new(session_start, validators);
+		<span class="comment">// active rounds starts at block 10
+		</span><span class="kw">let </span>session_start = <span class="number">10u64</span>.into();
+		<span class="kw">let </span><span class="kw-2">mut </span>rounds = Rounds::&lt;Block&gt;::new(session_start, validators);
 
-		<span class="kw">let </span><span class="kw-2">mut </span>vote = (H256::from_low_u64_le(<span class="number">1</span>), <span class="number">9</span>);
+		<span class="comment">// vote on round 9
+		</span><span class="kw">let </span>block_number = <span class="number">9</span>;
+		<span class="kw">let </span>payload = Payload::from_single_entry(MMR_ROOT_ID, <span class="macro">vec!</span>[]);
+		<span class="kw">let </span>commitment = Commitment { block_number, payload, validator_set_id };
+		<span class="kw">let </span><span class="kw-2">mut </span>vote = VoteMessage {
+			id: Keyring::Alice.public(),
+			commitment,
+			signature: Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>),
+		};
 		<span class="comment">// add vote for previous session, should fail
-		</span><span class="macro">assert!</span>(!rounds.add_vote(<span class="kw-2">&amp;</span>vote, alice.clone(), <span class="bool-val">true</span>));
+		</span><span class="macro">assert_eq!</span>(rounds.add_vote(vote.clone()), VoteImportResult::Stale);
 		<span class="comment">// no votes present
 		</span><span class="macro">assert!</span>(rounds.rounds.is_empty());
 
 		<span class="comment">// simulate 11 was concluded
 		</span>rounds.best_done = <span class="prelude-val">Some</span>(<span class="number">11</span>);
 		<span class="comment">// add votes for current session, but already concluded rounds, should fail
-		</span>vote.<span class="number">1 </span>= <span class="number">10</span>;
-		<span class="macro">assert!</span>(!rounds.add_vote(<span class="kw-2">&amp;</span>vote, alice.clone(), <span class="bool-val">true</span>));
-		vote.<span class="number">1 </span>= <span class="number">11</span>;
-		<span class="macro">assert!</span>(!rounds.add_vote(<span class="kw-2">&amp;</span>vote, alice.clone(), <span class="bool-val">true</span>));
+		</span>vote.commitment.block_number = <span class="number">10</span>;
+		<span class="macro">assert_eq!</span>(rounds.add_vote(vote.clone()), VoteImportResult::Stale);
+		vote.commitment.block_number = <span class="number">11</span>;
+		<span class="macro">assert_eq!</span>(rounds.add_vote(vote.clone()), VoteImportResult::Stale);
 		<span class="comment">// no votes present
 		</span><span class="macro">assert!</span>(rounds.rounds.is_empty());
 
-		<span class="comment">// add good vote
-		</span>vote.<span class="number">1 </span>= <span class="number">12</span>;
-		<span class="macro">assert!</span>(rounds.add_vote(<span class="kw-2">&amp;</span>vote, alice, <span class="bool-val">true</span>));
+		<span class="comment">// add vote for active round 12
+		</span>vote.commitment.block_number = <span class="number">12</span>;
+		<span class="macro">assert_eq!</span>(rounds.add_vote(vote), VoteImportResult::Ok);
 		<span class="comment">// good vote present
 		</span><span class="macro">assert_eq!</span>(rounds.rounds.len(), <span class="number">1</span>);
 	}
@@ -825,89 +838,74 @@
 		sp_tracing::try_init_simple();
 
 		<span class="kw">let </span>validators = ValidatorSet::&lt;Public&gt;::new(
-			<span class="macro">vec!</span>[
-				Keyring::Alice.public(),
-				Keyring::Bob.public(),
-				Keyring::Charlie.public(),
-				Keyring::Dave.public(),
-			],
+			<span class="macro">vec!</span>[Keyring::Alice.public(), Keyring::Bob.public(), Keyring::Charlie.public()],
 			Default::default(),
 		)
 		.unwrap();
+		<span class="kw">let </span>validator_set_id = validators.id();
 
 		<span class="kw">let </span>session_start = <span class="number">1u64</span>.into();
-		<span class="kw">let </span><span class="kw-2">mut </span>rounds = Rounds::&lt;H256, Block&gt;::new(session_start, validators);
+		<span class="kw">let </span><span class="kw-2">mut </span>rounds = Rounds::&lt;Block&gt;::new(session_start, validators);
 
-		<span class="comment">// round 1
-		</span><span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">1</span>), <span class="number">1</span>),
-			(Keyring::Alice.public(), Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">true</span>,
-		));
-		<span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">1</span>), <span class="number">1</span>),
-			(Keyring::Bob.public(), Keyring::Bob.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">false</span>,
-		));
-		<span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">1</span>), <span class="number">1</span>),
-			(Keyring::Charlie.public(), Keyring::Charlie.sign(<span class="string">b&quot;I am committed&quot;</span>)),
-			<span class="bool-val">false</span>,
-		));
+		<span class="kw">let </span>payload = Payload::from_single_entry(MMR_ROOT_ID, <span class="macro">vec!</span>[]);
+		<span class="kw">let </span>commitment = Commitment { block_number: <span class="number">1</span>, payload, validator_set_id };
+		<span class="kw">let </span><span class="kw-2">mut </span>alice_vote = VoteMessage {
+			id: Keyring::Alice.public(),
+			commitment: commitment.clone(),
+			signature: Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>),
+		};
+		<span class="kw">let </span><span class="kw-2">mut </span>bob_vote = VoteMessage {
+			id: Keyring::Bob.public(),
+			commitment: commitment.clone(),
+			signature: Keyring::Bob.sign(<span class="string">b&quot;I am committed&quot;</span>),
+		};
+		<span class="kw">let </span><span class="kw-2">mut </span>charlie_vote = VoteMessage {
+			id: Keyring::Charlie.public(),
+			commitment,
+			signature: Keyring::Charlie.sign(<span class="string">b&quot;I am committed&quot;</span>),
+		};
+		<span class="kw">let </span>expected_signatures = <span class="macro">vec!</span>[
+			<span class="prelude-val">Some</span>(Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>)),
+			<span class="prelude-val">Some</span>(Keyring::Bob.sign(<span class="string">b&quot;I am committed&quot;</span>)),
+			<span class="prelude-val">Some</span>(Keyring::Charlie.sign(<span class="string">b&quot;I am committed&quot;</span>)),
+		];
 
-		<span class="comment">// round 2
-		</span><span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">2</span>), <span class="number">2</span>),
-			(Keyring::Alice.public(), Keyring::Alice.sign(<span class="string">b&quot;I am again committed&quot;</span>)),
-			<span class="bool-val">true</span>,
-		));
-		<span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">2</span>), <span class="number">2</span>),
-			(Keyring::Bob.public(), Keyring::Bob.sign(<span class="string">b&quot;I am again committed&quot;</span>)),
-			<span class="bool-val">false</span>,
-		));
-		<span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">2</span>), <span class="number">2</span>),
-			(Keyring::Charlie.public(), Keyring::Charlie.sign(<span class="string">b&quot;I am again committed&quot;</span>)),
-			<span class="bool-val">false</span>,
-		));
+		<span class="comment">// round 1 - only 2 out of 3 vote
+		</span><span class="macro">assert_eq!</span>(rounds.add_vote(alice_vote.clone()), VoteImportResult::Ok);
+		<span class="macro">assert_eq!</span>(rounds.add_vote(charlie_vote.clone()), VoteImportResult::Ok);
+		<span class="comment">// should be 1 active round
+		</span><span class="macro">assert_eq!</span>(<span class="number">1</span>, rounds.rounds.len());
 
-		<span class="comment">// round 3
-		</span><span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">3</span>), <span class="number">3</span>),
-			(Keyring::Alice.public(), Keyring::Alice.sign(<span class="string">b&quot;I am still committed&quot;</span>)),
-			<span class="bool-val">true</span>,
-		));
-		<span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">3</span>), <span class="number">3</span>),
-			(Keyring::Bob.public(), Keyring::Bob.sign(<span class="string">b&quot;I am still committed&quot;</span>)),
-			<span class="bool-val">false</span>,
-		));
-		<span class="macro">assert!</span>(rounds.add_vote(
-			<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">3</span>), <span class="number">3</span>),
-			(Keyring::Charlie.public(), Keyring::Charlie.sign(<span class="string">b&quot;I am still committed&quot;</span>)),
-			<span class="bool-val">false</span>,
-		));
-		<span class="macro">assert_eq!</span>(<span class="number">3</span>, rounds.rounds.len());
+		<span class="comment">// round 2 - only Charlie votes
+		</span>charlie_vote.commitment.block_number = <span class="number">2</span>;
+		<span class="macro">assert_eq!</span>(rounds.add_vote(charlie_vote.clone()), VoteImportResult::Ok);
+		<span class="comment">// should be 2 active rounds
+		</span><span class="macro">assert_eq!</span>(<span class="number">2</span>, rounds.rounds.len());
 
-		<span class="comment">// conclude unknown round
-		</span><span class="macro">assert!</span>(rounds.should_conclude(<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">5</span>), <span class="number">5</span>)).is_none());
-		<span class="macro">assert_eq!</span>(<span class="number">3</span>, rounds.rounds.len());
+		<span class="comment">// round 3 - all validators vote -&gt; round is concluded
+		</span>alice_vote.commitment.block_number = <span class="number">3</span>;
+		bob_vote.commitment.block_number = <span class="number">3</span>;
+		charlie_vote.commitment.block_number = <span class="number">3</span>;
+		<span class="macro">assert_eq!</span>(rounds.add_vote(alice_vote.clone()), VoteImportResult::Ok);
+		<span class="macro">assert_eq!</span>(rounds.add_vote(bob_vote.clone()), VoteImportResult::Ok);
+		<span class="macro">assert_eq!</span>(
+			rounds.add_vote(charlie_vote.clone()),
+			VoteImportResult::RoundConcluded(SignedCommitment {
+				commitment: charlie_vote.commitment,
+				signatures: expected_signatures
+			})
+		);
+		<span class="comment">// should be only 2 active since this one auto-concluded
+		</span><span class="macro">assert_eq!</span>(<span class="number">2</span>, rounds.rounds.len());
 
 		<span class="comment">// conclude round 2
-		</span><span class="kw">let </span>signatures = rounds.should_conclude(<span class="kw-2">&amp;</span>(H256::from_low_u64_le(<span class="number">2</span>), <span class="number">2</span>)).unwrap();
-		rounds.conclude(<span class="number">2</span>);
-		<span class="macro">assert_eq!</span>(<span class="number">1</span>, rounds.rounds.len());
+		</span>rounds.conclude(<span class="number">2</span>);
+		<span class="comment">// should be no more active rounds since 2 was officially concluded and round &quot;1&quot; is stale
+		</span><span class="macro">assert!</span>(rounds.rounds.is_empty());
 
-		<span class="macro">assert_eq!</span>(
-			signatures,
-			<span class="macro">vec!</span>[
-				<span class="prelude-val">Some</span>(Keyring::Alice.sign(<span class="string">b&quot;I am again committed&quot;</span>)),
-				<span class="prelude-val">Some</span>(Keyring::Bob.sign(<span class="string">b&quot;I am again committed&quot;</span>)),
-				<span class="prelude-val">Some</span>(Keyring::Charlie.sign(<span class="string">b&quot;I am again committed&quot;</span>)),
-				<span class="prelude-val">None
-			</span>]
-		);
+		<span class="comment">// conclude round 3
+		</span>rounds.conclude(<span class="number">3</span>);
+		<span class="macro">assert!</span>(rounds.previous_votes.is_empty());
 	}
 }
 </code></pre></div>

@@ -471,6 +471,7 @@
 <a href="#471" id="471">471</a>
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -593,7 +594,7 @@
 
 	<span class="doccomment">/// Note a voting round.
 	///
-	/// Noting round will start a live `round`.
+	/// Noting round will track gossiped votes for `round`.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>note_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;) {
 		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 About to note gossip round #{}&quot;</span>, round);
 		<span class="self">self</span>.known_votes.write().insert(round);
@@ -715,9 +716,10 @@
 	<span class="kw">use </span>sc_network_test::Block;
 	<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 
-	<span class="kw">use </span><span class="kw">crate</span>::keystore::{tests::Keyring, BeefyKeystore};
+	<span class="kw">use </span><span class="kw">crate</span>::keystore::BeefyKeystore;
 	<span class="kw">use </span>beefy_primitives::{
-		crypto::Signature, known_payloads, Commitment, MmrRootHash, Payload, VoteMessage, KEY_TYPE,
+		crypto::Signature, keyring::Keyring, known_payloads, Commitment, MmrRootHash, Payload,
+		VoteMessage, KEY_TYPE,
 	};
 
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;

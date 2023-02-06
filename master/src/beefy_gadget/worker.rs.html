@@ -1529,27 +1529,6 @@
 <a href="#1529" id="1529">1529</a>
 <a href="#1530" id="1530">1530</a>
 <a href="#1531" id="1531">1531</a>
-<a href="#1532" id="1532">1532</a>
-<a href="#1533" id="1533">1533</a>
-<a href="#1534" id="1534">1534</a>
-<a href="#1535" id="1535">1535</a>
-<a href="#1536" id="1536">1536</a>
-<a href="#1537" id="1537">1537</a>
-<a href="#1538" id="1538">1538</a>
-<a href="#1539" id="1539">1539</a>
-<a href="#1540" id="1540">1540</a>
-<a href="#1541" id="1541">1541</a>
-<a href="#1542" id="1542">1542</a>
-<a href="#1543" id="1543">1543</a>
-<a href="#1544" id="1544">1544</a>
-<a href="#1545" id="1545">1545</a>
-<a href="#1546" id="1546">1546</a>
-<a href="#1547" id="1547">1547</a>
-<a href="#1548" id="1548">1548</a>
-<a href="#1549" id="1549">1549</a>
-<a href="#1550" id="1550">1550</a>
-<a href="#1551" id="1551">1551</a>
-<a href="#1552" id="1552">1552</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -1578,13 +1557,13 @@
 	keystore::BeefyKeystore,
 	metric_inc, metric_set,
 	metrics::Metrics,
-	round::Rounds,
+	round::{Rounds, VoteImportResult},
 	BeefyVoterLinks, LOG_TARGET,
 };
 <span class="kw">use </span>beefy_primitives::{
 	crypto::{AuthorityId, Signature},
-	Commitment, ConsensusLog, Payload, PayloadProvider, SignedCommitment, ValidatorSet,
-	VersionedFinalityProof, VoteMessage, BEEFY_ENGINE_ID,
+	Commitment, ConsensusLog, PayloadProvider, ValidatorSet, VersionedFinalityProof, VoteMessage,
+	BEEFY_ENGINE_ID,
 };
 <span class="kw">use </span>codec::{Codec, Decode, Encode};
 <span class="kw">use </span>futures::{stream::Fuse, FutureExt, StreamExt};
@@ -1607,6 +1586,7 @@
 	marker::PhantomData,
 	sync::Arc,
 };
+
 <span class="doccomment">/// Bound for the number of buffered future voting rounds.
 </span><span class="kw">const </span>MAX_BUFFERED_VOTE_ROUNDS: usize = <span class="number">600</span>;
 <span class="doccomment">/// Bound for the number of buffered votes per round number.
@@ -1635,17 +1615,14 @@
 	/// 3. lagging behind GRANDPA: queue has [1, N] elements, where all `mandatory_done == false`.
 	///    In this state, everytime a session gets its mandatory block BEEFY finalized, it&#39;s
 	///    popped off the queue, eventually getting to state `2. up-to-date`.
-	</span>sessions: VecDeque&lt;Rounds&lt;Payload, B&gt;&gt;,
+	</span>sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;,
 	<span class="doccomment">/// Min delta in block numbers between two blocks, BEEFY should vote on.
 	</span>min_block_delta: u32,
 }
 
 <span class="kw">impl</span>&lt;B: Block&gt; VoterOracle&lt;B&gt; {
 	<span class="doccomment">/// Verify provided `sessions` satisfies requirements, then build `VoterOracle`.
-	</span><span class="kw">pub fn </span>checked_new(
-		sessions: VecDeque&lt;Rounds&lt;Payload, B&gt;&gt;,
-		min_block_delta: u32,
-	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+	</span><span class="kw">pub fn </span>checked_new(sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;, min_block_delta: u32) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>prev_start = Zero::zero();
 		<span class="kw">let </span><span class="kw-2">mut </span>prev_validator_id = <span class="prelude-val">None</span>;
 		<span class="comment">// verifies the
@@ -1688,13 +1665,13 @@
 
 	<span class="comment">// Return reference to rounds pertaining to first session in the queue.
 	// Voting will always happen at the head of the queue.
-	</span><span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;Payload, B&gt;&gt; {
+	</span><span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;&gt; {
 		<span class="self">self</span>.sessions.front()
 	}
 
 	<span class="comment">// Return mutable reference to rounds pertaining to first session in the queue.
 	// Voting will always happen at the head of the queue.
-	</span><span class="kw">fn </span>active_rounds_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Rounds&lt;Payload, B&gt;&gt; {
+	</span><span class="kw">fn </span>active_rounds_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Rounds&lt;B&gt;&gt; {
 		<span class="self">self</span>.sessions.front_mut()
 	}
 
@@ -1709,7 +1686,7 @@
 	}
 
 	<span class="doccomment">/// Add new observed session to the Oracle.
-	</span><span class="kw">pub fn </span>add_session(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rounds: Rounds&lt;Payload, B&gt;) {
+	</span><span class="kw">pub fn </span>add_session(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rounds: Rounds&lt;B&gt;) {
 		<span class="self">self</span>.sessions.push_back(rounds);
 		<span class="comment">// Once we add a new session we can drop/prune previous session if it&#39;s been finalized.
 		</span><span class="self">self</span>.try_prune();
@@ -1816,6 +1793,8 @@
 	</span>best_grandpa_block_header: &lt;B <span class="kw">as </span>Block&gt;::Header,
 	<span class="doccomment">/// Best block a BEEFY voting round has been concluded for.
 	</span>best_beefy_block: NumberFor&lt;B&gt;,
+	<span class="doccomment">/// Best block we voted on.
+	</span>best_voted: NumberFor&lt;B&gt;,
 	<span class="doccomment">/// Chooses which incoming votes to accept and which votes to generate.
 	/// Keeps track of voting seen for current and future rounds.
 	</span>voting_oracle: VoterOracle&lt;B&gt;,
@@ -1825,12 +1804,13 @@
 	<span class="kw">pub fn </span>checked_new(
 		grandpa_header: &lt;B <span class="kw">as </span>Block&gt;::Header,
 		best_beefy: NumberFor&lt;B&gt;,
-		sessions: VecDeque&lt;Rounds&lt;Payload, B&gt;&gt;,
+		sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;,
 		min_block_delta: u32,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
 		VoterOracle::checked_new(sessions, min_block_delta).map(|voting_oracle| PersistedState {
 			best_grandpa_block_header: grandpa_header,
 			best_beefy_block: best_beefy,
+			best_voted: Zero::zero(),
 			voting_oracle,
 		})
 	}
@@ -1933,7 +1913,7 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state.voting_oracle
 	}
 
-	<span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;Payload, B&gt;&gt; {
+	<span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;&gt; {
 		<span class="self">self</span>.persisted_state.voting_oracle.active_rounds()
 	}
 
@@ -2038,12 +2018,9 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 		<span class="kw">let </span>block_num = vote.commitment.block_number;
 		<span class="kw">let </span>best_grandpa = <span class="self">self</span>.best_grandpa_block();
+		<span class="self">self</span>.gossip_validator.note_round(block_num);
 		<span class="kw">match </span><span class="self">self</span>.voting_oracle().triage_round(block_num, best_grandpa)<span class="question-mark">? </span>{
-			RoundAction::Process =&gt; <span class="self">self</span>.handle_vote(
-				(vote.commitment.payload, vote.commitment.block_number),
-				(vote.id, vote.signature),
-				<span class="bool-val">false</span>,
-			)<span class="question-mark">?</span>,
+			RoundAction::Process =&gt; <span class="self">self</span>.handle_vote(vote)<span class="question-mark">?</span>,
 			RoundAction::Enqueue =&gt; {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer vote for round: {:?}.&quot;</span>, block_num);
 				<span class="kw">if </span><span class="self">self</span>.pending_votes.len() &lt; MAX_BUFFERED_VOTE_ROUNDS {
@@ -2098,57 +2075,47 @@
 
 	<span class="kw">fn </span>handle_vote(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		round: (Payload, NumberFor&lt;B&gt;),
-		vote: (AuthorityId, Signature),
-		self_vote: bool,
+		vote: VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="self">self</span>.gossip_validator.note_round(round.<span class="number">1</span>);
-
 		<span class="kw">let </span>rounds = <span class="self">self
 			</span>.persisted_state
 			.voting_oracle
 			.active_rounds_mut()
 			.ok_or(Error::UninitSession)<span class="question-mark">?</span>;
 
-		<span class="kw">if </span>rounds.add_vote(<span class="kw-2">&amp;</span>round, vote, self_vote) {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(signatures) = rounds.should_conclude(<span class="kw-2">&amp;</span>round) {
-				<span class="self">self</span>.gossip_validator.conclude_round(round.<span class="number">1</span>);
+		<span class="kw">let </span>block_number = vote.commitment.block_number;
+		<span class="kw">match </span>rounds.add_vote(vote) {
+			VoteImportResult::RoundConcluded(signed_commitment) =&gt; {
+				<span class="self">self</span>.gossip_validator.conclude_round(block_number);
+				<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_round_concluded, block_number);
 
-				<span class="kw">let </span>block_num = round.<span class="number">1</span>;
-				<span class="kw">let </span>commitment = Commitment {
-					payload: round.<span class="number">0</span>,
-					block_number: block_num,
-					validator_set_id: rounds.validator_set_id(),
-				};
-
-				<span class="kw">let </span>finality_proof =
-					VersionedFinalityProof::V1(SignedCommitment { commitment, signatures });
-
-				<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_round_concluded, block_num);
-
+				<span class="kw">let </span>finality_proof = VersionedFinalityProof::V1(signed_commitment);
 				<span class="macro">info!</span>(
 					target: LOG_TARGET,
-					<span class="string">&quot;🥩 Round #{} concluded, finality_proof: {:?}.&quot;</span>, round.<span class="number">1</span>, finality_proof
+					<span class="string">&quot;🥩 Round #{} concluded, finality_proof: {:?}.&quot;</span>, block_number, finality_proof
 				);
-
 				<span class="comment">// We created the `finality_proof` and know to be valid.
 				// New state is persisted after finalization.
 				</span><span class="self">self</span>.finalize(finality_proof)<span class="question-mark">?</span>;
-			} <span class="kw">else </span>{
-				<span class="kw">let </span>mandatory_round = <span class="self">self
+			},
+			VoteImportResult::Ok =&gt; {
+				<span class="comment">// Persist state after handling mandatory block vote.
+				</span><span class="kw">if </span><span class="self">self
 					</span>.voting_oracle()
 					.mandatory_pending()
-					.map(|p| p.<span class="number">0 </span>== round.<span class="number">1</span>)
-					.unwrap_or(<span class="bool-val">false</span>);
-				<span class="comment">// Persist state after handling self vote to avoid double voting in case
-				// of voter restarts.
-				// Also persist state after handling mandatory block vote.
-				</span><span class="kw">if </span>self_vote || mandatory_round {
+					.map(|(mandatory_num, <span class="kw">_</span>)| mandatory_num == block_number)
+					.unwrap_or(<span class="bool-val">false</span>)
+				{
 					<span class="kw">crate</span>::aux_schema::write_voter_state(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, <span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state)
 						.map_err(|e| Error::Backend(e.to_string()))<span class="question-mark">?</span>;
 				}
-			}
-		}
+			},
+			VoteImportResult::Equivocation =&gt; {
+				<span class="comment">// TODO: report returned `EquivocationProof` to chain through `pallet-beefy`.
+				</span>()
+			},
+			VoteImportResult::Invalid | VoteImportResult::Stale =&gt; (),
+		};
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -2247,11 +2214,7 @@
 			<span class="kw">for </span>(num, votes) <span class="kw">in </span>votes_to_handle.into_iter() {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Handle buffered votes for: {:?}.&quot;</span>, num);
 				<span class="kw">for </span>v <span class="kw">in </span>votes.into_iter() {
-					<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(
-						(v.commitment.payload, v.commitment.block_number),
-						(v.id, v.signature),
-						<span class="bool-val">false</span>,
-					) {
+					<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(v) {
 						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error handling buffered vote: {}&quot;</span>, err);
 					};
 				}
@@ -2268,7 +2231,9 @@
 			.voting_target(<span class="self">self</span>.best_beefy_block(), <span class="self">self</span>.best_grandpa_block())
 		{
 			<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_should_vote_on, target);
-			<span class="self">self</span>.do_vote(target)<span class="question-mark">?</span>;
+			<span class="kw">if </span>target &gt; <span class="self">self</span>.persisted_state.best_voted {
+				<span class="self">self</span>.do_vote(target)<span class="question-mark">?</span>;
+			}
 		}
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2318,13 +2283,6 @@
 			.voting_oracle
 			.active_rounds_mut()
 			.ok_or(Error::UninitSession)<span class="question-mark">?</span>;
-		<span class="kw">if </span>!rounds.should_self_vote(<span class="kw-2">&amp;</span>(payload.clone(), target_number)) {
-			<span class="macro">debug!</span>(
-				target: LOG_TARGET,
-				<span class="string">&quot;🥩 Don&#39;t double vote for block number: {:?}&quot;</span>, target_number
-			);
-			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
-		}
 		<span class="kw">let </span>(validators, validator_set_id) = (rounds.validators(), rounds.validator_set_id());
 
 		<span class="kw">let </span>authority_id = <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = <span class="self">self</span>.key_store.authority_id(validators) {
@@ -2364,17 +2322,17 @@
 
 		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Sent vote message: {:?}&quot;</span>, message);
 
-		<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(
-			(message.commitment.payload, message.commitment.block_number),
-			(message.id, message.signature),
-			<span class="bool-val">true</span>,
-		) {
+		<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(message) {
 			<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error handling self vote: {}&quot;</span>, err);
 		}
 
 		<span class="self">self</span>.gossip_engine.gossip_message(topic::&lt;B&gt;(), encoded_message, <span class="bool-val">false</span>);
 
-		<span class="prelude-val">Ok</span>(())
+		<span class="comment">// Persist state after vote to avoid double voting in case of voter restarts.
+		</span><span class="self">self</span>.persisted_state.best_voted = target_number;
+		<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_best_voted, target_number);
+		<span class="kw">crate</span>::aux_schema::write_voter_state(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, <span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state)
+			.map_err(|e| Error::Backend(e.to_string()))
 	}
 
 	<span class="kw">fn </span>process_new_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
@@ -2400,8 +2358,7 @@
 
 	<span class="doccomment">/// Main loop for BEEFY worker.
 	///
-	/// Wait for BEEFY runtime pallet to be available, then start the main async loop
-	/// which is driven by finality notifications and gossiped votes.
+	/// Run the main async loop which is driven by finality notifications and gossiped votes.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>run(
 		<span class="kw-2">mut </span><span class="self">self</span>,
 		<span class="kw-2">mut </span>block_import_justif: Fuse&lt;NotificationReceiver&lt;BeefyVersionedFinalityProof&lt;B&gt;&gt;&gt;,
@@ -2544,14 +2501,15 @@
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use crate</span>::{
 		communication::notification::{BeefyBestBlockStream, BeefyVersionedFinalityProofStream},
-		keystore::tests::Keyring,
 		tests::{
 			create_beefy_keystore, get_beefy_streams, make_beefy_ids, BeefyPeer, BeefyTestNet,
 			TestApi,
 		},
 		BeefyRPCLinks, KnownPeers,
 	};
-	<span class="kw">use </span>beefy_primitives::{known_payloads, mmr::MmrRootProvider};
+	<span class="kw">use </span>beefy_primitives::{
+		keyring::Keyring, known_payloads, mmr::MmrRootProvider, Payload, SignedCommitment,
+	};
 	<span class="kw">use </span>futures::{future::poll_fn, task::Poll};
 	<span class="kw">use </span>parking_lot::Mutex;
 	<span class="kw">use </span>sc_client_api::{Backend <span class="kw">as </span>BackendT, HeaderBackend};
@@ -2559,7 +2517,7 @@
 	<span class="kw">use </span>sc_network_test::TestNetFactory;
 	<span class="kw">use </span>sp_api::HeaderT;
 	<span class="kw">use </span>sp_blockchain::Backend <span class="kw">as </span>BlockchainBackendT;
-	<span class="kw">use </span>sp_runtime::traits::{One, Zero};
+	<span class="kw">use </span>sp_runtime::traits::One;
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		runtime::{Block, Digest, DigestItem, Header, H256},
 		Backend,
@@ -2570,7 +2528,7 @@
 			<span class="kw-2">&amp;</span><span class="self">self</span>.voting_oracle
 		}
 
-		<span class="kw">pub fn </span>active_round(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;Payload, B&gt;&gt; {
+		<span class="kw">pub fn </span>active_round(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;&gt; {
 			<span class="self">self</span>.voting_oracle.active_rounds()
 		}
 
@@ -2584,7 +2542,7 @@
 	}
 
 	<span class="kw">impl</span>&lt;B: <span class="kw">super</span>::Block&gt; VoterOracle&lt;B&gt; {
-		<span class="kw">pub fn </span>sessions(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>VecDeque&lt;Rounds&lt;Payload, B&gt;&gt; {
+		<span class="kw">pub fn </span>sessions(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>VecDeque&lt;Rounds&lt;B&gt;&gt; {
 			<span class="kw-2">&amp;</span><span class="self">self</span>.sessions
 		}
 	}
@@ -2642,7 +2600,7 @@
 			min_block_delta,
 		)
 		.unwrap();
-		<span class="kw">let </span>payload_provider = MmrRootProvider::new(api);
+		<span class="kw">let </span>payload_provider = MmrRootProvider::new(api.clone());
 		<span class="kw">let </span>worker_params = <span class="kw">crate</span>::worker::WorkerParams {
 			backend,
 			payload_provider,

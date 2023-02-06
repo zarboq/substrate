@@ -132,25 +132,25 @@
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
 <span class="kw">const </span>VERSION_KEY: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;beefy_auxschema_version&quot;</span>;
-<span class="kw">const </span>WORKER_STATE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;beefy_voter_state&quot;</span>;
+<span class="kw">const </span>WORKER_STATE_KEY: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;beefy_voter_state&quot;</span>;
 
 <span class="kw">const </span>CURRENT_VERSION: u32 = <span class="number">2</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>write_current_version&lt;B: AuxStore&gt;(backend: <span class="kw-2">&amp;</span>B) -&gt; ClientResult&lt;()&gt; {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>write_current_version&lt;BE: AuxStore&gt;(backend: <span class="kw-2">&amp;</span>BE) -&gt; ClientResult&lt;()&gt; {
 	<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 write aux schema version {:?}&quot;</span>, CURRENT_VERSION);
 	AuxStore::insert_aux(backend, <span class="kw-2">&amp;</span>[(VERSION_KEY, CURRENT_VERSION.encode().as_slice())], <span class="kw-2">&amp;</span>[])
 }
 
 <span class="doccomment">/// Write voter state.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>write_voter_state&lt;Block: BlockT, B: AuxStore&gt;(
-	backend: <span class="kw-2">&amp;</span>B,
-	state: <span class="kw-2">&amp;</span>PersistedState&lt;Block&gt;,
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>write_voter_state&lt;B: BlockT, BE: AuxStore&gt;(
+	backend: <span class="kw-2">&amp;</span>BE,
+	state: <span class="kw-2">&amp;</span>PersistedState&lt;B&gt;,
 ) -&gt; ClientResult&lt;()&gt; {
 	<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 persisting {:?}&quot;</span>, state);
-	backend.insert_aux(<span class="kw-2">&amp;</span>[(WORKER_STATE, state.encode().as_slice())], <span class="kw-2">&amp;</span>[])
+	AuxStore::insert_aux(backend, <span class="kw-2">&amp;</span>[(WORKER_STATE_KEY, state.encode().as_slice())], <span class="kw-2">&amp;</span>[])
 }
 
-<span class="kw">fn </span>load_decode&lt;B: AuxStore, T: Decode&gt;(backend: <span class="kw-2">&amp;</span>B, key: <span class="kw-2">&amp;</span>[u8]) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; {
+<span class="kw">fn </span>load_decode&lt;BE: AuxStore, T: Decode&gt;(backend: <span class="kw-2">&amp;</span>BE, key: <span class="kw-2">&amp;</span>[u8]) -&gt; ClientResult&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; {
 	<span class="kw">match </span>backend.get_aux(key)<span class="question-mark">? </span>{
 		<span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
 		<span class="prelude-val">Some</span>(t) =&gt; T::decode(<span class="kw-2">&amp;mut &amp;</span>t[..])
@@ -170,7 +170,7 @@
 	<span class="kw">match </span>version {
 		<span class="prelude-val">None </span>=&gt; (),
 		<span class="prelude-val">Some</span>(<span class="number">1</span>) =&gt; (), <span class="comment">// version 1 is totally obsolete and should be simply ignored
-		</span><span class="prelude-val">Some</span>(<span class="number">2</span>) =&gt; <span class="kw">return </span>load_decode::&lt;<span class="kw">_</span>, PersistedState&lt;B&gt;&gt;(backend, WORKER_STATE),
+		</span><span class="prelude-val">Some</span>(<span class="number">2</span>) =&gt; <span class="kw">return </span>load_decode::&lt;<span class="kw">_</span>, PersistedState&lt;B&gt;&gt;(backend, WORKER_STATE_KEY),
 		other =&gt;
 			<span class="kw">return </span><span class="prelude-val">Err</span>(ClientError::Backend(<span class="macro">format!</span>(<span class="string">&quot;Unsupported BEEFY DB version: {:?}&quot;</span>, other))),
 	}
