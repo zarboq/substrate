@@ -4417,6 +4417,50 @@
 <a href="#4417" id="4417">4417</a>
 <a href="#4418" id="4418">4418</a>
 <a href="#4419" id="4419">4419</a>
+<a href="#4420" id="4420">4420</a>
+<a href="#4421" id="4421">4421</a>
+<a href="#4422" id="4422">4422</a>
+<a href="#4423" id="4423">4423</a>
+<a href="#4424" id="4424">4424</a>
+<a href="#4425" id="4425">4425</a>
+<a href="#4426" id="4426">4426</a>
+<a href="#4427" id="4427">4427</a>
+<a href="#4428" id="4428">4428</a>
+<a href="#4429" id="4429">4429</a>
+<a href="#4430" id="4430">4430</a>
+<a href="#4431" id="4431">4431</a>
+<a href="#4432" id="4432">4432</a>
+<a href="#4433" id="4433">4433</a>
+<a href="#4434" id="4434">4434</a>
+<a href="#4435" id="4435">4435</a>
+<a href="#4436" id="4436">4436</a>
+<a href="#4437" id="4437">4437</a>
+<a href="#4438" id="4438">4438</a>
+<a href="#4439" id="4439">4439</a>
+<a href="#4440" id="4440">4440</a>
+<a href="#4441" id="4441">4441</a>
+<a href="#4442" id="4442">4442</a>
+<a href="#4443" id="4443">4443</a>
+<a href="#4444" id="4444">4444</a>
+<a href="#4445" id="4445">4445</a>
+<a href="#4446" id="4446">4446</a>
+<a href="#4447" id="4447">4447</a>
+<a href="#4448" id="4448">4448</a>
+<a href="#4449" id="4449">4449</a>
+<a href="#4450" id="4450">4450</a>
+<a href="#4451" id="4451">4451</a>
+<a href="#4452" id="4452">4452</a>
+<a href="#4453" id="4453">4453</a>
+<a href="#4454" id="4454">4454</a>
+<a href="#4455" id="4455">4455</a>
+<a href="#4456" id="4456">4456</a>
+<a href="#4457" id="4457">4457</a>
+<a href="#4458" id="4458">4458</a>
+<a href="#4459" id="4459">4459</a>
+<a href="#4460" id="4460">4460</a>
+<a href="#4461" id="4461">4461</a>
+<a href="#4462" id="4462">4462</a>
+<a href="#4463" id="4463">4463</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -6225,7 +6269,13 @@
 		}
 
 		<span class="kw">let </span>new_displaced = <span class="self">self</span>.blockchain.leaves.write().finalize_height(f_num);
-		<span class="self">self</span>.prune_blocks(transaction, f_num, <span class="kw-2">&amp;</span>new_displaced, current_transaction_justifications)<span class="question-mark">?</span>;
+		<span class="self">self</span>.prune_blocks(
+			transaction,
+			f_num,
+			f_hash,
+			<span class="kw-2">&amp;</span>new_displaced,
+			current_transaction_justifications,
+		)<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -6234,6 +6284,7 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		transaction: <span class="kw-2">&amp;mut </span>Transaction&lt;DbHash&gt;,
 		finalized_number: NumberFor&lt;Block&gt;,
+		finalized_hash: Block::Hash,
 		displaced: <span class="kw-2">&amp;</span>FinalizationOutcome&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;,
 		current_transaction_justifications: <span class="kw-2">&amp;mut </span>HashMap&lt;Block::Hash, Justification&gt;,
 	) -&gt; ClientResult&lt;()&gt; {
@@ -6262,10 +6313,10 @@
 
 					<span class="self">self</span>.prune_block(transaction, BlockId::&lt;Block&gt;::number(number))<span class="question-mark">?</span>;
 				}
-				<span class="self">self</span>.prune_displaced_branches(transaction, finalized_number, displaced)<span class="question-mark">?</span>;
+				<span class="self">self</span>.prune_displaced_branches(transaction, finalized_hash, displaced)<span class="question-mark">?</span>;
 			},
 			BlocksPruning::KeepFinalized =&gt; {
-				<span class="self">self</span>.prune_displaced_branches(transaction, finalized_number, displaced)<span class="question-mark">?</span>;
+				<span class="self">self</span>.prune_displaced_branches(transaction, finalized_hash, displaced)<span class="question-mark">?</span>;
 			},
 		}
 		<span class="prelude-val">Ok</span>(())
@@ -6274,28 +6325,21 @@
 	<span class="kw">fn </span>prune_displaced_branches(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		transaction: <span class="kw-2">&amp;mut </span>Transaction&lt;DbHash&gt;,
-		finalized: NumberFor&lt;Block&gt;,
+		finalized: Block::Hash,
 		displaced: <span class="kw-2">&amp;</span>FinalizationOutcome&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;,
 	) -&gt; ClientResult&lt;()&gt; {
 		<span class="comment">// Discard all blocks from displaced branches
 		</span><span class="kw">for </span>h <span class="kw">in </span>displaced.leaves() {
-			<span class="kw">let </span><span class="kw-2">mut </span>number = finalized;
-			<span class="kw">let </span><span class="kw-2">mut </span>hash = <span class="kw-2">*</span>h;
-			<span class="comment">// Follow displaced chains back until we reach a finalized block.
-			// Since leaves are discarded due to finality, they can&#39;t have parents
-			// that are canonical, but not yet finalized. So we stop deleting as soon as
-			// we reach canonical chain.
-			</span><span class="kw">while </span><span class="self">self</span>.blockchain.hash(number)<span class="question-mark">? </span>!= <span class="prelude-val">Some</span>(hash) {
-				<span class="kw">match </span><span class="self">self</span>.blockchain.header(hash)<span class="question-mark">? </span>{
-					<span class="prelude-val">Some</span>(header) =&gt; {
-						<span class="self">self</span>.blockchain.insert_persisted_body_if_pinned(hash)<span class="question-mark">?</span>;
-
-						<span class="self">self</span>.prune_block(transaction, BlockId::&lt;Block&gt;::hash(hash))<span class="question-mark">?</span>;
-						number = header.number().saturating_sub(One::one());
-						hash = <span class="kw-2">*</span>header.parent_hash();
+			<span class="kw">match </span>sp_blockchain::tree_route(<span class="kw-2">&amp;</span><span class="self">self</span>.blockchain, <span class="kw-2">*</span>h, finalized) {
+				<span class="prelude-val">Ok</span>(tree_route) =&gt;
+					<span class="kw">for </span>r <span class="kw">in </span>tree_route.retracted() {
+						<span class="self">self</span>.blockchain.insert_persisted_body_if_pinned(r.hash)<span class="question-mark">?</span>;
+						<span class="self">self</span>.prune_block(transaction, BlockId::&lt;Block&gt;::hash(r.hash))<span class="question-mark">?</span>;
 					},
-					<span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
-				}
+				<span class="prelude-val">Err</span>(sp_blockchain::Error::UnknownBlock(<span class="kw">_</span>)) =&gt; {
+					<span class="comment">// Sometimes routes can&#39;t be calculated. E.g. after warp sync.
+				</span>},
+				<span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e)<span class="question-mark">?</span>,
 			}
 		}
 		<span class="prelude-val">Ok</span>(())
@@ -7986,6 +8030,50 @@
 		<span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, bc.body(blocks[<span class="number">2</span>]).unwrap());
 		<span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">3</span>.into()]), bc.body(blocks[<span class="number">3</span>]).unwrap());
 		<span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">4</span>.into()]), bc.body(blocks[<span class="number">4</span>]).unwrap());
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>prune_blocks_on_finalize_and_reorg() {
+		<span class="comment">//	0 - 1b
+		//	\ - 1a - 2a - 3a
+		//	     \ - 2b
+
+		</span><span class="kw">let </span>backend = Backend::&lt;Block&gt;::new_test_with_tx_storage(BlocksPruning::Some(<span class="number">10</span>), <span class="number">10</span>);
+
+		<span class="kw">let </span>make_block = |index, parent, val: u64| {
+			insert_block(<span class="kw-2">&amp;</span>backend, index, parent, <span class="prelude-val">None</span>, H256::random(), <span class="macro">vec!</span>[val.into()], <span class="prelude-val">None</span>)
+				.unwrap()
+		};
+
+		<span class="kw">let </span>block_0 = make_block(<span class="number">0</span>, Default::default(), <span class="number">0x00</span>);
+		<span class="kw">let </span>block_1a = make_block(<span class="number">1</span>, block_0, <span class="number">0x1a</span>);
+		<span class="kw">let </span>block_1b = make_block(<span class="number">1</span>, block_0, <span class="number">0x1b</span>);
+		<span class="kw">let </span>block_2a = make_block(<span class="number">2</span>, block_1a, <span class="number">0x2a</span>);
+		<span class="kw">let </span>block_2b = make_block(<span class="number">2</span>, block_1a, <span class="number">0x2b</span>);
+		<span class="kw">let </span>block_3a = make_block(<span class="number">3</span>, block_2a, <span class="number">0x3a</span>);
+
+		<span class="comment">// Make sure 1b is head
+		</span><span class="kw">let </span><span class="kw-2">mut </span>op = backend.begin_operation().unwrap();
+		backend.begin_state_operation(<span class="kw-2">&amp;mut </span>op, block_0).unwrap();
+		op.mark_head(block_1b).unwrap();
+		backend.commit_operation(op).unwrap();
+
+		<span class="comment">// Finalize 3a
+		</span><span class="kw">let </span><span class="kw-2">mut </span>op = backend.begin_operation().unwrap();
+		backend.begin_state_operation(<span class="kw-2">&amp;mut </span>op, block_0).unwrap();
+		op.mark_head(block_3a).unwrap();
+		op.mark_finalized(block_1a, <span class="prelude-val">None</span>).unwrap();
+		op.mark_finalized(block_2a, <span class="prelude-val">None</span>).unwrap();
+		op.mark_finalized(block_3a, <span class="prelude-val">None</span>).unwrap();
+		backend.commit_operation(op).unwrap();
+
+		<span class="kw">let </span>bc = backend.blockchain();
+		<span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, bc.body(block_1b).unwrap());
+		<span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, bc.body(block_2b).unwrap());
+		<span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">0x00</span>.into()]), bc.body(block_0).unwrap());
+		<span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">0x1a</span>.into()]), bc.body(block_1a).unwrap());
+		<span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">0x2a</span>.into()]), bc.body(block_2a).unwrap());
+		<span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">0x3a</span>.into()]), bc.body(block_3a).unwrap());
 	}
 
 	<span class="attr">#[test]
