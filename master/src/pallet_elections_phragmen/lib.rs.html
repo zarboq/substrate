@@ -3220,6 +3220,40 @@
 <a href="#3220" id="3220">3220</a>
 <a href="#3221" id="3221">3221</a>
 <a href="#3222" id="3222">3222</a>
+<a href="#3223" id="3223">3223</a>
+<a href="#3224" id="3224">3224</a>
+<a href="#3225" id="3225">3225</a>
+<a href="#3226" id="3226">3226</a>
+<a href="#3227" id="3227">3227</a>
+<a href="#3228" id="3228">3228</a>
+<a href="#3229" id="3229">3229</a>
+<a href="#3230" id="3230">3230</a>
+<a href="#3231" id="3231">3231</a>
+<a href="#3232" id="3232">3232</a>
+<a href="#3233" id="3233">3233</a>
+<a href="#3234" id="3234">3234</a>
+<a href="#3235" id="3235">3235</a>
+<a href="#3236" id="3236">3236</a>
+<a href="#3237" id="3237">3237</a>
+<a href="#3238" id="3238">3238</a>
+<a href="#3239" id="3239">3239</a>
+<a href="#3240" id="3240">3240</a>
+<a href="#3241" id="3241">3241</a>
+<a href="#3242" id="3242">3242</a>
+<a href="#3243" id="3243">3243</a>
+<a href="#3244" id="3244">3244</a>
+<a href="#3245" id="3245">3245</a>
+<a href="#3246" id="3246">3246</a>
+<a href="#3247" id="3247">3247</a>
+<a href="#3248" id="3248">3248</a>
+<a href="#3249" id="3249">3249</a>
+<a href="#3250" id="3250">3250</a>
+<a href="#3251" id="3251">3251</a>
+<a href="#3252" id="3252">3252</a>
+<a href="#3253" id="3253">3253</a>
+<a href="#3254" id="3254">3254</a>
+<a href="#3255" id="3255">3255</a>
+<a href="#3256" id="3256">3256</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -3265,14 +3299,14 @@
 //! ### Voting
 //!
 //! Voters can vote for a limited number of the candidates by providing a list of account ids,
-//! bounded by [`MAXIMUM_VOTE`]. Invalid votes (voting for non-candidates) and duplicate votes are
-//! ignored during election. Yet, a voter _might_ vote for a future candidate. Voters reserve a bond
-//! as they vote. Each vote defines a `value`. This amount is locked from the account of the voter
-//! and indicates the weight of the vote. Voters can update their votes at any time by calling
-//! `vote()` again. This can update the vote targets (which might update the deposit) or update the
-//! vote&#39;s stake ([`Voter::stake`]). After a round, votes are kept and might still be valid for
-//! further rounds. A voter is responsible for calling `remove_voter` once they are done to have
-//! their bond back and remove the lock.
+//! bounded by [`Config::MaxVotesPerVoter`]. Invalid votes (voting for non-candidates) and duplicate
+//! votes are ignored during election. Yet, a voter _might_ vote for a future candidate. Voters
+//! reserve a bond as they vote. Each vote defines a `value`. This amount is locked from the account
+//! of the voter and indicates the weight of the vote. Voters can update their votes at any time by
+//! calling `vote()` again. This can update the vote targets (which might update the deposit) or
+//! update the vote&#39;s stake ([`Voter::stake`]). After a round, votes are kept and might still be
+//! valid for further rounds. A voter is responsible for calling `remove_voter` once they are done
+//! to have their bond back and remove the lock.
 //!
 //! See [`Call::vote`], [`Call::remove_voter`].
 //!
@@ -3345,9 +3379,6 @@
 </span><span class="kw">pub mod </span>migrations;
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;runtime::elections-phragmen&quot;</span>;
-
-<span class="doccomment">/// The maximum votes allowed per voter.
-</span><span class="kw">pub const </span>MAXIMUM_VOTE: usize = <span class="number">16</span>;
 
 <span class="kw">type </span>BalanceOf&lt;T&gt; =
 	&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>Currency&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::Balance;
@@ -3476,18 +3507,28 @@
 
 		<span class="doccomment">/// The maximum number of candidates in a phragmen election.
 		///
-		/// Warning: The election happens onchain, and this value will determine
-		/// the size of the election. When this limit is reached no more
-		/// candidates are accepted in the election.
+		/// Warning: This impacts the size of the election which is run onchain. Chose wisely, and
+		/// consider how it will impact `T::WeightInfo::election_phragmen`.
+		///
+		/// When this limit is reached no more candidates are accepted in the election.
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>MaxCandidates: Get&lt;u32&gt;;
 
 		<span class="doccomment">/// The maximum number of voters to allow in a phragmen election.
 		///
-		/// Warning: This impacts the size of the election which is run onchain.
+		/// Warning: This impacts the size of the election which is run onchain. Chose wisely, and
+		/// consider how it will impact `T::WeightInfo::election_phragmen`.
+		///
 		/// When the limit is reached the new voters are ignored.
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>MaxVoters: Get&lt;u32&gt;;
+
+		<span class="doccomment">/// Maximum numbers of votes per voter.
+		///
+		/// Warning: This impacts the size of the election which is run onchain. Chose wisely, and
+		/// consider how it will impact `T::WeightInfo::election_phragmen`.
+		</span><span class="attr">#[pallet::constant]
+		</span><span class="kw">type </span>MaxVotesPerVoter: Get&lt;u32&gt;;
 
 		<span class="doccomment">/// Weight information for extrinsics in this pallet.
 		</span><span class="kw">type </span>WeightInfo: WeightInfo;
@@ -3505,6 +3546,41 @@
 			} <span class="kw">else </span>{
 				Weight::zero()
 			}
+		}
+
+		<span class="kw">fn </span>integrity_test() {
+			<span class="kw">let </span>block_weight = T::BlockWeights::get().max_block;
+			<span class="comment">// mind the order.
+			</span><span class="kw">let </span>election_weight = T::WeightInfo::election_phragmen(
+				T::MaxCandidates::get(),
+				T::MaxVoters::get(),
+				T::MaxVotesPerVoter::get() * T::MaxVoters::get(),
+			);
+
+			<span class="kw">let </span>to_seconds = |w: <span class="kw-2">&amp;</span>Weight| {
+				w.ref_time() <span class="kw">as </span>f32 /
+					frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND <span class="kw">as </span>f32
+			};
+
+			<span class="macro">frame_support::log::debug!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;election weight {}s ({:?}) // chain&#39;s block weight {}s ({:?})&quot;</span>,
+				to_seconds(<span class="kw-2">&amp;</span>election_weight),
+				election_weight,
+				to_seconds(<span class="kw-2">&amp;</span>block_weight),
+				block_weight,
+			);
+			<span class="macro">assert!</span>(
+				election_weight.all_lt(block_weight),
+				<span class="string">&quot;election weight {}s ({:?}) will exceed a {}s chain&#39;s block weight ({:?}) (MaxCandidates {}, MaxVoters {}, MaxVotesPerVoter {} -- tweak these parameters)&quot;</span>,
+				election_weight,
+				to_seconds(<span class="kw-2">&amp;</span>election_weight),
+				to_seconds(<span class="kw-2">&amp;</span>block_weight),
+				block_weight,
+				T::MaxCandidates::get(),
+				T::MaxVoters::get(),
+				T::MaxVotesPerVoter::get(),
+			);
 		}
 	}
 
@@ -3529,10 +3605,6 @@
 		///
 		/// It is the responsibility of the caller to **NOT** place all of their balance into the
 		/// lock and keep some for further operations.
-		///
-		/// # &lt;weight&gt;
-		/// We assume the maximum weight among all 3 cases: vote_equal, vote_more and vote_less.
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
 		#[pallet::weight(
 			T::WeightInfo::vote_more(votes.len() <span class="kw">as </span>u32)
@@ -3546,8 +3618,10 @@
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 
-			<span class="comment">// votes should not be empty and more than `MAXIMUM_VOTE` in any case.
-			</span><span class="macro">ensure!</span>(votes.len() &lt;= MAXIMUM_VOTE, Error::&lt;T&gt;::MaximumVotesExceeded);
+			<span class="macro">ensure!</span>(
+				votes.len() &lt;= T::MaxVotesPerVoter::get() <span class="kw">as </span>usize,
+				Error::&lt;T&gt;::MaximumVotesExceeded
+			);
 			<span class="macro">ensure!</span>(!votes.is_empty(), Error::&lt;T&gt;::NoVotes);
 
 			<span class="kw">let </span>candidates_count = &lt;Candidates&lt;T&gt;&gt;::decode_len().unwrap_or(<span class="number">0</span>);
@@ -4228,7 +4302,7 @@
 					// count](https://en.wikipedia.org/wiki/Borda_count). We weigh everyone&#39;s vote for
 					// that new member by a multiplier based on the order of the votes. i.e. the
 					// first person a voter votes for gets a 16x multiplier, the next person gets a
-					// 15x multiplier, an so on... (assuming `MAXIMUM_VOTE` = 16)
+					// 15x multiplier, an so on... (assuming `T::MaxVotesPerVoter` = 16)
 					</span><span class="kw">let </span><span class="kw-2">mut </span>prime_votes = new_members_sorted_by_id
 						.iter()
 						.map(|c| (<span class="kw-2">&amp;</span>c.<span class="number">0</span>, BalanceOf::&lt;T&gt;::zero()))
@@ -4236,7 +4310,7 @@
 					<span class="kw">for </span>(<span class="kw">_</span>, stake, votes) <span class="kw">in </span>voters_and_stakes.into_iter() {
 						<span class="kw">for </span>(vote_multiplier, who) <span class="kw">in
 							</span>votes.iter().enumerate().map(|(vote_position, who)| {
-								((MAXIMUM_VOTE - vote_position) <span class="kw">as </span>u32, who)
+								((T::MaxVotesPerVoter::get() <span class="kw">as </span>usize - vote_position) <span class="kw">as </span>u32, who)
 							}) {
 							<span class="kw">if let </span><span class="prelude-val">Ok</span>(i) = prime_votes.binary_search_by_key(<span class="kw-2">&amp;</span>who, |k| k.<span class="number">0</span>) {
 								prime_votes[i].<span class="number">1 </span>= prime_votes[i]
@@ -4395,16 +4469,9 @@
 	};
 	<span class="kw">use </span>substrate_test_utils::assert_eq_uvec;
 
-	<span class="macro">parameter_types! </span>{
-		<span class="kw">pub </span>BlockWeights: frame_system::limits::BlockWeights =
-			frame_system::limits::BlockWeights::simple_max(
-				frame_support::weights::Weight::from_ref_time(<span class="number">1024</span>).set_proof_size(u64::MAX),
-			);
-	}
-
 	<span class="kw">impl </span>frame_system::Config <span class="kw">for </span>Test {
 		<span class="kw">type </span>BaseCallFilter = frame_support::traits::Everything;
-		<span class="kw">type </span>BlockWeights = BlockWeights;
+		<span class="kw">type </span>BlockWeights = ();
 		<span class="kw">type </span>BlockLength = ();
 		<span class="kw">type </span>DbWeight = ();
 		<span class="kw">type </span>RuntimeOrigin = RuntimeOrigin;
@@ -4519,6 +4586,7 @@
 		<span class="kw">type </span>KickedMember = ();
 		<span class="kw">type </span>WeightInfo = ();
 		<span class="kw">type </span>MaxVoters = PhragmenMaxVoters;
+		<span class="kw">type </span>MaxVotesPerVoter = ConstU32&lt;<span class="number">16</span>&gt;;
 		<span class="kw">type </span>MaxCandidates = PhragmenMaxCandidates;
 	}
 
