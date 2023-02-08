@@ -757,6 +757,41 @@
 <a href="#757" id="757">757</a>
 <a href="#758" id="758">758</a>
 <a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -784,10 +819,12 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::{
+	collections::BTreeMap,
 	format,
 	string::{String, ToString},
 	vec::Vec,
 };
+<span class="kw">use </span>core::cmp::Reverse;
 <span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::{Span, TokenStream <span class="kw">as </span>TokenStream2};
 <span class="kw">use </span>quote::{quote, quote_spanned, ToTokens};
@@ -919,7 +956,7 @@
 <span class="doccomment">/// Parsed host function definition.
 </span><span class="kw">struct </span>HostFn {
 	item: syn::ItemFn,
-	module: String,
+	version: u8,
 	name: String,
 	returns: HostFnReturn,
 	is_stable: bool,
@@ -967,7 +1004,7 @@
 		<span class="kw">let </span>span = item.span();
 		<span class="kw">let </span><span class="kw-2">mut </span>attrs = item.attrs.clone();
 		attrs.retain(|a| !a.path.is_ident(<span class="string">&quot;doc&quot;</span>));
-		<span class="kw">let </span><span class="kw-2">mut </span>maybe_module = <span class="prelude-val">None</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>maybe_version = <span class="prelude-val">None</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>is_stable = <span class="bool-val">true</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>alias_to = <span class="prelude-val">None</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>not_deprecated = <span class="bool-val">true</span>;
@@ -975,12 +1012,11 @@
 			<span class="kw">let </span>ident = attr.path.get_ident().ok_or(err(span, msg))<span class="question-mark">?</span>.to_string();
 			<span class="kw">match </span>ident.as_str() {
 				<span class="string">&quot;version&quot; </span>=&gt; {
-					<span class="kw">if </span>maybe_module.is_some() {
+					<span class="kw">if </span>maybe_version.is_some() {
 						<span class="kw">return </span><span class="prelude-val">Err</span>(err(span, <span class="string">&quot;#[version] can only be specified once&quot;</span>))
 					}
-					<span class="kw">let </span>ver: u8 =
-						attr.parse_args::&lt;syn::LitInt&gt;().and_then(|lit| lit.base10_parse())<span class="question-mark">?</span>;
-					maybe_module = <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;seal{}&quot;</span>, ver));
+					maybe_version =
+						<span class="prelude-val">Some</span>(attr.parse_args::&lt;syn::LitInt&gt;().and_then(|lit| lit.base10_parse())<span class="question-mark">?</span>);
 				},
 				<span class="string">&quot;unstable&quot; </span>=&gt; {
 					<span class="kw">if </span>!is_stable {
@@ -1100,7 +1136,7 @@
 
 						<span class="prelude-val">Ok</span>(<span class="self">Self </span>{
 							item,
-							module: maybe_module.unwrap_or_else(|| <span class="string">&quot;seal0&quot;</span>.to_string()),
+							version: maybe_version.unwrap_or_default(),
 							name,
 							returns,
 							is_stable,
@@ -1113,6 +1149,10 @@
 			},
 			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(err(span, <span class="kw-2">&amp;</span>msg)),
 		}
+	}
+
+	<span class="kw">fn </span>module(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+		<span class="macro">format!</span>(<span class="string">&quot;seal{}&quot;</span>, <span class="self">self</span>.version)
 	}
 }
 
@@ -1168,83 +1208,116 @@
 	<span class="macro">matches!</span>(<span class="kw-2">*</span>pat.ty, syn::Type::Infer(<span class="kw">_</span>))
 }
 
-<span class="doccomment">/// Expands documentation for host functions.
-</span><span class="kw">fn </span>expand_docs(def: <span class="kw-2">&amp;mut </span>EnvDef) -&gt; TokenStream2 {
-	<span class="kw">let </span><span class="kw-2">mut </span>modules = def.host_funcs.iter().map(|f| f.module.clone()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-	modules.sort();
-	modules.dedup();
-
-	<span class="kw">let </span>doc_selector = |a: <span class="kw-2">&amp;</span>syn::Attribute| a.path.is_ident(<span class="string">&quot;doc&quot;</span>);
-	<span class="kw">let </span>docs = modules.iter().map(|m| {
-		<span class="kw">let </span>funcs = def.host_funcs.iter_mut().map(|f| {
-			<span class="kw">if </span><span class="kw-2">*</span>m == f.module {
-				<span class="comment">// Remove auxiliary args: `ctx: _` and `memory: _`
-				</span>f.item.sig.inputs = f
-					.item
-					.sig
-					.inputs
-					.iter()
-					.skip(<span class="number">2</span>)
-					.map(|p| p.clone())
-					.collect::&lt;Punctuated&lt;FnArg, Comma&gt;&gt;();
-				<span class="kw">let </span>func_decl = f.item.sig.to_token_stream();
-				<span class="kw">let </span>func_doc = <span class="kw">if let </span><span class="prelude-val">Some</span>(origin_fn) = <span class="kw-2">&amp;</span>f.alias_to {
-					<span class="kw">let </span>alias_doc = <span class="macro">format!</span>(
-						<span class="string">&quot;This is just an alias function to [`{0}()`][`Self::{0}`] with backwards-compatible prefixed identifier.&quot;</span>,
-						origin_fn,
-					);
-					<span class="macro">quote! </span>{ <span class="attr">#[doc = #alias_doc] </span>}
-
-				} <span class="kw">else </span>{
-					<span class="kw">let </span>func_docs = f.item.attrs.iter().filter(|a| doc_selector(a)).map(|d| {
-						<span class="kw">let </span>docs = d.to_token_stream();
-						<span class="macro">quote! </span>{ #docs }
-					});
-					<span class="kw">let </span>unstable_notice = <span class="kw">if </span>!f.is_stable {
-						<span class="kw">let </span>warning = <span class="string">&quot;\n # Unstable\n\n \
-									    This function is unstable and it is a subject to change (or removal) in the future.\n \
-									    Do not deploy a contract using it to a production chain.&quot;</span>;
-						<span class="macro">quote! </span>{ <span class="attr">#[doc = #warning] </span>}
-					} <span class="kw">else </span>{
-						<span class="macro">quote! </span>{}
-					};
-					<span class="macro">quote! </span>{
-						#( #func_docs )*
-						#unstable_notice
-					}
-				};
-				<span class="macro">quote! </span>{
-					#func_doc
-					#func_decl;
-				}
-			} <span class="kw">else </span>{
-				<span class="macro">quote! </span>{}
-			}
-		});
-
-		<span class="kw">let </span>module = Ident::new(m, Span::call_site());
-		<span class="kw">let </span>module_doc = <span class="macro">format!</span>(
-			<span class="string">&quot;Documentation of the API available to contracts by importing `{}` WASM module.&quot;</span>,
-			module
-		);
-
+<span class="kw">fn </span>expand_func_doc(func: <span class="kw-2">&amp;</span>HostFn) -&gt; TokenStream2 {
+	<span class="comment">// Remove auxiliary args: `ctx: _` and `memory: _`
+	</span><span class="kw">let </span>func_decl = {
+		<span class="kw">let </span><span class="kw-2">mut </span>sig = func.item.sig.clone();
+		sig.inputs = sig
+			.inputs
+			.iter()
+			.skip(<span class="number">2</span>)
+			.map(|p| p.clone())
+			.collect::&lt;Punctuated&lt;FnArg, Comma&gt;&gt;();
+		sig.to_token_stream()
+	};
+	<span class="kw">let </span>func_doc = {
+		<span class="kw">let </span>func_docs = <span class="kw">if let </span><span class="prelude-val">Some</span>(origin_fn) = <span class="kw-2">&amp;</span>func.alias_to {
+			<span class="kw">let </span>alias_doc = <span class="macro">format!</span>(
+				<span class="string">&quot;This is just an alias function to [`{0}()`][`Self::{0}`] with backwards-compatible prefixed identifier.&quot;</span>,
+				origin_fn,
+			);
+			<span class="macro">quote! </span>{ <span class="attr">#[doc = #alias_doc] </span>}
+		} <span class="kw">else </span>{
+			<span class="kw">let </span>docs = func.item.attrs.iter().filter(|a| a.path.is_ident(<span class="string">&quot;doc&quot;</span>)).map(|d| {
+				<span class="kw">let </span>docs = d.to_token_stream();
+				<span class="macro">quote! </span>{ #docs }
+			});
+			<span class="macro">quote! </span>{ #( #docs )* }
+		};
+		<span class="kw">let </span>deprecation_notice = <span class="kw">if </span>!func.not_deprecated {
+			<span class="kw">let </span>warning = <span class="string">&quot;\n # Deprecated\n\n \
+								This function is deprecated and will be removed in future versions.\n \
+								No new code or contracts with this API can be deployed.&quot;</span>;
+			<span class="macro">quote! </span>{ <span class="attr">#[doc = #warning] </span>}
+		} <span class="kw">else </span>{
+			<span class="macro">quote! </span>{}
+		};
+		<span class="kw">let </span>import_notice = {
+			<span class="kw">let </span>info = <span class="macro">format!</span>(
+				<span class="string">&quot;\n# Wasm Import Statement\n```wat\n(import \&quot;seal{}\&quot; \&quot;{}\&quot; (func ...))\n```&quot;</span>,
+				func.version, func.name,
+			);
+			<span class="macro">quote! </span>{ <span class="attr">#[doc = #info] </span>}
+		};
+		<span class="kw">let </span>unstable_notice = <span class="kw">if </span>!func.is_stable {
+			<span class="kw">let </span>warning = <span class="string">&quot;\n # Unstable\n\n \
+								This function is unstable and it is a subject to change (or removal) in the future.\n \
+								Do not deploy a contract using it to a production chain.&quot;</span>;
+			<span class="macro">quote! </span>{ <span class="attr">#[doc = #warning] </span>}
+		} <span class="kw">else </span>{
+			<span class="macro">quote! </span>{}
+		};
 		<span class="macro">quote! </span>{
-			<span class="attr">#[doc = #module_doc]
-			</span><span class="kw">pub mod </span>#module {
-				<span class="kw">use </span><span class="kw">crate</span>::wasm::runtime::{TrapReason, ReturnCode};
-				<span class="doccomment">/// Every function in this trait represents (at least) one function that can be imported by a contract.
-				///
-				/// The function&#39;s identifier is to be set as the name in the import definition.
-				/// Where it is specifically indicated, an _alias_ function having `seal_`-prefixed identifier and
-				/// just the same signature and body, is also available (for backwards-compatibility purposes).
-				</span><span class="kw">pub trait </span>Api {
-					#( #funcs )*
-				}
+			#deprecation_notice
+			#func_docs
+			#import_notice
+			#unstable_notice
+		}
+	};
+	<span class="macro">quote! </span>{
+		#func_doc
+		#func_decl;
+	}
+}
+
+<span class="doccomment">/// Expands documentation for host functions.
+</span><span class="kw">fn </span>expand_docs(def: <span class="kw-2">&amp;</span>EnvDef) -&gt; TokenStream2 {
+	<span class="comment">// Create the `Current` trait with only the newest versions
+	// we sort so that only the newest versions make it into `docs`
+	</span><span class="kw">let </span><span class="kw-2">mut </span>current_docs = BTreeMap::new();
+	<span class="kw">let </span><span class="kw-2">mut </span>funcs: Vec&lt;<span class="kw">_</span>&gt; = def.host_funcs.iter().filter(|f| f.alias_to.is_none()).collect();
+	funcs.sort_unstable_by_key(|func| Reverse(func.version));
+	<span class="kw">for </span>func <span class="kw">in </span>funcs {
+		<span class="kw">if </span>current_docs.contains_key(<span class="kw-2">&amp;</span>func.name) {
+			<span class="kw">continue
+		</span>}
+		current_docs.insert(func.name.clone(), expand_func_doc(<span class="kw-2">&amp;</span>func));
+	}
+	<span class="kw">let </span>current_docs = current_docs.values();
+
+	<span class="comment">// Create the `legacy` module with all functions
+	// Maps from version to list of functions that have this version
+	</span><span class="kw">let </span><span class="kw-2">mut </span>legacy_doc = BTreeMap::&lt;u8, Vec&lt;TokenStream2&gt;&gt;::new();
+	<span class="kw">for </span>func <span class="kw">in </span>def.host_funcs.iter() {
+		legacy_doc.entry(func.version).or_default().push(expand_func_doc(<span class="kw-2">&amp;</span>func));
+	}
+	<span class="kw">let </span>legacy_doc = legacy_doc.into_iter().map(|(version, funcs)| {
+		<span class="kw">let </span>doc = <span class="macro">format!</span>(<span class="string">&quot;All functions available in the **seal{}** module&quot;</span>, version);
+		<span class="kw">let </span>version = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Version{version}&quot;</span>), Span::call_site());
+		<span class="macro">quote! </span>{
+			<span class="attr">#[doc = #doc]
+			</span><span class="kw">pub trait </span>#version {
+				#( #funcs )*
 			}
 		}
 	});
+
 	<span class="macro">quote! </span>{
-		  #( #docs )*
+		<span class="doccomment">/// Contains only the latest version of each function.
+		///
+		/// In reality there are more functions available but they are all obsolete: When a function
+		/// is updated a new **version** is added and the old versions stays available as-is.
+		/// We only list the newest version here. Some functions are available under additional
+		/// names (aliases) for historic reasons which are omitted here.
+		///
+		/// If you want an overview of all the functions available to a contact all you need
+		/// to look at is this trait. It contains only the latest version of each
+		/// function and no aliases. If you are writing a contract(language) from scratch
+		/// this is where you should look at.
+		</span><span class="kw">pub trait </span>Current {
+			#( #current_docs )*
+		}
+		#( #legacy_doc )*
 	}
 }
 
@@ -1252,25 +1325,26 @@
 /// Should generate source code for:
 ///  - implementations of the host functions to be added to the wasm runtime environment (see
 ///    `expand_impls()`).
-</span><span class="kw">fn </span>expand_env(def: <span class="kw-2">&amp;mut </span>EnvDef, docs: bool) -&gt; TokenStream2 {
+</span><span class="kw">fn </span>expand_env(def: <span class="kw-2">&amp;</span>EnvDef, docs: bool) -&gt; TokenStream2 {
 	<span class="kw">let </span>impls = expand_impls(def);
 	<span class="kw">let </span>docs = docs.then_some(expand_docs(def)).unwrap_or(TokenStream2::new());
 
 	<span class="macro">quote! </span>{
 		<span class="kw">pub struct </span>Env;
 		#impls
-		<span class="doccomment">/// Contains the documentation of the API available to contracts.
+		<span class="doccomment">/// Documentation of the API (host functions) available to contracts.
 		///
-		/// In order to generate this documentation, pass `doc` attribute to the [`#[define_env]`][`macro@define_env`] macro:
-		/// `#[define_env(doc)]`, and then run `cargo doc`.
+		/// The `Current` trait might be the most useful doc to look at. The versioned
+		/// traits only exist for reference: If trying to find out if a specific version of
+		/// `pallet-contracts` contains a certain function.
 		///
-		/// This module is not meant to be used by any code. Rather, it is meant to be consumed by humans through rustdoc.
+		/// # Note
 		///
-		/// Every function described in this module&#39;s sub module&#39;s traits uses this sub module&#39;s identifier
-		/// as its imported module name. The identifier of the function is the function&#39;s imported name.
-		/// According to the [WASM spec of imports](https://webassembly.github.io/spec/core/text/modules.html#text-import).
+		/// This module is not meant to be used by any code. Rather, it is meant to be
+		/// consumed by humans through rustdoc.
 		</span><span class="attr">#[cfg(doc)]
 		</span><span class="kw">pub mod </span>api_doc {
+			<span class="kw">use super</span>::{TrapReason, ReturnCode};
 			#docs
 		}
 	}
@@ -1279,7 +1353,7 @@
 <span class="doccomment">/// Generates for every host function:
 ///   - real implementation, to register it in the contract execution environment;
 ///   - dummy implementation, to be used as mocks for contract validation step.
-</span><span class="kw">fn </span>expand_impls(def: <span class="kw-2">&amp;mut </span>EnvDef) -&gt; TokenStream2 {
+</span><span class="kw">fn </span>expand_impls(def: <span class="kw-2">&amp;</span>EnvDef) -&gt; TokenStream2 {
 	<span class="kw">let </span>impls = expand_functions(def, <span class="bool-val">true</span>, <span class="macro">quote! </span>{ <span class="kw">crate</span>::wasm::Runtime&lt;E&gt; });
 	<span class="kw">let </span>dummy_impls = expand_functions(def, <span class="bool-val">false</span>, <span class="macro">quote! </span>{ () });
 
@@ -1312,16 +1386,12 @@
 	}
 }
 
-<span class="kw">fn </span>expand_functions(
-	def: <span class="kw-2">&amp;mut </span>EnvDef,
-	expand_blocks: bool,
-	host_state: TokenStream2,
-) -&gt; TokenStream2 {
+<span class="kw">fn </span>expand_functions(def: <span class="kw-2">&amp;</span>EnvDef, expand_blocks: bool, host_state: TokenStream2) -&gt; TokenStream2 {
 	<span class="kw">let </span>impls = def.host_funcs.iter().map(|f| {
 		<span class="comment">// skip the context and memory argument
 		</span><span class="kw">let </span>params = f.item.sig.inputs.iter().skip(<span class="number">2</span>);
 		<span class="kw">let </span>(module, name, body, wasm_output, output) = (
-			<span class="kw-2">&amp;</span>f.module,
+			f.module(),
 			<span class="kw-2">&amp;</span>f.name,
 			<span class="kw-2">&amp;</span>f.item.block,
 			f.returns.to_wasm_sig(),
