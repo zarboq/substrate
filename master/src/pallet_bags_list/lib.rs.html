@@ -402,6 +402,14 @@
 <a href="#402" id="402">402</a>
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -678,6 +686,13 @@
 	}
 }
 
+<span class="attr">#[cfg(any(test, feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzz&quot;</span>))]
+</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
+	<span class="kw">pub fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		List::&lt;T, I&gt;::do_try_state()
+	}
+}
+
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
 	<span class="doccomment">/// Move an account from one bag to another, depositing an event on success.
 	///
@@ -752,8 +767,9 @@
 		</span>List::&lt;T, I&gt;::unsafe_regenerate(all, score_of)
 	}
 
-	<span class="kw">fn </span>try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		List::&lt;T, I&gt;::try_state()
+	<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+	</span><span class="kw">fn </span>try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		<span class="self">Self</span>::do_try_state()
 	}
 
 	<span class="kw">fn </span>unsafe_clear() {
