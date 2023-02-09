@@ -315,6 +315,19 @@
 <a href="#315" id="315">315</a>
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -342,6 +355,9 @@
 
 <span class="kw">pub type </span>Hash = H256;
 <span class="kw">pub type </span>BoundedInline = <span class="kw">crate</span>::BoundedVec&lt;u8, ConstU32&lt;<span class="number">128</span>&gt;&gt;;
+
+<span class="doccomment">/// The maximum we expect a single legacy hash lookup to be.
+</span><span class="kw">const </span>MAX_LEGACY_LEN: u32 = <span class="number">1_000_000</span>;
 
 <span class="attr">#[derive(
 	Encode, Decode, MaxEncodedLen, Clone, Eq, PartialEq, scale_info::TypeInfo, RuntimeDebug,
@@ -384,20 +400,25 @@
 	<span class="doccomment">/// Returns the hash of the preimage.
 	///
 	/// The hash is re-calculated every time if the preimage is inlined.
-	</span><span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; H256 {
+	</span><span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Hash {
 		<span class="kw">use </span>Bounded::<span class="kw-2">*</span>;
 		<span class="kw">match </span><span class="self">self </span>{
-			Legacy { hash, .. } =&gt; <span class="kw-2">*</span>hash,
+			Lookup { hash, .. } | Legacy { hash, .. } =&gt; <span class="kw-2">*</span>hash,
 			Inline(x) =&gt; blake2_256(x.as_ref()).into(),
-			Lookup { hash, .. } =&gt; <span class="kw-2">*</span>hash,
 		}
 	}
-}
 
-<span class="comment">// The maximum we expect a single legacy hash lookup to be.
-</span><span class="kw">const </span>MAX_LEGACY_LEN: u32 = <span class="number">1_000_000</span>;
+	<span class="doccomment">/// Returns the hash to lookup the preimage.
+	///
+	/// If this is a `Bounded::Inline`, `None` is returned as no lookup is required.
+	</span><span class="kw">pub fn </span>lookup_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Hash&gt; {
+		<span class="kw">use </span>Bounded::<span class="kw-2">*</span>;
+		<span class="kw">match </span><span class="self">self </span>{
+			Lookup { hash, .. } | Legacy { hash, .. } =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>hash),
+			Inline(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+		}
+	}
 
-<span class="kw">impl</span>&lt;T&gt; Bounded&lt;T&gt; {
 	<span class="doccomment">/// Returns the length of the preimage or `None` if the length is unknown.
 	</span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
 		<span class="kw">match </span><span class="self">self </span>{
@@ -485,8 +506,11 @@
 		}
 	}
 
-	<span class="doccomment">/// Create a `Bounded` instance based on the `hash` and `len` of the encoded value. This may not
-	/// be `peek`-able or `realize`-able.
+	<span class="doccomment">/// Create a `Bounded` instance based on the `hash` and `len` of the encoded value.
+	///
+	/// It also directly requests the given `hash` using [`Self::request`].
+	///
+	/// This may not be `peek`-able or `realize`-able.
 	</span><span class="kw">fn </span>pick&lt;T&gt;(hash: Hash, len: u32) -&gt; Bounded&lt;T&gt; {
 		<span class="self">Self</span>::request(<span class="kw-2">&amp;</span>hash);
 		Bounded::Lookup { hash, len }
@@ -545,10 +569,12 @@
 		<span class="self">Self</span>::unrequest(hash)
 	}
 
-	<span class="doccomment">/// Convert an otherwise unbounded or large value into a type ready for placing in storage. The
-	/// result is a type whose `MaxEncodedLen` is 131 bytes.
+	<span class="doccomment">/// Convert an otherwise unbounded or large value into a type ready for placing in storage.
+	///
+	/// The result is a type whose `MaxEncodedLen` is 131 bytes.
 	///
 	/// NOTE: Once this API is used, you should use either `drop` or `realize`.
+	/// The value is also noted using [`Self::note`].
 	</span><span class="kw">fn </span>bound&lt;T: Encode&gt;(t: T) -&gt; <span class="prelude-ty">Result</span>&lt;Bounded&lt;T&gt;, DispatchError&gt; {
 		<span class="kw">let </span>data = t.encode();
 		<span class="kw">let </span>len = data.len() <span class="kw">as </span>u32;
