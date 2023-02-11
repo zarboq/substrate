@@ -303,60 +303,6 @@
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -542,96 +488,43 @@
 	<span class="doccomment">/// Return hashes of all blocks that are children of the block with `parent_hash`.
 	</span><span class="kw">fn </span>children(<span class="kw-2">&amp;</span><span class="self">self</span>, parent_hash: Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Block::Hash&gt;&gt;;
 
-	<span class="doccomment">/// Get the most recent block hash of the best (longest) chains
-	/// that contain block with the given `target_hash`.
+	<span class="doccomment">/// Get the most recent block hash of the longest chain that contains
+	/// a block with the given `base_hash`.
 	///
 	/// The search space is always limited to blocks which are in the finalized
 	/// chain or descendents of it.
 	///
-	/// If `maybe_max_block_number` is `Some(max_block_number)`
-	/// the search is limited to block `numbers &lt;= max_block_number`.
-	/// in other words as if there were no blocks greater `max_block_number`.
-	/// Returns `Ok(None)` if `target_hash` is not found in search space.
-	/// TODO: document time complexity of this, see [#1444](https://github.com/paritytech/substrate/issues/1444)
-	</span><span class="kw">fn </span>best_containing(
+	/// Returns `Ok(None)` if `base_hash` is not found in search space.
+	</span><span class="comment">// TODO: document time complexity of this, see [#1444](https://github.com/paritytech/substrate/issues/1444)
+	</span><span class="kw">fn </span>longest_containing(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		target_hash: Block::Hash,
-		maybe_max_number: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;Block&gt;&gt;,
+		base_hash: Block::Hash,
 		import_lock: <span class="kw-2">&amp;</span>RwLock&lt;()&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Block::Hash&gt;&gt; {
-		<span class="kw">let </span>target_header = {
-			<span class="kw">match </span><span class="self">self</span>.header(target_hash)<span class="question-mark">? </span>{
-				<span class="prelude-val">Some</span>(x) =&gt; x,
-				<span class="comment">// target not in blockchain
-				</span><span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-			}
+		<span class="kw">let </span><span class="prelude-val">Some</span>(base_header) = <span class="self">self</span>.header(base_hash)<span class="question-mark">? </span><span class="kw">else </span>{
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 		};
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(max_number) = maybe_max_number {
-			<span class="comment">// target outside search range
-			</span><span class="kw">if </span>target_header.number() &gt; <span class="kw-2">&amp;</span>max_number {
-				<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-			}
-		}
 
 		<span class="kw">let </span>leaves = {
 			<span class="comment">// ensure no blocks are imported during this code block.
 			// an import could trigger a reorg which could change the canonical chain.
 			// we depend on the canonical chain staying the same during this code block.
 			</span><span class="kw">let </span>_import_guard = import_lock.read();
-
 			<span class="kw">let </span>info = <span class="self">self</span>.info();
-
-			<span class="comment">// this can be `None` if the best chain is shorter than the target header.
-			</span><span class="kw">let </span>maybe_canon_hash = <span class="self">self</span>.hash(<span class="kw-2">*</span>target_header.number())<span class="question-mark">?</span>;
-
-			<span class="kw">if </span>maybe_canon_hash.as_ref() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>target_hash) {
-				<span class="comment">// if a `max_number` is given we try to fetch the block at the
-				// given depth, if it doesn&#39;t exist or `max_number` is not
-				// provided, we continue to search from all leaves below.
-				</span><span class="kw">if let </span><span class="prelude-val">Some</span>(max_number) = maybe_max_number {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(header) = <span class="self">self</span>.hash(max_number)<span class="question-mark">? </span>{
-						<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(header))
-					}
-				}
-			} <span class="kw">else if </span>info.finalized_number &gt;= <span class="kw-2">*</span>target_header.number() {
-				<span class="comment">// header is on a dead fork.
+			<span class="kw">if </span>info.finalized_number &gt; <span class="kw-2">*</span>base_header.number() {
+				<span class="comment">// `base_header` is on a dead fork.
 				</span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 			}
-
 			<span class="self">self</span>.leaves()<span class="question-mark">?
 		</span>};
 
 		<span class="comment">// for each chain. longest chain first. shortest last
 		</span><span class="kw">for </span>leaf_hash <span class="kw">in </span>leaves {
-			<span class="comment">// start at the leaf
-			</span><span class="kw">let </span><span class="kw-2">mut </span>current_hash = leaf_hash;
-
-			<span class="comment">// if search is not restricted then the leaf is the best
-			</span><span class="kw">let </span><span class="kw-2">mut </span>best_hash = leaf_hash;
-
-			<span class="comment">// go backwards entering the search space
-			// waiting until we are &lt;= max_number
-			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(max_number) = maybe_max_number {
-				<span class="kw">loop </span>{
-					<span class="kw">let </span>current_header = <span class="self">self
-						</span>.header(current_hash)<span class="question-mark">?
-						</span>.ok_or_else(|| Error::MissingHeader(current_hash.to_string()))<span class="question-mark">?</span>;
-
-					<span class="kw">if </span>current_header.number() &lt;= <span class="kw-2">&amp;</span>max_number {
-						best_hash = current_header.hash();
-						<span class="kw">break
-					</span>}
-
-					current_hash = <span class="kw-2">*</span>current_header.parent_hash();
-				}
-			}
-
+			<span class="kw">let </span><span class="kw-2">mut </span>current_hash = leaf_hash;
 			<span class="comment">// go backwards through the chain (via parent links)
 			</span><span class="kw">loop </span>{
-				<span class="comment">// until we find target
-				</span><span class="kw">if </span>current_hash == target_hash {
-					<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(best_hash))
+				<span class="kw">if </span>current_hash == base_hash {
+					<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(leaf_hash))
 				}
 
 				<span class="kw">let </span>current_header = <span class="self">self
@@ -639,7 +532,7 @@
 					</span>.ok_or_else(|| Error::MissingHeader(current_hash.to_string()))<span class="question-mark">?</span>;
 
 				<span class="comment">// stop search in this chain once we go below the target&#39;s block number
-				</span><span class="kw">if </span>current_header.number() &lt; target_header.number() {
+				</span><span class="kw">if </span>current_header.number() &lt; base_header.number() {
 					<span class="kw">break
 				</span>}
 
@@ -652,9 +545,8 @@
 		//
 		// FIXME #1558 only issue this warning when not on a dead fork
 		</span><span class="macro">warn!</span>(
-			<span class="string">&quot;Block {:?} exists in chain but not found when following all \
-			leaves backwards. Number limit = {:?}&quot;</span>,
-			target_hash, maybe_max_number,
+			<span class="string">&quot;Block {:?} exists in chain but not found when following all leaves backwards&quot;</span>,
+			base_hash,
 		);
 
 		<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)

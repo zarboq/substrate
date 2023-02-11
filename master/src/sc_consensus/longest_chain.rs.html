@@ -97,6 +97,64 @@
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -120,7 +178,7 @@
 </span><span class="kw">use </span>sc_client_api::backend;
 <span class="kw">use </span>sp_blockchain::{Backend, HeaderBackend};
 <span class="kw">use </span>sp_consensus::{Error <span class="kw">as </span>ConsensusError, SelectChain};
-<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
+<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor};
 <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
 <span class="doccomment">/// Implement Longest Chain Select implementation
@@ -147,20 +205,83 @@
 		LongestChain { backend, _phantom: Default::default() }
 	}
 
-	<span class="kw">fn </span>best_block_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; sp_blockchain::Result&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header&gt; {
+	<span class="kw">fn </span>best_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; sp_blockchain::Result&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt; {
 		<span class="kw">let </span>info = <span class="self">self</span>.backend.blockchain().info();
 		<span class="kw">let </span>import_lock = <span class="self">self</span>.backend.get_import_lock();
 		<span class="kw">let </span>best_hash = <span class="self">self
 			</span>.backend
 			.blockchain()
-			.best_containing(info.best_hash, <span class="prelude-val">None</span>, import_lock)<span class="question-mark">?
+			.longest_containing(info.best_hash, import_lock)<span class="question-mark">?
 			</span>.unwrap_or(info.best_hash);
+		<span class="prelude-val">Ok</span>(best_hash)
+	}
 
+	<span class="kw">fn </span>best_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; sp_blockchain::Result&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header&gt; {
+		<span class="kw">let </span>best_hash = <span class="self">self</span>.best_hash()<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(<span class="self">self
 			</span>.backend
 			.blockchain()
 			.header(best_hash)<span class="question-mark">?
 			</span>.expect(<span class="string">&quot;given block hash was fetched from block in db; qed&quot;</span>))
+	}
+
+	<span class="doccomment">/// Returns the highest descendant of the given block that is a valid
+	/// candidate to be finalized.
+	///
+	/// In this context, being a valid target means being an ancestor of
+	/// the best chain according to the `best_header` method.
+	///
+	/// If `maybe_max_number` is `Some(max_block_number)` the search is
+	/// limited to block `number &lt;= max_block_number`. In other words
+	/// as if there were no blocks greater than `max_block_number`.
+	</span><span class="kw">fn </span>finality_target(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		base_hash: Block::Hash,
+		maybe_max_number: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;Block&gt;&gt;,
+	) -&gt; sp_blockchain::Result&lt;Block::Hash&gt; {
+		<span class="kw">use </span>sp_blockchain::Error::{Application, MissingHeader};
+		<span class="kw">let </span>blockchain = <span class="self">self</span>.backend.blockchain();
+
+		<span class="kw">let </span><span class="kw-2">mut </span>current_head = <span class="self">self</span>.best_header()<span class="question-mark">?</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>best_hash = current_head.hash();
+
+		<span class="kw">let </span>base_header = blockchain
+			.header(base_hash)<span class="question-mark">?
+			</span>.ok_or_else(|| MissingHeader(base_hash.to_string()))<span class="question-mark">?</span>;
+		<span class="kw">let </span>base_number = <span class="kw-2">*</span>base_header.number();
+
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(max_number) = maybe_max_number {
+			<span class="kw">if </span>max_number &lt; base_number {
+				<span class="kw">let </span>msg = <span class="macro">format!</span>(
+					<span class="string">&quot;Requested a finality target using max number {} below the base number {}&quot;</span>,
+					max_number, base_number
+				);
+				<span class="kw">return </span><span class="prelude-val">Err</span>(Application(msg.into()))
+			}
+
+			<span class="kw">while </span>current_head.number() &gt; <span class="kw-2">&amp;</span>max_number {
+				best_hash = <span class="kw-2">*</span>current_head.parent_hash();
+				current_head = blockchain
+					.header(best_hash)<span class="question-mark">?
+					</span>.ok_or_else(|| MissingHeader(<span class="macro">format!</span>(<span class="string">&quot;{best_hash:?}&quot;</span>)))<span class="question-mark">?</span>;
+			}
+		}
+
+		<span class="kw">while </span>current_head.hash() != base_hash {
+			<span class="kw">if </span><span class="kw-2">*</span>current_head.number() &lt; base_number {
+				<span class="kw">let </span>msg = <span class="macro">format!</span>(
+					<span class="string">&quot;Requested a finality target using a base {:?} not in the best chain {:?}&quot;</span>,
+					base_hash, best_hash,
+				);
+				<span class="kw">return </span><span class="prelude-val">Err</span>(Application(msg.into()))
+			}
+			<span class="kw">let </span>current_hash = <span class="kw-2">*</span>current_head.parent_hash();
+			current_head = blockchain
+				.header(current_hash)<span class="question-mark">?
+				</span>.ok_or_else(|| MissingHeader(<span class="macro">format!</span>(<span class="string">&quot;{best_hash:?}&quot;</span>)))<span class="question-mark">?</span>;
+		}
+
+		<span class="prelude-val">Ok</span>(best_hash)
 	}
 
 	<span class="kw">fn </span>leaves(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt;, sp_blockchain::Error&gt; {
@@ -179,20 +300,15 @@
 	}
 
 	<span class="kw">async fn </span>best_chain(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header, ConsensusError&gt; {
-		LongestChain::best_block_header(<span class="self">self</span>)
-			.map_err(|e| ConsensusError::ChainLookup(e.to_string()))
+		LongestChain::best_header(<span class="self">self</span>).map_err(|e| ConsensusError::ChainLookup(e.to_string()))
 	}
 
 	<span class="kw">async fn </span>finality_target(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		target_hash: Block::Hash,
+		base_hash: Block::Hash,
 		maybe_max_number: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;Block&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Block::Hash, ConsensusError&gt; {
-		<span class="kw">let </span>import_lock = <span class="self">self</span>.backend.get_import_lock();
-		<span class="self">self</span>.backend
-			.blockchain()
-			.best_containing(target_hash, maybe_max_number, import_lock)
-			.map(|maybe_hash| maybe_hash.unwrap_or(target_hash))
+		LongestChain::finality_target(<span class="self">self</span>, base_hash, maybe_max_number)
 			.map_err(|e| ConsensusError::ChainLookup(e.to_string()))
 	}
 }
