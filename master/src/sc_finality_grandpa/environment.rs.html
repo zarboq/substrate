@@ -1476,6 +1476,31 @@
 <a href="#1476" id="1476">1476</a>
 <a href="#1477" id="1477">1477</a>
 <a href="#1478" id="1478">1478</a>
+<a href="#1479" id="1479">1479</a>
+<a href="#1480" id="1480">1480</a>
+<a href="#1481" id="1481">1481</a>
+<a href="#1482" id="1482">1482</a>
+<a href="#1483" id="1483">1483</a>
+<a href="#1484" id="1484">1484</a>
+<a href="#1485" id="1485">1485</a>
+<a href="#1486" id="1486">1486</a>
+<a href="#1487" id="1487">1487</a>
+<a href="#1488" id="1488">1488</a>
+<a href="#1489" id="1489">1489</a>
+<a href="#1490" id="1490">1490</a>
+<a href="#1491" id="1491">1491</a>
+<a href="#1492" id="1492">1492</a>
+<a href="#1493" id="1493">1493</a>
+<a href="#1494" id="1494">1494</a>
+<a href="#1495" id="1495">1495</a>
+<a href="#1496" id="1496">1496</a>
+<a href="#1497" id="1497">1497</a>
+<a href="#1498" id="1498">1498</a>
+<a href="#1499" id="1499">1499</a>
+<a href="#1500" id="1500">1500</a>
+<a href="#1501" id="1501">1501</a>
+<a href="#1502" id="1502">1502</a>
+<a href="#1503" id="1503">1503</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2691,7 +2716,7 @@
 	<span class="comment">// NOTE: this is purposefully done after `finality_target` to prevent a case
 	// where in-between these two requests there is a block import and
 	// `finality_target` returns something higher than `best_chain`.
-	</span><span class="kw">let </span>best_header = <span class="kw">match </span>select_chain.best_chain().<span class="kw">await </span>{
+	</span><span class="kw">let </span><span class="kw-2">mut </span>best_header = <span class="kw">match </span>select_chain.best_chain().<span class="kw">await </span>{
 		<span class="prelude-val">Ok</span>(best_header) =&gt; best_header,
 		<span class="prelude-val">Err</span>(err) =&gt; {
 			<span class="macro">warn!</span>(
@@ -2705,11 +2730,29 @@
 		},
 	};
 
-	<span class="kw">if </span>target_header.number() &gt; best_header.number() {
-		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::Safety(
-			<span class="string">&quot;SelectChain returned a finality target higher than its best block&quot;</span>.into(),
-		))
+	<span class="kw">let </span>is_descendent_of = is_descendent_of(<span class="kw-2">&amp;*</span>client, <span class="prelude-val">None</span>);
+
+	<span class="kw">if </span>target_header.number() &gt; best_header.number() ||
+		target_header.number() == best_header.number() &amp;&amp;
+			target_header.hash() != best_header.hash() ||
+		!is_descendent_of(<span class="kw-2">&amp;</span>target_header.hash(), <span class="kw-2">&amp;</span>best_header.hash())<span class="question-mark">?
+	</span>{
+		<span class="macro">debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;SelectChain returned a finality target inconsistent with its best block. Restricting best block to target block&quot;
+		</span>);
+
+		best_header = target_header.clone();
 	}
+
+	<span class="macro">debug!</span>(
+		target: LOG_TARGET,
+		<span class="string">&quot;SelectChain: finality target: #{} ({}), best block: #{} ({})&quot;</span>,
+		target_header.number(),
+		target_header.hash(),
+		best_header.number(),
+		best_header.hash(),
+	);
 
 	<span class="comment">// check if our vote is currently being limited due to a pending change,
 	// in which case we will restrict our target header to the given limit
@@ -2732,6 +2775,13 @@
 				.header(<span class="kw-2">*</span>target_header.parent_hash())<span class="question-mark">?
 				</span>.expect(<span class="string">&quot;Header known to exist after `finality_target` call; qed&quot;</span>);
 		}
+
+		<span class="macro">debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Finality target restricted to #{} ({}) due to pending authority set change&quot;</span>,
+			target_header.number(),
+			target_header.hash()
+		)
 	}
 
 	<span class="comment">// restrict vote according to the given voting rule, if the voting rule
