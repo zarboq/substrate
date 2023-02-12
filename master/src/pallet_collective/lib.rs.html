@@ -1200,6 +1200,9 @@
 <a href="#1200" id="1200">1200</a>
 <a href="#1201" id="1201">1201</a>
 <a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1417,6 +1420,9 @@
 
 		<span class="doccomment">/// Weight information for extrinsics in this pallet.
 		</span><span class="kw">type </span>WeightInfo: WeightInfo;
+
+		<span class="doccomment">/// Origin allowed to set collective members
+		</span><span class="kw">type </span>SetMembersOrigin: EnsureOrigin&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeOrigin&gt;;
 	}
 
 	<span class="attr">#[pallet::genesis_config]
@@ -1551,7 +1557,7 @@
 		/// - `old_count`: The upper bound for the previous number of members in storage. Used for
 		///   weight estimation.
 		///
-		/// Requires root origin.
+		/// The dispatch of this call must be `SetMembersOrigin`.
 		///
 		/// NOTE: Does not enforce the expected `MaxMembers` limit on the amount of members, but
 		///       the weight estimations rely on it to estimate dispatchable weight.
@@ -1591,7 +1597,7 @@
 			prime: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 			old_count: MemberCount,
 		) -&gt; DispatchResultWithPostInfo {
-			ensure_root(origin)<span class="question-mark">?</span>;
+			T::SetMembersOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="kw">if </span>new_members.len() &gt; T::MaxMembers::get() <span class="kw">as </span>usize {
 				<span class="macro">log::error!</span>(
 					target: LOG_TARGET,
