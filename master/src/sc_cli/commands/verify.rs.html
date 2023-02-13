@@ -86,6 +86,55 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -106,9 +155,10 @@
 
 </span><span class="doccomment">//! implementation of the `verify` subcommand
 
-</span><span class="kw">use crate</span>::{error, utils, with_crypto_scheme, CryptoSchemeFlag};
+</span><span class="kw">use crate</span>::{error, params::MessageParams, utils, with_crypto_scheme, CryptoSchemeFlag};
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>sp_core::crypto::{ByteArray, Ss58Codec};
+<span class="kw">use </span>std::io::BufRead;
 
 <span class="doccomment">/// The `verify` command
 </span><span class="attr">#[derive(Debug, Clone, Parser)]
@@ -125,14 +175,9 @@
 	/// If not given, you will be prompted for the URI.
 	</span>uri: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
-	<span class="doccomment">/// Message to verify, if not provided you will be prompted to
-	/// pass the message via STDIN
-	</span><span class="attr">#[arg(long)]
-	</span>message: <span class="prelude-ty">Option</span>&lt;String&gt;,
-
-	<span class="doccomment">/// The message on STDIN is hex-encoded data
-	</span><span class="attr">#[arg(long)]
-	</span>hex: bool,
+	<span class="attr">#[allow(missing_docs)]
+	#[clap(flatten)]
+	</span><span class="kw">pub </span>message_params: MessageParams,
 
 	<span class="attr">#[allow(missing_docs)]
 	#[clap(flatten)]
@@ -142,7 +187,20 @@
 <span class="kw">impl </span>VerifyCmd {
 	<span class="doccomment">/// Run the command
 	</span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; error::Result&lt;()&gt; {
-		<span class="kw">let </span>message = utils::read_message(<span class="self">self</span>.message.as_ref(), <span class="self">self</span>.hex)<span class="question-mark">?</span>;
+		<span class="self">self</span>.verify(|| std::io::stdin().lock())
+	}
+
+	<span class="doccomment">/// Verify a signature for a message.
+	///
+	/// The message can either be provided as immediate argument via CLI or otherwise read from the
+	/// reader created by `create_reader`. The reader will only be created in case that the message
+	/// is not passed as immediate.
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>verify&lt;F, R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, create_reader: F) -&gt; error::Result&lt;()&gt;
+	<span class="kw">where
+		</span>R: BufRead,
+		F: FnOnce() -&gt; R,
+	{
+		<span class="kw">let </span>message = <span class="self">self</span>.message_params.message_from(create_reader)<span class="question-mark">?</span>;
 		<span class="kw">let </span>sig_data = array_bytes::hex2bytes(<span class="kw-2">&amp;</span><span class="self">self</span>.sig)<span class="question-mark">?</span>;
 		<span class="kw">let </span>uri = utils::read_uri(<span class="self">self</span>.uri.as_ref())<span class="question-mark">?</span>;
 		<span class="kw">let </span>uri = <span class="kw">if let </span><span class="prelude-val">Some</span>(uri) = uri.strip_prefix(<span class="string">&quot;0x&quot;</span>) { uri } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>uri };
@@ -173,6 +231,46 @@
 	}
 
 	<span class="prelude-val">Ok</span>(())
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+	<span class="kw">const </span>ALICE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY&quot;</span>;
+	<span class="kw">const </span>SIG1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;0x4eb25a2285a82374888880af0024eb30c3a21ce086eae3862888d345af607f0ad6fb081312f11730932564f24a9f8ebcee2d46861413ae61307eca58db2c3e81&quot;</span>;
+	<span class="kw">const </span>SIG2: <span class="kw-2">&amp;</span>str = <span class="string">&quot;0x026342225155056ea797118c1c8c8b3cc002aa2020c36f4217fa3c302783a572ad3dcd38c231cbaf86cadb93984d329c963ceac0685cc1ee4c1ed50fa443a68f&quot;</span>;
+
+	<span class="comment">// Verify work with `--message` argument.
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>verify_immediate() {
+		<span class="kw">let </span>cmd = VerifyCmd::parse_from(<span class="kw-2">&amp;</span>[<span class="string">&quot;verify&quot;</span>, SIG1, ALICE, <span class="string">&quot;--message&quot;</span>, <span class="string">&quot;test message&quot;</span>]);
+		<span class="macro">assert!</span>(cmd.run().is_ok(), <span class="string">&quot;Alice&#39; signature should verify&quot;</span>);
+	}
+
+	<span class="comment">// Verify work without `--message` argument.
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>verify_stdin() {
+		<span class="kw">let </span>cmd = VerifyCmd::parse_from(<span class="kw-2">&amp;</span>[<span class="string">&quot;verify&quot;</span>, SIG1, ALICE]);
+		<span class="kw">let </span>message = <span class="string">&quot;test message&quot;</span>;
+		<span class="macro">assert!</span>(cmd.verify(|| message.as_bytes()).is_ok(), <span class="string">&quot;Alice&#39; signature should verify&quot;</span>);
+	}
+
+	<span class="comment">// Verify work with `--message` argument for hex message.
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>verify_immediate_hex() {
+		<span class="kw">let </span>cmd = VerifyCmd::parse_from(<span class="kw-2">&amp;</span>[<span class="string">&quot;verify&quot;</span>, SIG2, ALICE, <span class="string">&quot;--message&quot;</span>, <span class="string">&quot;0xaabbcc&quot;</span>, <span class="string">&quot;--hex&quot;</span>]);
+		<span class="macro">assert!</span>(cmd.run().is_ok(), <span class="string">&quot;Alice&#39; signature should verify&quot;</span>);
+	}
+
+	<span class="comment">// Verify work without `--message` argument for hex message.
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>verify_stdin_hex() {
+		<span class="kw">let </span>cmd = VerifyCmd::parse_from(<span class="kw-2">&amp;</span>[<span class="string">&quot;verify&quot;</span>, SIG2, ALICE, <span class="string">&quot;--hex&quot;</span>]);
+		<span class="macro">assert!</span>(cmd.verify(|| <span class="string">&quot;0xaabbcc&quot;</span>.as_bytes()).is_ok());
+		<span class="macro">assert!</span>(cmd.verify(|| <span class="string">&quot;aabbcc&quot;</span>.as_bytes()).is_ok());
+		<span class="macro">assert!</span>(cmd.verify(|| <span class="string">&quot;0xaABBcC&quot;</span>.as_bytes()).is_ok());
+	}
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="sc_cli" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
