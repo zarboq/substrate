@@ -180,11 +180,11 @@
 		<span class="self">self</span>.live.remove(peer);
 	}
 
-	<span class="doccomment">/// Return _filtered and cloned_ list of peers that have voted on `block` or higher.
-	</span><span class="kw">pub fn </span>at_least_at_block(<span class="kw-2">&amp;</span><span class="self">self</span>, block: NumberFor&lt;B&gt;) -&gt; VecDeque&lt;PeerId&gt; {
+	<span class="doccomment">/// Return _filtered and cloned_ list of peers that have voted on higher than `block`.
+	</span><span class="kw">pub fn </span>further_than(<span class="kw-2">&amp;</span><span class="self">self</span>, block: NumberFor&lt;B&gt;) -&gt; VecDeque&lt;PeerId&gt; {
 		<span class="self">self</span>.live
 			.iter()
-			.filter_map(|(k, v)| (v.last_voted_on &gt;= block).then_some(k))
+			.filter_map(|(k, v)| (v.last_voted_on &gt; block).then_some(k))
 			.cloned()
 			.collect()
 	}
@@ -215,22 +215,22 @@
 		<span class="macro">assert!</span>(peers.contains(<span class="kw-2">&amp;</span>bob));
 		<span class="macro">assert!</span>(peers.contains(<span class="kw-2">&amp;</span>charlie));
 
-		<span class="comment">// Get peers at block &gt;= 5
-		</span><span class="kw">let </span>at_5 = peers.at_least_at_block(<span class="number">5</span>);
+		<span class="comment">// Get peers at block &gt; 4
+		</span><span class="kw">let </span>further_than_4 = peers.further_than(<span class="number">4</span>);
 		<span class="comment">// Should be Bob and Charlie
-		</span><span class="macro">assert_eq!</span>(at_5.len(), <span class="number">2</span>);
-		<span class="macro">assert!</span>(at_5.contains(<span class="kw-2">&amp;</span>bob));
-		<span class="macro">assert!</span>(at_5.contains(<span class="kw-2">&amp;</span>charlie));
+		</span><span class="macro">assert_eq!</span>(further_than_4.len(), <span class="number">2</span>);
+		<span class="macro">assert!</span>(further_than_4.contains(<span class="kw-2">&amp;</span>bob));
+		<span class="macro">assert!</span>(further_than_4.contains(<span class="kw-2">&amp;</span>charlie));
 
 		<span class="comment">// &#39;Tracked&#39; Alice seen voting for 10.
 		</span>peers.note_vote_for(alice, <span class="number">10</span>);
 
-		<span class="comment">// Get peers at block &gt;= 9
-		</span><span class="kw">let </span>at_9 = peers.at_least_at_block(<span class="number">9</span>);
+		<span class="comment">// Get peers at block &gt; 9
+		</span><span class="kw">let </span>further_than_9 = peers.further_than(<span class="number">9</span>);
 		<span class="comment">// Should be Charlie and Alice
-		</span><span class="macro">assert_eq!</span>(at_9.len(), <span class="number">2</span>);
-		<span class="macro">assert!</span>(at_9.contains(<span class="kw-2">&amp;</span>charlie));
-		<span class="macro">assert!</span>(at_9.contains(<span class="kw-2">&amp;</span>alice));
+		</span><span class="macro">assert_eq!</span>(further_than_9.len(), <span class="number">2</span>);
+		<span class="macro">assert!</span>(further_than_9.contains(<span class="kw-2">&amp;</span>charlie));
+		<span class="macro">assert!</span>(further_than_9.contains(<span class="kw-2">&amp;</span>alice));
 
 		<span class="comment">// Remove Alice
 		</span>peers.remove(<span class="kw-2">&amp;</span>alice);
@@ -238,10 +238,10 @@
 		<span class="macro">assert!</span>(!peers.contains(<span class="kw-2">&amp;</span>alice));
 
 		<span class="comment">// Get peers at block &gt;= 9
-		</span><span class="kw">let </span>at_9 = peers.at_least_at_block(<span class="number">9</span>);
+		</span><span class="kw">let </span>further_than_9 = peers.further_than(<span class="number">9</span>);
 		<span class="comment">// Now should be just Charlie
-		</span><span class="macro">assert_eq!</span>(at_9.len(), <span class="number">1</span>);
-		<span class="macro">assert!</span>(at_9.contains(<span class="kw-2">&amp;</span>charlie));
+		</span><span class="macro">assert_eq!</span>(further_than_9.len(), <span class="number">1</span>);
+		<span class="macro">assert!</span>(further_than_9.contains(<span class="kw-2">&amp;</span>charlie));
 	}
 }
 </code></pre></div>

@@ -2086,7 +2086,6 @@
 		<span class="kw">let </span>block_number = vote.commitment.block_number;
 		<span class="kw">match </span>rounds.add_vote(vote) {
 			VoteImportResult::RoundConcluded(signed_commitment) =&gt; {
-				<span class="self">self</span>.gossip_validator.conclude_round(block_number);
 				<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_round_concluded, block_number);
 
 				<span class="kw">let </span>finality_proof = VersionedFinalityProof::V1(signed_commitment);
@@ -2133,6 +2132,7 @@
 
 		<span class="comment">// Finalize inner round and update voting_oracle state.
 		</span><span class="self">self</span>.persisted_state.voting_oracle.finalize(block_num)<span class="question-mark">?</span>;
+		<span class="self">self</span>.gossip_validator.conclude_round(block_num);
 
 		<span class="kw">if </span>block_num &gt; <span class="self">self</span>.best_beefy_block() {
 			<span class="comment">// Set new best BEEFY block number.

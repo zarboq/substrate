@@ -233,7 +233,6 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -316,7 +315,7 @@
 
 	<span class="kw">fn </span>reset_peers_cache_for_block(<span class="kw-2">&amp;mut </span><span class="self">self</span>, block: NumberFor&lt;B&gt;) {
 		<span class="comment">// TODO (issue #12296): replace peer selection with generic one that involves all protocols.
-		</span><span class="self">self</span>.peers_cache = <span class="self">self</span>.live_peers.lock().at_least_at_block(block);
+		</span><span class="self">self</span>.peers_cache = <span class="self">self</span>.live_peers.lock().further_than(block);
 	}
 
 	<span class="kw">fn </span>try_next_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PeerId&gt; {
@@ -435,8 +434,7 @@
 		<span class="kw">let </span>(peer, req_info, resp) = <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.state {
 			State::Idle =&gt; {
 				<span class="macro">futures::pending!</span>();
-				<span class="comment">// Doesn&#39;t happen as &#39;futures::pending!()&#39; is an &#39;await&#39; barrier that never passes.
-				</span><span class="kw">return </span><span class="prelude-val">None
+				<span class="kw">return </span><span class="prelude-val">None
 			</span>},
 			State::AwaitingResponse(peer, req_info, receiver) =&gt; {
 				<span class="kw">let </span>resp = receiver.<span class="kw">await</span>;
