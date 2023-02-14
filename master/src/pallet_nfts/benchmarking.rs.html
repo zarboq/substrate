@@ -719,6 +719,62 @@
 <a href="#719" id="719">719</a>
 <a href="#720" id="720">720</a>
 <a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -752,7 +808,11 @@
 	BoundedVec,
 };
 <span class="kw">use </span>frame_system::RawOrigin <span class="kw">as </span>SystemOrigin;
-<span class="kw">use </span>sp_runtime::traits::{Bounded, One};
+<span class="kw">use </span>sp_io::crypto::{sr25519_generate, sr25519_sign};
+<span class="kw">use </span>sp_runtime::{
+	traits::{Bounded, IdentifyAccount, One},
+	AccountId32, MultiSignature, MultiSigner,
+};
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>Nfts;
@@ -869,7 +929,21 @@
 	ItemConfig { settings: ItemSettings::all_enabled() }
 }
 
+<span class="kw">fn </span>make_filled_vec(value: u16, length: usize) -&gt; Vec&lt;u8&gt; {
+	<span class="kw">let </span><span class="kw-2">mut </span>vec = <span class="macro">vec!</span>[<span class="number">0u8</span>; length];
+	<span class="kw">let </span><span class="kw-2">mut </span>s = Vec::from(value.to_be_bytes());
+	vec.truncate(length - s.len());
+	vec.append(<span class="kw-2">&amp;mut </span>s);
+	vec
+}
+
 <span class="macro">benchmarks_instance_pallet! </span>{
+	where_clause {
+		<span class="kw">where
+			</span>T::OffchainSignature: From&lt;MultiSignature&gt;,
+			T::AccountId: From&lt;AccountId32&gt;,
+	}
+
 	create {
 		<span class="kw">let </span>collection = T::Helper::collection(<span class="number">0</span>);
 		<span class="kw">let </span>origin = T::CreateOrigin::try_successful_origin(<span class="kw-2">&amp;</span>collection)
@@ -1160,11 +1234,7 @@
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>target, DepositBalanceOf::&lt;T, I&gt;::max_value());
 		<span class="kw">let </span>value: BoundedVec&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = <span class="macro">vec!</span>[<span class="number">0u8</span>; T::ValueLimit::get() <span class="kw">as </span>usize].try_into().unwrap();
 		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..n {
-			<span class="kw">let </span><span class="kw-2">mut </span>key = <span class="macro">vec!</span>[<span class="number">0u8</span>; T::KeyLimit::get() <span class="kw">as </span>usize];
-			<span class="kw">let </span><span class="kw-2">mut </span>s = Vec::from((i <span class="kw">as </span>u16).to_be_bytes());
-			key.truncate(s.len());
-			key.append(<span class="kw-2">&amp;mut </span>s);
-
+			<span class="kw">let </span>key = make_filled_vec(i <span class="kw">as </span>u16, T::KeyLimit::get() <span class="kw">as </span>usize);
 			Nfts::&lt;T, I&gt;::set_attribute(
 				SystemOrigin::Signed(target.clone()).into(),
 				T::Helper::collection(<span class="number">0</span>),
@@ -1436,6 +1506,48 @@
 			price: <span class="prelude-val">Some</span>(price_with_direction),
 			deadline: duration.saturating_add(One::one()),
 		}.into());
+	}
+
+	mint_pre_signed {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::MaxAttributesPerCall::get() <span class="kw">as </span>u32;
+		<span class="kw">let </span>caller_public = sr25519_generate(<span class="number">0</span>.into(), <span class="prelude-val">None</span>);
+		<span class="kw">let </span>caller = MultiSigner::Sr25519(caller_public).into_account().into();
+		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, DepositBalanceOf::&lt;T, I&gt;::max_value());
+		<span class="kw">let </span>caller_lookup = T::Lookup::unlookup(caller.clone());
+
+		<span class="kw">let </span>collection = T::Helper::collection(<span class="number">0</span>);
+		<span class="kw">let </span>item = T::Helper::item(<span class="number">0</span>);
+		<span class="macro">assert_ok!</span>(Nfts::&lt;T, I&gt;::force_create(
+			SystemOrigin::Root.into(),
+			caller_lookup.clone(),
+			default_collection_config::&lt;T, I&gt;()
+		));
+
+		<span class="kw">let </span>metadata = <span class="macro">vec!</span>[<span class="number">0u8</span>; T::StringLimit::get() <span class="kw">as </span>usize];
+		<span class="kw">let </span><span class="kw-2">mut </span>attributes = <span class="macro">vec!</span>[];
+		<span class="kw">let </span>attribute_value = <span class="macro">vec!</span>[<span class="number">0u8</span>; T::ValueLimit::get() <span class="kw">as </span>usize];
+		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..n {
+			<span class="kw">let </span>attribute_key = make_filled_vec(i <span class="kw">as </span>u16, T::KeyLimit::get() <span class="kw">as </span>usize);
+			attributes.push((attribute_key, attribute_value.clone()));
+		}
+		<span class="kw">let </span>mint_data = PreSignedMint {
+			collection,
+			item,
+			attributes,
+			metadata: metadata.clone(),
+			only_account: <span class="prelude-val">None</span>,
+			deadline: One::one(),
+		};
+		<span class="kw">let </span>message = Encode::encode(<span class="kw-2">&amp;</span>mint_data);
+		<span class="kw">let </span>signature = MultiSignature::Sr25519(sr25519_sign(<span class="number">0</span>.into(), <span class="kw-2">&amp;</span>caller_public, <span class="kw-2">&amp;</span>message).unwrap());
+
+		<span class="kw">let </span>target: T::AccountId = account(<span class="string">&quot;target&quot;</span>, <span class="number">0</span>, SEED);
+		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>target, DepositBalanceOf::&lt;T, I&gt;::max_value());
+		frame_system::Pallet::&lt;T&gt;::set_block_number(One::one());
+	}: <span class="kw">_</span>(SystemOrigin::Signed(target.clone()), mint_data, signature.into(), caller)
+	verify {
+		<span class="kw">let </span>metadata: BoundedVec&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = metadata.try_into().unwrap();
+		assert_last_event::&lt;T, I&gt;(Event::ItemMetadataSet { collection, item, data: metadata }.into());
 	}
 
 	<span class="macro">impl_benchmark_test_suite!</span>(Nfts, <span class="kw">crate</span>::mock::new_test_ext(), <span class="kw">crate</span>::mock::Test);

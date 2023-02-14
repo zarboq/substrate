@@ -324,6 +324,37 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -352,6 +383,7 @@
 		namespace: AttributeNamespace&lt;T::AccountId&gt;,
 		key: BoundedVec&lt;u8, T::KeyLimit&gt;,
 		value: BoundedVec&lt;u8, T::ValueLimit&gt;,
+		depositor: T::AccountId,
 	) -&gt; DispatchResult {
 		<span class="macro">ensure!</span>(
 			<span class="self">Self</span>::is_pallet_feature_enabled(PalletFeature::Attributes),
@@ -392,7 +424,8 @@
 		}
 
 		<span class="kw">let </span>attribute = Attribute::&lt;T, I&gt;::get((collection, maybe_item, <span class="kw-2">&amp;</span>namespace, <span class="kw-2">&amp;</span>key));
-		<span class="kw">if </span>attribute.is_none() {
+		<span class="kw">let </span>attribute_exists = attribute.is_some();
+		<span class="kw">if </span>!attribute_exists {
 			collection_details.attributes.saturating_inc();
 		}
 
@@ -400,7 +433,8 @@
 			attribute.map_or(AttributeDeposit { account: <span class="prelude-val">None</span>, amount: Zero::zero() }, |m| m.<span class="number">1</span>);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>deposit = Zero::zero();
-		<span class="kw">if </span>collection_config.is_setting_enabled(CollectionSetting::DepositRequired) ||
+		<span class="comment">// disabled DepositRequired setting only affects the CollectionOwner namespace
+		</span><span class="kw">if </span>collection_config.is_setting_enabled(CollectionSetting::DepositRequired) ||
 			namespace != AttributeNamespace::CollectionOwner
 		{
 			deposit = T::DepositPerByte::get()
@@ -408,33 +442,50 @@
 				.saturating_add(T::AttributeDepositBase::get());
 		}
 
+		<span class="kw">let </span>is_collection_owner_namespace = namespace == AttributeNamespace::CollectionOwner;
+		<span class="kw">let </span>is_depositor_collection_owner =
+			is_collection_owner_namespace &amp;&amp; collection_details.owner == depositor;
+
+		<span class="comment">// NOTE: in the CollectionOwner namespace if the depositor is `None` that means the deposit
+		// was paid by the collection&#39;s owner.
+		</span><span class="kw">let </span>old_depositor =
+			<span class="kw">if </span>is_collection_owner_namespace &amp;&amp; old_deposit.account.is_none() &amp;&amp; attribute_exists {
+				<span class="prelude-val">Some</span>(collection_details.owner.clone())
+			} <span class="kw">else </span>{
+				old_deposit.account
+			};
+		<span class="kw">let </span>depositor_has_changed = old_depositor != <span class="prelude-val">Some</span>(depositor.clone());
+
 		<span class="comment">// NOTE: when we transfer an item, we don&#39;t move attributes in the ItemOwner namespace.
 		// When the new owner updates the same attribute, we will update the depositor record
 		// and return the deposit to the previous owner.
-		</span><span class="kw">if </span>old_deposit.account.is_some() &amp;&amp; old_deposit.account != <span class="prelude-val">Some</span>(origin.clone()) {
-			T::Currency::unreserve(<span class="kw-2">&amp;</span>old_deposit.account.unwrap(), old_deposit.amount);
-			T::Currency::reserve(<span class="kw-2">&amp;</span>origin, deposit)<span class="question-mark">?</span>;
+		</span><span class="kw">if </span>depositor_has_changed {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(old_depositor) = old_depositor {
+				T::Currency::unreserve(<span class="kw-2">&amp;</span>old_depositor, old_deposit.amount);
+			}
+			T::Currency::reserve(<span class="kw-2">&amp;</span>depositor, deposit)<span class="question-mark">?</span>;
 		} <span class="kw">else if </span>deposit &gt; old_deposit.amount {
-			T::Currency::reserve(<span class="kw-2">&amp;</span>origin, deposit - old_deposit.amount)<span class="question-mark">?</span>;
+			T::Currency::reserve(<span class="kw-2">&amp;</span>depositor, deposit - old_deposit.amount)<span class="question-mark">?</span>;
 		} <span class="kw">else if </span>deposit &lt; old_deposit.amount {
-			T::Currency::unreserve(<span class="kw-2">&amp;</span>origin, old_deposit.amount - deposit);
+			T::Currency::unreserve(<span class="kw-2">&amp;</span>depositor, old_deposit.amount - deposit);
 		}
 
-		<span class="comment">// NOTE: we don&#39;t track the depositor in the CollectionOwner namespace as it&#39;s always a
-		// collection&#39;s owner. This simplifies the collection&#39;s transfer to another owner.
-		</span><span class="kw">let </span>deposit_owner = <span class="kw">match </span>namespace {
-			AttributeNamespace::CollectionOwner =&gt; {
-				collection_details.owner_deposit.saturating_accrue(deposit);
+		<span class="kw">if </span>is_depositor_collection_owner {
+			<span class="kw">if </span>!depositor_has_changed {
 				collection_details.owner_deposit.saturating_reduce(old_deposit.amount);
-				<span class="prelude-val">None
-			</span>},
-			<span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(origin),
-		};
+			}
+			collection_details.owner_deposit.saturating_accrue(deposit);
+		}
 
+		<span class="kw">let </span>new_deposit_owner = <span class="kw">match </span>is_depositor_collection_owner {
+			<span class="bool-val">true </span>=&gt; <span class="prelude-val">None</span>,
+			<span class="bool-val">false </span>=&gt; <span class="prelude-val">Some</span>(depositor),
+		};
 		Attribute::&lt;T, I&gt;::insert(
 			(<span class="kw-2">&amp;</span>collection, maybe_item, <span class="kw-2">&amp;</span>namespace, <span class="kw-2">&amp;</span>key),
-			(<span class="kw-2">&amp;</span>value, AttributeDeposit { account: deposit_owner, amount: deposit }),
+			(<span class="kw-2">&amp;</span>value, AttributeDeposit { account: new_deposit_owner, amount: deposit }),
 		);
+
 		Collection::&lt;T, I&gt;::insert(collection, <span class="kw-2">&amp;</span>collection_details);
 		<span class="self">Self</span>::deposit_event(Event::AttributeSet { collection, maybe_item, key, value, namespace });
 		<span class="prelude-val">Ok</span>(())
@@ -514,10 +565,21 @@
 						<span class="comment">// NOTE: if the item was previously burned, the ItemConfigOf record
 						// might not exist. In that case, we allow to clear the attribute.
 						</span><span class="kw">let </span>maybe_is_locked = <span class="self">Self</span>::get_item_config(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item)
-							.map_or(<span class="bool-val">false</span>, |c| {
-								c.has_disabled_setting(ItemSetting::UnlockedAttributes)
+							.map_or(<span class="prelude-val">None</span>, |c| {
+								<span class="prelude-val">Some</span>(c.has_disabled_setting(ItemSetting::UnlockedAttributes))
 							});
-						<span class="macro">ensure!</span>(!maybe_is_locked, Error::&lt;T, I&gt;::LockedItemAttributes);
+						<span class="kw">match </span>maybe_is_locked {
+							<span class="prelude-val">Some</span>(is_locked) =&gt; {
+								<span class="comment">// when item exists, then only the collection&#39;s owner can clear that
+								// attribute
+								</span><span class="macro">ensure!</span>(
+									check_owner == <span class="kw-2">&amp;</span>collection_details.owner,
+									Error::&lt;T, I&gt;::NoPermission
+								);
+								<span class="macro">ensure!</span>(!is_locked, Error::&lt;T, I&gt;::LockedItemAttributes);
+							},
+							<span class="prelude-val">None </span>=&gt; (),
+						}
 					},
 				},
 				<span class="kw">_ </span>=&gt; (),
@@ -525,16 +587,16 @@
 		}
 
 		collection_details.attributes.saturating_dec();
-		<span class="kw">match </span>namespace {
-			AttributeNamespace::CollectionOwner =&gt; {
+
+		<span class="kw">match </span>deposit.account {
+			<span class="prelude-val">Some</span>(deposit_account) =&gt; {
+				T::Currency::unreserve(<span class="kw-2">&amp;</span>deposit_account, deposit.amount);
+			},
+			<span class="prelude-val">None </span><span class="kw">if </span>namespace == AttributeNamespace::CollectionOwner =&gt; {
 				collection_details.owner_deposit.saturating_reduce(deposit.amount);
 				T::Currency::unreserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit.amount);
 			},
 			<span class="kw">_ </span>=&gt; (),
-		};
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(deposit_account) = deposit.account {
-			T::Currency::unreserve(<span class="kw-2">&amp;</span>deposit_account, deposit.amount);
 		}
 
 		Collection::&lt;T, I&gt;::insert(collection, <span class="kw-2">&amp;</span>collection_details);

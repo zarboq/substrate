@@ -192,6 +192,15 @@
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -254,14 +263,16 @@
 					.saturating_add(T::MetadataDepositBase::get());
 			}
 
-			<span class="comment">// the previous deposit was taken from the item&#39;s owner
-			</span><span class="kw">if </span>old_deposit.account.is_some() &amp;&amp; maybe_depositor.is_none() {
-				T::Currency::unreserve(<span class="kw-2">&amp;</span>old_deposit.account.unwrap(), old_deposit.amount);
-				T::Currency::reserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit)<span class="question-mark">?</span>;
+			<span class="kw">let </span>depositor = maybe_depositor.clone().unwrap_or(collection_details.owner.clone());
+			<span class="kw">let </span>old_depositor = old_deposit.account.unwrap_or(collection_details.owner.clone());
+
+			<span class="kw">if </span>depositor != old_depositor {
+				T::Currency::unreserve(<span class="kw-2">&amp;</span>old_depositor, old_deposit.amount);
+				T::Currency::reserve(<span class="kw-2">&amp;</span>depositor, deposit)<span class="question-mark">?</span>;
 			} <span class="kw">else if </span>deposit &gt; old_deposit.amount {
-				T::Currency::reserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit - old_deposit.amount)<span class="question-mark">?</span>;
+				T::Currency::reserve(<span class="kw-2">&amp;</span>depositor, deposit - old_deposit.amount)<span class="question-mark">?</span>;
 			} <span class="kw">else if </span>deposit &lt; old_deposit.amount {
-				T::Currency::unreserve(<span class="kw-2">&amp;</span>collection_details.owner, old_deposit.amount - deposit);
+				T::Currency::unreserve(<span class="kw-2">&amp;</span>depositor, old_deposit.amount - deposit);
 			}
 
 			<span class="kw">if </span>maybe_depositor.is_none() {
@@ -384,6 +395,13 @@
 			<span class="self">Self</span>::deposit_event(Event::CollectionMetadataCleared { collection });
 			<span class="prelude-val">Ok</span>(())
 		})
+	}
+
+	<span class="doccomment">/// A helper method to construct metadata.
+	</span><span class="kw">pub fn </span>construct_metadata(
+		metadata: Vec&lt;u8&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;BoundedVec&lt;u8, T::StringLimit&gt;, DispatchError&gt; {
+		<span class="prelude-val">Ok</span>(BoundedVec::try_from(metadata).map_err(|<span class="kw">_</span>| Error::&lt;T, I&gt;::IncorrectMetadata)<span class="question-mark">?</span>)
 	}
 }
 </code></pre></div>

@@ -1772,6 +1772,62 @@
 <a href="#1772" id="1772">1772</a>
 <a href="#1773" id="1773">1773</a>
 <a href="#1774" id="1774">1774</a>
+<a href="#1775" id="1775">1775</a>
+<a href="#1776" id="1776">1776</a>
+<a href="#1777" id="1777">1777</a>
+<a href="#1778" id="1778">1778</a>
+<a href="#1779" id="1779">1779</a>
+<a href="#1780" id="1780">1780</a>
+<a href="#1781" id="1781">1781</a>
+<a href="#1782" id="1782">1782</a>
+<a href="#1783" id="1783">1783</a>
+<a href="#1784" id="1784">1784</a>
+<a href="#1785" id="1785">1785</a>
+<a href="#1786" id="1786">1786</a>
+<a href="#1787" id="1787">1787</a>
+<a href="#1788" id="1788">1788</a>
+<a href="#1789" id="1789">1789</a>
+<a href="#1790" id="1790">1790</a>
+<a href="#1791" id="1791">1791</a>
+<a href="#1792" id="1792">1792</a>
+<a href="#1793" id="1793">1793</a>
+<a href="#1794" id="1794">1794</a>
+<a href="#1795" id="1795">1795</a>
+<a href="#1796" id="1796">1796</a>
+<a href="#1797" id="1797">1797</a>
+<a href="#1798" id="1798">1798</a>
+<a href="#1799" id="1799">1799</a>
+<a href="#1800" id="1800">1800</a>
+<a href="#1801" id="1801">1801</a>
+<a href="#1802" id="1802">1802</a>
+<a href="#1803" id="1803">1803</a>
+<a href="#1804" id="1804">1804</a>
+<a href="#1805" id="1805">1805</a>
+<a href="#1806" id="1806">1806</a>
+<a href="#1807" id="1807">1807</a>
+<a href="#1808" id="1808">1808</a>
+<a href="#1809" id="1809">1809</a>
+<a href="#1810" id="1810">1810</a>
+<a href="#1811" id="1811">1811</a>
+<a href="#1812" id="1812">1812</a>
+<a href="#1813" id="1813">1813</a>
+<a href="#1814" id="1814">1814</a>
+<a href="#1815" id="1815">1815</a>
+<a href="#1816" id="1816">1816</a>
+<a href="#1817" id="1817">1817</a>
+<a href="#1818" id="1818">1818</a>
+<a href="#1819" id="1819">1819</a>
+<a href="#1820" id="1820">1820</a>
+<a href="#1821" id="1821">1821</a>
+<a href="#1822" id="1822">1822</a>
+<a href="#1823" id="1823">1823</a>
+<a href="#1824" id="1824">1824</a>
+<a href="#1825" id="1825">1825</a>
+<a href="#1826" id="1826">1826</a>
+<a href="#1827" id="1827">1827</a>
+<a href="#1828" id="1828">1828</a>
+<a href="#1829" id="1829">1829</a>
+<a href="#1830" id="1830">1830</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1841,6 +1897,7 @@
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, traits::ExistenceRequirement};
 	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
+	<span class="kw">use </span>sp_runtime::traits::{IdentifyAccount, Verify};
 
 	<span class="attr">#[pallet::pallet]
 	#[pallet::generate_store(<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">trait </span>Store)]
@@ -1941,9 +1998,23 @@
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>MaxDeadlineDuration: Get&lt;&lt;<span class="self">Self </span><span class="kw">as </span>SystemConfig&gt;::BlockNumber&gt;;
 
+		<span class="doccomment">/// The max number of attributes a user could set per call.
+		</span><span class="attr">#[pallet::constant]
+		</span><span class="kw">type </span>MaxAttributesPerCall: Get&lt;u32&gt;;
+
 		<span class="doccomment">/// Disables some of pallet&#39;s features.
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>Features: Get&lt;PalletFeatures&gt;;
+
+		<span class="doccomment">/// Off-Chain signature type.
+		///
+		/// Can verify whether an `Self::OffchainPublic` created a signature.
+		</span><span class="kw">type </span>OffchainSignature: Verify&lt;Signer = <span class="self">Self</span>::OffchainPublic&gt; + Parameter;
+
+		<span class="doccomment">/// Off-Chain public key.
+		///
+		/// Must identify as an on-chain `Self::AccountId`.
+		</span><span class="kw">type </span>OffchainPublic: IdentifyAccount&lt;AccountId = <span class="self">Self</span>::AccountId&gt;;
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 		</span><span class="doccomment">/// A set of helper functions for benchmarking.
@@ -2365,6 +2436,14 @@
 		</span>AlreadyClaimed,
 		<span class="doccomment">/// The provided data is incorrect.
 		</span>IncorrectData,
+		<span class="doccomment">/// The extrinsic was sent by the wrong origin.
+		</span>WrongOrigin,
+		<span class="doccomment">/// The provided signature is incorrect.
+		</span>WrongSignature,
+		<span class="doccomment">/// The provided metadata might be too long.
+		</span>IncorrectMetadata,
+		<span class="doccomment">/// Can&#39;t set more attributes per one call.
+		</span>MaxAttributesLimitReached,
 	}
 
 	<span class="attr">#[pallet::call]
@@ -2516,10 +2595,8 @@
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>caller = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>mint_to = T::Lookup::lookup(mint_to)<span class="question-mark">?</span>;
-
-			<span class="kw">let </span>collection_config = <span class="self">Self</span>::get_collection_config(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
-			<span class="kw">let </span>item_settings = collection_config.mint_settings.default_item_settings;
-			<span class="kw">let </span>item_config = ItemConfig { settings: item_settings };
+			<span class="kw">let </span>item_config =
+				ItemConfig { settings: <span class="self">Self</span>::get_default_item_settings(<span class="kw-2">&amp;</span>collection)<span class="question-mark">? </span>};
 
 			<span class="self">Self</span>::do_mint(
 				collection,
@@ -3099,7 +3176,15 @@
 			value: BoundedVec&lt;u8, T::ValueLimit&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_set_attribute(origin, collection, maybe_item, namespace, key, value)
+			<span class="self">Self</span>::do_set_attribute(
+				origin.clone(),
+				collection,
+				maybe_item,
+				namespace,
+				key,
+				value,
+				origin,
+			)
 		}
 
 		<span class="doccomment">/// Force-set an attribute for a collection or item.
@@ -3541,6 +3626,33 @@
 				receive_item,
 				witness_price,
 			)
+		}
+
+		<span class="doccomment">/// Mint an item by providing the pre-signed approval.
+		///
+		/// Origin must be Signed.
+		///
+		/// - `mint_data`: The pre-signed approval that consists of the information about the item,
+		///   its metadata, attributes, who can mint it (`None` for anyone) and until what block
+		///   number.
+		/// - `signature`: The signature of the `data` object.
+		/// - `signer`: The `data` object&#39;s signer. Should be an owner of the collection.
+		///
+		/// Emits `Issued` on success.
+		/// Emits `AttributeSet` if the attributes were provided.
+		/// Emits `ItemMetadataSet` if the metadata was not empty.
+		</span><span class="attr">#[pallet::call_index(<span class="number">37</span>)]
+		#[pallet::weight(T::WeightInfo::mint_pre_signed(mint_data.attributes.len() <span class="kw">as </span>u32))]
+		</span><span class="kw">pub fn </span>mint_pre_signed(
+			origin: OriginFor&lt;T&gt;,
+			mint_data: PreSignedMintOf&lt;T, I&gt;,
+			signature: T::OffchainSignature,
+			signer: T::AccountId,
+		) -&gt; DispatchResult {
+			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
+			<span class="kw">let </span>msg = Encode::encode(<span class="kw-2">&amp;</span>mint_data);
+			<span class="macro">ensure!</span>(signature.verify(<span class="kw-2">&amp;*</span>msg, <span class="kw-2">&amp;</span>signer), Error::&lt;T, I&gt;::WrongSignature);
+			<span class="self">Self</span>::do_mint_pre_signed(origin, mint_data, signer)
 		}
 	}
 }
