@@ -600,23 +600,6 @@
 <a href="#600" id="600">600</a>
 <a href="#601" id="601">601</a>
 <a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
-<a href="#604" id="604">604</a>
-<a href="#605" id="605">605</a>
-<a href="#606" id="606">606</a>
-<a href="#607" id="607">607</a>
-<a href="#608" id="608">608</a>
-<a href="#609" id="609">609</a>
-<a href="#610" id="610">610</a>
-<a href="#611" id="611">611</a>
-<a href="#612" id="612">612</a>
-<a href="#613" id="613">613</a>
-<a href="#614" id="614">614</a>
-<a href="#615" id="615">615</a>
-<a href="#616" id="616">616</a>
-<a href="#617" id="617">617</a>
-<a href="#618" id="618">618</a>
-<a href="#619" id="619">619</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -850,12 +833,9 @@
 		///
 		/// Emits `NewTip` if successful.
 		///
-		/// # &lt;weight&gt;
-		/// - Complexity: `O(R)` where `R` length of `reason`.
+		/// ## Complexity
+		/// - `O(R)` where `R` length of `reason`.
 		///   - encoding and hashing of &#39;reason&#39;
-		/// - DbReads: `Reasons`, `Tips`
-		/// - DbWrites: `Reasons`, `Tips`
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::WeightInfo::report_awesome(reason.len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>report_awesome(
@@ -908,12 +888,9 @@
 		///
 		/// Emits `TipRetracted` if successful.
 		///
-		/// # &lt;weight&gt;
-		/// - Complexity: `O(1)`
+		/// ## Complexity
+		/// - `O(1)`
 		///   - Depends on the length of `T::Hash` which is fixed.
-		/// - DbReads: `Tips`, `origin account`
-		/// - DbWrites: `Reasons`, `Tips`, `origin account`
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::WeightInfo::retract_tip())]
 		</span><span class="kw">pub fn </span>retract_tip(origin: OriginFor&lt;T&gt;, hash: T::Hash) -&gt; DispatchResult {
@@ -944,15 +921,12 @@
 		///
 		/// Emits `NewTip` if successful.
 		///
-		/// # &lt;weight&gt;
-		/// - Complexity: `O(R + T)` where `R` length of `reason`, `T` is the number of tippers.
+		/// ## Complexity
+		/// - `O(R + T)` where `R` length of `reason`, `T` is the number of tippers.
 		///   - `O(T)`: decoding `Tipper` vec of length `T`. `T` is charged as upper bound given by
 		///     `ContainsLengthBound`. The actual cost depends on the implementation of
 		///     `T::Tippers`.
 		///   - `O(R)`: hashing and encoding of reason of length `R`
-		/// - DbReads: `Tippers`, `Reasons`
-		/// - DbWrites: `Reasons`, `Tips`
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::WeightInfo::tip_new(reason.len() <span class="kw">as </span>u32, T::Tippers::max_len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>tip_new(
@@ -998,16 +972,13 @@
 		/// Emits `TipClosing` if the threshold of tippers has been reached and the countdown period
 		/// has started.
 		///
-		/// # &lt;weight&gt;
-		/// - Complexity: `O(T)` where `T` is the number of tippers. decoding `Tipper` vec of length
-		///   `T`, insert tip and check closing, `T` is charged as upper bound given by
-		///   `ContainsLengthBound`. The actual cost depends on the implementation of `T::Tippers`.
+		/// ## Complexity
+		/// - `O(T)` where `T` is the number of tippers. decoding `Tipper` vec of length `T`, insert
+		///   tip and check closing, `T` is charged as upper bound given by `ContainsLengthBound`.
+		///   The actual cost depends on the implementation of `T::Tippers`.
 		///
 		///   Actually weight could be lower as it depends on how many tips are in `OpenTip` but it
 		///   is weighted as if almost full i.e of length `T-1`.
-		/// - DbReads: `Tippers`, `Tips`
-		/// - DbWrites: `Tips`
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">3</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::WeightInfo::tip(T::Tippers::max_len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>tip(
@@ -1035,13 +1006,10 @@
 		/// - `hash`: The identity of the open tip for which a tip value is declared. This is formed
 		///   as the hash of the tuple of the original tip `reason` and the beneficiary account ID.
 		///
-		/// # &lt;weight&gt;
-		/// - Complexity: `O(T)` where `T` is the number of tippers. decoding `Tipper` vec of length
-		///   `T`. `T` is charged as upper bound given by `ContainsLengthBound`. The actual cost
-		///   depends on the implementation of `T::Tippers`.
-		/// - DbReads: `Tips`, `Tippers`, `tip finder`
-		/// - DbWrites: `Reasons`, `Tips`, `Tippers`, `tip finder`
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// - : `O(T)` where `T` is the number of tippers. decoding `Tipper` vec of length `T`. `T`
+		///   is charged as upper bound given by `ContainsLengthBound`. The actual cost depends on
+		///   the implementation of `T::Tippers`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">4</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::WeightInfo::close_tip(T::Tippers::max_len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>close_tip(origin: OriginFor&lt;T&gt;, hash: T::Hash) -&gt; DispatchResult {
@@ -1065,10 +1033,8 @@
 		///
 		/// Emits `TipSlashed` if successful.
 		///
-		/// # &lt;weight&gt;
-		///   `T` is charged as upper bound given by `ContainsLengthBound`.
-		///   The actual cost depends on the implementation of `T::Tippers`.
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// - O(1).
 		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::WeightInfo::slash_tip(T::Tippers::max_len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>slash_tip(origin: OriginFor&lt;T&gt;, hash: T::Hash) -&gt; DispatchResult {

@@ -441,10 +441,6 @@
 <a href="#441" id="441">441</a>
 <a href="#442" id="442">442</a>
 <a href="#443" id="443">443</a>
-<a href="#444" id="444">444</a>
-<a href="#445" id="445">445</a>
-<a href="#446" id="446">446</a>
-<a href="#447" id="447">447</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -631,10 +627,9 @@
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
 		<span class="doccomment">/// Index and store data off chain. Minimum data size is 1 bytes, maximum is
 		/// `MaxTransactionSize`. Data will be removed after `STORAGE_PERIOD` blocks, unless `renew`
-		/// is called. # &lt;weight&gt;
-		/// - n*log(n) of data size, as all data is pushed to an in-memory trie.
-		/// Additionally contains a DB write.
-		/// # &lt;/weight&gt;
+		/// is called.
+		/// ## Complexity
+		/// - O(n*log(n)) of data size, as all data is pushed to an in-memory trie.
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
 		#[pallet::weight(T::WeightInfo::store(data.len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>store(origin: OriginFor&lt;T&gt;, data: Vec&lt;u8&gt;) -&gt; DispatchResult {
@@ -681,9 +676,8 @@
 		/// previous `store` or `renew` call and transaction index within that block.
 		/// Transaction index is emitted in the `Stored` or `Renewed` event.
 		/// Applies same fees as `store`.
-		/// # &lt;weight&gt;
-		/// - Constant.
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// - O(1).
 		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
 		#[pallet::weight(T::WeightInfo::renew())]
 		</span><span class="kw">pub fn </span>renew(
@@ -724,12 +718,10 @@
 
 		<span class="doccomment">/// Check storage proof for block number `block_number() - StoragePeriod`.
 		/// If such block does not exist the proof is expected to be `None`.
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - Linear w.r.t the number of indexed transactions in the proved block for random
 		///   probing.
 		/// There&#39;s a DB read for each transaction.
-		/// Here we assume a maximum of 100 probed transactions.
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
 		#[pallet::weight((T::WeightInfo::check_proof_max(), DispatchClass::Mandatory))]
 		</span><span class="kw">pub fn </span>check_proof(

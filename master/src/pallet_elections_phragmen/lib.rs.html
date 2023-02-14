@@ -3253,7 +3253,6 @@
 <a href="#3253" id="3253">3253</a>
 <a href="#3254" id="3254">3254</a>
 <a href="#3255" id="3255">3255</a>
-<a href="#3256" id="3256">3256</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -3691,9 +3690,9 @@
 		/// Even if a candidate ends up being a member, they must call [`Call::renounce_candidacy`]
 		/// to get their deposit back. Losing the spot in an election will always lead to a slash.
 		///
-		/// # &lt;weight&gt;
 		/// The number of current candidates must be provided as witness data.
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// O(C + log(C)) where C is candidate_count.
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
 		#[pallet::weight(T::WeightInfo::submit_candidacy(<span class="kw-2">*</span>candidate_count))]
 		</span><span class="kw">pub fn </span>submit_candidacy(
@@ -3735,10 +3734,12 @@
 		///   next round.
 		///
 		/// The dispatch origin of this call must be signed, and have one of the above roles.
-		///
-		/// # &lt;weight&gt;
 		/// The type of renouncing must be provided as witness data.
-		/// # &lt;/weight&gt;
+		///
+		/// ## Complexity
+		///   - Renouncing::Candidate(count): O(count + log(count))
+		///   - Renouncing::Member: O(1)
+		///   - Renouncing::RunnerUp: O(1)
 		</span><span class="attr">#[pallet::call_index(<span class="number">3</span>)]
 		#[pallet::weight(<span class="kw">match </span><span class="kw-2">*</span>renouncing {
 			Renouncing::Candidate(count) =&gt; T::WeightInfo::renounce_candidacy_candidate(count),
@@ -3798,10 +3799,8 @@
 		///
 		/// Note that this does not affect the designated block number of the next election.
 		///
-		/// # &lt;weight&gt;
-		/// If we have a replacement, we use a small weight. Else, since this is a root call and
-		/// will go into phragmen, we assume full block for now.
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// - Check details of remove_and_replace_member() and do_phragmen().
 		</span><span class="attr">#[pallet::call_index(<span class="number">4</span>)]
 		#[pallet::weight(<span class="kw">if </span><span class="kw-2">*</span>rerun_election {
 			T::WeightInfo::remove_member_without_replacement()
@@ -3835,9 +3834,8 @@
 		///
 		/// The dispatch origin of this call must be root.
 		///
-		/// # &lt;weight&gt;
-		/// The total number of voters and those that are defunct must be provided as witness data.
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// - Check is_defunct_voter() details.
 		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
 		#[pallet::weight(T::WeightInfo::clean_defunct_voters(<span class="kw-2">*</span>_num_voters, <span class="kw-2">*</span>_num_defunct))]
 		</span><span class="kw">pub fn </span>clean_defunct_voters(

@@ -48,46 +48,18 @@ when the bid becomes a member, or if the bid calls <code>unbid</code>.</p>
 <ul>
 <li><code>value</code>: A one time payment the bid would like to receive when joining the society.</li>
 </ul>
-<h4 id=""><a href="#"><weight></a></h4>
-<p>Key: B (len of bids), C (len of candidates), M (len of members), X (balance reserve)</p>
+<h5 id="complexity"><a href="#complexity">Complexity</a></h5>
 <ul>
-<li>Storage Reads:
+<li>O(M + B + C + logM + logB + X)
+- B (len of bids)
 <ul>
-<li>One storage read to check for suspended candidate. O(1)</li>
-<li>One storage read to check for suspended member. O(1)</li>
-<li>One storage read to retrieve all current bids. O(B)</li>
-<li>One storage read to retrieve all current candidates. O(C)</li>
-<li>One storage read to retrieve all members. O(M)</li>
-</ul>
-</li>
-<li>Storage Writes:
-<ul>
-<li>One storage mutate to add a new bid to the vector O(B) (TODO: possible optimization
-w/ read)</li>
-<li>Up to one storage removal if bid.len() &gt; MAX_BID_COUNT. O(1)</li>
-</ul>
-</li>
-<li>Notable Computation:
-<ul>
-<li>O(B + C + log M) search to check user is not already a part of society.</li>
-<li>O(log B) search to insert the new bid sorted.</li>
-</ul>
-</li>
-<li>External Pallet Operations:
-<ul>
-<li>One balance reserve operation. O(X)</li>
-<li>Up to one balance unreserve operation if bids.len() &gt; MAX_BID_COUNT.</li>
-</ul>
-</li>
-<li>Events:
-<ul>
-<li>One event for new bid.</li>
-<li>Up to one event for AutoUnbid if bid.len() &gt; MAX_BID_COUNT.</li>
+<li>C (len of candidates)</li>
+<li>M (len of members)</li>
+<li>X (balance reserve)</li>
 </ul>
 </li>
 </ul>
-<p>Total Complexity: O(M + B + C + logM + logB + X)</p>
-<h4 id="-1"><a href="#-1"></weight></a></h4></div><h3 id="variant.unbid" class="variant small-section-header"><a href="#variant.unbid" class="anchor field"></a><code>unbid</code></h3><div class="sub-variant" id="variant.unbid.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.unbid.field.pos" class="variant small-section-header"><a href="#variant.unbid.field.pos" class="anchor field"></a><code>pos:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>A bidder can remove their bid for entry into society.
+</div><h3 id="variant.unbid" class="variant small-section-header"><a href="#variant.unbid" class="anchor field"></a><code>unbid</code></h3><div class="sub-variant" id="variant.unbid.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.unbid.field.pos" class="variant small-section-header"><a href="#variant.unbid.field.pos" class="anchor field"></a><code>pos:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>A bidder can remove their bid for entry into society.
 By doing so, they will have their candidate deposit returned or
 they will unvouch their voucher.</p>
 <p>Payment: The bid deposit is unreserved if the user made a bid.</p>
@@ -96,15 +68,16 @@ they will unvouch their voucher.</p>
 <ul>
 <li><code>pos</code>: Position in the <code>Bids</code> vector of the bid who wants to unbid.</li>
 </ul>
-<h4 id="-2"><a href="#-2"><weight></a></h4>
-<p>Key: B (len of bids), X (balance unreserve)</p>
+<h5 id="complexity-1"><a href="#complexity-1">Complexity</a></h5>
 <ul>
-<li>One storage read and write to retrieve and update the bids. O(B)</li>
-<li>Either one unreserve balance action O(X) or one vouching storage removal. O(1)</li>
-<li>One event.</li>
+<li>O(B + X)
+<ul>
+<li>B (len of bids)</li>
+<li>X (balance unreserve)</li>
 </ul>
-<p>Total Complexity: O(B + X)</p>
-<h4 id="-3"><a href="#-3"></weight></a></h4></div><h3 id="variant.vouch" class="variant small-section-header"><a href="#variant.vouch" class="anchor field"></a><code>vouch</code></h3><div class="sub-variant" id="variant.vouch.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.vouch.field.who" class="variant small-section-header"><a href="#variant.vouch.field.who" class="anchor field"></a><code>who:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.vouch.field.value" class="variant small-section-header"><a href="#variant.vouch.field.value" class="anchor field"></a><code>value:&nbsp;&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a></code></span></div><div class="sub-variant-field"><span id="variant.vouch.field.tip" class="variant small-section-header"><a href="#variant.vouch.field.tip" class="anchor field"></a><code>tip:&nbsp;&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a></code></span></div></div><div class="docblock"><p>As a member, vouch for someone to join society by placing a bid on their behalf.</p>
+</li>
+</ul>
+</div><h3 id="variant.vouch" class="variant small-section-header"><a href="#variant.vouch" class="anchor field"></a><code>vouch</code></h3><div class="sub-variant" id="variant.vouch.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.vouch.field.who" class="variant small-section-header"><a href="#variant.vouch.field.who" class="anchor field"></a><code>who:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.vouch.field.value" class="variant small-section-header"><a href="#variant.vouch.field.value" class="anchor field"></a><code>value:&nbsp;&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a></code></span></div><div class="sub-variant-field"><span id="variant.vouch.field.tip" class="variant small-section-header"><a href="#variant.vouch.field.tip" class="anchor field"></a><code>tip:&nbsp;&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a></code></span></div></div><div class="docblock"><p>As a member, vouch for someone to join society by placing a bid on their behalf.</p>
 <p>There is no deposit required to vouch for a new bid, but a member can only vouch for
 one bid at a time. If the bid becomes a suspended candidate and ultimately rejected by
 the suspension judgement origin, the member will be banned from vouching again.</p>
@@ -119,65 +92,33 @@ a member in the society.</li>
 <li><code>tip</code>: Your cut of the total <code>value</code> payout when the candidate is inducted into
 the society. Tips larger than <code>value</code> will be saturated upon payout.</li>
 </ul>
-<h4 id="-4"><a href="#-4"><weight></a></h4>
-<p>Key: B (len of bids), C (len of candidates), M (len of members)</p>
+<h5 id="complexity-2"><a href="#complexity-2">Complexity</a></h5>
 <ul>
-<li>Storage Reads:
+<li>O(M + B + C + logM + logB + X)
 <ul>
-<li>One storage read to retrieve all members. O(M)</li>
-<li>One storage read to check member is not already vouching. O(1)</li>
-<li>One storage read to check for suspended candidate. O(1)</li>
-<li>One storage read to check for suspended member. O(1)</li>
-<li>One storage read to retrieve all current bids. O(B)</li>
-<li>One storage read to retrieve all current candidates. O(C)</li>
-</ul>
-</li>
-<li>Storage Writes:
-<ul>
-<li>One storage write to insert vouching status to the member. O(1)</li>
-<li>One storage mutate to add a new bid to the vector O(B) (TODO: possible optimization
-w/ read)</li>
-<li>Up to one storage removal if bid.len() &gt; MAX_BID_COUNT. O(1)</li>
-</ul>
-</li>
-<li>Notable Computation:
-<ul>
-<li>O(log M) search to check sender is a member.</li>
-<li>O(B + C + log M) search to check user is not already a part of society.</li>
-<li>O(log B) search to insert the new bid sorted.</li>
-</ul>
-</li>
-<li>External Pallet Operations:
-<ul>
-<li>One balance reserve operation. O(X)</li>
-<li>Up to one balance unreserve operation if bids.len() &gt; MAX_BID_COUNT.</li>
-</ul>
-</li>
-<li>Events:
-<ul>
-<li>One event for vouch.</li>
-<li>Up to one event for AutoUnbid if bid.len() &gt; MAX_BID_COUNT.</li>
+<li>B (len of bids)</li>
+<li>C (len of candidates)</li>
+<li>M (len of members)</li>
+<li>X (balance reserve)</li>
 </ul>
 </li>
 </ul>
-<p>Total Complexity: O(M + B + C + logM + logB + X)</p>
-<h4 id="-5"><a href="#-5"></weight></a></h4></div><h3 id="variant.unvouch" class="variant small-section-header"><a href="#variant.unvouch" class="anchor field"></a><code>unvouch</code></h3><div class="sub-variant" id="variant.unvouch.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.unvouch.field.pos" class="variant small-section-header"><a href="#variant.unvouch.field.pos" class="anchor field"></a><code>pos:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>As a vouching member, unvouch a bid. This only works while vouched user is
+</div><h3 id="variant.unvouch" class="variant small-section-header"><a href="#variant.unvouch" class="anchor field"></a><code>unvouch</code></h3><div class="sub-variant" id="variant.unvouch.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.unvouch.field.pos" class="variant small-section-header"><a href="#variant.unvouch.field.pos" class="anchor field"></a><code>pos:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>As a vouching member, unvouch a bid. This only works while vouched user is
 only a bidder (and not a candidate).</p>
 <p>The dispatch origin for this call must be <em>Signed</em> and a vouching member.</p>
 <p>Parameters:</p>
 <ul>
 <li><code>pos</code>: Position in the <code>Bids</code> vector of the bid who should be unvouched.</li>
 </ul>
-<h4 id="-6"><a href="#-6"><weight></a></h4>
-<p>Key: B (len of bids)</p>
+<h5 id="complexity-3"><a href="#complexity-3">Complexity</a></h5>
 <ul>
-<li>One storage read O(1) to check the signer is a vouching member.</li>
-<li>One storage mutate to retrieve and update the bids. O(B)</li>
-<li>One vouching storage removal. O(1)</li>
-<li>One event.</li>
+<li>O(B)
+<ul>
+<li>B (len of bids)</li>
 </ul>
-<p>Total Complexity: O(B)</p>
-<h4 id="-7"><a href="#-7"></weight></a></h4></div><h3 id="variant.vote" class="variant small-section-header"><a href="#variant.vote" class="anchor field"></a><code>vote</code></h3><div class="sub-variant" id="variant.vote.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.vote.field.candidate" class="variant small-section-header"><a href="#variant.vote.field.candidate" class="anchor field"></a><code>candidate:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.vote.field.approve" class="variant small-section-header"><a href="#variant.vote.field.approve" class="anchor field"></a><code>approve:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>As a member, vote on a candidate.</p>
+</li>
+</ul>
+</div><h3 id="variant.vote" class="variant small-section-header"><a href="#variant.vote" class="anchor field"></a><code>vote</code></h3><div class="sub-variant" id="variant.vote.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.vote.field.candidate" class="variant small-section-header"><a href="#variant.vote.field.candidate" class="anchor field"></a><code>candidate:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.vote.field.approve" class="variant small-section-header"><a href="#variant.vote.field.approve" class="anchor field"></a><code>approve:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>As a member, vote on a candidate.</p>
 <p>The dispatch origin for this call must be <em>Signed</em> and a member.</p>
 <p>Parameters:</p>
 <ul>
@@ -185,49 +126,48 @@ only a bidder (and not a candidate).</p>
 <li><code>approve</code>: A boolean which says if the candidate should be approved (<code>true</code>) or
 rejected (<code>false</code>).</li>
 </ul>
-<h4 id="-8"><a href="#-8"><weight></a></h4>
-<p>Key: C (len of candidates), M (len of members)</p>
+<h5 id="complexity-4"><a href="#complexity-4">Complexity</a></h5>
 <ul>
-<li>One storage read O(M) and O(log M) search to check user is a member.</li>
-<li>One account lookup.</li>
-<li>One storage read O(C) and O(C) search to check that user is a candidate.</li>
-<li>One storage write to add vote to votes. O(1)</li>
-<li>One event.</li>
+<li>O(M + logM + C)
+<ul>
+<li>C (len of candidates)</li>
+<li>M (len of members)</li>
 </ul>
-<p>Total Complexity: O(M + logM + C)</p>
-<h4 id="-9"><a href="#-9"></weight></a></h4></div><h3 id="variant.defender_vote" class="variant small-section-header"><a href="#variant.defender_vote" class="anchor field"></a><code>defender_vote</code></h3><div class="sub-variant" id="variant.defender_vote.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.defender_vote.field.approve" class="variant small-section-header"><a href="#variant.defender_vote.field.approve" class="anchor field"></a><code>approve:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>As a member, vote on the defender.</p>
+</li>
+</ul>
+</div><h3 id="variant.defender_vote" class="variant small-section-header"><a href="#variant.defender_vote" class="anchor field"></a><code>defender_vote</code></h3><div class="sub-variant" id="variant.defender_vote.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.defender_vote.field.approve" class="variant small-section-header"><a href="#variant.defender_vote.field.approve" class="anchor field"></a><code>approve:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>As a member, vote on the defender.</p>
 <p>The dispatch origin for this call must be <em>Signed</em> and a member.</p>
 <p>Parameters:</p>
 <ul>
 <li><code>approve</code>: A boolean which says if the candidate should be
 approved (<code>true</code>) or rejected (<code>false</code>).</li>
 </ul>
-<h4 id="-10"><a href="#-10"><weight></a></h4>
+<h5 id="complexity-5"><a href="#complexity-5">Complexity</a></h5>
 <ul>
-<li>Key: M (len of members)</li>
-<li>One storage read O(M) and O(log M) search to check user is a member.</li>
-<li>One storage write to add vote to votes. O(1)</li>
-<li>One event.</li>
+<li>O(M + logM)
+<ul>
+<li>M (len of members)</li>
 </ul>
-<p>Total Complexity: O(M + logM)</p>
-<h4 id="-11"><a href="#-11"></weight></a></h4></div><h3 id="variant.payout" class="variant small-section-header"><a href="#variant.payout" class="anchor field"></a><code>payout</code></h3><div class="sub-variant" id="variant.payout.fields"><h4>Fields</h4></div><div class="docblock"><p>Transfer the first matured payout for the sender and remove it from the records.</p>
+</li>
+</ul>
+</div><h3 id="variant.payout" class="variant small-section-header"><a href="#variant.payout" class="anchor field"></a><code>payout</code></h3><div class="sub-variant" id="variant.payout.fields"><h4>Fields</h4></div><div class="docblock"><p>Transfer the first matured payout for the sender and remove it from the records.</p>
 <p>NOTE: This extrinsic needs to be called multiple times to claim multiple matured
 payouts.</p>
 <p>Payment: The member will receive a payment equal to their first matured
 payout to their free balance.</p>
 <p>The dispatch origin for this call must be <em>Signed</em> and a member with
 payouts remaining.</p>
-<h4 id="-12"><a href="#-12"><weight></a></h4>
-<p>Key: M (len of members), P (number of payouts for a particular member)</p>
+<h5 id="complexity-6"><a href="#complexity-6">Complexity</a></h5>
 <ul>
-<li>One storage read O(M) and O(log M) search to check signer is a member.</li>
-<li>One storage read O(P) to get all payouts for a member.</li>
-<li>One storage read O(1) to get the current block number.</li>
-<li>One currency transfer call. O(X)</li>
-<li>One storage write or removal to update the member’s payouts. O(P)</li>
+<li>O(M + logM + P + X)
+<ul>
+<li>M (len of members)</li>
+<li>P (number of payouts for a particular member)</li>
+<li>X (currency transfer call)</li>
 </ul>
-<p>Total Complexity: O(M + logM + P + X)</p>
-<h4 id="-13"><a href="#-13"></weight></a></h4></div><h3 id="variant.found" class="variant small-section-header"><a href="#variant.found" class="anchor field"></a><code>found</code></h3><div class="sub-variant" id="variant.found.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.found.field.founder" class="variant small-section-header"><a href="#variant.found.field.founder" class="anchor field"></a><code>founder:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.found.field.max_members" class="variant small-section-header"><a href="#variant.found.field.max_members" class="anchor field"></a><code>max_members:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div><div class="sub-variant-field"><span id="variant.found.field.rules" class="variant small-section-header"><a href="#variant.found.field.rules" class="anchor field"></a><code>rules:&nbsp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a>&gt;</code></span></div></div><div class="docblock"><p>Found the society.</p>
+</li>
+</ul>
+</div><h3 id="variant.found" class="variant small-section-header"><a href="#variant.found" class="anchor field"></a><code>found</code></h3><div class="sub-variant" id="variant.found.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.found.field.founder" class="variant small-section-header"><a href="#variant.found.field.founder" class="anchor field"></a><code>founder:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.found.field.max_members" class="variant small-section-header"><a href="#variant.found.field.max_members" class="anchor field"></a><code>max_members:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div><div class="sub-variant-field"><span id="variant.found.field.rules" class="variant small-section-header"><a href="#variant.found.field.rules" class="anchor field"></a><code>rules:&nbsp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a>&gt;</code></span></div></div><div class="docblock"><p>Found the society.</p>
 <p>This is done as a discrete action in order to allow for the
 pallet to be included into a running chain and can only be done once.</p>
 <p>The dispatch origin for this call must be from the <em>FounderSetOrigin</em>.</p>
@@ -237,25 +177,19 @@ pallet to be included into a running chain and can only be done once.</p>
 <li><code>max_members</code> - The initial max number of members for the society.</li>
 <li><code>rules</code> - The rules of this society concerning membership.</li>
 </ul>
-<h4 id="-14"><a href="#-14"><weight></a></h4>
+<h5 id="complexity-7"><a href="#complexity-7">Complexity</a></h5>
 <ul>
-<li>Two storage mutates to set <code>Head</code> and <code>Founder</code>. O(1)</li>
-<li>One storage write to add the first member to society. O(1)</li>
-<li>One event.</li>
+<li>O(1)</li>
 </ul>
-<p>Total Complexity: O(1)</p>
-<h4 id="-15"><a href="#-15"></weight></a></h4></div><h3 id="variant.unfound" class="variant small-section-header"><a href="#variant.unfound" class="anchor field"></a><code>unfound</code></h3><div class="sub-variant" id="variant.unfound.fields"><h4>Fields</h4></div><div class="docblock"><p>Annul the founding of the society.</p>
+</div><h3 id="variant.unfound" class="variant small-section-header"><a href="#variant.unfound" class="anchor field"></a><code>unfound</code></h3><div class="sub-variant" id="variant.unfound.fields"><h4>Fields</h4></div><div class="docblock"><p>Annul the founding of the society.</p>
 <p>The dispatch origin for this call must be Signed, and the signing account must be both
 the <code>Founder</code> and the <code>Head</code>. This implies that it may only be done when there is one
 member.</p>
-<h4 id="-16"><a href="#-16"><weight></a></h4>
+<h5 id="complexity-8"><a href="#complexity-8">Complexity</a></h5>
 <ul>
-<li>Two storage reads O(1).</li>
-<li>Four storage removals O(1).</li>
-<li>One event.</li>
+<li>O(1)</li>
 </ul>
-<p>Total Complexity: O(1)</p>
-<h4 id="-17"><a href="#-17"></weight></a></h4></div><h3 id="variant.judge_suspended_member" class="variant small-section-header"><a href="#variant.judge_suspended_member" class="anchor field"></a><code>judge_suspended_member</code></h3><div class="sub-variant" id="variant.judge_suspended_member.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.judge_suspended_member.field.who" class="variant small-section-header"><a href="#variant.judge_suspended_member.field.who" class="anchor field"></a><code>who:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.judge_suspended_member.field.forgive" class="variant small-section-header"><a href="#variant.judge_suspended_member.field.forgive" class="anchor field"></a><code>forgive:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>Allow suspension judgement origin to make judgement on a suspended member.</p>
+</div><h3 id="variant.judge_suspended_member" class="variant small-section-header"><a href="#variant.judge_suspended_member" class="anchor field"></a><code>judge_suspended_member</code></h3><div class="sub-variant" id="variant.judge_suspended_member.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.judge_suspended_member.field.who" class="variant small-section-header"><a href="#variant.judge_suspended_member.field.who" class="anchor field"></a><code>who:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.judge_suspended_member.field.forgive" class="variant small-section-header"><a href="#variant.judge_suspended_member.field.forgive" class="anchor field"></a><code>forgive:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>Allow suspension judgement origin to make judgement on a suspended member.</p>
 <p>If a suspended member is forgiven, we simply add them back as a member, not affecting
 any of the existing storage items for that member.</p>
 <p>If a suspended member is rejected, remove all associated storage items, including
@@ -267,20 +201,16 @@ their payouts, and remove any vouched bids they currently have.</p>
 <li><code>forgive</code> - A boolean representing whether the suspension judgement origin forgives
 (<code>true</code>) or rejects (<code>false</code>) a suspended member.</li>
 </ul>
-<h4 id="-18"><a href="#-18"><weight></a></h4>
-<p>Key: B (len of bids), M (len of members)</p>
+<h5 id="complexity-9"><a href="#complexity-9">Complexity</a></h5>
 <ul>
-<li>One storage read to check <code>who</code> is a suspended member. O(1)</li>
-<li>Up to one storage write O(M) with O(log M) binary search to add a member back to
-society.</li>
-<li>Up to 3 storage removals O(1) to clean up a removed member.</li>
-<li>Up to one storage write O(B) with O(B) search to remove vouched bid from bids.</li>
-<li>Up to one additional event if unvouch takes place.</li>
-<li>One storage removal. O(1)</li>
-<li>One event for the judgement.</li>
+<li>O(M + logM + B)
+<ul>
+<li>B (len of bids)</li>
+<li>M (len of members)</li>
 </ul>
-<p>Total Complexity: O(M + logM + B)</p>
-<h4 id="-19"><a href="#-19"></weight></a></h4></div><h3 id="variant.judge_suspended_candidate" class="variant small-section-header"><a href="#variant.judge_suspended_candidate" class="anchor field"></a><code>judge_suspended_candidate</code></h3><div class="sub-variant" id="variant.judge_suspended_candidate.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.judge_suspended_candidate.field.who" class="variant small-section-header"><a href="#variant.judge_suspended_candidate.field.who" class="anchor field"></a><code>who:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.judge_suspended_candidate.field.judgement" class="variant small-section-header"><a href="#variant.judge_suspended_candidate.field.judgement" class="anchor field"></a><code>judgement:&nbsp;<a class="enum" href="../enum.Judgement.html" title="enum pallet_society::Judgement">Judgement</a></code></span></div></div><div class="docblock"><p>Allow suspended judgement origin to make judgement on a suspended candidate.</p>
+</li>
+</ul>
+</div><h3 id="variant.judge_suspended_candidate" class="variant small-section-header"><a href="#variant.judge_suspended_candidate" class="anchor field"></a><code>judge_suspended_candidate</code></h3><div class="sub-variant" id="variant.judge_suspended_candidate.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.judge_suspended_candidate.field.who" class="variant small-section-header"><a href="#variant.judge_suspended_candidate.field.who" class="anchor field"></a><code>who:&nbsp;&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a></code></span></div><div class="sub-variant-field"><span id="variant.judge_suspended_candidate.field.judgement" class="variant small-section-header"><a href="#variant.judge_suspended_candidate.field.judgement" class="anchor field"></a><code>judgement:&nbsp;<a class="enum" href="../enum.Judgement.html" title="enum pallet_society::Judgement">Judgement</a></code></span></div></div><div class="docblock"><p>Allow suspended judgement origin to make judgement on a suspended candidate.</p>
 <p>If the judgement is <code>Approve</code>, we add them to society as a member with the appropriate
 payment for joining society.</p>
 <p>If the judgement is <code>Reject</code>, we either slash the deposit of the bid, giving it back
@@ -293,52 +223,28 @@ through the induction process again.</p>
 <li><code>who</code> - The suspended candidate to be judged.</li>
 <li><code>judgement</code> - <code>Approve</code>, <code>Reject</code>, or <code>Rebid</code>.</li>
 </ul>
-<h4 id="-20"><a href="#-20"><weight></a></h4>
-<p>Key: B (len of bids), M (len of members), X (balance action)</p>
+<h5 id="complexity-10"><a href="#complexity-10">Complexity</a></h5>
 <ul>
-<li>One storage read to check <code>who</code> is a suspended candidate.</li>
-<li>One storage removal of the suspended candidate.</li>
-<li>Approve Logic
+<li>O(M + logM + B + X)
 <ul>
-<li>One storage read to get the available pot to pay users with. O(1)</li>
-<li>One storage write to update the available pot. O(1)</li>
-<li>One storage read to get the current block number. O(1)</li>
-<li>One storage read to get all members. O(M)</li>
-<li>Up to one unreserve currency action.</li>
-<li>Up to two new storage writes to payouts.</li>
-<li>Up to one storage write with O(log M) binary search to add a member to society.</li>
+<li>B (len of bids)</li>
+<li>M (len of members)</li>
+<li>X (balance action)</li>
 </ul>
 </li>
-<li>Reject Logic
-<ul>
-<li>Up to one repatriate reserved currency action. O(X)</li>
-<li>Up to one storage write to ban the vouching member from vouching again.</li>
 </ul>
-</li>
-<li>Rebid Logic
-<ul>
-<li>Storage mutate with O(log B) binary search to place the user back into bids.</li>
-</ul>
-</li>
-<li>Up to one additional event if unvouch takes place.</li>
-<li>One storage removal.</li>
-<li>One event for the judgement.</li>
-</ul>
-<p>Total Complexity: O(M + logM + B + X)</p>
-<h4 id="-21"><a href="#-21"></weight></a></h4></div><h3 id="variant.set_max_members" class="variant small-section-header"><a href="#variant.set_max_members" class="anchor field"></a><code>set_max_members</code></h3><div class="sub-variant" id="variant.set_max_members.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.set_max_members.field.max" class="variant small-section-header"><a href="#variant.set_max_members.field.max" class="anchor field"></a><code>max:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Allows root origin to change the maximum number of members in society.
+</div><h3 id="variant.set_max_members" class="variant small-section-header"><a href="#variant.set_max_members" class="anchor field"></a><code>set_max_members</code></h3><div class="sub-variant" id="variant.set_max_members.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.set_max_members.field.max" class="variant small-section-header"><a href="#variant.set_max_members.field.max" class="anchor field"></a><code>max:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Allows root origin to change the maximum number of members in society.
 Max membership count must be greater than 1.</p>
 <p>The dispatch origin for this call must be from <em>ROOT</em>.</p>
 <p>Parameters:</p>
 <ul>
 <li><code>max</code> - The maximum number of members for the society.</li>
 </ul>
-<h4 id="-22"><a href="#-22"><weight></a></h4>
+<h5 id="complexity-11"><a href="#complexity-11">Complexity</a></h5>
 <ul>
-<li>One storage write to update the max. O(1)</li>
-<li>One event.</li>
+<li>O(1)</li>
 </ul>
-<p>Total Complexity: O(1)</p>
-<h4 id="-23"><a href="#-23"></weight></a></h4></div><h2 id="implementations" class="small-section-header">Implementations<a href="#implementations" class="anchor"></a></h2><div id="implementations-list"><details class="rustdoc-toggle implementors-toggle" open><summary><section id="impl-Call%3CT%2C%20I%3E" class="impl has-srclink"><a class="srclink rightside" href="../../src/pallet_society/lib.rs.html#680">source</a><a href="#impl-Call%3CT%2C%20I%3E" class="anchor"></a><h3 class="code-header">impl&lt;T:&nbsp;<a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;, I:&nbsp;'static&gt; <a class="enum" href="enum.Call.html" title="enum pallet_society::pallet::Call">Call</a>&lt;T, I&gt;</h3></section></summary><div class="impl-items"><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_bid" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_society/lib.rs.html#680">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_bid" class="fnname">new_call_variant_bid</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;value: &lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>bid</code>.</p>
+</div><h2 id="implementations" class="small-section-header">Implementations<a href="#implementations" class="anchor"></a></h2><div id="implementations-list"><details class="rustdoc-toggle implementors-toggle" open><summary><section id="impl-Call%3CT%2C%20I%3E" class="impl has-srclink"><a class="srclink rightside" href="../../src/pallet_society/lib.rs.html#680">source</a><a href="#impl-Call%3CT%2C%20I%3E" class="anchor"></a><h3 class="code-header">impl&lt;T:&nbsp;<a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;, I:&nbsp;'static&gt; <a class="enum" href="enum.Call.html" title="enum pallet_society::pallet::Call">Call</a>&lt;T, I&gt;</h3></section></summary><div class="impl-items"><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_bid" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_society/lib.rs.html#680">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_bid" class="fnname">new_call_variant_bid</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;value: &lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>bid</code>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_unbid" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_society/lib.rs.html#680">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_unbid" class="fnname">new_call_variant_unbid</a>(pos: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>unbid</code>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_vouch" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_society/lib.rs.html#680">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_vouch" class="fnname">new_call_variant_vouch</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;who: &lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Lookup" title="type frame_system::pallet::Config::Lookup">Lookup</a> as <a class="trait" href="../../sp_runtime/traits/trait.StaticLookup.html" title="trait sp_runtime::traits::StaticLookup">StaticLookup</a>&gt;::<a class="associatedtype" href="../../sp_runtime/traits/trait.StaticLookup.html#associatedtype.Source" title="type sp_runtime::traits::StaticLookup::Source">Source</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;value: &lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;tip: &lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_society::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Currency" title="type pallet_society::pallet::Config::Currency">Currency</a> as <a class="trait" href="../../frame_support/traits/tokens/currency/trait.Currency.html" title="trait frame_support::traits::tokens::currency::Currency">Currency</a>&lt;&lt;T as <a class="trait" href="../../frame_system/pallet/trait.Config.html" title="trait frame_system::pallet::Config">Config</a>&gt;::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;&gt;::<a class="associatedtype" href="../../frame_support/traits/tokens/currency/trait.Currency.html#associatedtype.Balance" title="type frame_support::traits::tokens::currency::Currency::Balance">Balance</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>vouch</code>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_unvouch" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_society/lib.rs.html#680">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_unvouch" class="fnname">new_call_variant_unvouch</a>(pos: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>unvouch</code>.</p>

@@ -50,7 +50,7 @@ the weight estimations rely on it to estimate dispatchable weight.</p>
 implementation of the trait <a href="../../frame_support/traits/members/trait.ChangeMembers.html" title="ChangeMembers"><code>ChangeMembers</code></a>.
 Any call to <code>set_members</code> must be careful that the member set doesn’t get out of sync
 with other logic managing the member set.</p>
-<h4 id=""><a href="#"><weight></a></h4><h5 id="weight"><a href="#weight">Weight</a></h5>
+<h5 id="complexity"><a href="#complexity">Complexity:</a></h5>
 <ul>
 <li><code>O(MP + N)</code> where:
 <ul>
@@ -59,30 +59,21 @@ with other logic managing the member set.</p>
 <li><code>P</code> proposals-count (code-bounded)</li>
 </ul>
 </li>
-<li>DB:
-<ul>
-<li>1 storage mutation (codec <code>O(M)</code> read, <code>O(N)</code> write) for reading and writing the
-members</li>
-<li>1 storage read (codec <code>O(P)</code>) for reading the proposals</li>
-<li><code>P</code> storage mutations (codec <code>O(M)</code>) for updating the votes for each proposal</li>
-<li>1 storage write (codec <code>O(1)</code>) for deleting the old <code>prime</code> and setting the new one</li>
 </ul>
-</li>
-</ul>
-<h4 id="-1"><a href="#-1"></weight></a></h4></div><h3 id="variant.execute" class="variant small-section-header"><a href="#variant.execute" class="anchor field"></a><code>execute</code></h3><div class="sub-variant" id="variant.execute.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.execute.field.proposal" class="variant small-section-header"><a href="#variant.execute.field.proposal" class="anchor field"></a><code>proposal:&nbsp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Proposal" title="type pallet_collective::pallet::Config::Proposal">Proposal</a>&gt;</code></span></div><div class="sub-variant-field"><span id="variant.execute.field.length_bound" class="variant small-section-header"><a href="#variant.execute.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Dispatch a proposal from a member using the <code>Member</code> origin.</p>
+</div><h3 id="variant.execute" class="variant small-section-header"><a href="#variant.execute" class="anchor field"></a><code>execute</code></h3><div class="sub-variant" id="variant.execute.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.execute.field.proposal" class="variant small-section-header"><a href="#variant.execute.field.proposal" class="anchor field"></a><code>proposal:&nbsp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Proposal" title="type pallet_collective::pallet::Config::Proposal">Proposal</a>&gt;</code></span></div><div class="sub-variant-field"><span id="variant.execute.field.length_bound" class="variant small-section-header"><a href="#variant.execute.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Dispatch a proposal from a member using the <code>Member</code> origin.</p>
 <p>Origin must be a member of the collective.</p>
-<h4 id="-2"><a href="#-2"><weight></a></h4><h5 id="weight-1"><a href="#weight-1">Weight</a></h5>
+<h5 id="complexity-1"><a href="#complexity-1">Complexity:</a></h5>
 <ul>
-<li><code>O(M + P)</code> where <code>M</code> members-count (code-bounded) and <code>P</code> complexity of dispatching
-<code>proposal</code></li>
-<li>DB: 1 read (codec <code>O(M)</code>) + DB access of <code>proposal</code></li>
-<li>1 event</li>
+<li><code>O(B + M + P)</code> where:</li>
+<li><code>B</code> is <code>proposal</code> size in bytes (length-fee-bounded)</li>
+<li><code>M</code> members-count (code-bounded)</li>
+<li><code>P</code> complexity of dispatching <code>proposal</code></li>
 </ul>
-<h4 id="-3"><a href="#-3"></weight></a></h4></div><h3 id="variant.propose" class="variant small-section-header"><a href="#variant.propose" class="anchor field"></a><code>propose</code></h3><div class="sub-variant" id="variant.propose.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.propose.field.threshold" class="variant small-section-header"><a href="#variant.propose.field.threshold" class="anchor field"></a><code>threshold:&nbsp;<a class="type" href="../type.MemberCount.html" title="type pallet_collective::MemberCount">MemberCount</a></code></span></div><div class="sub-variant-field"><span id="variant.propose.field.proposal" class="variant small-section-header"><a href="#variant.propose.field.proposal" class="anchor field"></a><code>proposal:&nbsp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Proposal" title="type pallet_collective::pallet::Config::Proposal">Proposal</a>&gt;</code></span></div><div class="sub-variant-field"><span id="variant.propose.field.length_bound" class="variant small-section-header"><a href="#variant.propose.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Add a new proposal to either be voted on or executed directly.</p>
+</div><h3 id="variant.propose" class="variant small-section-header"><a href="#variant.propose" class="anchor field"></a><code>propose</code></h3><div class="sub-variant" id="variant.propose.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.propose.field.threshold" class="variant small-section-header"><a href="#variant.propose.field.threshold" class="anchor field"></a><code>threshold:&nbsp;<a class="type" href="../type.MemberCount.html" title="type pallet_collective::MemberCount">MemberCount</a></code></span></div><div class="sub-variant-field"><span id="variant.propose.field.proposal" class="variant small-section-header"><a href="#variant.propose.field.proposal" class="anchor field"></a><code>proposal:&nbsp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Proposal" title="type pallet_collective::pallet::Config::Proposal">Proposal</a>&gt;</code></span></div><div class="sub-variant-field"><span id="variant.propose.field.length_bound" class="variant small-section-header"><a href="#variant.propose.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Add a new proposal to either be voted on or executed directly.</p>
 <p>Requires the sender to be member.</p>
 <p><code>threshold</code> determines whether <code>proposal</code> is executed directly (<code>threshold &lt; 2</code>)
 or put up for voting.</p>
-<h4 id="-4"><a href="#-4"><weight></a></h4><h5 id="weight-2"><a href="#weight-2">Weight</a></h5>
+<h5 id="complexity-2"><a href="#complexity-2">Complexity</a></h5>
 <ul>
 <li><code>O(B + M + P1)</code> or <code>O(B + M + P2)</code> where:
 <ul>
@@ -96,44 +87,17 @@ or put up for voting.</p>
 </li>
 </ul>
 </li>
-<li>DB:
-<ul>
-<li>1 storage read <code>is_member</code> (codec <code>O(M)</code>)</li>
-<li>1 storage read <code>ProposalOf::contains_key</code> (codec <code>O(1)</code>)</li>
-<li>DB accesses influenced by <code>threshold</code>:
-<ul>
-<li>EITHER storage accesses done by <code>proposal</code> (<code>threshold &lt; 2</code>)</li>
-<li>OR proposal insertion (<code>threshold &lt;= 2</code>)
-<ul>
-<li>1 storage mutation <code>Proposals</code> (codec <code>O(P2)</code>)</li>
-<li>1 storage mutation <code>ProposalCount</code> (codec <code>O(1)</code>)</li>
-<li>1 storage write <code>ProposalOf</code> (codec <code>O(B)</code>)</li>
-<li>1 storage write <code>Voting</code> (codec <code>O(M)</code>)</li>
 </ul>
-</li>
-</ul>
-</li>
-<li>1 event</li>
-</ul>
-</li>
-</ul>
-<h4 id="-5"><a href="#-5"></weight></a></h4></div><h3 id="variant.vote" class="variant small-section-header"><a href="#variant.vote" class="anchor field"></a><code>vote</code></h3><div class="sub-variant" id="variant.vote.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.vote.field.proposal" class="variant small-section-header"><a href="#variant.vote.field.proposal" class="anchor field"></a><code>proposal:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div><div class="sub-variant-field"><span id="variant.vote.field.index" class="variant small-section-header"><a href="#variant.vote.field.index" class="anchor field"></a><code>index:&nbsp;<a class="type" href="../type.ProposalIndex.html" title="type pallet_collective::ProposalIndex">ProposalIndex</a></code></span></div><div class="sub-variant-field"><span id="variant.vote.field.approve" class="variant small-section-header"><a href="#variant.vote.field.approve" class="anchor field"></a><code>approve:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>Add an aye or nay vote for the sender to the given proposal.</p>
+</div><h3 id="variant.vote" class="variant small-section-header"><a href="#variant.vote" class="anchor field"></a><code>vote</code></h3><div class="sub-variant" id="variant.vote.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.vote.field.proposal" class="variant small-section-header"><a href="#variant.vote.field.proposal" class="anchor field"></a><code>proposal:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div><div class="sub-variant-field"><span id="variant.vote.field.index" class="variant small-section-header"><a href="#variant.vote.field.index" class="anchor field"></a><code>index:&nbsp;<a class="type" href="../type.ProposalIndex.html" title="type pallet_collective::ProposalIndex">ProposalIndex</a></code></span></div><div class="sub-variant-field"><span id="variant.vote.field.approve" class="variant small-section-header"><a href="#variant.vote.field.approve" class="anchor field"></a><code>approve:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></div></div><div class="docblock"><p>Add an aye or nay vote for the sender to the given proposal.</p>
 <p>Requires the sender to be a member.</p>
 <p>Transaction fees will be waived if the member is voting on any particular proposal
 for the first time and the call is successful. Subsequent vote changes will charge a
 fee.</p>
-<h4 id="-6"><a href="#-6"><weight></a></h4><h5 id="weight-3"><a href="#weight-3">Weight</a></h5>
+<h5 id="complexity-3"><a href="#complexity-3">Complexity</a></h5>
 <ul>
 <li><code>O(M)</code> where <code>M</code> is members-count (code- and governance-bounded)</li>
-<li>DB:
-<ul>
-<li>1 storage read <code>Members</code> (codec <code>O(M)</code>)</li>
-<li>1 storage mutation <code>Voting</code> (codec <code>O(M)</code>)</li>
 </ul>
-</li>
-<li>1 event</li>
-</ul>
-<h4 id="-7"><a href="#-7"></weight></a></h4></div><h3 id="variant.close_old_weight" class="variant small-section-header"><a href="#variant.close_old_weight" class="anchor field"></a><code>close_old_weight</code></h3><div class="sub-variant" id="variant.close_old_weight.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.close_old_weight.field.proposal_hash" class="variant small-section-header"><a href="#variant.close_old_weight.field.proposal_hash" class="anchor field"></a><code>proposal_hash:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div><div class="sub-variant-field"><span id="variant.close_old_weight.field.index" class="variant small-section-header"><a href="#variant.close_old_weight.field.index" class="anchor field"></a><code>index:&nbsp;<a class="type" href="../type.ProposalIndex.html" title="type pallet_collective::ProposalIndex">ProposalIndex</a></code></span></div><div class="sub-variant-field"><span id="variant.close_old_weight.field.proposal_weight_bound" class="variant small-section-header"><a href="#variant.close_old_weight.field.proposal_weight_bound" class="anchor field"></a><code>proposal_weight_bound:&nbsp;<a class="struct" href="../../sp_weights/struct.OldWeight.html" title="struct sp_weights::OldWeight">OldWeight</a></code></span></div><div class="sub-variant-field"><span id="variant.close_old_weight.field.length_bound" class="variant small-section-header"><a href="#variant.close_old_weight.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Close a vote that is either approved, disapproved or whose voting period has ended.</p>
+</div><h3 id="variant.close_old_weight" class="variant small-section-header"><a href="#variant.close_old_weight" class="anchor field"></a><code>close_old_weight</code></h3><div class="sub-variant" id="variant.close_old_weight.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.close_old_weight.field.proposal_hash" class="variant small-section-header"><a href="#variant.close_old_weight.field.proposal_hash" class="anchor field"></a><code>proposal_hash:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div><div class="sub-variant-field"><span id="variant.close_old_weight.field.index" class="variant small-section-header"><a href="#variant.close_old_weight.field.index" class="anchor field"></a><code>index:&nbsp;<a class="type" href="../type.ProposalIndex.html" title="type pallet_collective::ProposalIndex">ProposalIndex</a></code></span></div><div class="sub-variant-field"><span id="variant.close_old_weight.field.proposal_weight_bound" class="variant small-section-header"><a href="#variant.close_old_weight.field.proposal_weight_bound" class="anchor field"></a><code>proposal_weight_bound:&nbsp;<a class="struct" href="../../sp_weights/struct.OldWeight.html" title="struct sp_weights::OldWeight">OldWeight</a></code></span></div><div class="sub-variant-field"><span id="variant.close_old_weight.field.length_bound" class="variant small-section-header"><a href="#variant.close_old_weight.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Close a vote that is either approved, disapproved or whose voting period has ended.</p>
 <p>May be called by any signed account in order to finish voting and close the proposal.</p>
 <p>If called before the end of the voting period it will only close the vote if it is
 has enough votes to be approved or disapproved.</p>
@@ -147,7 +111,7 @@ proposal.</li>
 <li><code>length_bound</code>: The upper bound for the length of the proposal in storage. Checked via
 <code>storage::read</code> so it is <code>size_of::&lt;u32&gt;() == 4</code> larger than the pure length.</li>
 </ul>
-<h4 id="-8"><a href="#-8"><weight></a></h4><h5 id="weight-4"><a href="#weight-4">Weight</a></h5>
+<h5 id="complexity-4"><a href="#complexity-4">Complexity</a></h5>
 <ul>
 <li><code>O(B + M + P1 + P2)</code> where:
 <ul>
@@ -157,28 +121,17 @@ proposal.</li>
 <li><code>P2</code> is proposal-count (code-bounded)</li>
 </ul>
 </li>
-<li>DB:</li>
-<li>2 storage reads (<code>Members</code>: codec <code>O(M)</code>, <code>Prime</code>: codec <code>O(1)</code>)</li>
-<li>3 mutations (<code>Voting</code>: codec <code>O(M)</code>, <code>ProposalOf</code>: codec <code>O(B)</code>, <code>Proposals</code>: codec
-<code>O(P2)</code>)</li>
-<li>any mutations done while executing <code>proposal</code> (<code>P1</code>)</li>
-<li>up to 3 events</li>
 </ul>
-<h4 id="-9"><a href="#-9"></weight></a></h4></div><h3 id="variant.disapprove_proposal" class="variant small-section-header"><a href="#variant.disapprove_proposal" class="anchor field"></a><code>disapprove_proposal</code></h3><div class="sub-variant" id="variant.disapprove_proposal.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.disapprove_proposal.field.proposal_hash" class="variant small-section-header"><a href="#variant.disapprove_proposal.field.proposal_hash" class="anchor field"></a><code>proposal_hash:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div></div><div class="docblock"><p>Disapprove a proposal, close, and remove it from the system, regardless of its current
+</div><h3 id="variant.disapprove_proposal" class="variant small-section-header"><a href="#variant.disapprove_proposal" class="anchor field"></a><code>disapprove_proposal</code></h3><div class="sub-variant" id="variant.disapprove_proposal.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.disapprove_proposal.field.proposal_hash" class="variant small-section-header"><a href="#variant.disapprove_proposal.field.proposal_hash" class="anchor field"></a><code>proposal_hash:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div></div><div class="docblock"><p>Disapprove a proposal, close, and remove it from the system, regardless of its current
 state.</p>
 <p>Must be called by the Root origin.</p>
 <p>Parameters:</p>
 <ul>
 <li><code>proposal_hash</code>: The hash of the proposal that should be disapproved.</li>
 </ul>
-<h4 id="-10"><a href="#-10"><weight></a></h4>
-<p>Complexity: O(P) where P is the number of max proposals
-DB Weight:</p>
-<ul>
-<li>Reads: Proposals</li>
-<li>Writes: Voting, Proposals, ProposalOf</li>
-</ul>
-<h4 id="-11"><a href="#-11"></weight></a></h4></div><h3 id="variant.close" class="variant small-section-header"><a href="#variant.close" class="anchor field"></a><code>close</code></h3><div class="sub-variant" id="variant.close.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.close.field.proposal_hash" class="variant small-section-header"><a href="#variant.close.field.proposal_hash" class="anchor field"></a><code>proposal_hash:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div><div class="sub-variant-field"><span id="variant.close.field.index" class="variant small-section-header"><a href="#variant.close.field.index" class="anchor field"></a><code>index:&nbsp;<a class="type" href="../type.ProposalIndex.html" title="type pallet_collective::ProposalIndex">ProposalIndex</a></code></span></div><div class="sub-variant-field"><span id="variant.close.field.proposal_weight_bound" class="variant small-section-header"><a href="#variant.close.field.proposal_weight_bound" class="anchor field"></a><code>proposal_weight_bound:&nbsp;<a class="struct" href="../../sp_weights/weight_v2/struct.Weight.html" title="struct sp_weights::weight_v2::Weight">Weight</a></code></span></div><div class="sub-variant-field"><span id="variant.close.field.length_bound" class="variant small-section-header"><a href="#variant.close.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Close a vote that is either approved, disapproved or whose voting period has ended.</p>
+<h5 id="complexity-5"><a href="#complexity-5">Complexity</a></h5>
+<p>O(P) where P is the number of max proposals</p>
+</div><h3 id="variant.close" class="variant small-section-header"><a href="#variant.close" class="anchor field"></a><code>close</code></h3><div class="sub-variant" id="variant.close.fields"><h4>Fields</h4><div class="sub-variant-field"><span id="variant.close.field.proposal_hash" class="variant small-section-header"><a href="#variant.close.field.proposal_hash" class="anchor field"></a><code>proposal_hash:&nbsp;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a></code></span></div><div class="sub-variant-field"><span id="variant.close.field.index" class="variant small-section-header"><a href="#variant.close.field.index" class="anchor field"></a><code>index:&nbsp;<a class="type" href="../type.ProposalIndex.html" title="type pallet_collective::ProposalIndex">ProposalIndex</a></code></span></div><div class="sub-variant-field"><span id="variant.close.field.proposal_weight_bound" class="variant small-section-header"><a href="#variant.close.field.proposal_weight_bound" class="anchor field"></a><code>proposal_weight_bound:&nbsp;<a class="struct" href="../../sp_weights/weight_v2/struct.Weight.html" title="struct sp_weights::weight_v2::Weight">Weight</a></code></span></div><div class="sub-variant-field"><span id="variant.close.field.length_bound" class="variant small-section-header"><a href="#variant.close.field.length_bound" class="anchor field"></a><code>length_bound:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></span></div></div><div class="docblock"><p>Close a vote that is either approved, disapproved or whose voting period has ended.</p>
 <p>May be called by any signed account in order to finish voting and close the proposal.</p>
 <p>If called before the end of the voting period it will only close the vote if it is
 has enough votes to be approved or disapproved.</p>
@@ -192,7 +145,7 @@ proposal.</li>
 <li><code>length_bound</code>: The upper bound for the length of the proposal in storage. Checked via
 <code>storage::read</code> so it is <code>size_of::&lt;u32&gt;() == 4</code> larger than the pure length.</li>
 </ul>
-<h4 id="-12"><a href="#-12"><weight></a></h4><h5 id="weight-5"><a href="#weight-5">Weight</a></h5>
+<h5 id="complexity-6"><a href="#complexity-6">Complexity</a></h5>
 <ul>
 <li><code>O(B + M + P1 + P2)</code> where:
 <ul>
@@ -202,14 +155,8 @@ proposal.</li>
 <li><code>P2</code> is proposal-count (code-bounded)</li>
 </ul>
 </li>
-<li>DB:</li>
-<li>2 storage reads (<code>Members</code>: codec <code>O(M)</code>, <code>Prime</code>: codec <code>O(1)</code>)</li>
-<li>3 mutations (<code>Voting</code>: codec <code>O(M)</code>, <code>ProposalOf</code>: codec <code>O(B)</code>, <code>Proposals</code>: codec
-<code>O(P2)</code>)</li>
-<li>any mutations done while executing <code>proposal</code> (<code>P1</code>)</li>
-<li>up to 3 events</li>
 </ul>
-<h4 id="-13"><a href="#-13"></weight></a></h4></div><h2 id="implementations" class="small-section-header">Implementations<a href="#implementations" class="anchor"></a></h2><div id="implementations-list"><details class="rustdoc-toggle implementors-toggle" open><summary><section id="impl-Call%3CT%2C%20I%3E" class="impl has-srclink"><a class="srclink rightside" href="../../src/pallet_collective/lib.rs.html#346">source</a><a href="#impl-Call%3CT%2C%20I%3E" class="anchor"></a><h3 class="code-header">impl&lt;T:&nbsp;<a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;, I:&nbsp;'static&gt; <a class="enum" href="enum.Call.html" title="enum pallet_collective::pallet::Call">Call</a>&lt;T, I&gt;</h3></section></summary><div class="impl-items"><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_set_members" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_collective/lib.rs.html#346">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_set_members" class="fnname">new_call_variant_set_members</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;new_members: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;prime: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;old_count: <a class="type" href="../type.MemberCount.html" title="type pallet_collective::MemberCount">MemberCount</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>set_members</code>.</p>
+</div><h2 id="implementations" class="small-section-header">Implementations<a href="#implementations" class="anchor"></a></h2><div id="implementations-list"><details class="rustdoc-toggle implementors-toggle" open><summary><section id="impl-Call%3CT%2C%20I%3E" class="impl has-srclink"><a class="srclink rightside" href="../../src/pallet_collective/lib.rs.html#346">source</a><a href="#impl-Call%3CT%2C%20I%3E" class="anchor"></a><h3 class="code-header">impl&lt;T:&nbsp;<a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;, I:&nbsp;'static&gt; <a class="enum" href="enum.Call.html" title="enum pallet_collective::pallet::Call">Call</a>&lt;T, I&gt;</h3></section></summary><div class="impl-items"><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_set_members" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_collective/lib.rs.html#346">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_set_members" class="fnname">new_call_variant_set_members</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;new_members: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;prime: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.AccountId" title="type frame_system::pallet::Config::AccountId">AccountId</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;old_count: <a class="type" href="../type.MemberCount.html" title="type pallet_collective::MemberCount">MemberCount</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>set_members</code>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_execute" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_collective/lib.rs.html#346">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_execute" class="fnname">new_call_variant_execute</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;proposal: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Proposal" title="type pallet_collective::pallet::Config::Proposal">Proposal</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;length_bound: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>execute</code>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_propose" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_collective/lib.rs.html#346">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_propose" class="fnname">new_call_variant_propose</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;threshold: <a class="type" href="../type.MemberCount.html" title="type pallet_collective::MemberCount">MemberCount</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;proposal: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;&lt;T as <a class="trait" href="trait.Config.html" title="trait pallet_collective::pallet::Config">Config</a>&lt;I&gt;&gt;::<a class="associatedtype" href="trait.Config.html#associatedtype.Proposal" title="type pallet_collective::pallet::Config::Proposal">Proposal</a>&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;length_bound: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>propose</code>.</p>
 </div></details><details class="rustdoc-toggle method-toggle" open><summary><section id="method.new_call_variant_vote" class="method has-srclink"><a class="srclink rightside" href="../../src/pallet_collective/lib.rs.html#346">source</a><h4 class="code-header">pub fn <a href="#method.new_call_variant_vote" class="fnname">new_call_variant_vote</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;proposal: T::<a class="associatedtype" href="../../frame_system/pallet/trait.Config.html#associatedtype.Hash" title="type frame_system::pallet::Config::Hash">Hash</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;index: <a class="type" href="../type.ProposalIndex.html" title="type pallet_collective::ProposalIndex">ProposalIndex</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;approve: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a><br>) -&gt; Self</h4></section></summary><div class="docblock"><p>Create a call with the variant <code>vote</code>.</p>

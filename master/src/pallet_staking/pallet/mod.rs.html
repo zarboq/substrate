@@ -1783,41 +1783,6 @@
 <a href="#1783" id="1783">1783</a>
 <a href="#1784" id="1784">1784</a>
 <a href="#1785" id="1785">1785</a>
-<a href="#1786" id="1786">1786</a>
-<a href="#1787" id="1787">1787</a>
-<a href="#1788" id="1788">1788</a>
-<a href="#1789" id="1789">1789</a>
-<a href="#1790" id="1790">1790</a>
-<a href="#1791" id="1791">1791</a>
-<a href="#1792" id="1792">1792</a>
-<a href="#1793" id="1793">1793</a>
-<a href="#1794" id="1794">1794</a>
-<a href="#1795" id="1795">1795</a>
-<a href="#1796" id="1796">1796</a>
-<a href="#1797" id="1797">1797</a>
-<a href="#1798" id="1798">1798</a>
-<a href="#1799" id="1799">1799</a>
-<a href="#1800" id="1800">1800</a>
-<a href="#1801" id="1801">1801</a>
-<a href="#1802" id="1802">1802</a>
-<a href="#1803" id="1803">1803</a>
-<a href="#1804" id="1804">1804</a>
-<a href="#1805" id="1805">1805</a>
-<a href="#1806" id="1806">1806</a>
-<a href="#1807" id="1807">1807</a>
-<a href="#1808" id="1808">1808</a>
-<a href="#1809" id="1809">1809</a>
-<a href="#1810" id="1810">1810</a>
-<a href="#1811" id="1811">1811</a>
-<a href="#1812" id="1812">1812</a>
-<a href="#1813" id="1813">1813</a>
-<a href="#1814" id="1814">1814</a>
-<a href="#1815" id="1815">1815</a>
-<a href="#1816" id="1816">1816</a>
-<a href="#1817" id="1817">1817</a>
-<a href="#1818" id="1818">1818</a>
-<a href="#1819" id="1819">1819</a>
-<a href="#1820" id="1820">1820</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2660,15 +2625,13 @@
 		/// The dispatch origin for this call must be _Signed_ by the stash account.
 		///
 		/// Emits `Bonded`.
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - Independent of the arguments. Moderate complexity.
 		/// - O(1).
 		/// - Three extra DB entries.
 		///
 		/// NOTE: Two of the storage writes (`Self::bonded`, `Self::payee`) are _never_ cleaned
 		/// unless the `origin` falls below _existential deposit_ and gets removed as dust.
-		/// ------------------
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
 		#[pallet::weight(T::WeightInfo::bond())]
 		</span><span class="kw">pub fn </span>bond(
@@ -2735,10 +2698,9 @@
 		///
 		/// Emits `Bonded`.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - Independent of the arguments. Insignificant complexity.
 		/// - O(1).
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
 		#[pallet::weight(T::WeightInfo::bond_extra())]
 		</span><span class="kw">pub fn </span>bond_extra(
@@ -2896,10 +2858,9 @@
 		///
 		/// See also [`Call::unbond`].
 		///
-		/// # &lt;weight&gt;
-		/// Complexity O(S) where S is the number of slashing spans to remove
+		/// ## Complexity
+		/// O(S) where S is the number of slashing spans to remove
 		/// NOTE: Weight annotation is the kill scenario, we refund otherwise.
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">3</span>)]
 		#[pallet::weight(T::WeightInfo::withdraw_unbonded_kill(<span class="kw-2">*</span>num_slashing_spans))]
 		</span><span class="kw">pub fn </span>withdraw_unbonded(
@@ -2956,11 +2917,10 @@
 		///
 		/// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - The transaction&#39;s complexity is proportional to the size of `targets` (N)
 		/// which is capped at CompactAssignments::LIMIT (T::MaxNominations).
 		/// - Both the reads and writes follow a similar pattern.
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
 		#[pallet::weight(T::WeightInfo::nominate(targets.len() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>nominate(
@@ -3025,11 +2985,10 @@
 		///
 		/// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - Independent of the arguments. Insignificant complexity.
 		/// - Contains one read.
 		/// - Writes are limited to the `origin` account key.
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">6</span>)]
 		#[pallet::weight(T::WeightInfo::chill())]
 		</span><span class="kw">pub fn </span>chill(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
@@ -3045,16 +3004,12 @@
 		///
 		/// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
+		/// - O(1)
 		/// - Independent of the arguments. Insignificant complexity.
 		/// - Contains a limited number of reads.
 		/// - Writes are limited to the `origin` account key.
 		/// ---------
-		/// - Weight: O(1)
-		/// - DB Weight:
-		///     - Read: Ledger
-		///     - Write: Payee
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">7</span>)]
 		#[pallet::weight(T::WeightInfo::set_payee())]
 		</span><span class="kw">pub fn </span>set_payee(
@@ -3074,16 +3029,11 @@
 		///
 		/// The dispatch origin for this call must be _Signed_ by the stash, not the controller.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
+		/// O(1)
 		/// - Independent of the arguments. Insignificant complexity.
 		/// - Contains a limited number of reads.
 		/// - Writes are limited to the `origin` account key.
-		/// ----------
-		/// Weight: O(1)
-		/// DB Weight:
-		/// - Read: Bonded, Ledger New Controller, Ledger Old Controller
-		/// - Write: Bonded, Ledger New Controller, Ledger Old Controller
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">8</span>)]
 		#[pallet::weight(T::WeightInfo::set_controller())]
 		</span><span class="kw">pub fn </span>set_controller(
@@ -3109,10 +3059,8 @@
 		///
 		/// The dispatch origin must be Root.
 		///
-		/// # &lt;weight&gt;
-		/// Weight: O(1)
-		/// Write: Validator Count
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// O(1)
 		</span><span class="attr">#[pallet::call_index(<span class="number">9</span>)]
 		#[pallet::weight(T::WeightInfo::set_validator_count())]
 		</span><span class="kw">pub fn </span>set_validator_count(
@@ -3135,9 +3083,8 @@
 		///
 		/// The dispatch origin must be Root.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// Same as [`Self::set_validator_count`].
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">10</span>)]
 		#[pallet::weight(T::WeightInfo::set_validator_count())]
 		</span><span class="kw">pub fn </span>increase_validator_count(
@@ -3161,9 +3108,8 @@
 		///
 		/// The dispatch origin must be Root.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// Same as [`Self::set_validator_count`].
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">11</span>)]
 		#[pallet::weight(T::WeightInfo::set_validator_count())]
 		</span><span class="kw">pub fn </span>scale_validator_count(origin: OriginFor&lt;T&gt;, factor: Percent) -&gt; DispatchResult {
@@ -3190,11 +3136,9 @@
 		/// Thus the election process may be ongoing when this is called. In this case the
 		/// election will continue until the next era is triggered.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - No arguments.
 		/// - Weight: O(1)
-		/// - Write: ForceEra
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">12</span>)]
 		#[pallet::weight(T::WeightInfo::force_no_eras())]
 		</span><span class="kw">pub fn </span>force_no_eras(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
@@ -3214,11 +3158,9 @@
 		/// If this is called just before a new era is triggered, the election process may not
 		/// have enough blocks to get a result.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - No arguments.
 		/// - Weight: O(1)
-		/// - Write ForceEra
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">13</span>)]
 		#[pallet::weight(T::WeightInfo::force_new_era())]
 		</span><span class="kw">pub fn </span>force_new_era(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
@@ -3317,18 +3259,8 @@
 		/// The origin of this call must be _Signed_. Any account can call this function, even if
 		/// it is not one of the stakers.
 		///
-		/// # &lt;weight&gt;
-		/// - Time complexity: at most O(MaxNominatorRewardedPerValidator).
-		/// - Contains a limited number of reads and writes.
-		/// -----------
-		/// N is the Number of payouts for the validator (including the validator)
-		/// Weight:
-		/// - Reward Destination Staked: O(N)
-		/// - Reward Destination Controller (Creating): O(N)
-		///
-		///   NOTE: weights are assuming that payouts are made to alive stash account (Staked).
-		///   Paying even a dead controller is cheaper weight-wise. We don&#39;t do any refunds here.
-		/// # &lt;/weight&gt;
+		/// ## Complexity
+		/// - At most O(MaxNominatorRewardedPerValidator).
 		</span><span class="attr">#[pallet::call_index(<span class="number">18</span>)]
 		#[pallet::weight(T::WeightInfo::payout_stakers_alive_staked(
 			T::MaxNominatorRewardedPerValidator::get()
@@ -3346,11 +3278,9 @@
 		///
 		/// The dispatch origin must be signed by the controller.
 		///
-		/// # &lt;weight&gt;
+		/// ## Complexity
 		/// - Time complexity: O(L), where L is unlocking chunks
 		/// - Bounded by `MaxUnlockingChunks`.
-		/// - Storage changes: Can&#39;t increase storage, only decrease it.
-		/// # &lt;/weight&gt;
 		</span><span class="attr">#[pallet::call_index(<span class="number">19</span>)]
 		#[pallet::weight(T::WeightInfo::rebond(T::MaxUnlockingChunks::get() <span class="kw">as </span>u32))]
 		</span><span class="kw">pub fn </span>rebond(
