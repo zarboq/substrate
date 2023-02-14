@@ -1031,6 +1031,7 @@
 <a href="#1031" id="1031">1031</a>
 <a href="#1032" id="1032">1032</a>
 <a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1076,7 +1077,7 @@
 <span class="kw">use </span>sc_network_common::{
 	protocol::role::Roles,
 	service::{NetworkStateInfo, NetworkStatusProvider},
-	sync::warp::WarpSyncProvider,
+	sync::warp::WarpSyncParams,
 };
 <span class="kw">use </span>sc_network_light::light_client_requests::handler::LightClientRequestHandler;
 <span class="kw">use </span>sc_network_sync::{
@@ -1792,8 +1793,8 @@
 	<span class="doccomment">/// A block announce validator builder.
 	</span><span class="kw">pub </span>block_announce_validator_builder:
 		<span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>FnOnce(Arc&lt;TCl&gt;) -&gt; Box&lt;<span class="kw">dyn </span>BlockAnnounceValidator&lt;TBl&gt; + Send&gt; + Send&gt;&gt;,
-	<span class="doccomment">/// An optional warp sync provider.
-	</span><span class="kw">pub </span>warp_sync: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>WarpSyncProvider&lt;TBl&gt;&gt;&gt;,
+	<span class="doccomment">/// Optional warp sync params.
+	</span><span class="kw">pub </span>warp_sync_params: <span class="prelude-ty">Option</span>&lt;WarpSyncParams&lt;TBl&gt;&gt;,
 }
 <span class="doccomment">/// Build the network service, the network status sinks and an RPC sender.
 </span><span class="kw">pub fn </span>build_network&lt;TBl, TExPool, TImpQu, TCl&gt;(
@@ -1828,12 +1829,12 @@
 		spawn_handle,
 		import_queue,
 		block_announce_validator_builder,
-		warp_sync,
+		warp_sync_params,
 	} = params;
 
 	<span class="kw">let </span><span class="kw-2">mut </span>request_response_protocol_configs = Vec::new();
 
-	<span class="kw">if </span>warp_sync.is_none() &amp;&amp; config.network.sync_mode.is_warp() {
+	<span class="kw">if </span>warp_sync_params.is_none() &amp;&amp; config.network.sync_mode.is_warp() {
 		<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Warp sync enabled, but no warp sync provider configured.&quot;</span>.into())
 	}
 
@@ -1878,8 +1879,8 @@
 		protocol_config
 	};
 
-	<span class="kw">let </span>(warp_sync_provider, warp_sync_protocol_config) = warp_sync
-		.map(|provider| {
+	<span class="kw">let </span>warp_sync_protocol_config = <span class="kw">match </span>warp_sync_params.as_ref() {
+		<span class="prelude-val">Some</span>(WarpSyncParams::WithProvider(warp_with_provider)) =&gt; {
 			<span class="comment">// Allow both outgoing and incoming requests.
 			</span><span class="kw">let </span>(handler, protocol_config) = WarpSyncRequestHandler::new(
 				protocol_id.clone(),
@@ -1889,12 +1890,13 @@
 					.flatten()
 					.expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>),
 				config.chain_spec.fork_id(),
-				provider.clone(),
+				warp_with_provider.clone(),
 			);
 			spawn_handle.spawn(<span class="string">&quot;warp-sync-request-handler&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), handler.run());
-			(<span class="prelude-val">Some</span>(provider), <span class="prelude-val">Some</span>(protocol_config))
-		})
-		.unwrap_or_default();
+			<span class="prelude-val">Some</span>(protocol_config)
+		},
+		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+	};
 
 	<span class="kw">let </span>light_client_request_protocol_config = {
 		<span class="comment">// Allow both outgoing and incoming requests.
@@ -1921,7 +1923,7 @@
 		Roles::from(<span class="kw-2">&amp;</span>config.role),
 		block_announce_validator,
 		config.network.max_parallel_downloads,
-		warp_sync_provider,
+		warp_sync_params,
 		config.prometheus_config.as_ref().map(|config| config.registry.clone()).as_ref(),
 		chain_sync_network_handle,
 		import_queue.service(),

@@ -251,6 +251,52 @@
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -272,24 +318,35 @@
 </span><span class="doccomment">//! Warp sync support.
 
 </span><span class="kw">use crate</span>::{
+	oneshot,
 	schema::v1::{StateRequest, StateResponse},
 	state::{ImportResult, StateSync},
 };
+<span class="kw">use </span>futures::FutureExt;
+<span class="kw">use </span>log::error;
 <span class="kw">use </span>sc_client_api::ProofProvider;
 <span class="kw">use </span>sc_network_common::sync::{
 	message::{BlockAttributes, BlockData, BlockRequest, Direction, FromBlock},
 	warp::{
-		EncodedProof, VerificationResult, WarpProofRequest, WarpSyncPhase, WarpSyncProgress,
-		WarpSyncProvider,
+		EncodedProof, VerificationResult, WarpProofRequest, WarpSyncParams, WarpSyncPhase,
+		WarpSyncProgress, WarpSyncProvider,
 	},
 };
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_finality_grandpa::{AuthorityList, SetId};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, Zero};
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::{sync::Arc, task::Poll};
 
 <span class="kw">enum </span>Phase&lt;B: BlockT, Client&gt; {
-	WarpProof { set_id: SetId, authorities: AuthorityList, last_hash: B::Hash },
+	WarpProof {
+		set_id: SetId,
+		authorities: AuthorityList,
+		last_hash: B::Hash,
+		warp_sync_provider: Arc&lt;<span class="kw">dyn </span>WarpSyncProvider&lt;B&gt;&gt;,
+	},
+	PendingTargetBlock {
+		target_block: <span class="prelude-ty">Option</span>&lt;oneshot::Receiver&lt;B::Header&gt;&gt;,
+	},
 	TargetBlock(B::Header),
 	State(StateSync&lt;B, Client&gt;),
 }
@@ -314,7 +371,6 @@
 </span><span class="kw">pub struct </span>WarpSync&lt;B: BlockT, Client&gt; {
 	phase: Phase&lt;B, Client&gt;,
 	client: Arc&lt;Client&gt;,
-	warp_sync_provider: Arc&lt;<span class="kw">dyn </span>WarpSyncProvider&lt;B&gt;&gt;,
 	total_proof_bytes: u64,
 }
 
@@ -323,21 +379,56 @@
 	</span>B: BlockT,
 	Client: HeaderBackend&lt;B&gt; + ProofProvider&lt;B&gt; + <span class="lifetime">&#39;static</span>,
 {
-	<span class="doccomment">///  Create a new instance.
-	</span><span class="kw">pub fn </span>new(client: Arc&lt;Client&gt;, warp_sync_provider: Arc&lt;<span class="kw">dyn </span>WarpSyncProvider&lt;B&gt;&gt;) -&gt; <span class="self">Self </span>{
+	<span class="doccomment">/// Create a new instance. When passing a warp sync provider we will be checking for proof and
+	/// authorities. Alternatively we can pass a target block when we want to skip downloading
+	/// proofs, in this case we will continue polling until the target block is known.
+	</span><span class="kw">pub fn </span>new(client: Arc&lt;Client&gt;, warp_sync_params: WarpSyncParams&lt;B&gt;) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>last_hash = client.hash(Zero::zero()).unwrap().expect(<span class="string">&quot;Genesis header always exists&quot;</span>);
-		<span class="kw">let </span>phase = Phase::WarpProof {
-			set_id: <span class="number">0</span>,
-			authorities: warp_sync_provider.current_authorities(),
-			last_hash,
-		};
-		<span class="self">Self </span>{ client, warp_sync_provider, phase, total_proof_bytes: <span class="number">0 </span>}
+		<span class="kw">match </span>warp_sync_params {
+			WarpSyncParams::WithProvider(warp_sync_provider) =&gt; {
+				<span class="kw">let </span>phase = Phase::WarpProof {
+					set_id: <span class="number">0</span>,
+					authorities: warp_sync_provider.current_authorities(),
+					last_hash,
+					warp_sync_provider: warp_sync_provider.clone(),
+				};
+				<span class="self">Self </span>{ client, phase, total_proof_bytes: <span class="number">0 </span>}
+			},
+			WarpSyncParams::WaitForTarget(block) =&gt; <span class="self">Self </span>{
+				client,
+				phase: Phase::PendingTargetBlock { target_block: <span class="prelude-val">Some</span>(block) },
+				total_proof_bytes: <span class="number">0</span>,
+			},
+		}
+	}
+
+	<span class="doccomment">/// Poll to make progress.
+	///
+	/// This only makes progress when `phase = Phase::PendingTargetBlock` and the pending block was
+	/// sent.
+	</span><span class="kw">pub fn </span>poll(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>std::task::Context) {
+		<span class="kw">let </span>new_phase = <span class="kw">if let </span>Phase::PendingTargetBlock { target_block: <span class="prelude-val">Some</span>(target_block) } =
+			<span class="kw-2">&amp;mut </span><span class="self">self</span>.phase
+		{
+			<span class="kw">match </span>target_block.poll_unpin(cx) {
+				Poll::Ready(<span class="prelude-val">Ok</span>(target)) =&gt; Phase::TargetBlock(target),
+				Poll::Ready(<span class="prelude-val">Err</span>(e)) =&gt; {
+					<span class="macro">error!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Failed to get target block. Error: {:?}&quot;</span>,e);
+					Phase::PendingTargetBlock { target_block: <span class="prelude-val">None </span>}
+				},
+				<span class="kw">_ </span>=&gt; <span class="kw">return</span>,
+			}
+		} <span class="kw">else </span>{
+			<span class="kw">return
+		</span>};
+
+		<span class="self">self</span>.phase = new_phase;
 	}
 
 	<span class="doccomment">///  Validate and import a state response.
 	</span><span class="kw">pub fn </span>import_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, response: StateResponse) -&gt; ImportResult&lt;B&gt; {
 		<span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.phase {
-			Phase::WarpProof { .. } | Phase::TargetBlock(<span class="kw">_</span>) =&gt; {
+			Phase::WarpProof { .. } | Phase::TargetBlock(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt; {
 				<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Unexpected state response&quot;</span>);
 				ImportResult::BadResponse
 			},
@@ -348,12 +439,12 @@
 	<span class="doccomment">///  Validate and import a warp proof response.
 	</span><span class="kw">pub fn </span>import_warp_proof(<span class="kw-2">&amp;mut </span><span class="self">self</span>, response: EncodedProof) -&gt; WarpProofImportResult {
 		<span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.phase {
-			Phase::State(<span class="kw">_</span>) | Phase::TargetBlock(<span class="kw">_</span>) =&gt; {
+			Phase::State(<span class="kw">_</span>) | Phase::TargetBlock(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt; {
 				<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Unexpected warp proof response&quot;</span>);
 				WarpProofImportResult::BadResponse
 			},
-			Phase::WarpProof { set_id, authorities, last_hash } =&gt; {
-				<span class="kw">match </span><span class="self">self</span>.warp_sync_provider.verify(<span class="kw-2">&amp;</span>response, <span class="kw-2">*</span>set_id, authorities.clone()) {
+			Phase::WarpProof { set_id, authorities, last_hash, warp_sync_provider } =&gt;
+				<span class="kw">match </span>warp_sync_provider.verify(<span class="kw-2">&amp;</span>response, <span class="kw-2">*</span>set_id, authorities.clone()) {
 					<span class="prelude-val">Err</span>(e) =&gt; {
 						<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Bad warp proof response: {}&quot;</span>, e);
 						WarpProofImportResult::BadResponse
@@ -372,15 +463,14 @@
 						<span class="self">self</span>.phase = Phase::TargetBlock(header);
 						WarpProofImportResult::Success
 					},
-				}
-			},
+				},
 		}
 	}
 
 	<span class="doccomment">/// Import the target block body.
 	</span><span class="kw">pub fn </span>import_target_block(<span class="kw-2">&amp;mut </span><span class="self">self</span>, block: BlockData&lt;B&gt;) -&gt; TargetBlockImportResult {
 		<span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.phase {
-			Phase::WarpProof { .. } | Phase::State(<span class="kw">_</span>) =&gt; {
+			Phase::WarpProof { .. } | Phase::State(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt; {
 				<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Unexpected target block response&quot;</span>);
 				TargetBlockImportResult::BadResponse
 			},
@@ -421,8 +511,8 @@
 	<span class="doccomment">/// Produce next state request.
 	</span><span class="kw">pub fn </span>next_state_request(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;StateRequest&gt; {
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.phase {
-			Phase::WarpProof { .. } =&gt; <span class="prelude-val">None</span>,
-			Phase::TargetBlock(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+			Phase::WarpProof { .. } | Phase::TargetBlock(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt;
+				<span class="prelude-val">None</span>,
 			Phase::State(sync) =&gt; <span class="prelude-val">Some</span>(sync.next_request()),
 		}
 	}
@@ -431,15 +521,14 @@
 	</span><span class="kw">pub fn </span>next_warp_proof_request(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;WarpProofRequest&lt;B&gt;&gt; {
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.phase {
 			Phase::WarpProof { last_hash, .. } =&gt; <span class="prelude-val">Some</span>(WarpProofRequest { begin: <span class="kw-2">*</span>last_hash }),
-			Phase::TargetBlock(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
-			Phase::State(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+			Phase::TargetBlock(<span class="kw">_</span>) | Phase::State(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt; <span class="prelude-val">None</span>,
 		}
 	}
 
 	<span class="doccomment">/// Produce next target block request.
 	</span><span class="kw">pub fn </span>next_target_block_request(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(NumberFor&lt;B&gt;, BlockRequest&lt;B&gt;)&gt; {
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.phase {
-			Phase::WarpProof { .. } =&gt; <span class="prelude-val">None</span>,
+			Phase::WarpProof { .. } | Phase::State(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt; <span class="prelude-val">None</span>,
 			Phase::TargetBlock(header) =&gt; {
 				<span class="kw">let </span>request = BlockRequest::&lt;B&gt; {
 					id: <span class="number">0</span>,
@@ -451,15 +540,14 @@
 				};
 				<span class="prelude-val">Some</span>((<span class="kw-2">*</span>header.number(), request))
 			},
-			Phase::State(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
 		}
 	}
 
 	<span class="doccomment">/// Return target block hash if it is known.
 	</span><span class="kw">pub fn </span>target_block_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;B::Hash&gt; {
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.phase {
-			Phase::WarpProof { .. } =&gt; <span class="prelude-val">None</span>,
-			Phase::TargetBlock(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+			Phase::WarpProof { .. } | Phase::TargetBlock(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt;
+				<span class="prelude-val">None</span>,
 			Phase::State(s) =&gt; <span class="prelude-val">Some</span>(s.target()),
 		}
 	}
@@ -467,7 +555,7 @@
 	<span class="doccomment">/// Return target block number if it is known.
 	</span><span class="kw">pub fn </span>target_block_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt; {
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.phase {
-			Phase::WarpProof { .. } =&gt; <span class="prelude-val">None</span>,
+			Phase::WarpProof { .. } | Phase::PendingTargetBlock { .. } =&gt; <span class="prelude-val">None</span>,
 			Phase::TargetBlock(header) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>header.number()),
 			Phase::State(s) =&gt; <span class="prelude-val">Some</span>(s.target_block_num()),
 		}
@@ -476,8 +564,8 @@
 	<span class="doccomment">/// Check if the state is complete.
 	</span><span class="kw">pub fn </span>is_complete(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.phase {
-			Phase::WarpProof { .. } =&gt; <span class="bool-val">false</span>,
-			Phase::TargetBlock(<span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
+			Phase::WarpProof { .. } | Phase::TargetBlock(<span class="kw">_</span>) | Phase::PendingTargetBlock { .. } =&gt;
+				<span class="bool-val">false</span>,
 			Phase::State(sync) =&gt; sync.is_complete(),
 		}
 	}
@@ -491,6 +579,10 @@
 			},
 			Phase::TargetBlock(<span class="kw">_</span>) =&gt; WarpSyncProgress {
 				phase: WarpSyncPhase::DownloadingTargetBlock,
+				total_bytes: <span class="self">self</span>.total_proof_bytes,
+			},
+			Phase::PendingTargetBlock { .. } =&gt; WarpSyncProgress {
+				phase: WarpSyncPhase::AwaitingTargetBlock,
 				total_bytes: <span class="self">self</span>.total_proof_bytes,
 			},
 			Phase::State(sync) =&gt; WarpSyncProgress {

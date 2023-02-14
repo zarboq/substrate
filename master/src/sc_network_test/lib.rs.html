@@ -1185,6 +1185,20 @@
 <a href="#1185" id="1185">1185</a>
 <a href="#1186" id="1186">1186</a>
 <a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1218,7 +1232,7 @@
 	time::Duration,
 };
 
-<span class="kw">use </span>futures::{future::BoxFuture, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>futures::{channel::oneshot, future::BoxFuture, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>libp2p::{build_multiaddr, PeerId};
 <span class="kw">use </span>log::trace;
 <span class="kw">use </span>parking_lot::Mutex;
@@ -1243,7 +1257,9 @@
 	},
 	protocol::{role::Roles, ProtocolName},
 	service::{NetworkBlock, NetworkStateInfo, NetworkSyncForkRequest},
-	sync::warp::{AuthorityList, EncodedProof, SetId, VerificationResult, WarpSyncProvider},
+	sync::warp::{
+		AuthorityList, EncodedProof, SetId, VerificationResult, WarpSyncParams, WarpSyncProvider,
+	},
 };
 <span class="kw">use </span>sc_network_light::light_client_requests::handler::LightClientRequestHandler;
 <span class="kw">use </span>sc_network_sync::{
@@ -1909,6 +1925,8 @@
 	</span><span class="kw">pub </span>extra_storage: <span class="prelude-ty">Option</span>&lt;sp_core::storage::Storage&gt;,
 	<span class="doccomment">/// Enable transaction indexing.
 	</span><span class="kw">pub </span>storage_chain: bool,
+	<span class="doccomment">/// Optional target block header to sync to
+	</span><span class="kw">pub </span>target_block: <span class="prelude-ty">Option</span>&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header&gt;,
 }
 
 <span class="attr">#[async_trait::async_trait]
@@ -2054,6 +2072,15 @@
 
 		<span class="kw">let </span>warp_sync = Arc::new(TestWarpSyncProvider(client.clone()));
 
+		<span class="kw">let </span>warp_sync_params = <span class="kw">match </span>config.target_block {
+			<span class="prelude-val">Some</span>(target_block) =&gt; {
+				<span class="kw">let </span>(sender, receiver) = oneshot::channel::&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header&gt;();
+				<span class="kw">let _ </span>= sender.send(target_block);
+				WarpSyncParams::WaitForTarget(receiver)
+			},
+			<span class="kw">_ </span>=&gt; WarpSyncParams::WithProvider(warp_sync.clone()),
+		};
+
 		<span class="kw">let </span>warp_protocol_config = {
 			<span class="kw">let </span>(handler, protocol_config) = warp_request_handler::RequestHandler::new(
 				protocol_id.clone(),
@@ -2074,6 +2101,7 @@
 			.unwrap_or_else(|| Box::new(DefaultBlockAnnounceValidator));
 		<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) =
 			NetworkServiceProvider::new();
+
 		<span class="kw">let </span>(chain_sync, chain_sync_service, block_announce_config) = ChainSync::new(
 			<span class="kw">match </span>network_config.sync_mode {
 				SyncMode::Full =&gt; sc_network_common::sync::SyncMode::Full,
@@ -2090,7 +2118,7 @@
 			Roles::from(<span class="kw">if </span>config.is_authority { <span class="kw-2">&amp;</span>Role::Authority } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>Role::Full }),
 			block_announce_validator,
 			network_config.max_parallel_downloads,
-			<span class="prelude-val">Some</span>(warp_sync),
+			<span class="prelude-val">Some</span>(warp_sync_params),
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
 			import_queue.service(),

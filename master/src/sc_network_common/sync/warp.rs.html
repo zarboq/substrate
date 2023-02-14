@@ -95,6 +95,20 @@
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright 2022 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
@@ -112,9 +126,10 @@
 // along with Substrate.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
 
 </span><span class="kw">use </span>codec::{Decode, Encode};
+<span class="kw">use </span>futures::channel::oneshot;
 <span class="kw">pub use </span>sp_finality_grandpa::{AuthorityList, SetId};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
-<span class="kw">use </span>std::fmt;
+<span class="kw">use </span>std::{fmt, sync::Arc};
 
 <span class="doccomment">/// Scale-encoded warp sync proof response.
 </span><span class="kw">pub struct </span>EncodedProof(<span class="kw">pub </span>Vec&lt;u8&gt;);
@@ -124,6 +139,16 @@
 </span><span class="kw">pub struct </span>WarpProofRequest&lt;B: BlockT&gt; {
 	<span class="doccomment">/// Start collecting proofs from this block.
 	</span><span class="kw">pub </span>begin: B::Hash,
+}
+
+<span class="doccomment">/// The different types of warp syncing.
+</span><span class="kw">pub enum </span>WarpSyncParams&lt;Block: BlockT&gt; {
+	<span class="doccomment">/// Standard warp sync for the relay chain
+	</span>WithProvider(Arc&lt;<span class="kw">dyn </span>WarpSyncProvider&lt;Block&gt;&gt;),
+	<span class="doccomment">/// Skip downloading proofs and wait for a header of the state that should be downloaded.
+	///
+	/// It is expected that the header provider ensures that the header is trusted.
+	</span>WaitForTarget(oneshot::Receiver&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Header&gt;),
 }
 
 <span class="doccomment">/// Proof verification result.
@@ -159,6 +184,8 @@
 </span><span class="kw">pub enum </span>WarpSyncPhase&lt;Block: BlockT&gt; {
 	<span class="doccomment">/// Waiting for peers to connect.
 	</span>AwaitingPeers,
+	<span class="doccomment">/// Waiting for target block to be received.
+	</span>AwaitingTargetBlock,
 	<span class="doccomment">/// Downloading and verifying grandpa warp proofs.
 	</span>DownloadingWarpProofs,
 	<span class="doccomment">/// Downloading target block.
@@ -175,6 +202,7 @@
 	<span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
 		<span class="kw">match </span><span class="self">self </span>{
 			<span class="self">Self</span>::AwaitingPeers =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Waiting for peers&quot;</span>),
+			<span class="self">Self</span>::AwaitingTargetBlock =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Waiting for target block to be received&quot;</span>),
 			<span class="self">Self</span>::DownloadingWarpProofs =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Downloading finality proofs&quot;</span>),
 			<span class="self">Self</span>::DownloadingTargetBlock =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Downloading target block&quot;</span>),
 			<span class="self">Self</span>::DownloadingState =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Downloading state&quot;</span>),
