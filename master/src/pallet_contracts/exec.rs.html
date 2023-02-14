@@ -3455,23 +3455,6 @@
 <a href="#3455" id="3455">3455</a>
 <a href="#3456" id="3456">3456</a>
 <a href="#3457" id="3457">3457</a>
-<a href="#3458" id="3458">3458</a>
-<a href="#3459" id="3459">3459</a>
-<a href="#3460" id="3460">3460</a>
-<a href="#3461" id="3461">3461</a>
-<a href="#3462" id="3462">3462</a>
-<a href="#3463" id="3463">3463</a>
-<a href="#3464" id="3464">3464</a>
-<a href="#3465" id="3465">3465</a>
-<a href="#3466" id="3466">3466</a>
-<a href="#3467" id="3467">3467</a>
-<a href="#3468" id="3468">3468</a>
-<a href="#3469" id="3469">3469</a>
-<a href="#3470" id="3470">3470</a>
-<a href="#3471" id="3471">3471</a>
-<a href="#3472" id="3472">3472</a>
-<a href="#3473" id="3473">3473</a>
-<a href="#3474" id="3474">3474</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -4810,31 +4793,16 @@
 
 	<span class="kw">fn </span>append_debug_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: <span class="kw-2">&amp;</span>str) -&gt; bool {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(buffer) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.debug_message {
-			<span class="kw">let </span>err_msg = <span class="macro">scale_info::prelude::format!</span>(
-				<span class="string">&quot;Debug message too big (size={}) for debug buffer (bound={})&quot;</span>,
-				msg.len(),
-				DebugBufferVec::&lt;T&gt;::bound(),
-			);
-
-			<span class="kw">let </span><span class="kw-2">mut </span>msg = <span class="kw">if </span>msg.len() &gt; DebugBufferVec::&lt;T&gt;::bound() {
-				err_msg.bytes()
-			} <span class="kw">else </span>{
-				msg.bytes()
-			};
-
-			<span class="kw">let </span>num_drain = {
-				<span class="kw">let </span>capacity = DebugBufferVec::&lt;T&gt;::bound().checked_sub(buffer.len()).expect(
-					<span class="string">&quot;
-					`buffer` is of type `DebugBufferVec`,
-					`DebugBufferVec` is a `BoundedVec`,
-					`BoundedVec::len()` &lt;= `BoundedVec::bound()`;
-					qed
-				&quot;</span>,
-				);
-				msg.len().saturating_sub(capacity).min(buffer.len())
-			};
-			buffer.drain(<span class="number">0</span>..num_drain);
-			buffer.try_extend(<span class="kw-2">&amp;mut </span>msg).ok();
+			buffer
+				.try_extend(<span class="kw-2">&amp;mut </span>msg.bytes())
+				.map_err(|<span class="kw">_</span>| {
+					<span class="macro">log::debug!</span>(
+						target: <span class="string">&quot;runtime::contracts&quot;</span>,
+						<span class="string">&quot;Debug buffer (of {} bytes) exhausted!&quot;</span>,
+						DebugBufferVec::&lt;T&gt;::bound(),
+					)
+				})
+				.ok();
 			<span class="bool-val">true
 		</span>} <span class="kw">else </span>{
 			<span class="bool-val">false
@@ -6077,9 +6045,11 @@
 			exec_success()
 		});
 
-		<span class="comment">// Pre-fill the buffer up to its limit
-		</span><span class="kw">let </span><span class="kw-2">mut </span>debug_buffer =
-			DebugBufferVec::&lt;Test&gt;::try_from(<span class="macro">vec!</span>[<span class="number">0u8</span>; DebugBufferVec::&lt;Test&gt;::bound()]).unwrap();
+		<span class="comment">// Pre-fill the buffer almost up to its limit, leaving not enough space to the message
+		</span><span class="kw">let </span>debug_buf_before =
+			DebugBufferVec::&lt;Test&gt;::try_from(<span class="macro">vec!</span>[<span class="number">0u8</span>; DebugBufferVec::&lt;Test&gt;::bound() - <span class="number">5</span>])
+				.unwrap();
+		<span class="kw">let </span><span class="kw-2">mut </span>debug_buf_after = debug_buf_before.clone();
 
 		ExtBuilder::default().build().execute_with(|| {
 			<span class="kw">let </span>schedule: Schedule&lt;Test&gt; = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
@@ -6096,15 +6066,11 @@
 				<span class="kw-2">&amp;</span>schedule,
 				<span class="number">0</span>,
 				<span class="macro">vec!</span>[],
-				<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>debug_buffer),
+				<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>debug_buf_after),
 				Determinism::Deterministic,
 			)
 			.unwrap();
-			<span class="macro">assert_eq!</span>(
-				<span class="kw-2">&amp;</span>String::from_utf8(debug_buffer[DebugBufferVec::&lt;Test&gt;::bound() - <span class="number">17</span>..].to_vec())
-					.unwrap(),
-				<span class="string">&quot;overflowing bytes&quot;
-			</span>);
+			<span class="macro">assert_eq!</span>(debug_buf_before, debug_buf_after);
 		});
 	}
 

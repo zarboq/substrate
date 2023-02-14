@@ -2611,7 +2611,6 @@
 <a href="#2611" id="2611">2611</a>
 <a href="#2612" id="2612">2612</a>
 <a href="#2613" id="2613">2613</a>
-<a href="#2614" id="2614">2614</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -2635,7 +2634,7 @@
 	exec::{ExecError, ExecResult, Ext, FixSizedKey, TopicOf, VarSizedKey},
 	gas::{ChargedAmount, Token},
 	schedule::HostFnWeights,
-	BalanceOf, CodeHash, Config, Error, SENTINEL,
+	BalanceOf, CodeHash, Config, DebugBufferVec, Error, SENTINEL,
 };
 
 <span class="kw">use </span>bitflags::bitflags;
@@ -2728,9 +2727,6 @@
 	</span>CodeNotFound = <span class="number">7</span>,
 	<span class="doccomment">/// The contract that was called is no contract (a plain account).
 	</span>NotCallable = <span class="number">8</span>,
-	<span class="doccomment">/// The call to `seal_debug_message` had no effect because debug message
-	/// recording was disabled.
-	</span>LoggingDisabled = <span class="number">9</span>,
 	<span class="doccomment">/// The call dispatched by `seal_call_runtime` was executed but returned an error.
 	</span>CallRuntimeReturnedError = <span class="number">10</span>,
 	<span class="doccomment">/// ECDSA pubkey recovery failed (most probably wrong recovery id or signature), or
@@ -2843,8 +2839,8 @@
 	</span>Random,
 	<span class="doccomment">/// Weight of calling `seal_deposit_event` with the given number of topics and event size.
 	</span>DepositEvent { num_topic: u32, len: u32 },
-	<span class="doccomment">/// Weight of calling `seal_debug_message`.
-	</span>DebugMessage,
+	<span class="doccomment">/// Weight of calling `seal_debug_message` per byte of passed message.
+	</span>DebugMessage(u32),
 	<span class="doccomment">/// Weight of calling `seal_set_storage` for the given storage item sizes.
 	</span>SetStorage { old_bytes: u32, new_bytes: u32 },
 	<span class="doccomment">/// Weight of calling `seal_clear_storage` per cleared byte.
@@ -2923,7 +2919,9 @@
 				.deposit_event
 				.saturating_add(s.deposit_event_per_topic.saturating_mul(num_topic.into()))
 				.saturating_add(s.deposit_event_per_byte.saturating_mul(len.into())),
-			DebugMessage =&gt; s.debug_message,
+			DebugMessage(len) =&gt; s
+				.debug_message
+				.saturating_add(s.deposit_event_per_byte.saturating_mul(len.into())),
 			SetStorage { new_bytes, old_bytes } =&gt; s
 				.set_storage
 				.saturating_add(s.set_storage_per_new_byte.saturating_mul(new_bytes.into()))
@@ -4668,7 +4666,7 @@
 		_delta_ptr: u32,
 		_delta_count: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
+		ctx.charge_gas(RuntimeCosts::DebugMessage(<span class="number">0</span>))<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -4690,7 +4688,7 @@
 		_delta_ptr: u32,
 		_delta_count: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
+		ctx.charge_gas(RuntimeCosts::DebugMessage(<span class="number">0</span>))<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -4708,7 +4706,7 @@
 		_value_ptr: u32,
 		_value_len: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
+		ctx.charge_gas(RuntimeCosts::DebugMessage(<span class="number">0</span>))<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -4722,7 +4720,7 @@
 	#[prefixed_alias]
 	#[deprecated]
 	</span><span class="kw">fn </span>set_rent_allowance(ctx: <span class="kw">_</span>, _memory: <span class="kw">_</span>, _value_ptr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
+		ctx.charge_gas(RuntimeCosts::DebugMessage(<span class="number">0</span>))<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -4976,7 +4974,7 @@
 	<span class="doccomment">/// Emit a custom debug message.
 	///
 	/// No newlines are added to the supplied message.
-	/// Specifying invalid UTF-8 triggers a trap.
+	/// Specifying invalid UTF-8 just drops the message with no trap.
 	///
 	/// This is a no-op if debug message recording is disabled which is always the case
 	/// when the code is executing on-chain. The message is interpreted as UTF-8 and
@@ -4997,15 +4995,15 @@
 		str_ptr: u32,
 		str_len: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ReturnCode, TrapReason&gt; {
-		ctx.charge_gas(RuntimeCosts::DebugMessage)<span class="question-mark">?</span>;
+		<span class="kw">let </span>str_len = str_len.min(DebugBufferVec::&lt;E::T&gt;::bound() <span class="kw">as </span>u32);
+		ctx.charge_gas(RuntimeCosts::DebugMessage(str_len))<span class="question-mark">?</span>;
 		<span class="kw">if </span>ctx.ext.append_debug_buffer(<span class="string">&quot;&quot;</span>) {
 			<span class="kw">let </span>data = ctx.read_sandbox_memory(memory, str_ptr, str_len)<span class="question-mark">?</span>;
-			<span class="kw">let </span>msg =
-				core::str::from_utf8(<span class="kw-2">&amp;</span>data).map_err(|<span class="kw">_</span>| &lt;Error&lt;E::T&gt;&gt;::DebugMessageInvalidUTF8)<span class="question-mark">?</span>;
-			ctx.ext.append_debug_buffer(msg);
-			<span class="kw">return </span><span class="prelude-val">Ok</span>(ReturnCode::Success)
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(msg) = core::str::from_utf8(<span class="kw-2">&amp;</span>data).ok() {
+				ctx.ext.append_debug_buffer(msg);
+			}
 		}
-		<span class="prelude-val">Ok</span>(ReturnCode::LoggingDisabled)
+		<span class="prelude-val">Ok</span>(ReturnCode::Success)
 	}
 
 	<span class="doccomment">/// Call some dispatchable of the runtime.
