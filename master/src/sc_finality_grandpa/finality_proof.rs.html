@@ -558,6 +558,37 @@
 <a href="#558" id="558">558</a>
 <a href="#559" id="559">559</a>
 <a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -618,6 +649,7 @@
 <span class="kw">const </span>MAX_UNKNOWN_HEADERS: usize = <span class="number">100_000</span>;
 
 <span class="doccomment">/// Finality proof provider for serving network requests.
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>FinalityProofProvider&lt;BE, Block: BlockT&gt; {
 	backend: Arc&lt;BE&gt;,
 	shared_authority_set: <span class="prelude-ty">Option</span>&lt;SharedAuthoritySet&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;&gt;,
@@ -659,11 +691,24 @@
 	B: Backend&lt;Block&gt;,
 {
 	<span class="doccomment">/// Prove finality for the given block number by returning a Justification for the last block of
-	/// the authority set.
+	/// the authority set in bytes.
 	</span><span class="kw">pub fn </span>prove_finality(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		block: NumberFor&lt;Block&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, FinalityProofError&gt; {
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.prove_finality_proof(block, <span class="bool-val">true</span>)<span class="question-mark">?</span>.map(|proof| proof.encode()))
+	}
+
+	<span class="doccomment">/// Prove finality for the given block number by returning a Justification for the last block of
+	/// the authority set.
+	///
+	/// If `collect_unknown_headers` is true, the finality proof will include all headers from the
+	/// requested block until the block the justification refers to.
+	</span><span class="kw">pub fn </span>prove_finality_proof(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		block: NumberFor&lt;Block&gt;,
+		collect_unknown_headers: bool,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;FinalityProof&lt;Block::Header&gt;&gt;, FinalityProofError&gt; {
 		<span class="kw">let </span>authority_set_changes = <span class="kw">if let </span><span class="prelude-val">Some</span>(changes) = <span class="self">self
 			</span>.shared_authority_set
 			.as_ref()
@@ -674,7 +719,7 @@
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 		};
 
-		prove_finality(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, authority_set_changes, block)
+		prove_finality(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, authority_set_changes, block, collect_unknown_headers)
 	}
 }
 
@@ -706,22 +751,29 @@
 	</span>Client(<span class="attr">#[from] </span>sp_blockchain::Error),
 }
 
-<span class="kw">fn </span>prove_finality&lt;Block, B&gt;(
+<span class="doccomment">/// Prove finality for the given block number by returning a justification for the last block of
+/// the authority set of which the given block is part of, or a justification for the latest
+/// finalized block if the given block is part of the current authority set.
+///
+/// If `collect_unknown_headers` is true, the finality proof will include all headers from the
+/// requested block until the block the justification refers to.
+</span><span class="kw">fn </span>prove_finality&lt;Block, B&gt;(
 	backend: <span class="kw-2">&amp;</span>B,
 	authority_set_changes: AuthoritySetChanges&lt;NumberFor&lt;Block&gt;&gt;,
 	block: NumberFor&lt;Block&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, FinalityProofError&gt;
+	collect_unknown_headers: bool,
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;FinalityProof&lt;Block::Header&gt;&gt;, FinalityProofError&gt;
 <span class="kw">where
 	</span>Block: BlockT,
 	B: Backend&lt;Block&gt;,
 {
 	<span class="comment">// Early-return if we are sure that there are no blocks finalized that cover the requested
 	// block.
-	</span><span class="kw">let </span>info = backend.blockchain().info();
-	<span class="kw">if </span>info.finalized_number &lt; block {
+	</span><span class="kw">let </span>finalized_number = backend.blockchain().info().finalized_number;
+	<span class="kw">if </span>finalized_number &lt; block {
 		<span class="kw">let </span>err = <span class="macro">format!</span>(
 			<span class="string">&quot;Requested finality proof for descendant of #{} while we only have finalized #{}.&quot;</span>,
-			block, info.finalized_number,
+			block, finalized_number,
 		);
 		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;{}&quot;</span>, <span class="kw-2">&amp;</span>err);
 		<span class="kw">return </span><span class="prelude-val">Err</span>(FinalityProofError::BlockNotYetFinalized)
@@ -774,10 +826,10 @@
 		},
 	};
 
-	<span class="comment">// Collect all headers from the requested block until the last block of the set
-	</span><span class="kw">let </span>unknown_headers = {
-		<span class="kw">let </span><span class="kw-2">mut </span>headers = Vec::new();
-		<span class="kw">let </span><span class="kw-2">mut </span>current = block + One::one();
+	<span class="kw">let </span><span class="kw-2">mut </span>headers = Vec::new();
+	<span class="kw">if </span>collect_unknown_headers {
+		<span class="comment">// Collect all headers from the requested block until the last block of the set
+		</span><span class="kw">let </span><span class="kw-2">mut </span>current = block + One::one();
 		<span class="kw">loop </span>{
 			<span class="kw">if </span>current &gt; just_block || headers.len() &gt;= MAX_UNKNOWN_HEADERS {
 				<span class="kw">break
@@ -786,17 +838,13 @@
 			headers.push(backend.blockchain().expect_header(hash)<span class="question-mark">?</span>);
 			current += One::one();
 		}
-		headers
 	};
 
-	<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
-		FinalityProof {
-			block: backend.blockchain().expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(just_block))<span class="question-mark">?</span>,
-			justification,
-			unknown_headers,
-		}
-		.encode(),
-	))
+	<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(FinalityProof {
+		block: backend.blockchain().expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(just_block))<span class="question-mark">?</span>,
+		justification,
+		unknown_headers: headers,
+	}))
 }
 
 <span class="attr">#[cfg(test)]
@@ -894,7 +942,7 @@
 		<span class="kw">let </span>authority_set_changes = AuthoritySetChanges::empty();
 
 		<span class="comment">// The last finalized block is 4, so we cannot provide further justifications.
-		</span><span class="kw">let </span>proof_of_5 = prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">5</span>);
+		</span><span class="kw">let </span>proof_of_5 = prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">5</span>, <span class="bool-val">true</span>);
 		<span class="macro">assert!</span>(<span class="macro">matches!</span>(proof_of_5, <span class="prelude-val">Err</span>(FinalityProofError::BlockNotYetFinalized)));
 	}
 
@@ -907,7 +955,7 @@
 
 		<span class="comment">// Block 4 is finalized without justification
 		// =&gt; we can&#39;t prove finality of 3
-		</span><span class="kw">let </span>proof_of_3 = prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">3</span>).unwrap();
+		</span><span class="kw">let </span>proof_of_3 = prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">3</span>, <span class="bool-val">true</span>).unwrap();
 		<span class="macro">assert_eq!</span>(proof_of_3, <span class="prelude-val">None</span>);
 	}
 
@@ -1038,7 +1086,7 @@
 		</span><span class="kw">let </span><span class="kw-2">mut </span>authority_set_changes = AuthoritySetChanges::empty();
 		authority_set_changes.append(<span class="number">1</span>, <span class="number">8</span>);
 
-		<span class="kw">let </span>proof_of_6 = prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">6</span>);
+		<span class="kw">let </span>proof_of_6 = prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">6</span>, <span class="bool-val">true</span>);
 		<span class="macro">assert!</span>(<span class="macro">matches!</span>(proof_of_6, <span class="prelude-val">Err</span>(FinalityProofError::BlockNotInAuthoritySetChanges)));
 	}
 
@@ -1062,16 +1110,31 @@
 		authority_set_changes.append(<span class="number">0</span>, <span class="number">5</span>);
 		authority_set_changes.append(<span class="number">1</span>, <span class="number">8</span>);
 
-		<span class="kw">let </span>proof_of_6: FinalityProof = Decode::decode(
-			<span class="kw-2">&amp;mut &amp;</span>prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes.clone(), <span class="number">6</span>).unwrap().unwrap()[..],
-		)
-		.unwrap();
+		<span class="kw">let </span>proof_of_6: FinalityProof =
+			prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes.clone(), <span class="number">6</span>, <span class="bool-val">true</span>)
+				.unwrap()
+				.unwrap();
+
 		<span class="macro">assert_eq!</span>(
 			proof_of_6,
 			FinalityProof {
 				block: block8.hash(),
 				justification: grandpa_just8.encode(),
 				unknown_headers: <span class="macro">vec!</span>[block7.header().clone(), block8.header().clone()],
+			},
+		);
+
+		<span class="kw">let </span>proof_of_6_without_unknown: FinalityProof =
+			prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes.clone(), <span class="number">6</span>, <span class="bool-val">false</span>)
+				.unwrap()
+				.unwrap();
+
+		<span class="macro">assert_eq!</span>(
+			proof_of_6_without_unknown,
+			FinalityProof {
+				block: block8.hash(),
+				justification: grandpa_just8.encode(),
+				unknown_headers: <span class="macro">vec!</span>[],
 			},
 		);
 	}
@@ -1085,7 +1148,7 @@
 		</span><span class="kw">let </span><span class="kw-2">mut </span>authority_set_changes = AuthoritySetChanges::empty();
 		authority_set_changes.append(<span class="number">0</span>, <span class="number">5</span>);
 
-		<span class="macro">assert!</span>(<span class="macro">matches!</span>(prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">6</span>), <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)));
+		<span class="macro">assert!</span>(<span class="macro">matches!</span>(prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">6</span>, <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)));
 	}
 
 	<span class="attr">#[test]
@@ -1104,10 +1167,9 @@
 		</span><span class="kw">let </span><span class="kw-2">mut </span>authority_set_changes = AuthoritySetChanges::empty();
 		authority_set_changes.append(<span class="number">0</span>, <span class="number">5</span>);
 
-		<span class="kw">let </span>proof_of_6: FinalityProof = Decode::decode(
-			<span class="kw-2">&amp;mut &amp;</span>prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">6</span>).unwrap().unwrap()[..],
-		)
-		.unwrap();
+		<span class="kw">let </span>proof_of_6: FinalityProof =
+			prove_finality(<span class="kw-2">&amp;*</span>backend, authority_set_changes, <span class="number">6</span>, <span class="bool-val">true</span>).unwrap().unwrap();
+
 		<span class="macro">assert_eq!</span>(
 			proof_of_6,
 			FinalityProof {
