@@ -229,6 +229,14 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -281,53 +289,61 @@
 /// under the specified `code_hash`.
 </span><span class="kw">pub fn </span>store&lt;T: Config&gt;(<span class="kw-2">mut </span>module: PrefabWasmModule&lt;T&gt;, instantiated: bool) -&gt; DispatchResult {
 	<span class="kw">let </span>code_hash = sp_std::mem::take(<span class="kw-2">&amp;mut </span>module.code_hash);
-	&lt;CodeStorage&lt;T&gt;&gt;::mutate(<span class="kw-2">&amp;</span>code_hash, |existing| <span class="kw">match </span>existing {
-		<span class="prelude-val">Some</span>(existing) =&gt; {
-			<span class="comment">// We instrument any uploaded contract anyways. We might as well store it to save
-			// a potential re-instrumentation later.
-			</span>existing.code = module.code;
-			existing.instruction_weights_version = module.instruction_weights_version;
-			<span class="comment">// When the code was merely uploaded but not instantiated we can skip this.
-			</span><span class="kw">if </span>instantiated {
-				&lt;OwnerInfoOf&lt;T&gt;&gt;::mutate(<span class="kw-2">&amp;</span>code_hash, |owner_info| {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(owner_info) = owner_info {
-						owner_info.refcount = owner_info.refcount.checked_add(<span class="number">1</span>).expect(
-							<span class="string">&quot;
-							refcount is 64bit. Generating this overflow would require to store
-							_at least_ 18 exabyte of data assuming that a contract consumes only
-							one byte of data. Any node would run out of storage space before hitting
-							this overflow.
-							qed
-						&quot;</span>,
-						);
-					}
-				})
-			}
-			<span class="prelude-val">Ok</span>(())
-		},
-		<span class="prelude-val">None </span>=&gt; {
-			<span class="kw">let </span>orig_code = module.original_code.take().expect(
-				<span class="string">&quot;
+	&lt;OwnerInfoOf&lt;T&gt;&gt;::mutate(<span class="kw-2">&amp;</span>code_hash, |owner_info| {
+		<span class="kw">match </span>owner_info {
+			<span class="comment">// Instantiate existing contract.
+			//
+			// No need to update the `CodeStorage` as any re-instrumentation eagerly saves
+			// the re-instrumented code.
+			</span><span class="prelude-val">Some</span>(owner_info) <span class="kw">if </span>instantiated =&gt; {
+				owner_info.refcount = owner_info.refcount.checked_add(<span class="number">1</span>).expect(
+					<span class="string">&quot;
+					refcount is 64bit. Generating this overflow would require to store
+					_at least_ 18 exabyte of data assuming that a contract consumes only
+					one byte of data. Any node would run out of storage space before hitting
+					this overflow.
+					qed
+				&quot;</span>,
+				);
+				<span class="prelude-val">Ok</span>(())
+			},
+			<span class="comment">// Re-upload existing contract without executing it.
+			//
+			// We are careful here to just overwrite the code to not include it into the PoV.
+			// We do this because the uploaded code was instrumented with the latest schedule
+			// and hence we persist those changes. Otherwise the next execution will pay again
+			// for the instrumentation.
+			</span><span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; {
+				&lt;CodeStorage&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>code_hash, module);
+				<span class="prelude-val">Ok</span>(())
+			},
+			<span class="comment">// Upload a new contract.
+			//
+			// We need to write all data structures and collect the deposit.
+			</span><span class="prelude-val">None </span>=&gt; {
+				<span class="kw">let </span>orig_code = module.original_code.take().expect(
+					<span class="string">&quot;
 					If an executable isn&#39;t in storage it was uploaded.
 					If it was uploaded the original code must exist. qed
 				&quot;</span>,
-			);
-			<span class="kw">let </span><span class="kw-2">mut </span>owner_info = module.owner_info.take().expect(
-				<span class="string">&quot;If an executable isn&#39;t in storage it was uploaded.
+				);
+				<span class="kw">let </span><span class="kw-2">mut </span>new_owner_info = module.owner_info.take().expect(
+					<span class="string">&quot;If an executable isn&#39;t in storage it was uploaded.
 				If it was uploaded the owner info was generated and attached. qed
 				&quot;</span>,
-			);
-			<span class="comment">// This `None` case happens only in freshly uploaded modules. This means that
-			// the `owner` is always the origin of the current transaction.
-			</span>T::Currency::reserve(<span class="kw-2">&amp;</span>owner_info.owner, owner_info.deposit)
-				.map_err(|<span class="kw">_</span>| &lt;Error&lt;T&gt;&gt;::StorageDepositNotEnoughFunds)<span class="question-mark">?</span>;
-			owner_info.refcount = <span class="kw">if </span>instantiated { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>};
-			&lt;PristineCode&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>code_hash, orig_code);
-			&lt;OwnerInfoOf&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>code_hash, owner_info);
-			<span class="kw-2">*</span>existing = <span class="prelude-val">Some</span>(module);
-			&lt;Pallet&lt;T&gt;&gt;::deposit_event(<span class="macro">vec!</span>[code_hash], Event::CodeStored { code_hash });
-			<span class="prelude-val">Ok</span>(())
-		},
+				);
+				<span class="comment">// This `None` case happens only in freshly uploaded modules. This means that
+				// the `owner` is always the origin of the current transaction.
+				</span>T::Currency::reserve(<span class="kw-2">&amp;</span>new_owner_info.owner, new_owner_info.deposit)
+					.map_err(|<span class="kw">_</span>| &lt;Error&lt;T&gt;&gt;::StorageDepositNotEnoughFunds)<span class="question-mark">?</span>;
+				new_owner_info.refcount = <span class="kw">if </span>instantiated { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>};
+				&lt;PristineCode&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>code_hash, orig_code);
+				&lt;CodeStorage&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>code_hash, module);
+				<span class="kw-2">*</span>owner_info = <span class="prelude-val">Some</span>(new_owner_info);
+				&lt;Pallet&lt;T&gt;&gt;::deposit_event(<span class="macro">vec!</span>[code_hash], Event::CodeStored { code_hash });
+				<span class="prelude-val">Ok</span>(())
+			},
+		}
 	})
 }
 
@@ -393,15 +409,16 @@
 	<span class="kw">let </span>charged = gas_meter.charge(CodeToken::Load(max_code_len))<span class="question-mark">?</span>;
 
 	<span class="kw">let </span><span class="kw-2">mut </span>prefab_module = &lt;CodeStorage&lt;T&gt;&gt;::get(code_hash).ok_or(Error::&lt;T&gt;::CodeNotFound)<span class="question-mark">?</span>;
-	gas_meter.adjust_gas(charged, CodeToken::Load(prefab_module.code.len() <span class="kw">as </span>u32));
+	<span class="kw">let </span>instrumented_code_len = prefab_module.code.len() <span class="kw">as </span>u32;
+	gas_meter.adjust_gas(charged, CodeToken::Load(instrumented_code_len));
 	prefab_module.code_hash = code_hash;
 
 	<span class="kw">if </span>prefab_module.instruction_weights_version &lt; schedule.instruction_weights.version {
 		<span class="comment">// The instruction weights have changed.
 		// We need to re-instrument the code with the new instruction weights.
-		</span><span class="kw">let </span>charged = gas_meter.charge(CodeToken::Reinstrument(max_code_len))<span class="question-mark">?</span>;
-		<span class="kw">let </span>code_size = reinstrument(<span class="kw-2">&amp;mut </span>prefab_module, schedule)<span class="question-mark">?</span>;
-		gas_meter.adjust_gas(charged, CodeToken::Reinstrument(code_size));
+		</span><span class="kw">let </span>charged = gas_meter.charge(CodeToken::Reinstrument(instrumented_code_len))<span class="question-mark">?</span>;
+		<span class="kw">let </span>orig_code_len = reinstrument(<span class="kw-2">&amp;mut </span>prefab_module, schedule)<span class="question-mark">?</span>;
+		gas_meter.adjust_gas(charged, CodeToken::Reinstrument(orig_code_len));
 	}
 
 	<span class="prelude-val">Ok</span>(prefab_module)
@@ -455,8 +472,7 @@
 		</span><span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
 			Reinstrument(len) =&gt; T::WeightInfo::reinstrument(len),
 			Load(len) =&gt; T::WeightInfo::call_with_code_per_byte(len)
-				.saturating_sub(T::WeightInfo::call_with_code_per_byte(<span class="number">0</span>))
-				.set_proof_size(len.into()),
+				.saturating_sub(T::WeightInfo::call_with_code_per_byte(<span class="number">0</span>)),
 		}
 	}
 }

@@ -332,11 +332,6 @@
 <a href="#332" id="332">332</a>
 <a href="#333" id="333">333</a>
 <a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -584,13 +579,12 @@
 	<span class="doccomment">/// Calculates the weight that is necessary to remove one key from the trie and how many
 	/// of those keys can be deleted from the deletion queue given the supplied queue length
 	/// and weight limit.
-	</span><span class="kw">pub fn </span>deletion_budget(queue_len: usize, weight_limit: Weight) -&gt; (u64, u32) {
+	</span><span class="kw">pub fn </span>deletion_budget(queue_len: usize, weight_limit: Weight) -&gt; (Weight, u32) {
 		<span class="kw">let </span>base_weight = T::WeightInfo::on_process_deletion_queue_batch();
 		<span class="kw">let </span>weight_per_queue_item = T::WeightInfo::on_initialize_per_queue_item(<span class="number">1</span>) -
 			T::WeightInfo::on_initialize_per_queue_item(<span class="number">0</span>);
-		<span class="kw">let </span>weight_per_key = (T::WeightInfo::on_initialize_per_trie_key(<span class="number">1</span>) -
-			T::WeightInfo::on_initialize_per_trie_key(<span class="number">0</span>))
-		.ref_time();
+		<span class="kw">let </span>weight_per_key = T::WeightInfo::on_initialize_per_trie_key(<span class="number">1</span>) -
+			T::WeightInfo::on_initialize_per_trie_key(<span class="number">0</span>);
 		<span class="kw">let </span>decoding_weight = weight_per_queue_item.saturating_mul(queue_len <span class="kw">as </span>u64);
 
 		<span class="comment">// `weight_per_key` being zero makes no sense and would constitute a failure to
@@ -598,9 +592,8 @@
 		</span><span class="kw">let </span>key_budget = weight_limit
 			.saturating_sub(base_weight)
 			.saturating_sub(decoding_weight)
-			.checked_div(weight_per_key)
-			.unwrap_or(Weight::zero())
-			.ref_time() <span class="kw">as </span>u32;
+			.checked_div_per_component(<span class="kw-2">&amp;</span>weight_per_key)
+			.unwrap_or(<span class="number">0</span>) <span class="kw">as </span>u32;
 
 		(weight_per_key, key_budget)
 	}
@@ -645,10 +638,7 @@
 		}
 
 		&lt;DeletionQueue&lt;T&gt;&gt;::put(queue);
-		<span class="kw">let </span>ref_time_weight = weight_limit
-			.ref_time()
-			.saturating_sub(weight_per_key.saturating_mul(u64::from(remaining_key_budget)));
-		Weight::from_ref_time(ref_time_weight)
+		weight_limit.saturating_sub(weight_per_key.saturating_mul(u64::from(remaining_key_budget)))
 	}
 
 	<span class="doccomment">/// Generates a unique trie id by returning `hash(account_id ++ nonce)`.

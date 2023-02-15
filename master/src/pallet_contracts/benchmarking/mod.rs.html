@@ -3220,8 +3220,6 @@
 <a href="#3220" id="3220">3220</a>
 <a href="#3221" id="3221">3221</a>
 <a href="#3222" id="3222">3222</a>
-<a href="#3223" id="3223">3223</a>
-<a href="#3224" id="3224">3224</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -3429,13 +3427,13 @@
 	}
 
 	<span class="comment">// The base weight consumed on processing contracts deletion queue.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>on_process_deletion_queue_batch {}: {
 		Storage::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
 	}
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>on_initialize_per_trie_key {
 		<span class="kw">let </span>k <span class="kw">in </span><span class="number">0</span>..<span class="number">1024</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_storage(WasmModule::dummy(), k, T::Schedule::get().limits.payload_len)<span class="question-mark">?</span>;
@@ -3444,7 +3442,7 @@
 		Storage::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
 	}
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>on_initialize_per_queue_item {
 		<span class="kw">let </span>q <span class="kw">in </span><span class="number">0</span>..<span class="number">1024</span>.min(T::DeletionQueueDepth::get());
 		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0 </span>.. q {
@@ -3459,7 +3457,7 @@
 	<span class="comment">// This benchmarks the additional weight that is charged when a contract is executed the
 	// first time after a new schedule was deployed: For every new schedule a contract needs
 	// to re-run the instrumentation once.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>reinstrument {
 		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. Perbill::from_percent(<span class="number">49</span>).mul_ceil(T::MaxCodeLen::get());
 		<span class="kw">let </span>WasmModule { code, hash, .. } = WasmModule::&lt;T&gt;::sized(c, Location::Call);
@@ -3476,7 +3474,7 @@
 	// is responsible. This is achieved by generating all code to the `deploy` function
 	// which is in the wasm module but not executed on `call`.
 	// The results are supposed to be used as `call_with_code_kb(c) - call_with_code_kb(0)`.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>call_with_code_per_byte {
 		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. T::MaxCodeLen::get();
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_caller(
@@ -3502,7 +3500,7 @@
 	//
 	// We cannot let `c` grow to the maximum code size because the code is not allowed
 	// to be larger than the maximum size **after instrumentation**.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>instantiate_with_code {
 		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. Perbill::from_percent(<span class="number">49</span>).mul_ceil(T::MaxCodeLen::get());
 		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
@@ -3534,7 +3532,7 @@
 	<span class="comment">// Instantiate uses a dummy contract constructor to measure the overhead of the instantiate.
 	// `i`: Size of the input in kilobytes.
 	// `s`: Size of the salt in kilobytes.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>instantiate {
 		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>s <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
@@ -3566,7 +3564,7 @@
 	// part of `seal_input`. The costs for invoking a contract of a specific size are not part
 	// of this benchmark because we cannot know the size of the contract when issuing a call
 	// transaction. See `invoke_per_code_kb` for this.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>call {
 		<span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">42u8</span>; <span class="number">1024</span>];
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_caller(
@@ -3599,7 +3597,7 @@
 	//
 	// We cannot let `c` grow to the maximum code size because the code is not allowed
 	// to be larger than the maximum size **after instrumentation**.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>upload_code {
 		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. Perbill::from_percent(<span class="number">49</span>).mul_ceil(T::MaxCodeLen::get());
 		<span class="kw">let </span>caller = whitelisted_caller();
@@ -3616,7 +3614,7 @@
 	<span class="comment">// Removing code does not depend on the size of the contract because all the information
 	// needed to verify the removal claim (refcount, owner) is stored in a separate storage
 	// item (`OwnerInfoOf`).
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>remove_code {
 		<span class="kw">let </span>caller = whitelisted_caller();
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, caller_funding::&lt;T&gt;());
@@ -3633,7 +3631,7 @@
 		<span class="macro">assert!</span>(&lt;Contract&lt;T&gt;&gt;::code_removed(<span class="kw-2">&amp;</span>hash));
 	}
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>set_code {
 		<span class="kw">let </span>instance = &lt;Contract&lt;T&gt;&gt;::with_caller(
 			whitelisted_caller(), WasmModule::dummy(), <span class="macro">vec!</span>[],
@@ -3648,7 +3646,7 @@
 		<span class="macro">assert_eq!</span>(instance.info()<span class="question-mark">?</span>.code_hash, hash);
 	}
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_caller {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3657,7 +3655,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_is_contract {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
@@ -3695,7 +3693,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_code_hash {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
@@ -3741,7 +3739,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_own_code_hash {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3750,7 +3748,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_caller_is_origin {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -3771,7 +3769,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_address {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3780,7 +3778,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_gas_left {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3789,7 +3787,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_balance {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3798,7 +3796,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_value_transferred {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3807,7 +3805,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_minimum_balance {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3816,7 +3814,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_block_number {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3825,7 +3823,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_now {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
@@ -3834,7 +3832,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_weight_to_fee {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>pages = code::max_pages::&lt;T&gt;();
@@ -3862,7 +3860,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_gas {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -3883,7 +3881,7 @@
 
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_input {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -3911,7 +3909,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_input_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
 		<span class="kw">let </span>pages = code::max_pages::&lt;T&gt;();
@@ -3945,7 +3943,7 @@
 	<span class="comment">// We cannot call `seal_return` multiple times. Therefore our weight determination is not
 	// as precise as with other APIs. Because this function can only be called once per
 	// contract it cannot be used as an attack vector.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_return {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -3968,7 +3966,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_return_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -3993,7 +3991,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// The same argument as for `seal_return` is true here.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_terminate {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>beneficiary = account::&lt;T::AccountId&gt;(<span class="string">&quot;beneficiary&quot;</span>, <span class="number">0</span>, <span class="number">0</span>);
@@ -4036,7 +4034,7 @@
 	<span class="comment">// We benchmark only for the maximum subject length. We assume that this is some lowish
 	// number (&lt; 1 KB). Therefore we are not overcharging too much in case a smaller subject is
 	// used.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_random {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>pages = code::max_pages::&lt;T&gt;();
@@ -4071,7 +4069,7 @@
 
 	<span class="comment">// Overhead of calling the function without any topic.
 	// We benchmark for the worst case (largest event).
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_deposit_event {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -4098,7 +4096,7 @@
 	<span class="comment">// Benchmark the overhead that topics generate.
 	// `t`: Number of topics
 	// `n`: Size of event payload in kb
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_deposit_event_per_topic_and_kb {
 		<span class="kw">let </span>t <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.event_topics;
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">1024</span>;
@@ -4137,7 +4135,7 @@
 	<span class="comment">// Benchmark debug_message call with zero input data.
 	// Whereas this function is used in RPC mode only, it still should be secured
 	// against an excessive use.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_debug_message {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -4227,7 +4225,7 @@
 	// because re-writing at an existing key is always more expensive than writing
 	// it at a virgin key.
 	</span><span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_set_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4276,7 +4274,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_set_storage_per_new_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
 		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4325,7 +4323,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_set_storage_per_old_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
 		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4378,7 +4376,7 @@
 	// deleting a non existing key. We generate keys of a maximum length, and have to
 	// reduce batch size in order to make resulting contract code size less than MaxCodeLen.
 	</span><span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_clear_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4426,7 +4424,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_clear_storage_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
 		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4474,7 +4472,7 @@
 
 	<span class="comment">// We make sure that all storage accesses are to unique keys.
 	</span><span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_get_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4529,7 +4527,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_get_storage_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
 		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4585,7 +4583,7 @@
 
 	<span class="comment">// We make sure that all storage accesses are to unique keys.
 	</span><span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_contains_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4634,7 +4632,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_contains_storage_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
 		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4682,7 +4680,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_take_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4737,7 +4735,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>seal_take_storage_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
 		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
@@ -4792,7 +4790,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// We transfer to unique accounts.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_transfer {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>accounts = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
@@ -4846,7 +4844,7 @@
 	}
 
 	<span class="comment">// We call unique accounts.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_call {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>dummy_code = WasmModule::&lt;T&gt;::dummy_with_bytes(<span class="number">0</span>);
@@ -4905,7 +4903,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_delegate_call {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>hashes = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
@@ -4958,7 +4956,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller);
 	}: call(origin, callee, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_call_per_transfer_clone_kb {
 		<span class="kw">let </span>t <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
@@ -5017,7 +5015,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, bytes)
 
 	<span class="comment">// We assume that every instantiate sends at least the minimum balance.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_instantiate {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>hashes = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
@@ -5131,7 +5129,7 @@
 		}
 	}
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_instantiate_per_transfer_input_salt_kb {
 		<span class="kw">let </span>t <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. (code::max_pages::&lt;T&gt;() - <span class="number">1</span>) * <span class="number">64</span>;
@@ -5226,7 +5224,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_sha2_256 {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5236,7 +5234,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// `n`: Input to hash in kilobytes
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_sha2_256_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5246,7 +5244,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_keccak_256 {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5256,7 +5254,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// `n`: Input to hash in kilobytes
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_keccak_256_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5266,7 +5264,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_256 {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5276,7 +5274,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// `n`: Input to hash in kilobytes
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_256_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5286,7 +5284,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_128 {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5296,7 +5294,7 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// `n`: Input to hash in kilobytes
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_128_per_kb {
 		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
@@ -5307,7 +5305,7 @@
 
 	<span class="comment">// Only calling the function itself with valid arguments.
 	// It generates different private keys and signatures for the message &quot;Hello world&quot;.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_ecdsa_recover {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 
@@ -5356,7 +5354,7 @@
 
 	<span class="comment">// Only calling the function itself for the list of
 	// generated different ECDSA keys.
-	</span><span class="attr">#[pov_mode = Ignored]
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_ecdsa_to_eth_address {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>key_type = sp_core::crypto::KeyTypeId(<span class="kw-2">*</span><span class="string">b&quot;code&quot;</span>);
@@ -5392,7 +5390,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_set_code_hash {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code_hashes = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
@@ -5433,7 +5431,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_reentrance_count {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -5454,7 +5452,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_account_reentrance_count {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>dummy_code = WasmModule::&lt;T&gt;::dummy_with_bytes(<span class="number">0</span>);
@@ -5488,7 +5486,7 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Ignored]
+	<span class="attr">#[pov_mode = Measured]
 	</span>seal_instantiation_nonce {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -6327,7 +6325,7 @@
 	<span class="comment">// This is no benchmark. It merely exist to have an easy way to pretty print the curently
 	// configured `Schedule` during benchmark development.
 	// It can be outputed using the following command:
-	// cargo run --manifest-path=bin/node/cli/Cargo.toml --release \
+	// cargo run --manifest-path=bin/node/cli/Cargo.toml \
 	//     --features runtime-benchmarks -- benchmark pallet --extra --dev --execution=native \
 	//     -p pallet_contracts -e print_schedule --no-median-slopes --no-min-squares
 	</span><span class="attr">#[extra]
@@ -6335,17 +6333,15 @@
 	</span>print_schedule {
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span>{
-			<span class="kw">let </span>weight_per_key = T::WeightInfo::on_initialize_per_trie_key(<span class="number">1</span>) -
-				T::WeightInfo::on_initialize_per_trie_key(<span class="number">0</span>);
-			<span class="kw">let </span>weight_per_queue_item = T::WeightInfo::on_initialize_per_queue_item(<span class="number">1</span>) -
-				T::WeightInfo::on_initialize_per_queue_item(<span class="number">0</span>);
 			<span class="kw">let </span>weight_limit = T::DeletionWeightLimit::get();
-			<span class="kw">let </span>queue_depth: u64 = T::DeletionQueueDepth::get().into();
+			<span class="kw">let </span>max_queue_depth = T::DeletionQueueDepth::get() <span class="kw">as </span>usize;
+			<span class="kw">let </span>empty_queue_throughput = Storage::&lt;T&gt;::deletion_budget(<span class="number">0</span>, weight_limit);
+			<span class="kw">let </span>full_queue_throughput = Storage::&lt;T&gt;::deletion_budget(max_queue_depth, weight_limit);
 			<span class="macro">println!</span>(<span class="string">&quot;{:#?}&quot;</span>, Schedule::&lt;T&gt;::default());
 			<span class="macro">println!</span>(<span class="string">&quot;###############################################&quot;</span>);
+			<span class="macro">println!</span>(<span class="string">&quot;Lazy deletion weight per key: {}&quot;</span>, empty_queue_throughput.<span class="number">0</span>);
 			<span class="macro">println!</span>(<span class="string">&quot;Lazy deletion throughput per block (empty queue, full queue): {}, {}&quot;</span>,
-				weight_limit / weight_per_key.ref_time(),
-				(weight_limit - weight_per_queue_item * queue_depth) / weight_per_key.ref_time(),
+				empty_queue_throughput.<span class="number">1</span>, full_queue_throughput.<span class="number">1</span>,
 			);
 		}
 		<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
@@ -6357,7 +6353,7 @@
 	// `g` is used to enable gas instrumentation to compare the performance impact of
 	// that instrumentation at runtime.
 	</span><span class="attr">#[extra]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>ink_erc20_transfer {
 		<span class="kw">let </span>g <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>gas_metering = g != <span class="number">0</span>;
@@ -6396,7 +6392,7 @@
 	// `g` is used to enable gas instrumentation to compare the performance impact of
 	// that instrumentation at runtime.
 	</span><span class="attr">#[extra]
-	#[pov_mode = Ignored]
+	#[pov_mode = Measured]
 	</span>solang_erc20_transfer {
 		<span class="kw">let </span>g <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
 		<span class="kw">let </span>gas_metering = g != <span class="number">0</span>;

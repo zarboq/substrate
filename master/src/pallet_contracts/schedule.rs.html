@@ -822,37 +822,6 @@
 <a href="#822" id="822">822</a>
 <a href="#823" id="823">823</a>
 <a href="#824" id="824">824</a>
-<a href="#825" id="825">825</a>
-<a href="#826" id="826">826</a>
-<a href="#827" id="827">827</a>
-<a href="#828" id="828">828</a>
-<a href="#829" id="829">829</a>
-<a href="#830" id="830">830</a>
-<a href="#831" id="831">831</a>
-<a href="#832" id="832">832</a>
-<a href="#833" id="833">833</a>
-<a href="#834" id="834">834</a>
-<a href="#835" id="835">835</a>
-<a href="#836" id="836">836</a>
-<a href="#837" id="837">837</a>
-<a href="#838" id="838">838</a>
-<a href="#839" id="839">839</a>
-<a href="#840" id="840">840</a>
-<a href="#841" id="841">841</a>
-<a href="#842" id="842">842</a>
-<a href="#843" id="843">843</a>
-<a href="#844" id="844">844</a>
-<a href="#845" id="845">845</a>
-<a href="#846" id="846">846</a>
-<a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a>
-<a href="#849" id="849">849</a>
-<a href="#850" id="850">850</a>
-<a href="#851" id="851">851</a>
-<a href="#852" id="852">852</a>
-<a href="#853" id="853">853</a>
-<a href="#854" id="854">854</a>
-<a href="#855" id="855">855</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -1302,7 +1271,7 @@
 
 <span class="macro">macro_rules! </span>cost_args {
 	(<span class="macro-nonterminal">$name</span>:ident, $( <span class="macro-nonterminal">$arg</span>: expr ),+) =&gt; {
-		(T::WeightInfo::<span class="macro-nonterminal">$name</span>($( <span class="macro-nonterminal">$arg </span>),+).saturating_sub(<span class="macro">call_zero!</span>(<span class="macro-nonterminal">$name</span>, $( <span class="macro-nonterminal">$arg </span>),+))).ref_time()
+		(T::WeightInfo::<span class="macro-nonterminal">$name</span>($( <span class="macro-nonterminal">$arg </span>),+).saturating_sub(<span class="macro">call_zero!</span>(<span class="macro-nonterminal">$name</span>, $( <span class="macro-nonterminal">$arg </span>),+)))
 	}
 }
 
@@ -1314,7 +1283,7 @@
 
 <span class="macro">macro_rules! </span>cost_instr_no_params_with_batch_size {
 	(<span class="macro-nonterminal">$name</span>:ident, <span class="macro-nonterminal">$batch_size</span>:expr) =&gt; {
-		(<span class="macro">cost_args!</span>(<span class="macro-nonterminal">$name</span>, <span class="number">1</span>) / u64::from(<span class="macro-nonterminal">$batch_size</span>)) <span class="kw">as </span>u32
+		(<span class="macro">cost_args!</span>(<span class="macro-nonterminal">$name</span>, <span class="number">1</span>).ref_time() / u64::from(<span class="macro-nonterminal">$batch_size</span>)) <span class="kw">as </span>u32
 	};
 }
 
@@ -1369,12 +1338,6 @@
 	};
 }
 
-<span class="macro">macro_rules! </span>to_weight {
-	(<span class="macro-nonterminal">$ref_time</span>:expr $(, <span class="macro-nonterminal">$proof_size</span>:expr )<span class="question-mark">?</span>) =&gt; {
-		Weight::from_ref_time(<span class="macro-nonterminal">$ref_time</span>)$(.set_proof_size(<span class="macro-nonterminal">$proof_size</span>))<span class="question-mark">?
-	</span>};
-}
-
 <span class="kw">impl </span>Default <span class="kw">for </span>Limits {
 	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{
@@ -1409,8 +1372,8 @@
 			br_table_per_entry: <span class="macro">cost_instr!</span>(instr_br_table_per_entry, <span class="number">0</span>),
 			call: <span class="macro">cost_instr!</span>(instr_call, <span class="number">2</span>),
 			call_indirect: <span class="macro">cost_instr!</span>(instr_call_indirect, <span class="number">3</span>),
-			call_indirect_per_param: <span class="macro">cost_instr!</span>(instr_call_indirect_per_param, <span class="number">1</span>),
-			call_per_local: <span class="macro">cost_instr!</span>(instr_call_per_local, <span class="number">1</span>),
+			call_indirect_per_param: <span class="macro">cost_instr!</span>(instr_call_indirect_per_param, <span class="number">0</span>),
+			call_per_local: <span class="macro">cost_instr!</span>(instr_call_per_local, <span class="number">0</span>),
 			local_get: <span class="macro">cost_instr!</span>(instr_local_get, <span class="number">1</span>),
 			local_set: <span class="macro">cost_instr!</span>(instr_local_set, <span class="number">1</span>),
 			local_tee: <span class="macro">cost_instr!</span>(instr_local_tee, <span class="number">2</span>),
@@ -1456,116 +1419,91 @@
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Default <span class="kw">for </span>HostFnWeights&lt;T&gt; {
-	<span class="doccomment">/// PoV should contain all trie nodes that are read during state transition (i.e. block
-	/// production). Hence we need to charge the `proof_size` weight for every host function which
-	/// reads storage, namely:
-	/// - get_storage,
-	/// - take_storage,
-	/// - contains_storage,
-	/// - clear_storage,
-	/// - set_storage.
-	///
-	/// The last two functions write to storage, but they also do read storage in order to return
-	/// the size of the pre-existed value. Till we have PoV benchmarks implemented, we approximate
-	/// `proof_size` as being equal to the size of storage read.
-	</span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{
-			caller: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_caller)),
-			is_contract: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_is_contract)),
-			code_hash: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_code_hash)),
-			own_code_hash: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_own_code_hash)),
-			caller_is_origin: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_caller_is_origin)),
-			address: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_address)),
-			gas_left: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_gas_left)),
-			balance: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_balance)),
-			value_transferred: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_value_transferred)),
-			minimum_balance: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_minimum_balance)),
-			block_number: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_block_number)),
-			now: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_now)),
-			weight_to_fee: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_weight_to_fee)),
-			gas: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_gas)),
-			input: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_input)),
-			input_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_input_per_kb)),
-			r#return: <span class="macro">to_weight!</span>(<span class="macro">cost!</span>(seal_return)),
-			return_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte!</span>(seal_return_per_kb)),
-			terminate: <span class="macro">to_weight!</span>(<span class="macro">cost!</span>(seal_terminate)),
-			random: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_random)),
-			deposit_event: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_deposit_event)),
-			deposit_event_per_topic: <span class="macro">to_weight!</span>(<span class="macro">cost_batched_args!</span>(
+			caller: <span class="macro">cost_batched!</span>(seal_caller),
+			is_contract: <span class="macro">cost_batched!</span>(seal_is_contract),
+			code_hash: <span class="macro">cost_batched!</span>(seal_code_hash),
+			own_code_hash: <span class="macro">cost_batched!</span>(seal_own_code_hash),
+			caller_is_origin: <span class="macro">cost_batched!</span>(seal_caller_is_origin),
+			address: <span class="macro">cost_batched!</span>(seal_address),
+			gas_left: <span class="macro">cost_batched!</span>(seal_gas_left),
+			balance: <span class="macro">cost_batched!</span>(seal_balance),
+			value_transferred: <span class="macro">cost_batched!</span>(seal_value_transferred),
+			minimum_balance: <span class="macro">cost_batched!</span>(seal_minimum_balance),
+			block_number: <span class="macro">cost_batched!</span>(seal_block_number),
+			now: <span class="macro">cost_batched!</span>(seal_now),
+			weight_to_fee: <span class="macro">cost_batched!</span>(seal_weight_to_fee),
+			<span class="comment">// Manually remove proof size from basic block cost.
+			//
+			// Due to imperfect benchmarking some host functions incur a small
+			// amount of proof size. Usually this is ok. However, charging a basic block is such
+			// a frequent operation that this would be a vast overestimation.
+			</span>gas: <span class="macro">cost_batched!</span>(seal_gas).set_proof_size(<span class="number">0</span>),
+			input: <span class="macro">cost_batched!</span>(seal_input),
+			input_per_byte: <span class="macro">cost_byte_batched!</span>(seal_input_per_kb),
+			r#return: <span class="macro">cost!</span>(seal_return),
+			return_per_byte: <span class="macro">cost_byte!</span>(seal_return_per_kb),
+			terminate: <span class="macro">cost!</span>(seal_terminate),
+			random: <span class="macro">cost_batched!</span>(seal_random),
+			deposit_event: <span class="macro">cost_batched!</span>(seal_deposit_event),
+			deposit_event_per_topic: <span class="macro">cost_batched_args!</span>(seal_deposit_event_per_topic_and_kb, <span class="number">1</span>, <span class="number">0</span>),
+			deposit_event_per_byte: <span class="macro">cost_byte_batched_args!</span>(
 				seal_deposit_event_per_topic_and_kb,
-				<span class="number">1</span>,
-				<span class="number">0
-			</span>)),
-			deposit_event_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched_args!</span>(
-				seal_deposit_event_per_topic_and_kb,
 				<span class="number">0</span>,
 				<span class="number">1
-			</span>)),
-			debug_message: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_debug_message)),
-			debug_message_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte!</span>(seal_debug_message_per_kb)),
-			set_storage: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_set_storage), <span class="number">1024u64</span>),
-			set_code_hash: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_set_code_hash)),
-			set_storage_per_new_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_set_storage_per_new_kb)),
-			set_storage_per_old_byte: <span class="macro">to_weight!</span>(
-				<span class="macro">cost_byte_batched!</span>(seal_set_storage_per_old_kb),
-				<span class="number">1u64
 			</span>),
-			clear_storage: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_clear_storage), <span class="number">1024u64</span>),
-			clear_storage_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_clear_storage_per_kb), <span class="number">1u64</span>),
-			contains_storage: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_contains_storage), <span class="number">1024u64</span>),
-			contains_storage_per_byte: <span class="macro">to_weight!</span>(
-				<span class="macro">cost_byte_batched!</span>(seal_contains_storage_per_kb),
-				<span class="number">1u64
+			debug_message: <span class="macro">cost_batched!</span>(seal_debug_message),
+			debug_message_per_byte: <span class="macro">cost_byte!</span>(seal_debug_message_per_kb),
+			set_storage: <span class="macro">cost_batched!</span>(seal_set_storage),
+			set_code_hash: <span class="macro">cost_batched!</span>(seal_set_code_hash),
+			set_storage_per_new_byte: <span class="macro">cost_byte_batched!</span>(seal_set_storage_per_new_kb),
+			set_storage_per_old_byte: <span class="macro">cost_byte_batched!</span>(seal_set_storage_per_old_kb),
+			clear_storage: <span class="macro">cost_batched!</span>(seal_clear_storage),
+			clear_storage_per_byte: <span class="macro">cost_byte_batched!</span>(seal_clear_storage_per_kb),
+			contains_storage: <span class="macro">cost_batched!</span>(seal_contains_storage),
+			contains_storage_per_byte: <span class="macro">cost_byte_batched!</span>(seal_contains_storage_per_kb),
+			get_storage: <span class="macro">cost_batched!</span>(seal_get_storage),
+			get_storage_per_byte: <span class="macro">cost_byte_batched!</span>(seal_get_storage_per_kb),
+			take_storage: <span class="macro">cost_batched!</span>(seal_take_storage),
+			take_storage_per_byte: <span class="macro">cost_byte_batched!</span>(seal_take_storage_per_kb),
+			transfer: <span class="macro">cost_batched!</span>(seal_transfer),
+			call: <span class="macro">cost_batched!</span>(seal_call),
+			delegate_call: <span class="macro">cost_batched!</span>(seal_delegate_call),
+			call_transfer_surcharge: <span class="macro">cost_batched_args!</span>(seal_call_per_transfer_clone_kb, <span class="number">1</span>, <span class="number">0</span>),
+			call_per_cloned_byte: <span class="macro">cost_byte_batched_args!</span>(seal_call_per_transfer_clone_kb, <span class="number">0</span>, <span class="number">1</span>),
+			instantiate: <span class="macro">cost_batched!</span>(seal_instantiate),
+			instantiate_transfer_surcharge: <span class="macro">cost_batched_args!</span>(
+				seal_instantiate_per_transfer_input_salt_kb,
+				<span class="number">1</span>,
+				<span class="number">0</span>,
+				<span class="number">0
 			</span>),
-			get_storage: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_get_storage), <span class="number">1024u64</span>),
-			get_storage_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_get_storage_per_kb), <span class="number">1u64</span>),
-			take_storage: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_take_storage), <span class="number">1024u64</span>),
-			take_storage_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_take_storage_per_kb), <span class="number">1u64</span>),
-			transfer: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_transfer)),
-			call: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_call)),
-			delegate_call: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_delegate_call)),
-			call_transfer_surcharge: <span class="macro">to_weight!</span>(<span class="macro">cost_batched_args!</span>(
-				seal_call_per_transfer_clone_kb,
-				<span class="number">1</span>,
-				<span class="number">0
-			</span>)),
-			call_per_cloned_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_batched_args!</span>(
-				seal_call_per_transfer_clone_kb,
-				<span class="number">0</span>,
-				<span class="number">1
-			</span>)),
-			instantiate: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_instantiate)),
-			instantiate_transfer_surcharge: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched_args!</span>(
-				seal_instantiate_per_transfer_input_salt_kb,
-				<span class="number">1</span>,
-				<span class="number">0</span>,
-				<span class="number">0
-			</span>)),
-			instantiate_per_input_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched_args!</span>(
+			instantiate_per_input_byte: <span class="macro">cost_byte_batched_args!</span>(
 				seal_instantiate_per_transfer_input_salt_kb,
 				<span class="number">0</span>,
 				<span class="number">1</span>,
 				<span class="number">0
-			</span>)),
-			instantiate_per_salt_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched_args!</span>(
+			</span>),
+			instantiate_per_salt_byte: <span class="macro">cost_byte_batched_args!</span>(
 				seal_instantiate_per_transfer_input_salt_kb,
 				<span class="number">0</span>,
 				<span class="number">0</span>,
 				<span class="number">1
-			</span>)),
-			hash_sha2_256: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_hash_sha2_256)),
-			hash_sha2_256_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_hash_sha2_256_per_kb)),
-			hash_keccak_256: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_hash_keccak_256)),
-			hash_keccak_256_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_hash_keccak_256_per_kb)),
-			hash_blake2_256: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_hash_blake2_256)),
-			hash_blake2_256_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_hash_blake2_256_per_kb)),
-			hash_blake2_128: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_hash_blake2_128)),
-			hash_blake2_128_per_byte: <span class="macro">to_weight!</span>(<span class="macro">cost_byte_batched!</span>(seal_hash_blake2_128_per_kb)),
-			ecdsa_recover: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_ecdsa_recover)),
-			ecdsa_to_eth_address: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_ecdsa_to_eth_address)),
-			reentrance_count: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_reentrance_count)),
-			account_reentrance_count: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_account_reentrance_count)),
-			instantiation_nonce: <span class="macro">to_weight!</span>(<span class="macro">cost_batched!</span>(seal_instantiation_nonce)),
+			</span>),
+			hash_sha2_256: <span class="macro">cost_batched!</span>(seal_hash_sha2_256),
+			hash_sha2_256_per_byte: <span class="macro">cost_byte_batched!</span>(seal_hash_sha2_256_per_kb),
+			hash_keccak_256: <span class="macro">cost_batched!</span>(seal_hash_keccak_256),
+			hash_keccak_256_per_byte: <span class="macro">cost_byte_batched!</span>(seal_hash_keccak_256_per_kb),
+			hash_blake2_256: <span class="macro">cost_batched!</span>(seal_hash_blake2_256),
+			hash_blake2_256_per_byte: <span class="macro">cost_byte_batched!</span>(seal_hash_blake2_256_per_kb),
+			hash_blake2_128: <span class="macro">cost_batched!</span>(seal_hash_blake2_128),
+			hash_blake2_128_per_byte: <span class="macro">cost_byte_batched!</span>(seal_hash_blake2_128_per_kb),
+			ecdsa_recover: <span class="macro">cost_batched!</span>(seal_ecdsa_recover),
+			ecdsa_to_eth_address: <span class="macro">cost_batched!</span>(seal_ecdsa_to_eth_address),
+			reentrance_count: <span class="macro">cost_batched!</span>(seal_reentrance_count),
+			account_reentrance_count: <span class="macro">cost_batched!</span>(seal_account_reentrance_count),
+			instantiation_nonce: <span class="macro">cost_batched!</span>(seal_instantiation_nonce),
 			_phantom: PhantomData,
 		}
 	}
