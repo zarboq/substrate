@@ -1529,6 +1529,24 @@
 <a href="#1529" id="1529">1529</a>
 <a href="#1530" id="1530">1530</a>
 <a href="#1531" id="1531">1531</a>
+<a href="#1532" id="1532">1532</a>
+<a href="#1533" id="1533">1533</a>
+<a href="#1534" id="1534">1534</a>
+<a href="#1535" id="1535">1535</a>
+<a href="#1536" id="1536">1536</a>
+<a href="#1537" id="1537">1537</a>
+<a href="#1538" id="1538">1538</a>
+<a href="#1539" id="1539">1539</a>
+<a href="#1540" id="1540">1540</a>
+<a href="#1541" id="1541">1541</a>
+<a href="#1542" id="1542">1542</a>
+<a href="#1543" id="1543">1543</a>
+<a href="#1544" id="1544">1544</a>
+<a href="#1545" id="1545">1545</a>
+<a href="#1546" id="1546">1546</a>
+<a href="#1547" id="1547">1547</a>
+<a href="#1548" id="1548">1548</a>
+<a href="#1549" id="1549">1549</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -1555,8 +1573,8 @@
 	error::Error,
 	justification::BeefyVersionedFinalityProof,
 	keystore::BeefyKeystore,
-	metric_inc, metric_set,
-	metrics::Metrics,
+	metric_get, metric_inc, metric_set,
+	metrics::VoterMetrics,
 	round::{Rounds, VoteImportResult},
 	BeefyVoterLinks, LOG_TARGET,
 };
@@ -1783,7 +1801,7 @@
 	<span class="kw">pub </span>gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
 	<span class="kw">pub </span>on_demand_justifications: OnDemandJustificationsEngine&lt;B&gt;,
 	<span class="kw">pub </span>links: BeefyVoterLinks&lt;B&gt;,
-	<span class="kw">pub </span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
+	<span class="kw">pub </span>metrics: <span class="prelude-ty">Option</span>&lt;VoterMetrics&gt;,
 	<span class="kw">pub </span>persisted_state: PersistedState&lt;B&gt;,
 }
 
@@ -1843,7 +1861,7 @@
 
 	<span class="comment">// voter state
 	</span><span class="doccomment">/// BEEFY client metrics.
-	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
+	</span>metrics: <span class="prelude-ty">Option</span>&lt;VoterMetrics&gt;,
 	<span class="doccomment">/// Buffer holding votes for future processing.
 	</span>pending_votes: BTreeMap&lt;
 		NumberFor&lt;B&gt;,
@@ -1938,6 +1956,7 @@
 		<span class="kw">if </span>store.intersection(<span class="kw-2">&amp;</span>active).count() == <span class="number">0 </span>{
 			<span class="kw">let </span>msg = <span class="string">&quot;no authority public key found in store&quot;</span>.to_string();
 			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 for block {:?} {}&quot;</span>, block, msg);
+			<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_no_authority_found_in_store);
 			<span class="prelude-val">Err</span>(Error::Keystore(msg))
 		} <span class="kw">else </span>{
 			<span class="prelude-val">Ok</span>(())
@@ -2025,17 +2044,21 @@
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer vote for round: {:?}.&quot;</span>, block_num);
 				<span class="kw">if </span><span class="self">self</span>.pending_votes.len() &lt; MAX_BUFFERED_VOTE_ROUNDS {
 					<span class="kw">let </span>votes_vec = <span class="self">self</span>.pending_votes.entry(block_num).or_default();
-					<span class="kw">if </span>votes_vec.try_push(vote).is_err() {
+					<span class="kw">if </span>votes_vec.try_push(vote).is_ok() {
+						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_votes);
+					} <span class="kw">else </span>{
 						<span class="macro">warn!</span>(
 							target: LOG_TARGET,
 							<span class="string">&quot;🥩 Buffer vote dropped for round: {:?}&quot;</span>, block_num
-						)
+						);
+						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_votes_dropped);
 					}
 				} <span class="kw">else </span>{
 					<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer vote dropped for round: {:?}.&quot;</span>, block_num);
+					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_votes_dropped);
 				}
 			},
-			RoundAction::Drop =&gt; (),
+			RoundAction::Drop =&gt; <span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_stale_votes),
 		};
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2055,20 +2078,23 @@
 		<span class="kw">match </span><span class="self">self</span>.voting_oracle().triage_round(block_num, best_grandpa)<span class="question-mark">? </span>{
 			RoundAction::Process =&gt; {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Process justification for round: {:?}.&quot;</span>, block_num);
+				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_imported_justifications);
 				<span class="self">self</span>.finalize(justification)<span class="question-mark">?
 			</span>},
 			RoundAction::Enqueue =&gt; {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer justification for round: {:?}.&quot;</span>, block_num);
 				<span class="kw">if </span><span class="self">self</span>.pending_justifications.len() &lt; MAX_BUFFERED_JUSTIFICATIONS {
 					<span class="self">self</span>.pending_justifications.entry(block_num).or_insert(justification);
+					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_justifications);
 				} <span class="kw">else </span>{
+					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_justifications_dropped);
 					<span class="macro">warn!</span>(
 						target: LOG_TARGET,
 						<span class="string">&quot;🥩 Buffer justification dropped for round: {:?}.&quot;</span>, block_num
 					);
 				}
 			},
-			RoundAction::Drop =&gt; (),
+			RoundAction::Drop =&gt; <span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_stale_justifications),
 		};
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2086,8 +2112,6 @@
 		<span class="kw">let </span>block_number = vote.commitment.block_number;
 		<span class="kw">match </span>rounds.add_vote(vote) {
 			VoteImportResult::RoundConcluded(signed_commitment) =&gt; {
-				<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_round_concluded, block_number);
-
 				<span class="kw">let </span>finality_proof = VersionedFinalityProof::V1(signed_commitment);
 				<span class="macro">info!</span>(
 					target: LOG_TARGET,
@@ -2115,6 +2139,7 @@
 			},
 			VoteImportResult::Invalid | VoteImportResult::Stale =&gt; (),
 		};
+		<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_successful_handled_votes);
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -2168,7 +2193,8 @@
 				.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(finality_proof))
 				.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
 		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Can&#39;t set best beefy to older: {}&quot;</span>, block_num);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Can&#39;t set best beefy to old: {}&quot;</span>, block_num);
+			<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_best_block_set_last_failure, block_num);
 		}
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2200,24 +2226,32 @@
 			<span class="kw">let </span>justifs_to_handle = to_process_for(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pending_justifications, interval, _ph);
 			<span class="kw">for </span>(num, justification) <span class="kw">in </span>justifs_to_handle.into_iter() {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Handle buffered justification for: {:?}.&quot;</span>, num);
+				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_imported_justifications);
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.finalize(justification) {
 					<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error finalizing block: {}&quot;</span>, err);
 				}
 			}
+			<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_buffered_justifications, <span class="self">self</span>.pending_justifications.len());
 			<span class="comment">// Possibly new interval after processing justifications.
 			</span>interval = <span class="self">self</span>.voting_oracle().accepted_interval(best_grandpa)<span class="question-mark">?</span>;
 		}
 
 		<span class="comment">// Process pending votes.
 		</span><span class="kw">if </span>!<span class="self">self</span>.pending_votes.is_empty() {
+			<span class="kw">let </span><span class="kw-2">mut </span>processed = <span class="number">0u64</span>;
 			<span class="kw">let </span>votes_to_handle = to_process_for(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pending_votes, interval, _ph);
 			<span class="kw">for </span>(num, votes) <span class="kw">in </span>votes_to_handle.into_iter() {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Handle buffered votes for: {:?}.&quot;</span>, num);
+				processed += votes.len() <span class="kw">as </span>u64;
 				<span class="kw">for </span>v <span class="kw">in </span>votes.into_iter() {
 					<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(v) {
 						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error handling buffered vote: {}&quot;</span>, err);
 					};
 				}
+			}
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(previous) = <span class="macro">metric_get!</span>(<span class="self">self</span>, beefy_buffered_votes) {
+				previous.sub(processed);
+				<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_buffered_votes, previous.get());
 			}
 		}
 		<span class="prelude-val">Ok</span>(())
@@ -2584,10 +2618,12 @@
 		<span class="kw">let </span>gossip_validator = Arc::new(GossipValidator::new(known_peers.clone()));
 		<span class="kw">let </span>gossip_engine =
 			GossipEngine::new(network.clone(), <span class="string">&quot;/beefy/1&quot;</span>, gossip_validator.clone(), <span class="prelude-val">None</span>);
+		<span class="kw">let </span>metrics = <span class="prelude-val">None</span>;
 		<span class="kw">let </span>on_demand_justifications = OnDemandJustificationsEngine::new(
 			network.clone(),
 			<span class="string">&quot;/beefy/justifs/1&quot;</span>.into(),
 			known_peers,
+			<span class="prelude-val">None</span>,
 		);
 		<span class="kw">let </span>genesis_header = backend
 			.blockchain()
@@ -2608,7 +2644,7 @@
 			links,
 			gossip_engine,
 			gossip_validator,
-			metrics: <span class="prelude-val">None</span>,
+			metrics,
 			network,
 			on_demand_justifications,
 			persisted_state,

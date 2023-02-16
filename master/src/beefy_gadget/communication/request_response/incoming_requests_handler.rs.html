@@ -196,6 +196,18 @@
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright 2022 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
@@ -227,8 +239,13 @@
 <span class="kw">use </span>sp_runtime::traits::Block;
 <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
-<span class="kw">use </span><span class="kw">crate</span>::communication::request_response::{
-	on_demand_justifications_protocol_config, Error, JustificationRequest, BEEFY_SYNC_LOG_TARGET,
+<span class="kw">use crate</span>::{
+	communication::request_response::{
+		on_demand_justifications_protocol_config, Error, JustificationRequest,
+		BEEFY_SYNC_LOG_TARGET,
+	},
+	metric_inc,
+	metrics::{register_metrics, OnDemandIncomingRequestsMetrics},
 };
 
 <span class="doccomment">/// A request coming in, including a sender for sending responses.
@@ -317,6 +334,7 @@
 	<span class="kw">pub</span>(<span class="kw">crate</span>) request_receiver: IncomingRequestReceiver,
 	<span class="kw">pub</span>(<span class="kw">crate</span>) justif_protocol_name: ProtocolName,
 	<span class="kw">pub</span>(<span class="kw">crate</span>) client: Arc&lt;Client&gt;,
+	<span class="kw">pub</span>(<span class="kw">crate</span>) metrics: <span class="prelude-ty">Option</span>&lt;OnDemandIncomingRequestsMetrics&gt;,
 	<span class="kw">pub</span>(<span class="kw">crate</span>) _block: PhantomData&lt;B&gt;,
 }
 
@@ -330,12 +348,16 @@
 		genesis_hash: Hash,
 		fork_id: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 		client: Arc&lt;Client&gt;,
+		prometheus_registry: <span class="prelude-ty">Option</span>&lt;prometheus::Registry&gt;,
 	) -&gt; (<span class="self">Self</span>, RequestResponseConfig) {
 		<span class="kw">let </span>(request_receiver, config) =
 			on_demand_justifications_protocol_config(genesis_hash, fork_id);
 		<span class="kw">let </span>justif_protocol_name = config.name.clone();
-
-		(<span class="self">Self </span>{ request_receiver, justif_protocol_name, client, _block: PhantomData }, config)
+		<span class="kw">let </span>metrics = register_metrics(prometheus_registry);
+		(
+			<span class="self">Self </span>{ request_receiver, justif_protocol_name, client, metrics, _block: PhantomData },
+			config,
+		)
 	}
 
 	<span class="doccomment">/// Network request-response protocol name used by this handler.
@@ -378,12 +400,14 @@
 			<span class="kw">let </span>peer = request.peer;
 			<span class="kw">match </span><span class="self">self</span>.handle_request(request) {
 				<span class="prelude-val">Ok</span>(()) =&gt; {
+					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_successful_justification_responses);
 					<span class="macro">debug!</span>(
 						target: BEEFY_SYNC_LOG_TARGET,
 						<span class="string">&quot;🥩 Handled BEEFY justification request from {:?}.&quot;</span>, peer
 					)
 				},
 				<span class="prelude-val">Err</span>(e) =&gt; {
+					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_failed_justification_responses);
 					<span class="comment">// TODO (issue #12293): apply reputation changes here based on error type.
 					</span><span class="macro">debug!</span>(
 						target: BEEFY_SYNC_LOG_TARGET,

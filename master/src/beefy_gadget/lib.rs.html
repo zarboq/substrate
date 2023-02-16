@@ -498,10 +498,6 @@
 <a href="#498" id="498">498</a>
 <a href="#499" id="499">499</a>
 <a href="#500" id="500">500</a>
-<a href="#501" id="501">501</a>
-<a href="#502" id="502">502</a>
-<a href="#503" id="503">503</a>
-<a href="#504" id="504">504</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -532,6 +528,7 @@
 		},
 	},
 	import::BeefyBlockImport,
+	metrics::register_metrics,
 	round::Rounds,
 	worker::PersistedState,
 };
@@ -540,7 +537,7 @@
 	GENESIS_AUTHORITY_SET_ID,
 };
 <span class="kw">use </span>futures::{stream::Fuse, StreamExt};
-<span class="kw">use </span>log::{debug, error, info};
+<span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>prometheus::Registry;
 <span class="kw">use </span>sc_client_api::{Backend, BlockBackend, BlockchainEvents, FinalityNotifications, Finalizer};
@@ -637,6 +634,7 @@
 	wrapped_block_import: I,
 	backend: Arc&lt;BE&gt;,
 	runtime: Arc&lt;RuntimeApi&gt;,
+	prometheus_registry: <span class="prelude-ty">Option</span>&lt;Registry&gt;,
 ) -&gt; (BeefyBlockImport&lt;B, BE, RuntimeApi, I&gt;, BeefyVoterLinks&lt;B&gt;, BeefyRPCLinks&lt;B&gt;)
 <span class="kw">where
 	</span>B: Block,
@@ -656,10 +654,16 @@
 	<span class="comment">// BlockImport -&gt; Voter links
 	</span><span class="kw">let </span>(to_voter_justif_sender, from_block_import_justif_stream) =
 		BeefyVersionedFinalityProofStream::&lt;B&gt;::channel();
+	<span class="kw">let </span>metrics = register_metrics(prometheus_registry);
 
 	<span class="comment">// BlockImport
-	</span><span class="kw">let </span>import =
-		BeefyBlockImport::new(backend, runtime, wrapped_block_import, to_voter_justif_sender);
+	</span><span class="kw">let </span>import = BeefyBlockImport::new(
+		backend,
+		runtime,
+		wrapped_block_import,
+		to_voter_justif_sender,
+		metrics,
+	);
 	<span class="kw">let </span>voter_links = BeefyVoterLinks {
 		from_block_import_justif_stream,
 		to_rpc_justif_sender,
@@ -746,27 +750,15 @@
 		gossip_validator.clone(),
 		<span class="prelude-val">None</span>,
 	);
+	<span class="kw">let </span>metrics = register_metrics(prometheus_registry.clone());
 
 	<span class="comment">// The `GossipValidator` adds and removes known peers based on valid votes and network events.
 	</span><span class="kw">let </span>on_demand_justifications = OnDemandJustificationsEngine::new(
 		network.clone(),
 		justifications_protocol_name,
 		known_peers,
+		prometheus_registry.clone(),
 	);
-
-	<span class="kw">let </span>metrics =
-		prometheus_registry.as_ref().map(metrics::Metrics::register).and_then(
-			|result| <span class="kw">match </span>result {
-				<span class="prelude-val">Ok</span>(metrics) =&gt; {
-					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Registered metrics&quot;</span>);
-					<span class="prelude-val">Some</span>(metrics)
-				},
-				<span class="prelude-val">Err</span>(err) =&gt; {
-					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Failed to register metrics: {:?}&quot;</span>, err);
-					<span class="prelude-val">None
-				</span>},
-			},
-		);
 
 	<span class="comment">// Subscribe to finality notifications and justifications before waiting for runtime pallet and
 	// reuse the streams, so we don&#39;t miss notifications while waiting for pallet to be available.

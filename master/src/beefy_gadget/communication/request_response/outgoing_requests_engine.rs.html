@@ -233,6 +233,17 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -269,6 +280,8 @@
 <span class="kw">use crate</span>::{
 	communication::request_response::{Error, JustificationRequest, BEEFY_SYNC_LOG_TARGET},
 	justification::{decode_and_verify_finality_proof, BeefyVersionedFinalityProof},
+	metric_inc,
+	metrics::{register_metrics, OnDemandOutgoingRequestsMetrics},
 	KnownPeers,
 };
 
@@ -296,6 +309,7 @@
 	peers_cache: VecDeque&lt;PeerId&gt;,
 
 	state: State&lt;B&gt;,
+	metrics: <span class="prelude-ty">Option</span>&lt;OnDemandOutgoingRequestsMetrics&gt;,
 }
 
 <span class="kw">impl</span>&lt;B: Block&gt; OnDemandJustificationsEngine&lt;B&gt; {
@@ -303,13 +317,16 @@
 		network: Arc&lt;<span class="kw">dyn </span>NetworkRequest + Send + Sync&gt;,
 		protocol_name: ProtocolName,
 		live_peers: Arc&lt;Mutex&lt;KnownPeers&lt;B&gt;&gt;&gt;,
+		prometheus_registry: <span class="prelude-ty">Option</span>&lt;prometheus::Registry&gt;,
 	) -&gt; <span class="self">Self </span>{
+		<span class="kw">let </span>metrics = register_metrics(prometheus_registry);
 		<span class="self">Self </span>{
 			network,
 			protocol_name,
 			live_peers,
 			peers_cache: VecDeque::new(),
 			state: State::Idle,
+			metrics,
 		}
 	}
 
@@ -365,6 +382,7 @@
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(peer) = <span class="self">self</span>.try_next_peer() {
 			<span class="self">self</span>.request_from_peer(peer, RequestInfo { block, active_set });
 		} <span class="kw">else </span>{
+			<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_no_peer_to_request_from);
 			<span class="macro">debug!</span>(
 				target: BEEFY_SYNC_LOG_TARGET,
 				<span class="string">&quot;🥩 no good peers to request justif #{:?} from&quot;</span>, block
@@ -394,6 +412,7 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;BeefyVersionedFinalityProof&lt;B&gt;, Error&gt; {
 		response
 			.map_err(|e| {
+				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_peer_hang_up);
 				<span class="macro">debug!</span>(
 					target: BEEFY_SYNC_LOG_TARGET,
 					<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} hung up: {:?}&quot;</span>,
@@ -404,6 +423,7 @@
 				Error::InvalidResponse
 			})<span class="question-mark">?
 			</span>.map_err(|e| {
+				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_peer_error);
 				<span class="macro">debug!</span>(
 					target: BEEFY_SYNC_LOG_TARGET,
 					<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} error: {:?}&quot;</span>,
@@ -420,6 +440,7 @@
 					<span class="kw-2">&amp;</span>req_info.active_set,
 				)
 				.map_err(|e| {
+					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_invalid_proof);
 					<span class="macro">debug!</span>(
 						target: BEEFY_SYNC_LOG_TARGET,
 						<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} responded with invalid proof: {:?}&quot;</span>,
@@ -459,6 +480,7 @@
 				}
 			})
 			.map(|proof| {
+				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_good_proof);
 				<span class="macro">debug!</span>(
 					target: BEEFY_SYNC_LOG_TARGET,
 					<span class="string">&quot;🥩 received valid on-demand justif #{:?} from {:?}&quot;</span>, block, peer
