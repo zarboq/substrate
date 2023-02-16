@@ -59,7 +59,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_bounties":["",[["migrations",[],["mod.rs","v4.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_child_bounties":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_collective":["",[["migrations",[],["mod.rs","v4.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
-"pallet_contracts":["",[["benchmarking",[],["code.rs","mod.rs","sandbox.rs"]],["storage",[],["meter.rs"]],["wasm",[],["code_cache.rs","mod.rs","prepare.rs","runtime.rs"]]],["chain_extension.rs","exec.rs","gas.rs","lib.rs","migration.rs","schedule.rs","storage.rs","weights.rs"]],\
+"pallet_contracts":["",[["benchmarking",[],["code.rs","mod.rs","sandbox.rs"]],["storage",[],["meter.rs"]],["wasm",[],["code_cache.rs","mod.rs","prepare.rs","runtime.rs"]]],["address.rs","chain_extension.rs","exec.rs","gas.rs","lib.rs","migration.rs","schedule.rs","storage.rs","weights.rs"]],\
 "pallet_contracts_primitives":["",[],["lib.rs"]],\
 "pallet_contracts_proc_macro":["",[],["lib.rs"]],\
 "pallet_conviction_voting":["",[],["benchmarking.rs","conviction.rs","lib.rs","types.rs","vote.rs","weights.rs"]],\

@@ -3455,6 +3455,25 @@
 <a href="#3455" id="3455">3455</a>
 <a href="#3456" id="3456">3456</a>
 <a href="#3457" id="3457">3457</a>
+<a href="#3458" id="3458">3458</a>
+<a href="#3459" id="3459">3459</a>
+<a href="#3460" id="3460">3460</a>
+<a href="#3461" id="3461">3461</a>
+<a href="#3462" id="3462">3462</a>
+<a href="#3463" id="3463">3463</a>
+<a href="#3464" id="3464">3464</a>
+<a href="#3465" id="3465">3465</a>
+<a href="#3466" id="3466">3466</a>
+<a href="#3467" id="3467">3467</a>
+<a href="#3468" id="3468">3468</a>
+<a href="#3469" id="3469">3469</a>
+<a href="#3470" id="3470">3470</a>
+<a href="#3471" id="3471">3471</a>
+<a href="#3472" id="3472">3472</a>
+<a href="#3473" id="3473">3473</a>
+<a href="#3474" id="3474">3474</a>
+<a href="#3475" id="3475">3475</a>
+<a href="#3476" id="3476">3476</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -3474,9 +3493,9 @@
 
 </span><span class="kw">use crate</span>::{
 	gas::GasMeter,
-	storage::{<span class="self">self</span>, Storage, WriteOutcome},
+	storage::{<span class="self">self</span>, DepositAccount, WriteOutcome},
 	BalanceOf, CodeHash, Config, ContractInfo, ContractInfoOf, DebugBufferVec, Determinism, Error,
-	Event, Nonce, Pallet <span class="kw">as </span>Contracts, Schedule,
+	Event, Nonce, Pallet <span class="kw">as </span>Contracts, Schedule, System,
 };
 <span class="kw">use </span>frame_support::{
 	crypto::ecdsa::ECDSAExt,
@@ -3949,7 +3968,7 @@
 	///
 	/// In this case a reload is neither allowed nor possible. Please note that recursive
 	/// calls cannot remove a contract as this is checked and denied.
-	</span>Terminated,
+	</span>Terminated(DepositAccount&lt;T&gt;),
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; CachedContract&lt;T&gt; {
@@ -3969,6 +3988,15 @@
 		} <span class="kw">else </span>{
 			<span class="prelude-val">None
 		</span>}
+	}
+
+	<span class="doccomment">/// Returns `Some` iff the contract is not `Cached::Invalidated`.
+	</span><span class="kw">fn </span>deposit_account(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>DepositAccount&lt;T&gt;&gt; {
+		<span class="kw">match </span><span class="self">self </span>{
+			CachedContract::Cached(contract) =&gt; <span class="prelude-val">Some</span>(contract.deposit_account()),
+			CachedContract::Terminated(deposit_account) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>deposit_account),
+			CachedContract::Invalidated =&gt; <span class="prelude-val">None</span>,
+		}
 	}
 }
 
@@ -4048,7 +4076,9 @@
 	<span class="doccomment">/// Terminate and return the contract info.
 	</span><span class="kw">fn </span>terminate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, account_id: <span class="kw-2">&amp;</span>T::AccountId) -&gt; ContractInfo&lt;T&gt; {
 		<span class="self">self</span>.load(account_id);
-		<span class="macro">get_cached_or_panic_after_load!</span>(mem::replace(<span class="self">self</span>, <span class="self">Self</span>::Terminated))
+		<span class="kw">let </span>contract = <span class="macro">get_cached_or_panic_after_load!</span>(<span class="self">self</span>);
+		<span class="kw">let </span>deposit_account = contract.deposit_account().clone();
+		<span class="macro">get_cached_or_panic_after_load!</span>(mem::replace(<span class="self">self</span>, <span class="self">Self</span>::Terminated(deposit_account)))
 	}
 }
 
@@ -4208,9 +4238,7 @@
 						input_data,
 						salt,
 					);
-					<span class="kw">let </span>trie_id = Storage::&lt;T&gt;::generate_trie_id(<span class="kw-2">&amp;</span>account_id, nonce);
-					<span class="kw">let </span>contract =
-						Storage::&lt;T&gt;::new_contract(<span class="kw-2">&amp;</span>account_id, trie_id, <span class="kw-2">*</span>executable.code_hash())<span class="question-mark">?</span>;
+					<span class="kw">let </span>contract = ContractInfo::new(<span class="kw-2">&amp;</span>account_id, nonce, <span class="kw-2">*</span>executable.code_hash())<span class="question-mark">?</span>;
 					(
 						account_id,
 						contract,
@@ -4330,7 +4358,7 @@
 			<span class="kw">match </span>(entry_point, delegated_code_hash) {
 				(ExportedFunction::Constructor, <span class="kw">_</span>) =&gt; {
 					<span class="comment">// It is not allowed to terminate a contract inside its constructor.
-					</span><span class="kw">if </span><span class="macro">matches!</span>(frame.contract_info, CachedContract::Terminated) {
+					</span><span class="kw">if </span><span class="macro">matches!</span>(frame.contract_info, CachedContract::Terminated(<span class="kw">_</span>)) {
 						<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::TerminatedInConstructor.into())
 					}
 
@@ -4419,11 +4447,21 @@
 
 			<span class="comment">// Record the storage meter changes of the nested call into the parent meter.
 			// If the dropped frame&#39;s contract wasn&#39;t terminated we update the deposit counter
-			// in its contract info. The load is necessary to to pull it from storage in case
+			// in its contract info. The load is necessary to pull it from storage in case
 			// it was invalidated.
 			</span>frame.contract_info.load(account_id);
+			<span class="kw">let </span>deposit_account = frame
+				.contract_info
+				.deposit_account()
+				.expect(
+					<span class="string">&quot;Is only `None` when the info is invalidated.
+				We just re-loaded from storage which either makes the state `Cached` or `Terminated`.
+				qed&quot;</span>,
+				)
+				.clone();
 			<span class="kw">let </span><span class="kw-2">mut </span>contract = frame.contract_info.into_contract();
-			prev.nested_storage.absorb(frame.nested_storage, account_id, contract.as_mut());
+			prev.nested_storage
+				.absorb(frame.nested_storage, deposit_account, contract.as_mut());
 
 			<span class="comment">// In case the contract wasn&#39;t terminated we need to persist changes made to it.
 			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(contract) = contract {
@@ -4458,10 +4496,14 @@
 			<span class="kw">if </span>!persist {
 				<span class="kw">return
 			</span>}
+			<span class="kw">let </span>deposit_account = <span class="self">self</span>.first_frame.contract_info.deposit_account().expect(
+				<span class="string">&quot;Is only `None` when the info is invalidated. The first frame can&#39;t be invalidated.
+				qed&quot;</span>,
+			).clone();
 			<span class="kw">let </span><span class="kw-2">mut </span>contract = <span class="self">self</span>.first_frame.contract_info.as_contract();
 			<span class="self">self</span>.storage_meter.absorb(
 				mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.first_frame.nested_storage),
-				<span class="kw-2">&amp;</span><span class="self">self</span>.first_frame.account_id,
+				deposit_account,
 				contract.as_deref_mut(),
 			);
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(contract) = contract {
@@ -4639,19 +4681,21 @@
 	}
 
 	<span class="kw">fn </span>terminate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, beneficiary: <span class="kw-2">&amp;</span>AccountIdOf&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
+		<span class="kw">use </span>frame_support::traits::fungible::Inspect;
 		<span class="kw">if </span><span class="self">self</span>.is_recursive() {
 			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::TerminatedWhileReentrant.into())
 		}
 		<span class="kw">let </span>frame = <span class="self">self</span>.top_frame_mut();
 		<span class="kw">let </span>info = frame.terminate();
 		frame.nested_storage.terminate(<span class="kw-2">&amp;</span>info);
-		Storage::&lt;T&gt;::queue_trie_for_deletion(<span class="kw-2">&amp;</span>info)<span class="question-mark">?</span>;
-		&lt;Stack&lt;<span class="lifetime">&#39;a</span>, T, E&gt;&gt;::transfer(
-			ExistenceRequirement::AllowDeath,
+		System::&lt;T&gt;::dec_consumers(<span class="kw-2">&amp;</span>frame.account_id);
+		T::Currency::transfer(
 			<span class="kw-2">&amp;</span>frame.account_id,
 			beneficiary,
-			T::Currency::free_balance(<span class="kw-2">&amp;</span>frame.account_id),
+			T::Currency::reducible_balance(<span class="kw-2">&amp;</span>frame.account_id, <span class="bool-val">false</span>),
+			ExistenceRequirement::AllowDeath,
 		)<span class="question-mark">?</span>;
+		info.queue_trie_for_deletion()<span class="question-mark">?</span>;
 		ContractInfoOf::&lt;T&gt;::remove(<span class="kw-2">&amp;</span>frame.account_id);
 		E::remove_user(info.code_hash);
 		Contracts::&lt;T&gt;::deposit_event(
@@ -4669,19 +4713,19 @@
 	}
 
 	<span class="kw">fn </span>get_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-		Storage::&lt;T&gt;::read(<span class="kw-2">&amp;</span><span class="self">self</span>.top_frame_mut().contract_info().trie_id, key)
+		<span class="self">self</span>.top_frame_mut().contract_info().read(key)
 	}
 
 	<span class="kw">fn </span>get_storage_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-		Storage::&lt;T&gt;::read(<span class="kw-2">&amp;</span><span class="self">self</span>.top_frame_mut().contract_info().trie_id, key)
+		<span class="self">self</span>.top_frame_mut().contract_info().read(key)
 	}
 
 	<span class="kw">fn </span>get_storage_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
-		Storage::&lt;T&gt;::size(<span class="kw-2">&amp;</span><span class="self">self</span>.top_frame_mut().contract_info().trie_id, key)
+		<span class="self">self</span>.top_frame_mut().contract_info().size(key)
 	}
 
 	<span class="kw">fn </span>get_storage_size_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
-		Storage::&lt;T&gt;::size(<span class="kw-2">&amp;</span><span class="self">self</span>.top_frame_mut().contract_info().trie_id, key)
+		<span class="self">self</span>.top_frame_mut().contract_info().size(key)
 	}
 
 	<span class="kw">fn </span>set_storage(
@@ -4691,8 +4735,7 @@
 		take_old: bool,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt; {
 		<span class="kw">let </span>frame = <span class="self">self</span>.top_frame_mut();
-		Storage::&lt;T&gt;::write(
-			<span class="kw-2">&amp;</span>frame.contract_info.get(<span class="kw-2">&amp;</span>frame.account_id).trie_id,
+		frame.contract_info.get(<span class="kw-2">&amp;</span>frame.account_id).write(
 			key,
 			value,
 			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>frame.nested_storage),
@@ -4707,8 +4750,7 @@
 		take_old: bool,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt; {
 		<span class="kw">let </span>frame = <span class="self">self</span>.top_frame_mut();
-		Storage::&lt;T&gt;::write(
-			<span class="kw-2">&amp;</span>frame.contract_info.get(<span class="kw-2">&amp;</span>frame.account_id).trie_id,
+		frame.contract_info.get(<span class="kw-2">&amp;</span>frame.account_id).write(
 			key,
 			value,
 			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>frame.nested_storage),
@@ -4895,7 +4937,6 @@
 	<span class="kw">use crate</span>::{
 		exec::ExportedFunction::<span class="kw-2">*</span>,
 		gas::GasMeter,
-		storage::Storage,
 		tests::{
 			test_utils::{get_balance, hash, place_contract, set_balance},
 			ExtBuilder, RuntimeCall, RuntimeEvent <span class="kw">as </span>MetaEvent, Test, TestFilter, ALICE, BOB,
@@ -5348,9 +5389,8 @@
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
 			<span class="kw">let </span>executable =
 				MockExecutable::from_storage(input_data_ch, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
-			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">1000</span>);
-			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
-				storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(min_balance * <span class="number">100</span>), min_balance).unwrap();
+			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">10_000</span>);
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">None</span>, min_balance).unwrap();
 
 			<span class="kw">let </span>result = MockStack::run_instantiate(
 				ALICE,
@@ -5688,7 +5728,7 @@
 			<span class="comment">// Check that the newly created account has the expected code hash and
 			// there are instantiation event.
 			</span><span class="macro">assert_eq!</span>(
-				Storage::&lt;Test&gt;::code_hash(<span class="kw-2">&amp;</span>instantiated_contract_address).unwrap(),
+				ContractInfo::&lt;Test&gt;::load_code_hash(<span class="kw-2">&amp;</span>instantiated_contract_address).unwrap(),
 				dummy_ch
 			);
 			<span class="macro">assert_eq!</span>(
@@ -5730,7 +5770,7 @@
 			);
 
 			<span class="comment">// Check that the account has not been created.
-			</span><span class="macro">assert!</span>(Storage::&lt;Test&gt;::code_hash(<span class="kw-2">&amp;</span>instantiated_contract_address).is_none());
+			</span><span class="macro">assert!</span>(ContractInfo::&lt;Test&gt;::load_code_hash(<span class="kw-2">&amp;</span>instantiated_contract_address).is_none());
 			<span class="macro">assert!</span>(events().is_empty());
 		});
 	}
@@ -5789,7 +5829,7 @@
 			<span class="comment">// Check that the newly created account has the expected code hash and
 			// there are instantiation event.
 			</span><span class="macro">assert_eq!</span>(
-				Storage::&lt;Test&gt;::code_hash(<span class="kw-2">&amp;</span>instantiated_contract_address).unwrap(),
+				ContractInfo::&lt;Test&gt;::load_code_hash(<span class="kw-2">&amp;</span>instantiated_contract_address).unwrap(),
 				dummy_ch
 			);
 			<span class="macro">assert_eq!</span>(
@@ -5831,7 +5871,7 @@
 			set_balance(<span class="kw-2">&amp;</span>ALICE, <span class="number">1000</span>);
 			set_balance(<span class="kw-2">&amp;</span>BOB, <span class="number">100</span>);
 			place_contract(<span class="kw-2">&amp;</span>BOB, instantiator_ch);
-			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(<span class="number">100</span>), <span class="number">0</span>).unwrap();
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(<span class="number">200</span>), <span class="number">0</span>).unwrap();
 
 			<span class="macro">assert_matches!</span>(
 				MockStack::run_call(
@@ -5866,8 +5906,8 @@
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
 			<span class="kw">let </span>executable =
 				MockExecutable::from_storage(terminate_ch, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
-			set_balance(<span class="kw-2">&amp;</span>ALICE, <span class="number">1000</span>);
-			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(<span class="number">100</span>), <span class="number">100</span>).unwrap();
+			set_balance(<span class="kw-2">&amp;</span>ALICE, <span class="number">10_000</span>);
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">None</span>, <span class="number">100</span>).unwrap();
 
 			<span class="macro">assert_eq!</span>(
 				MockStack::run_instantiate(
@@ -5951,9 +5991,8 @@
 			<span class="kw">let </span>min_balance = &lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
 			<span class="kw">let </span>executable = MockExecutable::from_storage(code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
-			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">1000</span>);
-			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
-				storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(min_balance * <span class="number">100</span>), min_balance).unwrap();
+			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">10_000</span>);
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">None</span>, min_balance).unwrap();
 
 			<span class="kw">let </span>result = MockStack::run_instantiate(
 				ALICE,
@@ -6359,10 +6398,9 @@
 				MockExecutable::from_storage(succ_fail_code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			<span class="kw">let </span>succ_succ_executable =
 				MockExecutable::from_storage(succ_succ_code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
-			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">1000</span>);
+			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">10_000</span>);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
-				storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(min_balance * <span class="number">500</span>), min_balance * <span class="number">100</span>)
-					.unwrap();
+				storage::meter::Meter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">None</span>, min_balance * <span class="number">100</span>).unwrap();
 
 			MockStack::run_instantiate(
 				ALICE,

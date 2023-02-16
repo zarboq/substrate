@@ -3204,22 +3204,6 @@
 <a href="#3204" id="3204">3204</a>
 <a href="#3205" id="3205">3205</a>
 <a href="#3206" id="3206">3206</a>
-<a href="#3207" id="3207">3207</a>
-<a href="#3208" id="3208">3208</a>
-<a href="#3209" id="3209">3209</a>
-<a href="#3210" id="3210">3210</a>
-<a href="#3211" id="3211">3211</a>
-<a href="#3212" id="3212">3212</a>
-<a href="#3213" id="3213">3213</a>
-<a href="#3214" id="3214">3214</a>
-<a href="#3215" id="3215">3215</a>
-<a href="#3216" id="3216">3216</a>
-<a href="#3217" id="3217">3217</a>
-<a href="#3218" id="3218">3218</a>
-<a href="#3219" id="3219">3219</a>
-<a href="#3220" id="3220">3220</a>
-<a href="#3221" id="3221">3221</a>
-<a href="#3222" id="3222">3222</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -3254,7 +3238,6 @@
 <span class="kw">use crate</span>::{
 	exec::{AccountIdOf, FixSizedKey, VarSizedKey},
 	schedule::{API_BENCHMARK_BATCH_SIZE, INSTR_BENCHMARK_BATCH_SIZE},
-	storage::Storage,
 	wasm::CallFlags,
 	Pallet <span class="kw">as </span>Contracts, <span class="kw-2">*</span>,
 };
@@ -3355,14 +3338,8 @@
 	</span><span class="kw">fn </span>store(<span class="kw-2">&amp;</span><span class="self">self</span>, items: <span class="kw-2">&amp;</span>Vec&lt;(FixSizedKey, Vec&lt;u8&gt;)&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="kw">let </span>info = <span class="self">self</span>.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>item <span class="kw">in </span>items {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
-				<span class="kw-2">&amp;</span>item.<span class="number">0 </span><span class="kw">as </span><span class="kw-2">&amp;</span>FixSizedKey,
-				<span class="prelude-val">Some</span>(item.<span class="number">1</span>.clone()),
-				<span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)
-			.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write storage to restoration dest&quot;</span>)<span class="question-mark">?</span>;
+			info.write(<span class="kw-2">&amp;</span>item.<span class="number">0 </span><span class="kw">as </span><span class="kw-2">&amp;</span>FixSizedKey, <span class="prelude-val">Some</span>(item.<span class="number">1</span>.clone()), <span class="prelude-val">None</span>, <span class="bool-val">false</span>)
+				.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write storage to restoration dest&quot;</span>)<span class="question-mark">?</span>;
 		}
 		&lt;ContractInfoOf&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span><span class="self">self</span>.account_id, info);
 		<span class="prelude-val">Ok</span>(())
@@ -3429,7 +3406,7 @@
 	<span class="comment">// The base weight consumed on processing contracts deletion queue.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>on_process_deletion_queue_batch {}: {
-		Storage::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
+		ContractInfo::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
 	}
 
 	<span class="attr">#[skip_meta]
@@ -3437,9 +3414,9 @@
 	</span>on_initialize_per_trie_key {
 		<span class="kw">let </span>k <span class="kw">in </span><span class="number">0</span>..<span class="number">1024</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_storage(WasmModule::dummy(), k, T::Schedule::get().limits.payload_len)<span class="question-mark">?</span>;
-		Storage::&lt;T&gt;::queue_trie_for_deletion(<span class="kw-2">&amp;</span>instance.info()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+		instance.info()<span class="question-mark">?</span>.queue_trie_for_deletion()<span class="question-mark">?</span>;
 	}: {
-		Storage::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
+		ContractInfo::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
 	}
 
 	<span class="attr">#[pov_mode = Measured]
@@ -3447,11 +3424,11 @@
 		<span class="kw">let </span>q <span class="kw">in </span><span class="number">0</span>..<span class="number">1024</span>.min(T::DeletionQueueDepth::get());
 		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0 </span>.. q {
 			<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_index(i, WasmModule::dummy(), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-			Storage::&lt;T&gt;::queue_trie_for_deletion(<span class="kw-2">&amp;</span>instance.info()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+			instance.info()<span class="question-mark">?</span>.queue_trie_for_deletion()<span class="question-mark">?</span>;
 			ContractInfoOf::&lt;T&gt;::remove(instance.account_id);
 		}
 	}: {
-		Storage::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
+		ContractInfo::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
 	}
 
 	<span class="comment">// This benchmarks the additional weight that is charged when a contract is executed the
@@ -3515,18 +3492,16 @@
 		<span class="kw">let </span>addr = Contracts::&lt;T&gt;::contract_address(<span class="kw-2">&amp;</span>caller, <span class="kw-2">&amp;</span>hash, <span class="kw-2">&amp;</span>input, <span class="kw-2">&amp;</span>salt);
 	}: <span class="kw">_</span>(origin, value, Weight::MAX, <span class="prelude-val">None</span>, code, input, salt)
 	verify {
-		<span class="comment">// the contract itself does not trigger any reserves
-		</span><span class="kw">let </span>deposit = T::Currency::reserved_balance(<span class="kw-2">&amp;</span>addr);
+		<span class="kw">let </span>deposit_account = Contract::&lt;T&gt;::address_info(<span class="kw-2">&amp;</span>addr)<span class="question-mark">?</span>.deposit_account().clone();
+		<span class="kw">let </span>deposit = T::Currency::free_balance(<span class="kw-2">&amp;</span>deposit_account);
 		<span class="comment">// uploading the code reserves some balance in the callers account
 		</span><span class="kw">let </span>code_deposit = T::Currency::reserved_balance(<span class="kw-2">&amp;</span>caller);
 		<span class="macro">assert_eq!</span>(
 			T::Currency::free_balance(<span class="kw-2">&amp;</span>caller),
-			caller_funding::&lt;T&gt;() - value - deposit - code_deposit,
+			caller_funding::&lt;T&gt;() - value - deposit - code_deposit - Pallet::&lt;T&gt;::min_balance(),
 		);
 		<span class="comment">// contract has the full value
-		</span><span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>addr), value);
-		<span class="comment">// instantiate should leave a contract
-		</span>Contract::&lt;T&gt;::address_info(<span class="kw-2">&amp;</span>addr)<span class="question-mark">?</span>;
+		</span><span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>addr), value + Pallet::&lt;T&gt;::min_balance());
 	}
 
 	<span class="comment">// Instantiate uses a dummy contract constructor to measure the overhead of the instantiate.
@@ -3547,14 +3522,15 @@
 		Contracts::&lt;T&gt;::store_code_raw(code, caller.clone())<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>(origin, value, Weight::MAX, <span class="prelude-val">None</span>, hash, input, salt)
 	verify {
-		<span class="comment">// the contract itself does not trigger any reserves
-		</span><span class="kw">let </span>deposit = T::Currency::reserved_balance(<span class="kw-2">&amp;</span>addr);
+		<span class="kw">let </span>deposit_account = Contract::&lt;T&gt;::address_info(<span class="kw-2">&amp;</span>addr)<span class="question-mark">?</span>.deposit_account().clone();
+		<span class="kw">let </span>deposit = T::Currency::free_balance(<span class="kw-2">&amp;</span>deposit_account);
 		<span class="comment">// value was removed from the caller
-		</span><span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>caller), caller_funding::&lt;T&gt;() - value - deposit);
+		</span><span class="macro">assert_eq!</span>(
+			T::Currency::free_balance(<span class="kw-2">&amp;</span>caller),
+			caller_funding::&lt;T&gt;() - value - deposit - Pallet::&lt;T&gt;::min_balance(),
+		);
 		<span class="comment">// contract has the full value
-		</span><span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>addr), value);
-		<span class="comment">// instantiate should leave a contract
-		</span>Contract::&lt;T&gt;::address_info(<span class="kw-2">&amp;</span>addr)<span class="question-mark">?</span>;
+		</span><span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>addr), value + Pallet::&lt;T&gt;::min_balance());
 	}
 
 	<span class="comment">// We just call a dummy contract to measure the overhead of the call extrinsic.
@@ -3570,18 +3546,19 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_caller(
 			whitelisted_caller(), WasmModule::dummy(), <span class="macro">vec!</span>[],
 		)<span class="question-mark">?</span>;
+		<span class="kw">let </span>deposit_account = instance.info()<span class="question-mark">?</span>.deposit_account().clone();
 		<span class="kw">let </span>value = Pallet::&lt;T&gt;::min_balance();
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 		<span class="kw">let </span>callee = instance.addr.clone();
 		<span class="kw">let </span>before = T::Currency::free_balance(<span class="kw-2">&amp;</span>instance.account_id);
+		<span class="kw">let </span>before_deposit = T::Currency::free_balance(<span class="kw-2">&amp;</span>deposit_account);
 	}: <span class="kw">_</span>(origin, callee, value, Weight::MAX, <span class="prelude-val">None</span>, data)
 	verify {
-		<span class="comment">// the contract itself does not trigger any reserves
-		</span><span class="kw">let </span>deposit = T::Currency::reserved_balance(<span class="kw-2">&amp;</span>instance.account_id);
+		<span class="kw">let </span>deposit = T::Currency::free_balance(<span class="kw-2">&amp;</span>deposit_account);
 		<span class="comment">// value and value transfered via call should be removed from the caller
 		</span><span class="macro">assert_eq!</span>(
 			T::Currency::free_balance(<span class="kw-2">&amp;</span>instance.caller),
-			caller_funding::&lt;T&gt;() - instance.value - value - deposit,
+			caller_funding::&lt;T&gt;() - instance.value - value - deposit - Pallet::&lt;T&gt;::min_balance(),
 		);
 		<span class="comment">// contract should have received the value
 		</span><span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>instance.account_id), before + value);
@@ -4020,14 +3997,16 @@
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
+		<span class="kw">let </span>deposit_account = instance.info()<span class="question-mark">?</span>.deposit_account().clone();
 		<span class="macro">assert_eq!</span>(T::Currency::total_balance(<span class="kw-2">&amp;</span>beneficiary), <span class="number">0u32</span>.into());
-		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>instance.account_id), Pallet::&lt;T&gt;::min_balance());
-		<span class="macro">assert_ne!</span>(T::Currency::reserved_balance(<span class="kw-2">&amp;</span>instance.account_id), <span class="number">0u32</span>.into());
+		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>instance.account_id), Pallet::&lt;T&gt;::min_balance() * <span class="number">2u32</span>.into());
+		<span class="macro">assert_ne!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>deposit_account), <span class="number">0u32</span>.into());
 	}: call(origin, instance.addr.clone(), <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 	verify {
 		<span class="kw">if </span>r &gt; <span class="number">0 </span>{
 			<span class="macro">assert_eq!</span>(T::Currency::total_balance(<span class="kw-2">&amp;</span>instance.account_id), <span class="number">0u32</span>.into());
-			<span class="macro">assert_eq!</span>(T::Currency::total_balance(<span class="kw-2">&amp;</span>beneficiary), Pallet::&lt;T&gt;::min_balance());
+			<span class="macro">assert_eq!</span>(T::Currency::total_balance(<span class="kw-2">&amp;</span>deposit_account), <span class="number">0u32</span>.into());
+			<span class="macro">assert_eq!</span>(T::Currency::total_balance(<span class="kw-2">&amp;</span>beneficiary), Pallet::&lt;T&gt;::min_balance() * <span class="number">2u32</span>.into());
 		}
 	}
 
@@ -4261,8 +4240,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
@@ -4310,8 +4288,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
@@ -4359,8 +4336,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
 				</span><span class="prelude-val">None</span>,
@@ -4410,8 +4386,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
@@ -4458,8 +4433,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
 				</span><span class="prelude-val">None</span>,
@@ -4513,8 +4487,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
@@ -4568,8 +4541,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
 				</span><span class="prelude-val">None</span>,
@@ -4618,8 +4590,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
@@ -4666,8 +4637,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
 				</span><span class="prelude-val">None</span>,
@@ -4721,8 +4691,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
@@ -4776,8 +4745,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			Storage::&lt;T&gt;::write(
-				<span class="kw-2">&amp;</span>info.trie_id,
+			info.write(
 				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
 				</span><span class="prelude-val">None</span>,
@@ -5106,7 +5074,7 @@
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-		instance.set_balance(value * (r * API_BENCHMARK_BATCH_SIZE + <span class="number">1</span>).into());
+		instance.set_balance((value + Pallet::&lt;T&gt;::min_balance()) * (r * API_BENCHMARK_BATCH_SIZE + <span class="number">1</span>).into());
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 		<span class="kw">let </span>callee = instance.addr.clone();
 		<span class="kw">let </span>addresses = hashes
@@ -5219,7 +5187,7 @@
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-		instance.set_balance(value * (API_BENCHMARK_BATCH_SIZE + <span class="number">1</span>).into());
+		instance.set_balance((value + Pallet::&lt;T&gt;::min_balance()) * (API_BENCHMARK_BATCH_SIZE + <span class="number">1</span>).into());
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
@@ -6335,8 +6303,8 @@
 		</span>{
 			<span class="kw">let </span>weight_limit = T::DeletionWeightLimit::get();
 			<span class="kw">let </span>max_queue_depth = T::DeletionQueueDepth::get() <span class="kw">as </span>usize;
-			<span class="kw">let </span>empty_queue_throughput = Storage::&lt;T&gt;::deletion_budget(<span class="number">0</span>, weight_limit);
-			<span class="kw">let </span>full_queue_throughput = Storage::&lt;T&gt;::deletion_budget(max_queue_depth, weight_limit);
+			<span class="kw">let </span>empty_queue_throughput = ContractInfo::&lt;T&gt;::deletion_budget(<span class="number">0</span>, weight_limit);
+			<span class="kw">let </span>full_queue_throughput = ContractInfo::&lt;T&gt;::deletion_budget(max_queue_depth, weight_limit);
 			<span class="macro">println!</span>(<span class="string">&quot;{:#?}&quot;</span>, Schedule::&lt;T&gt;::default());
 			<span class="macro">println!</span>(<span class="string">&quot;###############################################&quot;</span>);
 			<span class="macro">println!</span>(<span class="string">&quot;Lazy deletion weight per key: {}&quot;</span>, empty_queue_throughput.<span class="number">0</span>);
