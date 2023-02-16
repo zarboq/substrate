@@ -705,9 +705,6 @@
 <a href="#705" id="705">705</a>
 <a href="#706" id="706">706</a>
 <a href="#707" id="707">707</a>
-<a href="#708" id="708">708</a>
-<a href="#709" id="709">709</a>
-<a href="#710" id="710">710</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -752,7 +749,7 @@
 <span class="kw">use </span>sc_block_builder::BlockBuilderProvider;
 <span class="kw">use </span>sc_client_api::{
 	execution_extensions::{ExecutionExtensions, ExecutionStrategies},
-	BlockBackend, ExecutionStrategy,
+	ExecutionStrategy,
 };
 <span class="kw">use </span>sc_client_db::PruningMode;
 <span class="kw">use </span>sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy, ImportResult, ImportedAux};
@@ -764,7 +761,7 @@
 <span class="kw">use </span>sp_inherents::InherentData;
 <span class="kw">use </span>sp_runtime::{
 	generic::BlockId,
-	traits::{Block <span class="kw">as </span>BlockT, IdentifyAccount, Verify, Zero},
+	traits::{Block <span class="kw">as </span>BlockT, IdentifyAccount, Verify},
 	OpaqueExtrinsic,
 };
 
@@ -983,14 +980,11 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; BlockContentIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
 	<span class="kw">fn </span>new(content: BlockContent, keyring: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>BenchKeyring, client: <span class="kw-2">&amp;</span>Client) -&gt; <span class="self">Self </span>{
-		<span class="kw">let </span>runtime_version = client
-			.runtime_version_at(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>))
-			.expect(<span class="string">&quot;There should be runtime version at 0&quot;</span>);
+		<span class="kw">let </span>genesis_hash = client.chain_info().genesis_hash;
 
-		<span class="kw">let </span>genesis_hash = client
-			.block_hash(Zero::zero())
-			.expect(<span class="string">&quot;Database error?&quot;</span>)
-			.expect(<span class="string">&quot;Genesis block always exists; qed&quot;</span>);
+		<span class="kw">let </span>runtime_version = client
+			.runtime_version_at(genesis_hash)
+			.expect(<span class="string">&quot;There should be runtime version at 0&quot;</span>);
 
 		BlockContentIterator { iteration: <span class="number">0</span>, content, keyring, runtime_version, genesis_hash }
 	}
