@@ -332,6 +332,21 @@
 <a href="#332" id="332">332</a>
 <a href="#333" id="333">333</a>
 <a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -380,10 +395,16 @@
 	</span><span class="kw">pub </span>beefy_no_authority_found_in_store: Counter&lt;U64&gt;,
 	<span class="doccomment">/// Number of currently buffered votes
 	</span><span class="kw">pub </span>beefy_buffered_votes: Gauge&lt;U64&gt;,
-	<span class="doccomment">/// Number of valid but stale votes received
-	</span><span class="kw">pub </span>beefy_stale_votes: Counter&lt;U64&gt;,
 	<span class="doccomment">/// Number of votes dropped due to full buffers
 	</span><span class="kw">pub </span>beefy_buffered_votes_dropped: Counter&lt;U64&gt;,
+	<span class="doccomment">/// Number of good votes successfully handled
+	</span><span class="kw">pub </span>beefy_good_votes_processed: Counter&lt;U64&gt;,
+	<span class="doccomment">/// Number of equivocation votes received
+	</span><span class="kw">pub </span>beefy_equivocation_votes: Counter&lt;U64&gt;,
+	<span class="doccomment">/// Number of invalid votes received
+	</span><span class="kw">pub </span>beefy_invalid_votes: Counter&lt;U64&gt;,
+	<span class="doccomment">/// Number of valid but stale votes received
+	</span><span class="kw">pub </span>beefy_stale_votes: Counter&lt;U64&gt;,
 	<span class="doccomment">/// Number of currently buffered justifications
 	</span><span class="kw">pub </span>beefy_buffered_justifications: Gauge&lt;U64&gt;,
 	<span class="doccomment">/// Number of valid but stale justifications received
@@ -394,8 +415,6 @@
 	</span><span class="kw">pub </span>beefy_buffered_justifications_dropped: Counter&lt;U64&gt;,
 	<span class="doccomment">/// Trying to set Best Beefy block to old block
 	</span><span class="kw">pub </span>beefy_best_block_set_last_failure: Gauge&lt;U64&gt;,
-	<span class="doccomment">/// Number of Successful handled votes
-	</span><span class="kw">pub </span>beefy_successful_handled_votes: Counter&lt;U64&gt;,
 }
 
 <span class="kw">impl </span>PrometheusRegister <span class="kw">for </span>VoterMetrics {
@@ -443,17 +462,35 @@
 				Gauge::new(<span class="string">&quot;substrate_beefy_buffered_votes&quot;</span>, <span class="string">&quot;Number of currently buffered votes&quot;</span>)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,
-			beefy_stale_votes: register(
-				Counter::new(
-					<span class="string">&quot;substrate_beefy_stale_votes&quot;</span>,
-					<span class="string">&quot;Number of valid but stale votes received&quot;</span>,
-				)<span class="question-mark">?</span>,
-				registry,
-			)<span class="question-mark">?</span>,
 			beefy_buffered_votes_dropped: register(
 				Counter::new(
 					<span class="string">&quot;substrate_beefy_buffered_votes_dropped&quot;</span>,
 					<span class="string">&quot;Number of votes dropped due to full buffers&quot;</span>,
+				)<span class="question-mark">?</span>,
+				registry,
+			)<span class="question-mark">?</span>,
+			beefy_good_votes_processed: register(
+				Counter::new(
+					<span class="string">&quot;substrate_beefy_successful_handled_votes&quot;</span>,
+					<span class="string">&quot;Number of good votes successfully handled&quot;</span>,
+				)<span class="question-mark">?</span>,
+				registry,
+			)<span class="question-mark">?</span>,
+			beefy_equivocation_votes: register(
+				Counter::new(
+					<span class="string">&quot;substrate_beefy_stale_votes&quot;</span>,
+					<span class="string">&quot;Number of equivocation votes received&quot;</span>,
+				)<span class="question-mark">?</span>,
+				registry,
+			)<span class="question-mark">?</span>,
+			beefy_invalid_votes: register(
+				Counter::new(<span class="string">&quot;substrate_beefy_stale_votes&quot;</span>, <span class="string">&quot;Number of invalid votes received&quot;</span>)<span class="question-mark">?</span>,
+				registry,
+			)<span class="question-mark">?</span>,
+			beefy_stale_votes: register(
+				Counter::new(
+					<span class="string">&quot;substrate_beefy_stale_votes&quot;</span>,
+					<span class="string">&quot;Number of valid but stale votes received&quot;</span>,
 				)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,
@@ -489,13 +526,6 @@
 				Gauge::new(
 					<span class="string">&quot;substrate_beefy_best_block_to_old_block&quot;</span>,
 					<span class="string">&quot;Trying to set Best Beefy block to old block&quot;</span>,
-				)<span class="question-mark">?</span>,
-				registry,
-			)<span class="question-mark">?</span>,
-			beefy_successful_handled_votes: register(
-				Counter::new(
-					<span class="string">&quot;substrate_beefy_successful_handled_votes&quot;</span>,
-					<span class="string">&quot;Number of Successful handled votes&quot;</span>,
 				)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,

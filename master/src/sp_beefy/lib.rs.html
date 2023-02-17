@@ -346,6 +346,62 @@
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -382,10 +438,14 @@
 </span><span class="kw">mod </span>commitment;
 <span class="kw">pub mod </span>mmr;
 <span class="kw">mod </span>payload;
+<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="kw">mod </span>test_utils;
 <span class="kw">pub mod </span>witness;
 
 <span class="kw">pub use </span>commitment::{Commitment, SignedCommitment, VersionedFinalityProof};
 <span class="kw">pub use </span>payload::{known_payloads, BeefyPayloadId, Payload, PayloadProvider};
+<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="kw">pub use </span>test_utils::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>codec::{Codec, Decode, Encode};
 <span class="kw">use </span>scale_info::TypeInfo;
@@ -531,6 +591,83 @@
 	</span><span class="kw">pub </span>signature: Signature,
 }
 
+<span class="doccomment">/// Proof of voter misbehavior on a given set id. Misbehavior/equivocation in
+/// BEEFY happens when a voter votes on the same round/block for different payloads.
+/// Proving is achieved by collecting the signed commitments of conflicting votes.
+</span><span class="attr">#[derive(Clone, Debug, Decode, Encode, PartialEq, TypeInfo)]
+</span><span class="kw">pub struct </span>EquivocationProof&lt;Number, Id, Signature&gt; {
+	<span class="doccomment">/// The first vote in the equivocation.
+	</span><span class="kw">pub </span>first: VoteMessage&lt;Number, Id, Signature&gt;,
+	<span class="doccomment">/// The second vote in the equivocation.
+	</span><span class="kw">pub </span>second: VoteMessage&lt;Number, Id, Signature&gt;,
+}
+
+<span class="kw">impl</span>&lt;Number, Id, Signature&gt; EquivocationProof&lt;Number, Id, Signature&gt; {
+	<span class="doccomment">/// Returns the authority id of the equivocator.
+	</span><span class="kw">pub fn </span>offender_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Id {
+		<span class="kw-2">&amp;</span><span class="self">self</span>.first.id
+	}
+	<span class="doccomment">/// Returns the round number at which the equivocation occurred.
+	</span><span class="kw">pub fn </span>round_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Number {
+		<span class="kw-2">&amp;</span><span class="self">self</span>.first.commitment.block_number
+	}
+	<span class="doccomment">/// Returns the set id at which the equivocation occurred.
+	</span><span class="kw">pub fn </span>set_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ValidatorSetId {
+		<span class="self">self</span>.first.commitment.validator_set_id
+	}
+}
+
+<span class="doccomment">/// Check a commitment signature by encoding the commitment and
+/// verifying the provided signature using the expected authority id.
+</span><span class="kw">pub fn </span>check_commitment_signature&lt;Number, Id, MsgHash&gt;(
+	commitment: <span class="kw-2">&amp;</span>Commitment&lt;Number&gt;,
+	authority_id: <span class="kw-2">&amp;</span>Id,
+	signature: <span class="kw-2">&amp;</span>&lt;Id <span class="kw">as </span>RuntimeAppPublic&gt;::Signature,
+) -&gt; bool
+<span class="kw">where
+	</span>Id: BeefyAuthorityId&lt;MsgHash&gt;,
+	Number: Clone + Encode + PartialEq,
+	MsgHash: Hash,
+{
+	<span class="kw">let </span>encoded_commitment = commitment.encode();
+	BeefyAuthorityId::&lt;MsgHash&gt;::verify(authority_id, signature, <span class="kw-2">&amp;</span>encoded_commitment)
+}
+
+<span class="doccomment">/// Verifies the equivocation proof by making sure that both votes target
+/// different blocks and that its signatures are valid.
+</span><span class="kw">pub fn </span>check_equivocation_proof&lt;Number, Id, MsgHash&gt;(
+	report: <span class="kw-2">&amp;</span>EquivocationProof&lt;Number, Id, &lt;Id <span class="kw">as </span>RuntimeAppPublic&gt;::Signature&gt;,
+) -&gt; bool
+<span class="kw">where
+	</span>Id: BeefyAuthorityId&lt;MsgHash&gt; + PartialEq,
+	Number: Clone + Encode + PartialEq,
+	MsgHash: Hash,
+{
+	<span class="kw">let </span>first = <span class="kw-2">&amp;</span>report.first;
+	<span class="kw">let </span>second = <span class="kw-2">&amp;</span>report.second;
+
+	<span class="comment">// if votes
+	//   come from different authorities,
+	//   are for different rounds,
+	//   have different validator set ids,
+	//   or both votes have the same commitment,
+	//     --&gt; the equivocation is invalid.
+	</span><span class="kw">if </span>first.id != second.id ||
+		first.commitment.block_number != second.commitment.block_number ||
+		first.commitment.validator_set_id != second.commitment.validator_set_id ||
+		first.commitment.payload == second.commitment.payload
+	{
+		<span class="kw">return </span><span class="bool-val">false
+	</span>}
+
+	<span class="comment">// check signatures on both votes are valid
+	</span><span class="kw">let </span>valid_first = check_commitment_signature(<span class="kw-2">&amp;</span>first.commitment, <span class="kw-2">&amp;</span>first.id, <span class="kw-2">&amp;</span>first.signature);
+	<span class="kw">let </span>valid_second =
+		check_commitment_signature(<span class="kw-2">&amp;</span>second.commitment, <span class="kw-2">&amp;</span>second.id, <span class="kw-2">&amp;</span>second.signature);
+
+	<span class="kw">return </span>valid_first &amp;&amp; valid_second
+}
+
 <span class="doccomment">/// New BEEFY validator set notification hook.
 </span><span class="kw">pub trait </span>OnNewValidatorSet&lt;AuthorityId&gt; {
 	<span class="doccomment">/// Function called by the pallet when BEEFY validator set changes.
@@ -545,6 +682,28 @@
 	<span class="kw">fn </span>on_new_validator_set(<span class="kw">_</span>: <span class="kw-2">&amp;</span>ValidatorSet&lt;AuthorityId&gt;, <span class="kw">_</span>: <span class="kw-2">&amp;</span>ValidatorSet&lt;AuthorityId&gt;) {}
 }
 
+<span class="doccomment">/// An opaque type used to represent the key ownership proof at the runtime API
+/// boundary. The inner value is an encoded representation of the actual key
+/// ownership proof which will be parameterized when defining the runtime. At
+/// the runtime API boundary this type is unknown and as such we keep this
+/// opaque representation, implementors of the runtime API will have to make
+/// sure that all usages of `OpaqueKeyOwnershipProof` refer to the same type.
+</span><span class="attr">#[derive(Decode, Encode, PartialEq)]
+</span><span class="kw">pub struct </span>OpaqueKeyOwnershipProof(Vec&lt;u8&gt;);
+<span class="kw">impl </span>OpaqueKeyOwnershipProof {
+	<span class="doccomment">/// Create a new `OpaqueKeyOwnershipProof` using the given encoded
+	/// representation.
+	</span><span class="kw">pub fn </span>new(inner: Vec&lt;u8&gt;) -&gt; OpaqueKeyOwnershipProof {
+		OpaqueKeyOwnershipProof(inner)
+	}
+
+	<span class="doccomment">/// Try to decode this `OpaqueKeyOwnershipProof` into the given concrete key
+	/// ownership proof type.
+	</span><span class="kw">pub fn </span>decode&lt;T: Decode&gt;(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+		codec::Decode::decode(<span class="kw-2">&amp;mut &amp;</span><span class="self">self</span>.<span class="number">0</span>[..]).ok()
+	}
+}
+
 <span class="macro">sp_api::decl_runtime_apis! </span>{
 	<span class="doccomment">/// API necessary for BEEFY voters.
 	</span><span class="kw">pub trait </span>BeefyApi
@@ -554,83 +713,36 @@
 
 		<span class="doccomment">/// Return the current active BEEFY validator set
 		</span><span class="kw">fn </span>validator_set() -&gt; <span class="prelude-ty">Option</span>&lt;ValidatorSet&lt;crypto::AuthorityId&gt;&gt;;
-	}
-}
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="doccomment">/// Test accounts using [`crate::crypto`] types.
-</span><span class="kw">pub mod </span>keyring {
-	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>sp_core::{ecdsa, keccak_256, Pair};
-	<span class="kw">use </span>std::collections::HashMap;
-	<span class="kw">use </span>strum::IntoEnumIterator;
+		<span class="doccomment">/// Submits an unsigned extrinsic to report an equivocation. The caller
+		/// must provide the equivocation proof and a key ownership proof
+		/// (should be obtained using `generate_key_ownership_proof`). The
+		/// extrinsic will be unsigned and should only be accepted for local
+		/// authorship (not to be broadcast to the network). This method returns
+		/// `None` when creation of the extrinsic fails, e.g. if equivocation
+		/// reporting is disabled for the given runtime (i.e. this method is
+		/// hardcoded to return `None`). Only useful in an offchain context.
+		</span><span class="kw">fn </span>submit_report_equivocation_unsigned_extrinsic(
+			equivocation_proof:
+				EquivocationProof&lt;NumberFor&lt;Block&gt;, crypto::AuthorityId, crypto::Signature&gt;,
+			key_owner_proof: OpaqueKeyOwnershipProof,
+		) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt;;
 
-	<span class="doccomment">/// Set of test accounts using [`crate::crypto`] types.
-	</span><span class="attr">#[allow(missing_docs)]
-	#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::Display, strum::EnumIter)]
-	</span><span class="kw">pub enum </span>Keyring {
-		Alice,
-		Bob,
-		Charlie,
-		Dave,
-		Eve,
-		Ferdie,
-		One,
-		Two,
-	}
-
-	<span class="kw">impl </span>Keyring {
-		<span class="doccomment">/// Sign `msg`.
-		</span><span class="kw">pub fn </span>sign(<span class="self">self</span>, msg: <span class="kw-2">&amp;</span>[u8]) -&gt; crypto::Signature {
-			<span class="comment">// todo: use custom signature hashing type
-			</span><span class="kw">let </span>msg = keccak_256(msg);
-			ecdsa::Pair::from(<span class="self">self</span>).sign_prehashed(<span class="kw-2">&amp;</span>msg).into()
-		}
-
-		<span class="doccomment">/// Return key pair.
-		</span><span class="kw">pub fn </span>pair(<span class="self">self</span>) -&gt; crypto::Pair {
-			ecdsa::Pair::from_string(<span class="self">self</span>.to_seed().as_str(), <span class="prelude-val">None</span>).unwrap().into()
-		}
-
-		<span class="doccomment">/// Return public key.
-		</span><span class="kw">pub fn </span>public(<span class="self">self</span>) -&gt; crypto::Public {
-			<span class="self">self</span>.pair().public()
-		}
-
-		<span class="doccomment">/// Return seed string.
-		</span><span class="kw">pub fn </span>to_seed(<span class="self">self</span>) -&gt; String {
-			<span class="macro">format!</span>(<span class="string">&quot;//{}&quot;</span>, <span class="self">self</span>)
-		}
-
-		<span class="doccomment">/// Get Keyring from public key.
-		</span><span class="kw">pub fn </span>from_public(who: <span class="kw-2">&amp;</span>crypto::Public) -&gt; <span class="prelude-ty">Option</span>&lt;Keyring&gt; {
-			<span class="self">Self</span>::iter().find(|<span class="kw-2">&amp;</span>k| <span class="kw-2">&amp;</span>crypto::Public::from(k) == who)
-		}
-	}
-
-	<span class="macro">lazy_static::lazy_static! </span>{
-		<span class="kw">static </span><span class="kw-2">ref </span>PRIVATE_KEYS: HashMap&lt;Keyring, crypto::Pair&gt; =
-			Keyring::iter().map(|i| (i, i.pair())).collect();
-		<span class="kw">static </span><span class="kw-2">ref </span>PUBLIC_KEYS: HashMap&lt;Keyring, crypto::Public&gt; =
-			PRIVATE_KEYS.iter().map(|(<span class="kw-2">&amp;</span>name, pair)| (name, pair.public())).collect();
-	}
-
-	<span class="kw">impl </span>From&lt;Keyring&gt; <span class="kw">for </span>crypto::Pair {
-		<span class="kw">fn </span>from(k: Keyring) -&gt; <span class="self">Self </span>{
-			k.pair()
-		}
-	}
-
-	<span class="kw">impl </span>From&lt;Keyring&gt; <span class="kw">for </span>ecdsa::Pair {
-		<span class="kw">fn </span>from(k: Keyring) -&gt; <span class="self">Self </span>{
-			k.pair().into()
-		}
-	}
-
-	<span class="kw">impl </span>From&lt;Keyring&gt; <span class="kw">for </span>crypto::Public {
-		<span class="kw">fn </span>from(k: Keyring) -&gt; <span class="self">Self </span>{
-			(<span class="kw-2">*</span>PUBLIC_KEYS).get(<span class="kw-2">&amp;</span>k).cloned().unwrap()
-		}
+		<span class="doccomment">/// Generates a proof of key ownership for the given authority in the
+		/// given set. An example usage of this module is coupled with the
+		/// session historical module to prove that a given authority key is
+		/// tied to a given staking identity during a specific session. Proofs
+		/// of key ownership are necessary for submitting equivocation reports.
+		/// NOTE: even though the API takes a `set_id` as parameter the current
+		/// implementations ignores this parameter and instead relies on this
+		/// method being called at the correct block height, i.e. any point at
+		/// which the given set id is live on-chain. Future implementations will
+		/// instead use indexed data through an offchain worker, not requiring
+		/// older states to be available.
+		</span><span class="kw">fn </span>generate_key_ownership_proof(
+			set_id: ValidatorSetId,
+			authority_id: crypto::AuthorityId,
+		) -&gt; <span class="prelude-ty">Option</span>&lt;OpaqueKeyOwnershipProof&gt;;
 	}
 }
 

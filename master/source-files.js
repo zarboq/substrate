@@ -54,7 +54,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_bags_list":["",[["list",[],["mod.rs"]]],["benchmarks.rs","lib.rs","migrations.rs","mock.rs","weights.rs"]],\
 "pallet_bags_list_remote_tests":["",[],["lib.rs","migration.rs","snapshot.rs","try_state.rs"]],\
 "pallet_balances":["",[],["benchmarking.rs","lib.rs","migration.rs","weights.rs"]],\
-"pallet_beefy":["",[],["lib.rs"]],\
+"pallet_beefy":["",[],["default_weights.rs","equivocation.rs","lib.rs"]],\
 "pallet_beefy_mmr":["",[],["lib.rs"]],\
 "pallet_bounties":["",[["migrations",[],["mod.rs","v4.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_child_bounties":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
@@ -184,7 +184,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_application_crypto_test":["",[],["lib.rs"]],\
 "sp_arithmetic":["",[],["biguint.rs","fixed_point.rs","helpers_128bit.rs","lib.rs","per_things.rs","rational.rs","traits.rs"]],\
 "sp_authority_discovery":["",[],["lib.rs"]],\
-"sp_beefy":["",[],["commitment.rs","lib.rs","mmr.rs","payload.rs","witness.rs"]],\
+"sp_beefy":["",[],["commitment.rs","lib.rs","mmr.rs","payload.rs","test_utils.rs","witness.rs"]],\
 "sp_block_builder":["",[],["lib.rs"]],\
 "sp_blockchain":["",[],["backend.rs","error.rs","header_metadata.rs","lib.rs"]],\
 "sp_consensus":["",[],["block_validation.rs","error.rs","lib.rs","select_chain.rs"]],\
