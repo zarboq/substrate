@@ -209,6 +209,11 @@
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
 	benchmarking::{inherent_benchmark_data, RemarkBuilder, TransferKeepAliveBuilder},
 	chain_spec,
@@ -220,6 +225,9 @@
 <span class="kw">use </span>sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 <span class="kw">use </span>sc_service::PartialComponents;
 <span class="kw">use </span>sp_keyring::Sr25519Keyring;
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+</span><span class="kw">use </span>try_runtime_cli::block_building_info::timestamp_with_aura_info;
 
 <span class="kw">impl </span>SubstrateCli <span class="kw">for </span>Cli {
 	<span class="kw">fn </span>impl_name() -&gt; String {
@@ -395,11 +403,13 @@
 				<span class="kw">let </span>task_manager =
 					sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
 						.map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))<span class="question-mark">?</span>;
+				<span class="kw">let </span>info_provider = timestamp_with_aura_info(<span class="number">6000</span>);
+
 				<span class="prelude-val">Ok</span>((
 					cmd.run::&lt;Block, ExtendedHostFunctions&lt;
 						sp_io::SubstrateHostFunctions,
 						&lt;ExecutorDispatch <span class="kw">as </span>NativeExecutionDispatch&gt;::ExtendHostFunctions,
-					&gt;&gt;(),
+					&gt;, <span class="kw">_</span>&gt;(<span class="prelude-val">Some</span>(info_provider)),
 					task_manager,
 				))
 			})

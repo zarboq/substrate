@@ -255,6 +255,14 @@
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -288,6 +296,12 @@
 <span class="kw">use </span>sp_keyring::Sr25519Keyring;
 
 <span class="kw">use </span>std::sync::Arc;
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+</span><span class="kw">use </span>{
+	kitchensink_runtime::constants::time::SLOT_DURATION,
+	try_runtime_cli::block_building_info::substrate_info,
+};
 
 <span class="kw">impl </span>SubstrateCli <span class="kw">for </span>Cli {
 	<span class="kw">fn </span>impl_name() -&gt; String {
@@ -493,11 +507,13 @@
 					sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
 						.map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))<span class="question-mark">?</span>;
 
+				<span class="kw">let </span>info_provider = substrate_info(SLOT_DURATION);
+
 				<span class="prelude-val">Ok</span>((
 					cmd.run::&lt;Block, ExtendedHostFunctions&lt;
 						sp_io::SubstrateHostFunctions,
 						&lt;ExecutorDispatch <span class="kw">as </span>NativeExecutionDispatch&gt;::ExtendHostFunctions,
-					&gt;&gt;(),
+					&gt;, <span class="kw">_</span>&gt;(<span class="prelude-val">Some</span>(info_provider)),
 					task_manager,
 				))
 			})
