@@ -1104,6 +1104,31 @@
 <a href="#1104" id="1104">1104</a>
 <a href="#1105" id="1105">1105</a>
 <a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1126,7 +1151,9 @@
 //! Maintains trees of block overlays and allows discarding trees/roots
 //! The overlays are added in `insert` and removed in `canonicalize`.
 
-</span><span class="kw">use super</span>::{to_meta_key, ChangeSet, CommitSet, DBValue, Error, Hash, MetaDb, StateDbError};
+</span><span class="kw">use crate</span>::{LOG_TARGET, LOG_TARGET_PIN};
+
+<span class="kw">use super</span>::{to_meta_key, ChangeSet, CommitSet, DBValue, Error, Hash, MetaDb, StateDbError};
 <span class="kw">use </span>codec::{Decode, Encode};
 <span class="kw">use </span>log::trace;
 <span class="kw">use </span>std::collections::{hash_map::Entry, HashMap, VecDeque};
@@ -1284,7 +1311,12 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>values = HashMap::new();
 		<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw-2">ref </span>hash, <span class="kw-2">mut </span>block)) = last_canonicalized {
 			<span class="comment">// read the journal
-			</span><span class="macro">trace!</span>(target: <span class="string">&quot;state-db&quot;</span>, <span class="string">&quot;Reading uncanonicalized journal. Last canonicalized #{} ({:?})&quot;</span>, block, hash);
+			</span><span class="macro">trace!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Reading uncanonicalized journal. Last canonicalized #{} ({:?})&quot;</span>,
+				block,
+				hash
+			);
 			<span class="kw">let </span><span class="kw-2">mut </span>total: u64 = <span class="number">0</span>;
 			block += <span class="number">1</span>;
 			<span class="kw">loop </span>{
@@ -1304,7 +1336,7 @@
 						};
 						insert_values(<span class="kw-2">&amp;mut </span>values, record.inserted);
 						<span class="macro">trace!</span>(
-							target: <span class="string">&quot;state-db&quot;</span>,
+							target: LOG_TARGET,
 							<span class="string">&quot;Uncanonicalized journal entry {}.{} ({:?}) ({} inserted, {} deleted)&quot;</span>,
 							block,
 							index,
@@ -1323,7 +1355,11 @@
 				levels.push_back(level);
 				block += <span class="number">1</span>;
 			}
-			<span class="macro">trace!</span>(target: <span class="string">&quot;state-db&quot;</span>, <span class="string">&quot;Finished reading uncanonicalized journal, {} entries&quot;</span>, total);
+			<span class="macro">trace!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Finished reading uncanonicalized journal, {} entries&quot;</span>,
+				total
+			);
 		}
 		<span class="prelude-val">Ok</span>(NonCanonicalOverlay {
 			last_canonicalized,
@@ -1358,7 +1394,9 @@
 		} <span class="kw">else if </span><span class="self">self</span>.last_canonicalized.is_some() {
 			<span class="kw">if </span>number &lt; front_block_number || number &gt; front_block_number + <span class="self">self</span>.levels.len() <span class="kw">as </span>u64
 			{
-				<span class="macro">trace!</span>(target: <span class="string">&quot;state-db&quot;</span>, <span class="string">&quot;Failed to insert block {}, current is {} .. {})&quot;</span>,
+				<span class="macro">trace!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Failed to insert block {}, current is {} .. {})&quot;</span>,
 					number,
 					front_block_number,
 					front_block_number + <span class="self">self</span>.levels.len() <span class="kw">as </span>u64,
@@ -1390,7 +1428,7 @@
 
 		<span class="kw">if </span>level.blocks.len() &gt;= MAX_BLOCKS_PER_LEVEL <span class="kw">as </span>usize {
 			<span class="macro">trace!</span>(
-				target: <span class="string">&quot;state-db&quot;</span>,
+				target: LOG_TARGET,
 				<span class="string">&quot;Too many sibling blocks at #{number}: {:?}&quot;</span>,
 				level.blocks.iter().map(|b| <span class="kw-2">&amp;</span>b.hash).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 			);
@@ -1420,7 +1458,15 @@
 			deleted: changeset.deleted,
 		};
 		commit.meta.inserted.push((journal_key, journal_record.encode()));
-		<span class="macro">trace!</span>(target: <span class="string">&quot;state-db&quot;</span>, <span class="string">&quot;Inserted uncanonicalized changeset {}.{} {:?} ({} inserted, {} deleted)&quot;</span>, number, index, hash, journal_record.inserted.len(), journal_record.deleted.len());
+		<span class="macro">trace!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Inserted uncanonicalized changeset {}.{} {:?} ({} inserted, {} deleted)&quot;</span>,
+			number,
+			index,
+			hash,
+			journal_record.inserted.len(),
+			journal_record.deleted.len()
+		);
 		insert_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values, journal_record.inserted);
 		<span class="prelude-val">Ok</span>(commit)
 	}
@@ -1474,7 +1520,7 @@
 		hash: <span class="kw-2">&amp;</span>BlockHash,
 		commit: <span class="kw-2">&amp;mut </span>CommitSet&lt;Key&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;u64, StateDbError&gt; {
-		<span class="macro">trace!</span>(target: <span class="string">&quot;state-db&quot;</span>, <span class="string">&quot;Canonicalizing {:?}&quot;</span>, hash);
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Canonicalizing {:?}&quot;</span>, hash);
 		<span class="kw">let </span>level = <span class="kw">match </span><span class="self">self</span>.levels.pop_front() {
 			<span class="prelude-val">Some</span>(level) =&gt; level,
 			<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(StateDbError::InvalidBlock),
@@ -1538,7 +1584,7 @@
 			.meta
 			.inserted
 			.push((to_meta_key(LAST_CANONICAL, <span class="kw-2">&amp;</span>()), canonicalized.encode()));
-		<span class="macro">trace!</span>(target: <span class="string">&quot;state-db&quot;</span>, <span class="string">&quot;Discarding {} records&quot;</span>, commit.meta.deleted.len());
+		<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Discarding {} records&quot;</span>, commit.meta.deleted.len());
 
 		<span class="kw">let </span>num = canonicalized.<span class="number">1</span>;
 		<span class="self">self</span>.last_canonicalized = <span class="prelude-val">Some</span>(canonicalized);
@@ -1585,7 +1631,7 @@
 			};
 			<span class="comment">// Check that it does not have any children
 			</span><span class="kw">if </span>(level_index != level_count - <span class="number">1</span>) &amp;&amp; <span class="self">self</span>.parents.values().any(|h| h == hash) {
-				<span class="macro">log::debug!</span>(target: <span class="string">&quot;state-db&quot;</span>, <span class="string">&quot;Trying to remove block {:?} with children&quot;</span>, hash);
+				<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Trying to remove block {:?} with children&quot;</span>, hash);
 				<span class="kw">return </span><span class="prelude-val">None
 			</span>}
 			<span class="kw">let </span>overlay = level.remove(index);
@@ -1608,7 +1654,7 @@
 	</span><span class="kw">pub fn </span>pin(<span class="kw-2">&amp;mut </span><span class="self">self</span>, hash: <span class="kw-2">&amp;</span>BlockHash) {
 		<span class="kw">let </span>refs = <span class="self">self</span>.pinned.entry(hash.clone()).or_default();
 		<span class="kw">if </span><span class="kw-2">*</span>refs == <span class="number">0 </span>{
-			<span class="macro">trace!</span>(target: <span class="string">&quot;state-db-pin&quot;</span>, <span class="string">&quot;Pinned non-canon block: {:?}&quot;</span>, hash);
+			<span class="macro">trace!</span>(target: LOG_TARGET_PIN, <span class="string">&quot;Pinned non-canon block: {:?}&quot;</span>, hash);
 		}
 		<span class="kw-2">*</span>refs += <span class="number">1</span>;
 	}
@@ -1637,7 +1683,11 @@
 						entry.get_mut().<span class="number">1 </span>-= <span class="number">1</span>;
 						<span class="kw">if </span>entry.get().<span class="number">1 </span>== <span class="number">0 </span>{
 							<span class="kw">let </span>(inserted, <span class="kw">_</span>) = entry.remove();
-							<span class="macro">trace!</span>(target: <span class="string">&quot;state-db-pin&quot;</span>, <span class="string">&quot;Discarding unpinned non-canon block: {:?}&quot;</span>, hash);
+							<span class="macro">trace!</span>(
+								target: LOG_TARGET_PIN,
+								<span class="string">&quot;Discarding unpinned non-canon block: {:?}&quot;</span>,
+								hash
+							);
 							discard_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values, inserted);
 							<span class="self">self</span>.parents.remove(<span class="kw-2">&amp;</span>hash);
 						}
