@@ -1032,6 +1032,16 @@
 <a href="#1032" id="1032">1032</a>
 <a href="#1033" id="1033">1033</a>
 <a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
+<a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
+<a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1051,7 +1061,7 @@
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
 </span><span class="kw">use crate</span>::{
-	build_network_future,
+	build_network_future, build_system_rpc_future,
 	client::{Client, ClientConfig},
 	config::{Configuration, KeystoreConfig, PrometheusConfig},
 	error::Error,
@@ -1997,18 +2007,28 @@
 		<span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>),
 		chain_sync_network_provider.run(network.clone()),
 	);
-	spawn_handle.spawn(<span class="string">&quot;import-queue&quot;</span>, <span class="prelude-val">None</span>, import_queue.run(Box::new(chain_sync_service)));
+	spawn_handle.spawn(
+		<span class="string">&quot;import-queue&quot;</span>,
+		<span class="prelude-val">None</span>,
+		import_queue.run(Box::new(chain_sync_service.clone())),
+	);
 
 	<span class="kw">let </span>(system_rpc_tx, system_rpc_rx) = tracing_unbounded(<span class="string">&quot;mpsc_system_rpc&quot;</span>, <span class="number">10_000</span>);
-
-	<span class="kw">let </span>future = build_network_future(
-		config.role.clone(),
-		network_mut,
-		client,
-		system_rpc_rx,
-		has_bootnodes,
-		config.announce_block,
+	spawn_handle.spawn(
+		<span class="string">&quot;system-rpc-handler&quot;</span>,
+		<span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>),
+		build_system_rpc_future(
+			config.role.clone(),
+			network_mut.service().clone(),
+			chain_sync_service.clone(),
+			client.clone(),
+			system_rpc_rx,
+			has_bootnodes,
+		),
 	);
+
+	<span class="kw">let </span>future =
+		build_network_future(network_mut, client, chain_sync_service, config.announce_block);
 
 	<span class="comment">// TODO: Normally, one is supposed to pass a list of notifications protocols supported by the
 	// node through the `NetworkConfiguration` struct. But because this function doesn&#39;t know in

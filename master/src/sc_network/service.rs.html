@@ -1957,6 +1957,16 @@
 <a href="#1957" id="1957">1957</a>
 <a href="#1958" id="1958">1958</a>
 <a href="#1959" id="1959">1959</a>
+<a href="#1960" id="1960">1960</a>
+<a href="#1961" id="1961">1961</a>
+<a href="#1962" id="1962">1962</a>
+<a href="#1963" id="1963">1963</a>
+<a href="#1964" id="1964">1964</a>
+<a href="#1965" id="1965">1965</a>
+<a href="#1966" id="1966">1966</a>
+<a href="#1967" id="1967">1967</a>
+<a href="#1968" id="1968">1968</a>
+<a href="#1969" id="1969">1969</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1978,13 +1988,13 @@
 </span><span class="doccomment">//! Main entry point of the sc-network crate.
 //!
 //! There are two main structs in this module: [`NetworkWorker`] and [`NetworkService`].
-//! The [`NetworkWorker`] *is* the network and implements the `Future` trait. It must be polled in
-//! order for the network to advance.
+//! The [`NetworkWorker`] *is* the network. Network is driven by [`NetworkWorker::run`] future that
+//! terminates only when all instances of the control handles [`NetworkService`] were dropped.
 //! The [`NetworkService`] is merely a shared version of the [`NetworkWorker`]. You can obtain an
 //! `Arc&lt;NetworkService&gt;` by calling [`NetworkWorker::service`].
 //!
 //! The methods of the [`NetworkService`] are implemented by sending a message over a channel,
-//! which is then processed by [`NetworkWorker::poll`].
+//! which is then processed by [`NetworkWorker::next_action`].
 
 </span><span class="kw">use crate</span>::{
 	behaviour::{<span class="self">self</span>, Behaviour, BehaviourOut},
@@ -2005,8 +2015,9 @@
 	multiaddr,
 	ping::Failure <span class="kw">as </span>PingFailure,
 	swarm::{
-		AddressScore, ConnectionError, ConnectionLimits, DialError, Executor, NetworkBehaviour,
-		PendingConnectionError, Swarm, SwarmBuilder, SwarmEvent,
+		AddressScore, ConnectionError, ConnectionHandler, ConnectionLimits, DialError, Executor,
+		IntoConnectionHandler, NetworkBehaviour, PendingConnectionError, Swarm, SwarmBuilder,
+		SwarmEvent,
 	},
 	Multiaddr, PeerId,
 };
@@ -2046,7 +2057,6 @@
 		atomic::{AtomicBool, AtomicUsize, Ordering},
 		Arc,
 	},
-	task::Poll,
 };
 
 <span class="kw">pub use </span>behaviour::{InboundFailure, OutboundFailure, ResponseFailure};
@@ -2059,12 +2069,20 @@
 <span class="kw">pub use </span>libp2p::identity::{error::DecodingError, Keypair, PublicKey};
 <span class="kw">use </span>sc_network_common::service::{NetworkBlock, NetworkRequest};
 
+<span class="doccomment">/// Custom error that can be produced by the [`ConnectionHandler`] of the [`NetworkBehaviour`].
+/// Used as a template parameter of [`SwarmEvent`] below.
+</span><span class="kw">type </span>ConnectionHandlerErr&lt;TBehaviour&gt; =
+	&lt;&lt;&lt;TBehaviour <span class="kw">as </span>NetworkBehaviour&gt;::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;
+		::Handler <span class="kw">as </span>ConnectionHandler&gt;::Error;
+
 <span class="doccomment">/// Substrate network service. Handles network IO and manages connectivity.
 </span><span class="kw">pub struct </span>NetworkService&lt;B: BlockT + <span class="lifetime">&#39;static</span>, H: ExHashT&gt; {
 	<span class="doccomment">/// Number of peers we&#39;re connected to.
 	</span>num_connected: Arc&lt;AtomicUsize&gt;,
 	<span class="doccomment">/// The local external addresses.
 	</span>external_addresses: Arc&lt;Mutex&lt;Vec&lt;Multiaddr&gt;&gt;&gt;,
+	<span class="doccomment">/// Listen addresses. Do **NOT** include a trailing `/p2p/` with our `PeerId`.
+	</span>listen_addresses: Arc&lt;Mutex&lt;Vec&lt;Multiaddr&gt;&gt;&gt;,
 	<span class="doccomment">/// Are we actively catching up with the chain?
 	</span>is_major_syncing: Arc&lt;AtomicBool&gt;,
 	<span class="doccomment">/// Local copy of the `PeerId` of the local node.
@@ -2393,11 +2411,13 @@
 		}
 
 		<span class="kw">let </span>external_addresses = Arc::new(Mutex::new(Vec::new()));
+		<span class="kw">let </span>listen_addresses = Arc::new(Mutex::new(Vec::new()));
 		<span class="kw">let </span>peers_notifications_sinks = Arc::new(Mutex::new(HashMap::new()));
 
 		<span class="kw">let </span>service = Arc::new(NetworkService {
 			bandwidth,
 			external_addresses: external_addresses.clone(),
+			listen_addresses: listen_addresses.clone(),
 			num_connected: num_connected.clone(),
 			is_major_syncing: is_major_syncing.clone(),
 			peerset: peerset_handle,
@@ -2414,6 +2434,7 @@
 
 		<span class="prelude-val">Ok</span>(NetworkWorker {
 			external_addresses,
+			listen_addresses,
 			num_connected,
 			is_major_syncing,
 			network_service: swarm,
@@ -2670,6 +2691,34 @@
 		}
 	}
 
+	<span class="doccomment">/// Get connected peers debug information.
+	///
+	/// Returns an error if the `NetworkWorker` is no longer running.
+	</span><span class="kw">pub async fn </span>peers_debug_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(PeerId, PeerInfo&lt;B&gt;)&gt;, ()&gt; {
+		<span class="kw">let </span>(tx, rx) = oneshot::channel();
+
+		<span class="kw">let _ </span>= <span class="self">self
+			</span>.to_worker
+			.unbounded_send(ServiceToWorkerMsg::PeersDebugInfo { pending_response: tx });
+
+		<span class="comment">// The channel can only be closed if the network worker no longer exists.
+		</span>rx.<span class="kw">await</span>.map_err(|<span class="kw">_</span>| ())
+	}
+
+	<span class="doccomment">/// Get the list of reserved peers.
+	///
+	/// Returns an error if the `NetworkWorker` is no longer running.
+	</span><span class="kw">pub async fn </span>reserved_peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;PeerId&gt;, ()&gt; {
+		<span class="kw">let </span>(tx, rx) = oneshot::channel();
+
+		<span class="kw">let _ </span>= <span class="self">self
+			</span>.to_worker
+			.unbounded_send(ServiceToWorkerMsg::ReservedPeers { pending_response: tx });
+
+		<span class="comment">// The channel can only be closed if the network worker no longer exists.
+		</span>rx.<span class="kw">await</span>.map_err(|<span class="kw">_</span>| ())
+	}
+
 	<span class="doccomment">/// Utility function to extract `PeerId` from each `Multiaddr` for peer set updates.
 	///
 	/// Returns an `Err` if one of the given addresses is invalid or contains an
@@ -2731,6 +2780,11 @@
 	<span class="doccomment">/// Returns the local external addresses.
 	</span><span class="kw">fn </span>external_addresses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Multiaddr&gt; {
 		<span class="self">self</span>.external_addresses.lock().clone()
+	}
+
+	<span class="doccomment">/// Returns the listener addresses (without trailing `/p2p/` with our `PeerId`).
+	</span><span class="kw">fn </span>listen_addresses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Multiaddr&gt; {
+		<span class="self">self</span>.listen_addresses.lock().clone()
 	}
 
 	<span class="doccomment">/// Returns the local Peer ID.
@@ -3202,6 +3256,12 @@
 	},
 	DisconnectPeer(PeerId, ProtocolName),
 	NewBestBlockImported(B::Hash, NumberFor&lt;B&gt;),
+	PeersDebugInfo {
+		pending_response: oneshot::Sender&lt;Vec&lt;(PeerId, PeerInfo&lt;B&gt;)&gt;&gt;,
+	},
+	ReservedPeers {
+		pending_response: oneshot::Sender&lt;Vec&lt;PeerId&gt;&gt;,
+	},
 }
 
 <span class="doccomment">/// Main network worker. Must be polled in order for the network to advance.
@@ -3216,6 +3276,8 @@
 {
 	<span class="doccomment">/// Updated by the `NetworkWorker` and loaded by the `NetworkService`.
 	</span>external_addresses: Arc&lt;Mutex&lt;Vec&lt;Multiaddr&gt;&gt;&gt;,
+	<span class="doccomment">/// Updated by the `NetworkWorker` and loaded by the `NetworkService`.
+	</span>listen_addresses: Arc&lt;Mutex&lt;Vec&lt;Multiaddr&gt;&gt;&gt;,
 	<span class="doccomment">/// Updated by the `NetworkWorker` and loaded by the `NetworkService`.
 	</span>num_connected: Arc&lt;AtomicUsize&gt;,
 	<span class="doccomment">/// Updated by the `NetworkWorker` and loaded by the `NetworkService`.
@@ -3240,611 +3302,64 @@
 	</span>_marker: PhantomData&lt;H&gt;,
 }
 
-<span class="kw">impl</span>&lt;B, H, Client&gt; Future <span class="kw">for </span>NetworkWorker&lt;B, H, Client&gt;
+<span class="kw">impl</span>&lt;B, H, Client&gt; NetworkWorker&lt;B, H, Client&gt;
 <span class="kw">where
 	</span>B: BlockT + <span class="lifetime">&#39;static</span>,
 	H: ExHashT,
 	Client: HeaderBackend&lt;B&gt; + <span class="lifetime">&#39;static</span>,
 {
-	<span class="kw">type </span>Output = ();
+	<span class="doccomment">/// Run the network.
+	</span><span class="kw">pub async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>) {
+		<span class="kw">while </span><span class="self">self</span>.next_action().<span class="kw">await </span>{}
+	}
 
-	<span class="kw">fn </span>poll(<span class="kw-2">mut </span><span class="self">self</span>: Pin&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt;, cx: <span class="kw-2">&amp;mut </span>std::task::Context) -&gt; Poll&lt;<span class="self">Self</span>::Output&gt; {
-		<span class="kw">let </span>this = <span class="kw-2">&amp;mut *</span><span class="self">self</span>;
-
-		<span class="comment">// At the time of writing of this comment, due to a high volume of messages, the network
-		// worker sometimes takes a long time to process the loop below. When that happens, the
-		// rest of the polling is frozen. In order to avoid negative side-effects caused by this
-		// freeze, a limit to the number of iterations is enforced below. If the limit is reached,
-		// the task is interrupted then scheduled again.
-		//
-		// This allows for a more even distribution in the time taken by each sub-part of the
-		// polling.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>num_iterations = <span class="number">0</span>;
-		<span class="kw">loop </span>{
-			num_iterations += <span class="number">1</span>;
-			<span class="kw">if </span>num_iterations &gt;= <span class="number">100 </span>{
-				cx.waker().wake_by_ref();
-				<span class="kw">break
-			</span>}
-
-			<span class="comment">// Process the next message coming from the `NetworkService`.
-			</span><span class="kw">let </span>msg = <span class="kw">match </span>this.from_service.poll_next_unpin(cx) {
-				Poll::Ready(<span class="prelude-val">Some</span>(msg)) =&gt; msg,
-				Poll::Ready(<span class="prelude-val">None</span>) =&gt; <span class="kw">return </span>Poll::Ready(()),
-				Poll::Pending =&gt; <span class="kw">break</span>,
-			};
-			<span class="kw">match </span>msg {
-				ServiceToWorkerMsg::AnnounceBlock(hash, data) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.announce_block(hash, data),
-				ServiceToWorkerMsg::GetValue(key) =&gt;
-					this.network_service.behaviour_mut().get_value(key),
-				ServiceToWorkerMsg::PutValue(key, value) =&gt;
-					this.network_service.behaviour_mut().put_value(key, value),
-				ServiceToWorkerMsg::SetReservedOnly(reserved_only) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.set_reserved_only(reserved_only),
-				ServiceToWorkerMsg::SetReserved(peers) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.set_reserved_peers(peers),
-				ServiceToWorkerMsg::SetPeersetReserved(protocol, peers) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.set_reserved_peerset_peers(protocol, peers),
-				ServiceToWorkerMsg::AddReserved(peer_id) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.add_reserved_peer(peer_id),
-				ServiceToWorkerMsg::RemoveReserved(peer_id) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.remove_reserved_peer(peer_id),
-				ServiceToWorkerMsg::AddSetReserved(protocol, peer_id) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.add_set_reserved_peer(protocol, peer_id),
-				ServiceToWorkerMsg::RemoveSetReserved(protocol, peer_id) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.remove_set_reserved_peer(protocol, peer_id),
-				ServiceToWorkerMsg::AddKnownAddress(peer_id, addr) =&gt;
-					this.network_service.behaviour_mut().add_known_address(peer_id, addr),
-				ServiceToWorkerMsg::AddToPeersSet(protocol, peer_id) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.add_to_peers_set(protocol, peer_id),
-				ServiceToWorkerMsg::RemoveFromPeersSet(protocol, peer_id) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.remove_from_peers_set(protocol, peer_id),
-				ServiceToWorkerMsg::EventStream(sender) =&gt; this.event_streams.push(sender),
-				ServiceToWorkerMsg::Request {
-					target,
-					protocol,
-					request,
-					pending_response,
-					connect,
-				} =&gt; {
-					this.network_service.behaviour_mut().send_request(
-						<span class="kw-2">&amp;</span>target,
-						<span class="kw-2">&amp;</span>protocol,
-						request,
-						pending_response,
-						connect,
-					);
-				},
-				ServiceToWorkerMsg::NetworkStatus { pending_response } =&gt; {
-					<span class="kw">let _ </span>= pending_response.send(<span class="prelude-val">Ok</span>(this.status()));
-				},
-				ServiceToWorkerMsg::NetworkState { pending_response } =&gt; {
-					<span class="kw">let _ </span>= pending_response.send(<span class="prelude-val">Ok</span>(this.network_state()));
-				},
-				ServiceToWorkerMsg::DisconnectPeer(who, protocol_name) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.disconnect_peer(<span class="kw-2">&amp;</span>who, protocol_name),
-				ServiceToWorkerMsg::NewBestBlockImported(hash, number) =&gt; this
-					.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.new_best_block_imported(hash, number),
-			}
-		}
-
-		<span class="comment">// `num_iterations` serves the same purpose as in the previous loop.
-		// See the previous loop for explanations.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>num_iterations = <span class="number">0</span>;
-		<span class="kw">loop </span>{
-			num_iterations += <span class="number">1</span>;
-			<span class="kw">if </span>num_iterations &gt;= <span class="number">1000 </span>{
-				cx.waker().wake_by_ref();
-				<span class="kw">break
-			</span>}
-
-			<span class="comment">// Process the next action coming from the network.
-			</span><span class="kw">let </span>next_event = this.network_service.select_next_some();
-			<span class="macro">futures::pin_mut!</span>(next_event);
-			<span class="kw">let </span>poll_value = next_event.poll_unpin(cx);
-
-			<span class="kw">match </span>poll_value {
-				Poll::Pending =&gt; <span class="kw">break</span>,
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::InboundRequest {
-					protocol,
-					result,
-					..
-				})) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">match </span>result {
-							<span class="prelude-val">Ok</span>(serve_time) =&gt; {
-								metrics
-									.requests_in_success_total
-									.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol])
-									.observe(serve_time.as_secs_f64());
-							},
-							<span class="prelude-val">Err</span>(err) =&gt; {
-								<span class="kw">let </span>reason = <span class="kw">match </span>err {
-									ResponseFailure::Network(InboundFailure::Timeout) =&gt; <span class="string">&quot;timeout&quot;</span>,
-									ResponseFailure::Network(
-										InboundFailure::UnsupportedProtocols,
-									) =&gt;
-									<span class="comment">// `UnsupportedProtocols` is reported for every single
-									// inbound request whenever a request with an unsupported
-									// protocol is received. This is not reported in order to
-									// avoid confusions.
-										</span><span class="kw">continue</span>,
-									ResponseFailure::Network(InboundFailure::ResponseOmission) =&gt;
-										<span class="string">&quot;busy-omitted&quot;</span>,
-									ResponseFailure::Network(InboundFailure::ConnectionClosed) =&gt;
-										<span class="string">&quot;connection-closed&quot;</span>,
-								};
-
-								metrics
-									.requests_in_failure_total
-									.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol, reason])
-									.inc();
-							},
-						}
-					}
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::RequestFinished {
-					protocol,
-					duration,
-					result,
-					..
-				})) =&gt;
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">match </span>result {
-							<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
-								metrics
-									.requests_out_success_total
-									.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol])
-									.observe(duration.as_secs_f64());
-							},
-							<span class="prelude-val">Err</span>(err) =&gt; {
-								<span class="kw">let </span>reason = <span class="kw">match </span>err {
-									RequestFailure::NotConnected =&gt; <span class="string">&quot;not-connected&quot;</span>,
-									RequestFailure::UnknownProtocol =&gt; <span class="string">&quot;unknown-protocol&quot;</span>,
-									RequestFailure::Refused =&gt; <span class="string">&quot;refused&quot;</span>,
-									RequestFailure::Obsolete =&gt; <span class="string">&quot;obsolete&quot;</span>,
-									RequestFailure::Network(OutboundFailure::DialFailure) =&gt;
-										<span class="string">&quot;dial-failure&quot;</span>,
-									RequestFailure::Network(OutboundFailure::Timeout) =&gt; <span class="string">&quot;timeout&quot;</span>,
-									RequestFailure::Network(OutboundFailure::ConnectionClosed) =&gt;
-										<span class="string">&quot;connection-closed&quot;</span>,
-									RequestFailure::Network(
-										OutboundFailure::UnsupportedProtocols,
-									) =&gt; <span class="string">&quot;unsupported&quot;</span>,
-								};
-
-								metrics
-									.requests_out_failure_total
-									.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol, reason])
-									.inc();
-							},
-						}
-					},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::ReputationChanges {
-					peer,
-					changes,
-				})) =&gt;
-					<span class="kw">for </span>change <span class="kw">in </span>changes {
-						this.network_service.behaviour().user_protocol().report_peer(peer, change);
-					},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::PeerIdentify {
-					peer_id,
-					info:
-						IdentifyInfo {
-							protocol_version,
-							agent_version,
-							<span class="kw-2">mut </span>listen_addrs,
-							protocols,
-							..
-						},
-				})) =&gt; {
-					<span class="kw">if </span>listen_addrs.len() &gt; <span class="number">30 </span>{
-						<span class="macro">debug!</span>(
-							target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;Node {:?} has reported more than 30 addresses; it is identified by {:?} and {:?}&quot;</span>,
-							peer_id, protocol_version, agent_version
-						);
-						listen_addrs.truncate(<span class="number">30</span>);
-					}
-					<span class="kw">for </span>addr <span class="kw">in </span>listen_addrs {
-						this.network_service
-							.behaviour_mut()
-							.add_self_reported_address_to_dht(<span class="kw-2">&amp;</span>peer_id, <span class="kw-2">&amp;</span>protocols, addr);
-					}
-					this.network_service
-						.behaviour_mut()
-						.user_protocol_mut()
-						.add_default_set_discovered_nodes(iter::once(peer_id));
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::Discovered(peer_id))) =&gt; {
-					this.network_service
-						.behaviour_mut()
-						.user_protocol_mut()
-						.add_default_set_discovered_nodes(iter::once(peer_id));
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::RandomKademliaStarted)) =&gt;
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics.kademlia_random_queries_total.inc();
-					},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::NotificationStreamOpened {
-					remote,
-					protocol,
-					negotiated_fallback,
-					notifications_sink,
-					role,
-				})) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics
-							.notifications_streams_opened_total
-							.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol])
-							.inc();
-					}
-					{
-						<span class="kw">let </span><span class="kw-2">mut </span>peers_notifications_sinks = this.peers_notifications_sinks.lock();
-						<span class="kw">let </span>_previous_value = peers_notifications_sinks
-							.insert((remote, protocol.clone()), notifications_sink);
-						<span class="macro">debug_assert!</span>(_previous_value.is_none());
-					}
-					this.event_streams.send(Event::NotificationStreamOpened {
-						remote,
-						protocol,
-						negotiated_fallback,
-						role,
-					});
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::NotificationStreamReplaced {
-					remote,
-					protocol,
-					notifications_sink,
-				})) =&gt; {
-					<span class="kw">let </span><span class="kw-2">mut </span>peers_notifications_sinks = this.peers_notifications_sinks.lock();
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(s) = peers_notifications_sinks.get_mut(<span class="kw-2">&amp;</span>(remote, protocol)) {
-						<span class="kw-2">*</span>s = notifications_sink;
-					} <span class="kw">else </span>{
-						<span class="macro">error!</span>(
-							target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;NotificationStreamReplaced for non-existing substream&quot;
-						</span>);
-						<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
-					}
-
-					<span class="comment">// TODO: Notifications might have been lost as a result of the previous
-					// connection being dropped, and as a result it would be preferable to notify
-					// the users of this fact by simulating the substream being closed then
-					// reopened.
-					// The code below doesn&#39;t compile because `role` is unknown. Propagating the
-					// handshake of the secondary connections is quite an invasive change and
-					// would conflict with https://github.com/paritytech/substrate/issues/6403.
-					// Considering that dropping notifications is generally regarded as
-					// acceptable, this bug is at the moment intentionally left there and is
-					// intended to be fixed at the same time as
-					// https://github.com/paritytech/substrate/issues/6403.
-					// this.event_streams.send(Event::NotificationStreamClosed {
-					// remote,
-					// protocol,
-					// });
-					// this.event_streams.send(Event::NotificationStreamOpened {
-					// remote,
-					// protocol,
-					// role,
-					// });
-				</span>},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::NotificationStreamClosed {
-					remote,
-					protocol,
-				})) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics
-							.notifications_streams_closed_total
-							.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol[..]])
-							.inc();
-					}
-					this.event_streams.send(Event::NotificationStreamClosed {
-						remote,
-						protocol: protocol.clone(),
-					});
-					{
-						<span class="kw">let </span><span class="kw-2">mut </span>peers_notifications_sinks = this.peers_notifications_sinks.lock();
-						<span class="kw">let </span>_previous_value = peers_notifications_sinks.remove(<span class="kw-2">&amp;</span>(remote, protocol));
-						<span class="macro">debug_assert!</span>(_previous_value.is_some());
-					}
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::NotificationsReceived {
-					remote,
-					messages,
-				})) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">for </span>(protocol, message) <span class="kw">in </span><span class="kw-2">&amp;</span>messages {
-							metrics
-								.notifications_sizes
-								.with_label_values(<span class="kw-2">&amp;</span>[<span class="string">&quot;in&quot;</span>, protocol])
-								.observe(message.len() <span class="kw">as </span>f64);
-						}
-					}
-					this.event_streams.send(Event::NotificationsReceived { remote, messages });
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::SyncConnected(remote))) =&gt; {
-					this.event_streams.send(Event::SyncConnected { remote });
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::SyncDisconnected(remote))) =&gt; {
-					this.event_streams.send(Event::SyncDisconnected { remote });
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::Dht(event, duration))) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">let </span>query_type = <span class="kw">match </span>event {
-							DhtEvent::ValueFound(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-found&quot;</span>,
-							DhtEvent::ValueNotFound(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-not-found&quot;</span>,
-							DhtEvent::ValuePut(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-put&quot;</span>,
-							DhtEvent::ValuePutFailed(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-put-failed&quot;</span>,
-						};
-						metrics
-							.kademlia_query_duration
-							.with_label_values(<span class="kw-2">&amp;</span>[query_type])
-							.observe(duration.as_secs_f64());
-					}
-
-					this.event_streams.send(Event::Dht(event));
-				},
-				Poll::Ready(SwarmEvent::Behaviour(BehaviourOut::None)) =&gt; {
-					<span class="comment">// Ignored event from lower layers.
-				</span>},
-				Poll::Ready(SwarmEvent::ConnectionEstablished {
-					peer_id,
-					endpoint,
-					num_established,
-					concurrent_dial_errors,
-				}) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(errors) = concurrent_dial_errors {
-						<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Connected({:?}) with errors: {:?}&quot;</span>, peer_id, errors);
-					} <span class="kw">else </span>{
-						<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Connected({:?})&quot;</span>, peer_id);
-					}
-
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">let </span>direction = <span class="kw">match </span>endpoint {
-							ConnectedPoint::Dialer { .. } =&gt; <span class="string">&quot;out&quot;</span>,
-							ConnectedPoint::Listener { .. } =&gt; <span class="string">&quot;in&quot;</span>,
-						};
-						metrics.connections_opened_total.with_label_values(<span class="kw-2">&amp;</span>[direction]).inc();
-
-						<span class="kw">if </span>num_established.get() == <span class="number">1 </span>{
-							metrics.distinct_peers_connections_opened_total.inc();
-						}
-					}
-				},
-				Poll::Ready(SwarmEvent::ConnectionClosed {
-					peer_id,
-					cause,
-					endpoint,
-					num_established,
-				}) =&gt; {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Disconnected({:?}, {:?})&quot;</span>, peer_id, cause);
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">let </span>direction = <span class="kw">match </span>endpoint {
-							ConnectedPoint::Dialer { .. } =&gt; <span class="string">&quot;out&quot;</span>,
-							ConnectedPoint::Listener { .. } =&gt; <span class="string">&quot;in&quot;</span>,
-						};
-						<span class="kw">let </span>reason = <span class="kw">match </span>cause {
-							<span class="prelude-val">Some</span>(ConnectionError::IO(<span class="kw">_</span>)) =&gt; <span class="string">&quot;transport-error&quot;</span>,
-							<span class="prelude-val">Some</span>(ConnectionError::Handler(EitherError::A(EitherError::A(
-								EitherError::B(EitherError::A(PingFailure::Timeout)),
-							)))) =&gt; <span class="string">&quot;ping-timeout&quot;</span>,
-							<span class="prelude-val">Some</span>(ConnectionError::Handler(EitherError::A(EitherError::A(
-								EitherError::A(NotifsHandlerError::SyncNotificationsClogged),
-							)))) =&gt; <span class="string">&quot;sync-notifications-clogged&quot;</span>,
-							<span class="prelude-val">Some</span>(ConnectionError::Handler(<span class="kw">_</span>)) =&gt; <span class="string">&quot;protocol-error&quot;</span>,
-							<span class="prelude-val">Some</span>(ConnectionError::KeepAliveTimeout) =&gt; <span class="string">&quot;keep-alive-timeout&quot;</span>,
-							<span class="prelude-val">None </span>=&gt; <span class="string">&quot;actively-closed&quot;</span>,
-						};
-						metrics
-							.connections_closed_total
-							.with_label_values(<span class="kw-2">&amp;</span>[direction, reason])
-							.inc();
-
-						<span class="comment">// `num_established` represents the number of *remaining* connections.
-						</span><span class="kw">if </span>num_established == <span class="number">0 </span>{
-							metrics.distinct_peers_connections_closed_total.inc();
-						}
-					}
-				},
-				Poll::Ready(SwarmEvent::NewListenAddr { address, .. }) =&gt; {
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; NewListenAddr({})&quot;</span>, address);
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics.listeners_local_addresses.inc();
-					}
-				},
-				Poll::Ready(SwarmEvent::ExpiredListenAddr { address, .. }) =&gt; {
-					<span class="macro">info!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;📪 No longer listening on {}&quot;</span>, address);
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics.listeners_local_addresses.dec();
-					}
-				},
-				Poll::Ready(SwarmEvent::OutgoingConnectionError { peer_id, error }) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(peer_id) = peer_id {
-						<span class="macro">trace!</span>(
-							target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;Libp2p =&gt; Failed to reach {:?}: {}&quot;</span>,
-							peer_id, error,
-						);
-
-						<span class="kw">if </span>this.boot_node_ids.contains(<span class="kw-2">&amp;</span>peer_id) {
-							<span class="kw">if let </span>DialError::WrongPeerId { obtained, endpoint } = <span class="kw-2">&amp;</span>error {
-								<span class="kw">if let </span>ConnectedPoint::Dialer { address, role_override: <span class="kw">_ </span>} =
-									endpoint
-								{
-									<span class="macro">warn!</span>(
-										<span class="string">&quot;💔 The bootnode you want to connect to at `{}` provided a different peer ID `{}` than the one you expect `{}`.&quot;</span>,
-										address,
-										obtained,
-										peer_id,
-									);
-								}
-							}
-						}
-					}
-
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">let </span>reason = <span class="kw">match </span>error {
-							DialError::ConnectionLimit(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;limit-reached&quot;</span>),
-							DialError::InvalidPeerId(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;invalid-peer-id&quot;</span>),
-							DialError::Transport(<span class="kw">_</span>) | DialError::ConnectionIo(<span class="kw">_</span>) =&gt;
-								<span class="prelude-val">Some</span>(<span class="string">&quot;transport-error&quot;</span>),
-							DialError::Banned |
-							DialError::LocalPeerId |
-							DialError::NoAddresses |
-							DialError::DialPeerConditionFalse(<span class="kw">_</span>) |
-							DialError::WrongPeerId { .. } |
-							DialError::Aborted =&gt; <span class="prelude-val">None</span>, <span class="comment">// ignore them
-						</span>};
-						<span class="kw">if let </span><span class="prelude-val">Some</span>(reason) = reason {
-							metrics
-								.pending_connections_errors_total
-								.with_label_values(<span class="kw-2">&amp;</span>[reason])
-								.inc();
-						}
-					}
-				},
-				Poll::Ready(SwarmEvent::Dialing(peer_id)) =&gt; {
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Dialing({:?})&quot;</span>, peer_id)
-				},
-				Poll::Ready(SwarmEvent::IncomingConnection { local_addr, send_back_addr }) =&gt; {
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; IncomingConnection({},{}))&quot;</span>,
-						local_addr, send_back_addr);
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics.incoming_connections_total.inc();
-					}
-				},
-				Poll::Ready(SwarmEvent::IncomingConnectionError {
-					local_addr,
-					send_back_addr,
-					error,
-				}) =&gt; {
-					<span class="macro">debug!</span>(
-						target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; IncomingConnectionError({},{}): {}&quot;</span>,
-						local_addr, send_back_addr, error,
-					);
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						<span class="kw">let </span>reason = <span class="kw">match </span>error {
-							PendingConnectionError::ConnectionLimit(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;limit-reached&quot;</span>),
-							PendingConnectionError::WrongPeerId { .. } =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;invalid-peer-id&quot;</span>),
-							PendingConnectionError::Transport(<span class="kw">_</span>) |
-							PendingConnectionError::IO(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;transport-error&quot;</span>),
-							PendingConnectionError::Aborted =&gt; <span class="prelude-val">None</span>, <span class="comment">// ignore it
-						</span>};
-
-						<span class="kw">if let </span><span class="prelude-val">Some</span>(reason) = reason {
-							metrics
-								.incoming_connections_errors_total
-								.with_label_values(<span class="kw-2">&amp;</span>[reason])
-								.inc();
-						}
-					}
-				},
-				Poll::Ready(SwarmEvent::BannedPeer { peer_id, endpoint }) =&gt; {
-					<span class="macro">debug!</span>(
-						target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;Libp2p =&gt; BannedPeer({}). Connected via {:?}.&quot;</span>,
-						peer_id, endpoint,
-					);
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics
-							.incoming_connections_errors_total
-							.with_label_values(<span class="kw-2">&amp;</span>[<span class="string">&quot;banned&quot;</span>])
-							.inc();
-					}
-				},
-				Poll::Ready(SwarmEvent::ListenerClosed { reason, addresses, .. }) =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics.listeners_local_addresses.sub(addresses.len() <span class="kw">as </span>u64);
-					}
-					<span class="kw">let </span>addrs =
-						addresses.into_iter().map(|a| a.to_string()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">&quot;, &quot;</span>);
-					<span class="kw">match </span>reason {
-						<span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">error!</span>(
-							target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;📪 Libp2p listener ({}) closed gracefully&quot;</span>,
-							addrs
-						),
-						<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(
-							target: <span class="string">&quot;sub-libp2p&quot;</span>,
-							<span class="string">&quot;📪 Libp2p listener ({}) closed: {}&quot;</span>,
-							addrs, e
-						),
-					}
-				},
-				Poll::Ready(SwarmEvent::ListenerError { error, .. }) =&gt; {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; ListenerError: {}&quot;</span>, error);
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-						metrics.listeners_errors_total.inc();
-					}
-				},
-			};
-		}
+	<span class="doccomment">/// Perform one action on the network.
+	///
+	/// Returns `false` when the worker should be shutdown.
+	/// Use in tests only.
+	</span><span class="kw">pub async fn </span>next_action(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">futures::select! </span>{
+			<span class="comment">// Next message from the service.
+			</span>msg = <span class="self">self</span>.from_service.next() =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(msg) = msg {
+					<span class="self">self</span>.handle_worker_message(msg);
+				} <span class="kw">else </span>{
+					<span class="kw">return </span><span class="bool-val">false
+				</span>}
+			},
+			<span class="comment">// Next event from `Swarm` (the stream guaranteed to never terminate).
+			</span>event = <span class="self">self</span>.network_service.select_next_some() =&gt; {
+				<span class="self">self</span>.handle_swarm_event(event);
+			},
+		};
 
 		<span class="kw">let </span>num_connected_peers =
-			this.network_service.behaviour_mut().user_protocol_mut().num_connected_peers();
+			<span class="self">self</span>.network_service.behaviour_mut().user_protocol_mut().num_connected_peers();
 
 		<span class="comment">// Update the variables shared with the `NetworkService`.
-		</span>this.num_connected.store(num_connected_peers, Ordering::Relaxed);
+		</span><span class="self">self</span>.num_connected.store(num_connected_peers, Ordering::Relaxed);
 		{
 			<span class="kw">let </span>external_addresses =
-				Swarm::&lt;Behaviour&lt;B, Client&gt;&gt;::external_addresses(<span class="kw-2">&amp;</span>this.network_service)
-					.map(|r| <span class="kw-2">&amp;</span>r.addr)
-					.cloned()
-					.collect();
-			<span class="kw-2">*</span>this.external_addresses.lock() = external_addresses;
+				<span class="self">self</span>.network_service.external_addresses().map(|r| <span class="kw-2">&amp;</span>r.addr).cloned().collect();
+			<span class="kw-2">*</span><span class="self">self</span>.external_addresses.lock() = external_addresses;
+
+			<span class="kw">let </span>listen_addresses =
+				<span class="self">self</span>.network_service.listeners().map(ToOwned::to_owned).collect();
+			<span class="kw-2">*</span><span class="self">self</span>.listen_addresses.lock() = listen_addresses;
 		}
 
-		<span class="kw">let </span>is_major_syncing = this
-			.network_service
+		<span class="kw">let </span>is_major_syncing = <span class="self">self
+			</span>.network_service
 			.behaviour_mut()
 			.user_protocol_mut()
 			.sync_state()
 			.state
 			.is_major_syncing();
 
-		this.is_major_syncing.store(is_major_syncing, Ordering::Relaxed);
+		<span class="self">self</span>.is_major_syncing.store(is_major_syncing, Ordering::Relaxed);
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = this.metrics.as_ref() {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(buckets) = this.network_service.behaviour_mut().num_entries_per_kbucket() {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(buckets) = <span class="self">self</span>.network_service.behaviour_mut().num_entries_per_kbucket() {
 				<span class="kw">for </span>(lower_ilog2_bucket_bound, num_entries) <span class="kw">in </span>buckets {
 					metrics
 						.kbuckets_num_nodes
@@ -3852,25 +3367,530 @@
 						.set(num_entries <span class="kw">as </span>u64);
 				}
 			}
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(num_entries) = this.network_service.behaviour_mut().num_kademlia_records() {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(num_entries) = <span class="self">self</span>.network_service.behaviour_mut().num_kademlia_records() {
 				metrics.kademlia_records_count.set(num_entries <span class="kw">as </span>u64);
 			}
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(num_entries) =
-				this.network_service.behaviour_mut().kademlia_records_total_size()
+				<span class="self">self</span>.network_service.behaviour_mut().kademlia_records_total_size()
 			{
 				metrics.kademlia_records_sizes_total.set(num_entries <span class="kw">as </span>u64);
 			}
 			metrics
 				.peerset_num_discovered
-				.set(this.network_service.behaviour_mut().user_protocol().num_discovered_peers()
+				.set(<span class="self">self</span>.network_service.behaviour_mut().user_protocol().num_discovered_peers()
 					<span class="kw">as </span>u64);
 			metrics.pending_connections.set(
-				Swarm::network_info(<span class="kw-2">&amp;</span>this.network_service).connection_counters().num_pending()
+				Swarm::network_info(<span class="kw-2">&amp;</span><span class="self">self</span>.network_service).connection_counters().num_pending()
 					<span class="kw">as </span>u64,
 			);
 		}
 
-		Poll::Pending
+		<span class="bool-val">true
+	</span>}
+
+	<span class="doccomment">/// Process the next message coming from the `NetworkService`.
+	</span><span class="kw">fn </span>handle_worker_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: ServiceToWorkerMsg&lt;B&gt;) {
+		<span class="kw">match </span>msg {
+			ServiceToWorkerMsg::AnnounceBlock(hash, data) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.announce_block(hash, data),
+			ServiceToWorkerMsg::GetValue(key) =&gt;
+				<span class="self">self</span>.network_service.behaviour_mut().get_value(key),
+			ServiceToWorkerMsg::PutValue(key, value) =&gt;
+				<span class="self">self</span>.network_service.behaviour_mut().put_value(key, value),
+			ServiceToWorkerMsg::SetReservedOnly(reserved_only) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.set_reserved_only(reserved_only),
+			ServiceToWorkerMsg::SetReserved(peers) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.set_reserved_peers(peers),
+			ServiceToWorkerMsg::SetPeersetReserved(protocol, peers) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.set_reserved_peerset_peers(protocol, peers),
+			ServiceToWorkerMsg::AddReserved(peer_id) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.add_reserved_peer(peer_id),
+			ServiceToWorkerMsg::RemoveReserved(peer_id) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.remove_reserved_peer(peer_id),
+			ServiceToWorkerMsg::AddSetReserved(protocol, peer_id) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.add_set_reserved_peer(protocol, peer_id),
+			ServiceToWorkerMsg::RemoveSetReserved(protocol, peer_id) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.remove_set_reserved_peer(protocol, peer_id),
+			ServiceToWorkerMsg::AddKnownAddress(peer_id, addr) =&gt;
+				<span class="self">self</span>.network_service.behaviour_mut().add_known_address(peer_id, addr),
+			ServiceToWorkerMsg::AddToPeersSet(protocol, peer_id) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.add_to_peers_set(protocol, peer_id),
+			ServiceToWorkerMsg::RemoveFromPeersSet(protocol, peer_id) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.remove_from_peers_set(protocol, peer_id),
+			ServiceToWorkerMsg::EventStream(sender) =&gt; <span class="self">self</span>.event_streams.push(sender),
+			ServiceToWorkerMsg::Request {
+				target,
+				protocol,
+				request,
+				pending_response,
+				connect,
+			} =&gt; {
+				<span class="self">self</span>.network_service.behaviour_mut().send_request(
+					<span class="kw-2">&amp;</span>target,
+					<span class="kw-2">&amp;</span>protocol,
+					request,
+					pending_response,
+					connect,
+				);
+			},
+			ServiceToWorkerMsg::NetworkStatus { pending_response } =&gt; {
+				<span class="kw">let _ </span>= pending_response.send(<span class="prelude-val">Ok</span>(<span class="self">self</span>.status()));
+			},
+			ServiceToWorkerMsg::NetworkState { pending_response } =&gt; {
+				<span class="kw">let _ </span>= pending_response.send(<span class="prelude-val">Ok</span>(<span class="self">self</span>.network_state()));
+			},
+			ServiceToWorkerMsg::DisconnectPeer(who, protocol_name) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.disconnect_peer(<span class="kw-2">&amp;</span>who, protocol_name),
+			ServiceToWorkerMsg::NewBestBlockImported(hash, number) =&gt; <span class="self">self
+				</span>.network_service
+				.behaviour_mut()
+				.user_protocol_mut()
+				.new_best_block_imported(hash, number),
+			ServiceToWorkerMsg::PeersDebugInfo { pending_response } =&gt; {
+				<span class="kw">let _ </span>= pending_response.send(<span class="self">self</span>.peers_debug_info());
+			},
+			ServiceToWorkerMsg::ReservedPeers { pending_response } =&gt; {
+				<span class="kw">let _ </span>=
+					pending_response.send(<span class="self">self</span>.reserved_peers().map(ToOwned::to_owned).collect());
+			},
+		}
+	}
+
+	<span class="doccomment">/// Process the next event coming from `Swarm`.
+	</span><span class="kw">fn </span>handle_swarm_event(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		event: SwarmEvent&lt;BehaviourOut, ConnectionHandlerErr&lt;Behaviour&lt;B, Client&gt;&gt;&gt;,
+	) {
+		<span class="kw">match </span>event {
+			SwarmEvent::Behaviour(BehaviourOut::InboundRequest { protocol, result, .. }) =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">match </span>result {
+						<span class="prelude-val">Ok</span>(serve_time) =&gt; {
+							metrics
+								.requests_in_success_total
+								.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol])
+								.observe(serve_time.as_secs_f64());
+						},
+						<span class="prelude-val">Err</span>(err) =&gt; {
+							<span class="kw">let </span>reason = <span class="kw">match </span>err {
+								ResponseFailure::Network(InboundFailure::Timeout) =&gt;
+									<span class="prelude-val">Some</span>(<span class="string">&quot;timeout&quot;</span>),
+								ResponseFailure::Network(InboundFailure::UnsupportedProtocols) =&gt;
+								<span class="comment">// `UnsupportedProtocols` is reported for every single
+								// inbound request whenever a request with an unsupported
+								// protocol is received. This is not reported in order to
+								// avoid confusions.
+									</span><span class="prelude-val">None</span>,
+								ResponseFailure::Network(InboundFailure::ResponseOmission) =&gt;
+									<span class="prelude-val">Some</span>(<span class="string">&quot;busy-omitted&quot;</span>),
+								ResponseFailure::Network(InboundFailure::ConnectionClosed) =&gt;
+									<span class="prelude-val">Some</span>(<span class="string">&quot;connection-closed&quot;</span>),
+							};
+
+							<span class="kw">if let </span><span class="prelude-val">Some</span>(reason) = reason {
+								metrics
+									.requests_in_failure_total
+									.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol, reason])
+									.inc();
+							}
+						},
+					}
+				}
+			},
+			SwarmEvent::Behaviour(BehaviourOut::RequestFinished {
+				protocol,
+				duration,
+				result,
+				..
+			}) =&gt;
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">match </span>result {
+						<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
+							metrics
+								.requests_out_success_total
+								.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol])
+								.observe(duration.as_secs_f64());
+						},
+						<span class="prelude-val">Err</span>(err) =&gt; {
+							<span class="kw">let </span>reason = <span class="kw">match </span>err {
+								RequestFailure::NotConnected =&gt; <span class="string">&quot;not-connected&quot;</span>,
+								RequestFailure::UnknownProtocol =&gt; <span class="string">&quot;unknown-protocol&quot;</span>,
+								RequestFailure::Refused =&gt; <span class="string">&quot;refused&quot;</span>,
+								RequestFailure::Obsolete =&gt; <span class="string">&quot;obsolete&quot;</span>,
+								RequestFailure::Network(OutboundFailure::DialFailure) =&gt;
+									<span class="string">&quot;dial-failure&quot;</span>,
+								RequestFailure::Network(OutboundFailure::Timeout) =&gt; <span class="string">&quot;timeout&quot;</span>,
+								RequestFailure::Network(OutboundFailure::ConnectionClosed) =&gt;
+									<span class="string">&quot;connection-closed&quot;</span>,
+								RequestFailure::Network(OutboundFailure::UnsupportedProtocols) =&gt;
+									<span class="string">&quot;unsupported&quot;</span>,
+							};
+
+							metrics
+								.requests_out_failure_total
+								.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol, reason])
+								.inc();
+						},
+					}
+				},
+			SwarmEvent::Behaviour(BehaviourOut::ReputationChanges { peer, changes }) =&gt;
+				<span class="kw">for </span>change <span class="kw">in </span>changes {
+					<span class="self">self</span>.network_service.behaviour().user_protocol().report_peer(peer, change);
+				},
+			SwarmEvent::Behaviour(BehaviourOut::PeerIdentify {
+				peer_id,
+				info:
+					IdentifyInfo {
+						protocol_version, agent_version, <span class="kw-2">mut </span>listen_addrs, protocols, ..
+					},
+			}) =&gt; {
+				<span class="kw">if </span>listen_addrs.len() &gt; <span class="number">30 </span>{
+					<span class="macro">debug!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;Node {:?} has reported more than 30 addresses; it is identified by {:?} and {:?}&quot;</span>,
+						peer_id, protocol_version, agent_version
+					);
+					listen_addrs.truncate(<span class="number">30</span>);
+				}
+				<span class="kw">for </span>addr <span class="kw">in </span>listen_addrs {
+					<span class="self">self</span>.network_service
+						.behaviour_mut()
+						.add_self_reported_address_to_dht(<span class="kw-2">&amp;</span>peer_id, <span class="kw-2">&amp;</span>protocols, addr);
+				}
+				<span class="self">self</span>.network_service
+					.behaviour_mut()
+					.user_protocol_mut()
+					.add_default_set_discovered_nodes(iter::once(peer_id));
+			},
+			SwarmEvent::Behaviour(BehaviourOut::Discovered(peer_id)) =&gt; {
+				<span class="self">self</span>.network_service
+					.behaviour_mut()
+					.user_protocol_mut()
+					.add_default_set_discovered_nodes(iter::once(peer_id));
+			},
+			SwarmEvent::Behaviour(BehaviourOut::RandomKademliaStarted) =&gt;
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics.kademlia_random_queries_total.inc();
+				},
+			SwarmEvent::Behaviour(BehaviourOut::NotificationStreamOpened {
+				remote,
+				protocol,
+				negotiated_fallback,
+				notifications_sink,
+				role,
+			}) =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics
+						.notifications_streams_opened_total
+						.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol])
+						.inc();
+				}
+				{
+					<span class="kw">let </span><span class="kw-2">mut </span>peers_notifications_sinks = <span class="self">self</span>.peers_notifications_sinks.lock();
+					<span class="kw">let </span>_previous_value = peers_notifications_sinks
+						.insert((remote, protocol.clone()), notifications_sink);
+					<span class="macro">debug_assert!</span>(_previous_value.is_none());
+				}
+				<span class="self">self</span>.event_streams.send(Event::NotificationStreamOpened {
+					remote,
+					protocol,
+					negotiated_fallback,
+					role,
+				});
+			},
+			SwarmEvent::Behaviour(BehaviourOut::NotificationStreamReplaced {
+				remote,
+				protocol,
+				notifications_sink,
+			}) =&gt; {
+				<span class="kw">let </span><span class="kw-2">mut </span>peers_notifications_sinks = <span class="self">self</span>.peers_notifications_sinks.lock();
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(s) = peers_notifications_sinks.get_mut(<span class="kw-2">&amp;</span>(remote, protocol)) {
+					<span class="kw-2">*</span>s = notifications_sink;
+				} <span class="kw">else </span>{
+					<span class="macro">error!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;NotificationStreamReplaced for non-existing substream&quot;
+					</span>);
+					<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+				}
+
+				<span class="comment">// TODO: Notifications might have been lost as a result of the previous
+				// connection being dropped, and as a result it would be preferable to notify
+				// the users of this fact by simulating the substream being closed then
+				// reopened.
+				// The code below doesn&#39;t compile because `role` is unknown. Propagating the
+				// handshake of the secondary connections is quite an invasive change and
+				// would conflict with https://github.com/paritytech/substrate/issues/6403.
+				// Considering that dropping notifications is generally regarded as
+				// acceptable, this bug is at the moment intentionally left there and is
+				// intended to be fixed at the same time as
+				// https://github.com/paritytech/substrate/issues/6403.
+				// self.event_streams.send(Event::NotificationStreamClosed {
+				// remote,
+				// protocol,
+				// });
+				// self.event_streams.send(Event::NotificationStreamOpened {
+				// remote,
+				// protocol,
+				// role,
+				// });
+			</span>},
+			SwarmEvent::Behaviour(BehaviourOut::NotificationStreamClosed { remote, protocol }) =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics
+						.notifications_streams_closed_total
+						.with_label_values(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>protocol[..]])
+						.inc();
+				}
+				<span class="self">self</span>.event_streams
+					.send(Event::NotificationStreamClosed { remote, protocol: protocol.clone() });
+				{
+					<span class="kw">let </span><span class="kw-2">mut </span>peers_notifications_sinks = <span class="self">self</span>.peers_notifications_sinks.lock();
+					<span class="kw">let </span>_previous_value = peers_notifications_sinks.remove(<span class="kw-2">&amp;</span>(remote, protocol));
+					<span class="macro">debug_assert!</span>(_previous_value.is_some());
+				}
+			},
+			SwarmEvent::Behaviour(BehaviourOut::NotificationsReceived { remote, messages }) =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">for </span>(protocol, message) <span class="kw">in </span><span class="kw-2">&amp;</span>messages {
+						metrics
+							.notifications_sizes
+							.with_label_values(<span class="kw-2">&amp;</span>[<span class="string">&quot;in&quot;</span>, protocol])
+							.observe(message.len() <span class="kw">as </span>f64);
+					}
+				}
+				<span class="self">self</span>.event_streams.send(Event::NotificationsReceived { remote, messages });
+			},
+			SwarmEvent::Behaviour(BehaviourOut::SyncConnected(remote)) =&gt; {
+				<span class="self">self</span>.event_streams.send(Event::SyncConnected { remote });
+			},
+			SwarmEvent::Behaviour(BehaviourOut::SyncDisconnected(remote)) =&gt; {
+				<span class="self">self</span>.event_streams.send(Event::SyncDisconnected { remote });
+			},
+			SwarmEvent::Behaviour(BehaviourOut::Dht(event, duration)) =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">let </span>query_type = <span class="kw">match </span>event {
+						DhtEvent::ValueFound(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-found&quot;</span>,
+						DhtEvent::ValueNotFound(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-not-found&quot;</span>,
+						DhtEvent::ValuePut(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-put&quot;</span>,
+						DhtEvent::ValuePutFailed(<span class="kw">_</span>) =&gt; <span class="string">&quot;value-put-failed&quot;</span>,
+					};
+					metrics
+						.kademlia_query_duration
+						.with_label_values(<span class="kw-2">&amp;</span>[query_type])
+						.observe(duration.as_secs_f64());
+				}
+
+				<span class="self">self</span>.event_streams.send(Event::Dht(event));
+			},
+			SwarmEvent::Behaviour(BehaviourOut::None) =&gt; {
+				<span class="comment">// Ignored event from lower layers.
+			</span>},
+			SwarmEvent::ConnectionEstablished {
+				peer_id,
+				endpoint,
+				num_established,
+				concurrent_dial_errors,
+			} =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(errors) = concurrent_dial_errors {
+					<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Connected({:?}) with errors: {:?}&quot;</span>, peer_id, errors);
+				} <span class="kw">else </span>{
+					<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Connected({:?})&quot;</span>, peer_id);
+				}
+
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">let </span>direction = <span class="kw">match </span>endpoint {
+						ConnectedPoint::Dialer { .. } =&gt; <span class="string">&quot;out&quot;</span>,
+						ConnectedPoint::Listener { .. } =&gt; <span class="string">&quot;in&quot;</span>,
+					};
+					metrics.connections_opened_total.with_label_values(<span class="kw-2">&amp;</span>[direction]).inc();
+
+					<span class="kw">if </span>num_established.get() == <span class="number">1 </span>{
+						metrics.distinct_peers_connections_opened_total.inc();
+					}
+				}
+			},
+			SwarmEvent::ConnectionClosed { peer_id, cause, endpoint, num_established } =&gt; {
+				<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Disconnected({:?}, {:?})&quot;</span>, peer_id, cause);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">let </span>direction = <span class="kw">match </span>endpoint {
+						ConnectedPoint::Dialer { .. } =&gt; <span class="string">&quot;out&quot;</span>,
+						ConnectedPoint::Listener { .. } =&gt; <span class="string">&quot;in&quot;</span>,
+					};
+					<span class="kw">let </span>reason = <span class="kw">match </span>cause {
+						<span class="prelude-val">Some</span>(ConnectionError::IO(<span class="kw">_</span>)) =&gt; <span class="string">&quot;transport-error&quot;</span>,
+						<span class="prelude-val">Some</span>(ConnectionError::Handler(EitherError::A(EitherError::A(
+							EitherError::B(EitherError::A(PingFailure::Timeout)),
+						)))) =&gt; <span class="string">&quot;ping-timeout&quot;</span>,
+						<span class="prelude-val">Some</span>(ConnectionError::Handler(EitherError::A(EitherError::A(
+							EitherError::A(NotifsHandlerError::SyncNotificationsClogged),
+						)))) =&gt; <span class="string">&quot;sync-notifications-clogged&quot;</span>,
+						<span class="prelude-val">Some</span>(ConnectionError::Handler(<span class="kw">_</span>)) =&gt; <span class="string">&quot;protocol-error&quot;</span>,
+						<span class="prelude-val">Some</span>(ConnectionError::KeepAliveTimeout) =&gt; <span class="string">&quot;keep-alive-timeout&quot;</span>,
+						<span class="prelude-val">None </span>=&gt; <span class="string">&quot;actively-closed&quot;</span>,
+					};
+					metrics.connections_closed_total.with_label_values(<span class="kw-2">&amp;</span>[direction, reason]).inc();
+
+					<span class="comment">// `num_established` represents the number of *remaining* connections.
+					</span><span class="kw">if </span>num_established == <span class="number">0 </span>{
+						metrics.distinct_peers_connections_closed_total.inc();
+					}
+				}
+			},
+			SwarmEvent::NewListenAddr { address, .. } =&gt; {
+				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; NewListenAddr({})&quot;</span>, address);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics.listeners_local_addresses.inc();
+				}
+			},
+			SwarmEvent::ExpiredListenAddr { address, .. } =&gt; {
+				<span class="macro">info!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;📪 No longer listening on {}&quot;</span>, address);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics.listeners_local_addresses.dec();
+				}
+			},
+			SwarmEvent::OutgoingConnectionError { peer_id, error } =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(peer_id) = peer_id {
+					<span class="macro">trace!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;Libp2p =&gt; Failed to reach {:?}: {}&quot;</span>,
+						peer_id, error,
+					);
+
+					<span class="kw">if </span><span class="self">self</span>.boot_node_ids.contains(<span class="kw-2">&amp;</span>peer_id) {
+						<span class="kw">if let </span>DialError::WrongPeerId { obtained, endpoint } = <span class="kw-2">&amp;</span>error {
+							<span class="kw">if let </span>ConnectedPoint::Dialer { address, role_override: <span class="kw">_ </span>} = endpoint {
+								<span class="macro">warn!</span>(
+									<span class="string">&quot;💔 The bootnode you want to connect to at `{}` provided a different peer ID `{}` than the one you expect `{}`.&quot;</span>,
+									address,
+									obtained,
+									peer_id,
+								);
+							}
+						}
+					}
+				}
+
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">let </span>reason = <span class="kw">match </span>error {
+						DialError::ConnectionLimit(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;limit-reached&quot;</span>),
+						DialError::InvalidPeerId(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;invalid-peer-id&quot;</span>),
+						DialError::Transport(<span class="kw">_</span>) | DialError::ConnectionIo(<span class="kw">_</span>) =&gt;
+							<span class="prelude-val">Some</span>(<span class="string">&quot;transport-error&quot;</span>),
+						DialError::Banned |
+						DialError::LocalPeerId |
+						DialError::NoAddresses |
+						DialError::DialPeerConditionFalse(<span class="kw">_</span>) |
+						DialError::WrongPeerId { .. } |
+						DialError::Aborted =&gt; <span class="prelude-val">None</span>, <span class="comment">// ignore them
+					</span>};
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(reason) = reason {
+						metrics.pending_connections_errors_total.with_label_values(<span class="kw-2">&amp;</span>[reason]).inc();
+					}
+				}
+			},
+			SwarmEvent::Dialing(peer_id) =&gt; {
+				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Dialing({:?})&quot;</span>, peer_id)
+			},
+			SwarmEvent::IncomingConnection { local_addr, send_back_addr } =&gt; {
+				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; IncomingConnection({},{}))&quot;</span>,
+					local_addr, send_back_addr);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics.incoming_connections_total.inc();
+				}
+			},
+			SwarmEvent::IncomingConnectionError { local_addr, send_back_addr, error } =&gt; {
+				<span class="macro">debug!</span>(
+					target: <span class="string">&quot;sub-libp2p&quot;</span>,
+					<span class="string">&quot;Libp2p =&gt; IncomingConnectionError({},{}): {}&quot;</span>,
+					local_addr, send_back_addr, error,
+				);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					<span class="kw">let </span>reason = <span class="kw">match </span>error {
+						PendingConnectionError::ConnectionLimit(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;limit-reached&quot;</span>),
+						PendingConnectionError::WrongPeerId { .. } =&gt; <span class="prelude-val">Some</span>(<span class="string">&quot;invalid-peer-id&quot;</span>),
+						PendingConnectionError::Transport(<span class="kw">_</span>) | PendingConnectionError::IO(<span class="kw">_</span>) =&gt;
+							<span class="prelude-val">Some</span>(<span class="string">&quot;transport-error&quot;</span>),
+						PendingConnectionError::Aborted =&gt; <span class="prelude-val">None</span>, <span class="comment">// ignore it
+					</span>};
+
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(reason) = reason {
+						metrics
+							.incoming_connections_errors_total
+							.with_label_values(<span class="kw-2">&amp;</span>[reason])
+							.inc();
+					}
+				}
+			},
+			SwarmEvent::BannedPeer { peer_id, endpoint } =&gt; {
+				<span class="macro">debug!</span>(
+					target: <span class="string">&quot;sub-libp2p&quot;</span>,
+					<span class="string">&quot;Libp2p =&gt; BannedPeer({}). Connected via {:?}.&quot;</span>,
+					peer_id, endpoint,
+				);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics.incoming_connections_errors_total.with_label_values(<span class="kw-2">&amp;</span>[<span class="string">&quot;banned&quot;</span>]).inc();
+				}
+			},
+			SwarmEvent::ListenerClosed { reason, addresses, .. } =&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics.listeners_local_addresses.sub(addresses.len() <span class="kw">as </span>u64);
+				}
+				<span class="kw">let </span>addrs =
+					addresses.into_iter().map(|a| a.to_string()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">&quot;, &quot;</span>);
+				<span class="kw">match </span>reason {
+					<span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">error!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;📪 Libp2p listener ({}) closed gracefully&quot;</span>,
+						addrs
+					),
+					<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;📪 Libp2p listener ({}) closed: {}&quot;</span>,
+						addrs, e
+					),
+				}
+			},
+			SwarmEvent::ListenerError { error, .. } =&gt; {
+				<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; ListenerError: {}&quot;</span>, error);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
+					metrics.listeners_errors_total.inc();
+				}
+			},
+		}
 	}
 }
 

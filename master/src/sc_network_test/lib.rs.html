@@ -1199,6 +1199,15 @@
 <a href="#1199" id="1199">1199</a>
 <a href="#1200" id="1200">1200</a>
 <a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
+<a href="#1208" id="1208">1208</a>
+<a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1232,7 +1241,7 @@
 	time::Duration,
 };
 
-<span class="kw">use </span>futures::{channel::oneshot, future::BoxFuture, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>futures::{channel::oneshot, future::BoxFuture, pin_mut, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>libp2p::{build_multiaddr, PeerId};
 <span class="kw">use </span>log::trace;
 <span class="kw">use </span>parking_lot::Mutex;
@@ -1284,7 +1293,7 @@
 };
 <span class="kw">use </span>substrate_test_runtime_client::AccountKeyring;
 <span class="kw">pub use </span>substrate_test_runtime_client::{
-	runtime::{Block, Extrinsic, Hash, Transfer},
+	runtime::{Block, Extrinsic, Hash, Header, Transfer},
 	TestClient, TestClientBuilder, TestClientBuilderExt,
 };
 <span class="kw">use </span>tokio::time::timeout;
@@ -2279,8 +2288,17 @@
 		<span class="self">self</span>.mut_peers(|peers| {
 			<span class="kw">for </span>(i, peer) <span class="kw">in </span>peers.iter_mut().enumerate() {
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;-- Polling {}: {}&quot;</span>, i, peer.id());
-				<span class="kw">if let </span>Poll::Ready(()) = peer.network.poll_unpin(cx) {
-					<span class="macro">panic!</span>(<span class="string">&quot;NetworkWorker has terminated unexpectedly.&quot;</span>)
+				<span class="kw">loop </span>{
+					<span class="comment">// The code below is not quite correct, because we are polling a different
+					// instance of the future every time. But as long as
+					// `NetworkWorker::next_action()` contains just streams polling not interleaved
+					// with other `.await`s, dropping the future and recreating it works the same as
+					// polling a single instance.
+					</span><span class="kw">let </span>net_poll_future = peer.network.next_action();
+					<span class="macro">pin_mut!</span>(net_poll_future);
+					<span class="kw">if let </span>Poll::Pending = net_poll_future.poll(cx) {
+						<span class="kw">break
+					</span>}
 				}
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;-- Polling complete {}: {}&quot;</span>, i, peer.id());
 

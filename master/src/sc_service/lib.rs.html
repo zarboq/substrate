@@ -574,6 +574,65 @@
 <a href="#574" id="574">574</a>
 <a href="#575" id="575">575</a>
 <a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -613,12 +672,16 @@
 <span class="kw">use </span>std::{collections::HashMap, net::SocketAddr};
 
 <span class="kw">use </span>codec::{Decode, Encode};
-<span class="kw">use </span>futures::{channel::mpsc, FutureExt, StreamExt};
+<span class="kw">use </span>futures::{channel::mpsc, pin_mut, FutureExt, StreamExt};
 <span class="kw">use </span>jsonrpsee::{core::Error <span class="kw">as </span>JsonRpseeError, RpcModule};
 <span class="kw">use </span>log::{debug, error, warn};
 <span class="kw">use </span>sc_client_api::{blockchain::HeaderBackend, BlockBackend, BlockchainEvents, ProofProvider};
-<span class="kw">use </span>sc_network::PeerId;
-<span class="kw">use </span>sc_network_common::{config::MultiaddrWithPeerId, service::NetworkBlock};
+<span class="kw">use </span>sc_network::{NetworkStateInfo, PeerId};
+<span class="kw">use </span>sc_network_common::{
+	config::MultiaddrWithPeerId,
+	service::{NetworkBlock, NetworkPeers},
+};
+<span class="kw">use </span>sc_network_sync::service::chain_sync::ChainSyncInterfaceHandle;
 <span class="kw">use </span>sc_utils::mpsc::TracingUnboundedReceiver;
 <span class="kw">use </span>sp_blockchain::HeaderMetadata;
 <span class="kw">use </span>sp_consensus::SyncOracle;
@@ -714,9 +777,7 @@
 	</span><span class="kw">pub </span>other: Other,
 }
 
-<span class="doccomment">/// Builds a never-ending future that continuously polls the network.
-///
-/// The `status_sink` contain a list of senders to send a periodic network status to.
+<span class="doccomment">/// Builds a future that continuously polls the network.
 </span><span class="kw">async fn </span>build_network_future&lt;
 	B: BlockT,
 	C: BlockchainEvents&lt;B&gt;
@@ -729,20 +790,20 @@
 		+ <span class="lifetime">&#39;static</span>,
 	H: sc_network_common::ExHashT,
 &gt;(
-	role: Role,
-	<span class="kw-2">mut </span>network: sc_network::NetworkWorker&lt;B, H, C&gt;,
+	network: sc_network::NetworkWorker&lt;B, H, C&gt;,
 	client: Arc&lt;C&gt;,
-	<span class="kw-2">mut </span>rpc_rx: TracingUnboundedReceiver&lt;sc_rpc::system::Request&lt;B&gt;&gt;,
-	should_have_peers: bool,
+	chain_sync_service: ChainSyncInterfaceHandle&lt;B&gt;,
 	announce_imported_blocks: bool,
 ) {
 	<span class="kw">let </span><span class="kw-2">mut </span>imported_blocks_stream = client.import_notification_stream().fuse();
 
-	<span class="comment">// Current best block at initialization, to report to the RPC layer.
-	</span><span class="kw">let </span>starting_block = client.info().best_number;
-
 	<span class="comment">// Stream of finalized blocks reported by the client.
 	</span><span class="kw">let </span><span class="kw-2">mut </span>finality_notification_stream = client.finality_notification_stream().fuse();
+
+	<span class="kw">let </span>network_service = network.service().clone();
+
+	<span class="kw">let </span>network_run = network.run().fuse();
+	<span class="macro">pin_mut!</span>(network_run);
 
 	<span class="kw">loop </span>{
 		<span class="macro">futures::select! </span>{
@@ -752,15 +813,18 @@
 					<span class="prelude-val">Some</span>(n) =&gt; n,
 					<span class="comment">// If this stream is shut down, that means the client has shut down, and the
 					// most appropriate thing to do for the network future is to shut down too.
-					</span><span class="prelude-val">None </span>=&gt; <span class="kw">return</span>,
+					</span><span class="prelude-val">None </span>=&gt; {
+						<span class="macro">debug!</span>(<span class="string">&quot;Block import stream has terminated, shutting down the network future.&quot;</span>);
+						<span class="kw">return
+					</span>},
 				};
 
 				<span class="kw">if </span>announce_imported_blocks {
-					network.service().announce_block(notification.hash, <span class="prelude-val">None</span>);
+					network_service.announce_block(notification.hash, <span class="prelude-val">None</span>);
 				}
 
 				<span class="kw">if </span>notification.is_new_best {
-					network.service().new_best_block_imported(
+					network_service.new_best_block_imported(
 						notification.hash,
 						<span class="kw-2">*</span>notification.header.number(),
 					);
@@ -769,106 +833,160 @@
 
 			<span class="comment">// List of blocks that the client has finalized.
 			</span>notification = finality_notification_stream.select_next_some() =&gt; {
-				network.on_block_finalized(notification.hash, notification.header);
+				chain_sync_service.on_block_finalized(notification.hash, <span class="kw-2">*</span>notification.header.number());
 			}
 
-			<span class="comment">// Answer incoming RPC requests.
-			</span>request = rpc_rx.select_next_some() =&gt; {
-				<span class="kw">match </span>request {
-					sc_rpc::system::Request::Health(sender) =&gt; {
-						<span class="kw">let _ </span>= sender.send(sc_rpc::system::Health {
-							peers: network.peers_debug_info().len(),
-							is_syncing: network.service().is_major_syncing(),
-							should_have_peers,
-						});
-					},
-					sc_rpc::system::Request::LocalPeerId(sender) =&gt; {
-						<span class="kw">let _ </span>= sender.send(network.local_peer_id().to_base58());
-					},
-					sc_rpc::system::Request::LocalListenAddresses(sender) =&gt; {
-						<span class="kw">let </span>peer_id = (<span class="kw-2">*</span>network.local_peer_id()).into();
-						<span class="kw">let </span>p2p_proto_suffix = sc_network::multiaddr::Protocol::P2p(peer_id);
-						<span class="kw">let </span>addresses = network.listen_addresses()
-							.map(|addr| addr.clone().with(p2p_proto_suffix.clone()).to_string())
-							.collect();
-						<span class="kw">let _ </span>= sender.send(addresses);
-					},
-					sc_rpc::system::Request::Peers(sender) =&gt; {
-						<span class="kw">let _ </span>= sender.send(network.peers_debug_info().into_iter().map(|(peer_id, p)|
-							sc_rpc::system::PeerInfo {
+			<span class="comment">// Drive the network. Shut down the network future if `NetworkWorker` has terminated.
+			</span><span class="kw">_ </span>= network_run =&gt; {
+				<span class="macro">debug!</span>(<span class="string">&quot;`NetworkWorker` has terminated, shutting down the network future.&quot;</span>);
+				<span class="kw">return
+			</span>}
+		}
+	}
+}
+
+<span class="doccomment">/// Builds a future that processes system RPC requests.
+</span><span class="kw">async fn </span>build_system_rpc_future&lt;
+	B: BlockT,
+	C: BlockchainEvents&lt;B&gt;
+		+ HeaderBackend&lt;B&gt;
+		+ BlockBackend&lt;B&gt;
+		+ HeaderMetadata&lt;B, Error = sp_blockchain::Error&gt;
+		+ ProofProvider&lt;B&gt;
+		+ Send
+		+ Sync
+		+ <span class="lifetime">&#39;static</span>,
+	H: sc_network_common::ExHashT,
+&gt;(
+	role: Role,
+	network_service: Arc&lt;sc_network::NetworkService&lt;B, H&gt;&gt;,
+	chain_sync_service: ChainSyncInterfaceHandle&lt;B&gt;,
+	client: Arc&lt;C&gt;,
+	<span class="kw-2">mut </span>rpc_rx: TracingUnboundedReceiver&lt;sc_rpc::system::Request&lt;B&gt;&gt;,
+	should_have_peers: bool,
+) {
+	<span class="comment">// Current best block at initialization, to report to the RPC layer.
+	</span><span class="kw">let </span>starting_block = client.info().best_number;
+
+	<span class="kw">loop </span>{
+		<span class="comment">// Answer incoming RPC requests.
+		</span><span class="kw">let </span><span class="prelude-val">Some</span>(req) = rpc_rx.next().<span class="kw">await else </span>{
+			<span class="macro">debug!</span>(<span class="string">&quot;RPC requests stream has terminated, shutting down the system RPC future.&quot;</span>);
+			<span class="kw">return</span>;
+		};
+
+		<span class="kw">match </span>req {
+			sc_rpc::system::Request::Health(sender) =&gt; {
+				<span class="kw">let </span>peers = network_service.peers_debug_info().<span class="kw">await</span>;
+				<span class="kw">if let </span><span class="prelude-val">Ok</span>(peers) = peers {
+					<span class="kw">let _ </span>= sender.send(sc_rpc::system::Health {
+						peers: peers.len(),
+						is_syncing: network_service.is_major_syncing(),
+						should_have_peers,
+					});
+				} <span class="kw">else </span>{
+					<span class="kw">break
+				</span>}
+			},
+			sc_rpc::system::Request::LocalPeerId(sender) =&gt; {
+				<span class="kw">let _ </span>= sender.send(network_service.local_peer_id().to_base58());
+			},
+			sc_rpc::system::Request::LocalListenAddresses(sender) =&gt; {
+				<span class="kw">let </span>peer_id = network_service.local_peer_id().into();
+				<span class="kw">let </span>p2p_proto_suffix = sc_network::multiaddr::Protocol::P2p(peer_id);
+				<span class="kw">let </span>addresses = network_service
+					.listen_addresses()
+					.iter()
+					.map(|addr| addr.clone().with(p2p_proto_suffix.clone()).to_string())
+					.collect();
+				<span class="kw">let _ </span>= sender.send(addresses);
+			},
+			sc_rpc::system::Request::Peers(sender) =&gt; {
+				<span class="kw">let </span>peers = network_service.peers_debug_info().<span class="kw">await</span>;
+				<span class="kw">if let </span><span class="prelude-val">Ok</span>(peers) = peers {
+					<span class="kw">let _ </span>= sender.send(
+						peers
+							.into_iter()
+							.map(|(peer_id, p)| sc_rpc::system::PeerInfo {
 								peer_id: peer_id.to_base58(),
 								roles: <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, p.roles),
 								best_hash: p.best_hash,
 								best_number: p.best_number,
-							}
-						).collect());
+							})
+							.collect(),
+					);
+				} <span class="kw">else </span>{
+					<span class="kw">break
+				</span>}
+			},
+			sc_rpc::system::Request::NetworkState(sender) =&gt; {
+				<span class="kw">let </span>network_state = network_service.network_state().<span class="kw">await</span>;
+				<span class="kw">if let </span><span class="prelude-val">Ok</span>(network_state) = network_state {
+					<span class="kw">if let </span><span class="prelude-val">Ok</span>(network_state) = serde_json::to_value(network_state) {
+						<span class="kw">let _ </span>= sender.send(network_state);
 					}
-					sc_rpc::system::Request::NetworkState(sender) =&gt; {
-						<span class="kw">if let </span><span class="prelude-val">Ok</span>(network_state) = serde_json::to_value(<span class="kw-2">&amp;</span>network.network_state()) {
-							<span class="kw">let _ </span>= sender.send(network_state);
-						}
-					}
-					sc_rpc::system::Request::NetworkAddReservedPeer(peer_addr, sender) =&gt; {
-						<span class="kw">let </span>result = <span class="kw">match </span>MultiaddrWithPeerId::try_from(peer_addr) {
-							<span class="prelude-val">Ok</span>(peer) =&gt; {
-								network.add_reserved_peer(peer)
-							},
-							<span class="prelude-val">Err</span>(err) =&gt; {
-								<span class="prelude-val">Err</span>(err.to_string())
-							},
-						};
-						<span class="kw">let </span>x = result.map_err(sc_rpc::system::error::Error::MalformattedPeerArg);
-						<span class="kw">let _ </span>= sender.send(x);
-					}
-					sc_rpc::system::Request::NetworkRemoveReservedPeer(peer_id, sender) =&gt; {
-						<span class="kw">let _ </span>= <span class="kw">match </span>peer_id.parse::&lt;PeerId&gt;() {
-							<span class="prelude-val">Ok</span>(peer_id) =&gt; {
-								network.remove_reserved_peer(peer_id);
-								sender.send(<span class="prelude-val">Ok</span>(()))
-							}
-							<span class="prelude-val">Err</span>(e) =&gt; sender.send(<span class="prelude-val">Err</span>(sc_rpc::system::error::Error::MalformattedPeerArg(
-								e.to_string(),
-							))),
-						};
-					}
-					sc_rpc::system::Request::NetworkReservedPeers(sender) =&gt; {
-						<span class="kw">let </span>reserved_peers = network.reserved_peers();
-						<span class="kw">let </span>reserved_peers = reserved_peers
-							.map(|peer_id| peer_id.to_base58())
-							.collect();
+				} <span class="kw">else </span>{
+					<span class="kw">break
+				</span>}
+			},
+			sc_rpc::system::Request::NetworkAddReservedPeer(peer_addr, sender) =&gt; {
+				<span class="kw">let </span>result = <span class="kw">match </span>MultiaddrWithPeerId::try_from(peer_addr) {
+					<span class="prelude-val">Ok</span>(peer) =&gt; network_service.add_reserved_peer(peer),
+					<span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(err.to_string()),
+				};
+				<span class="kw">let </span>x = result.map_err(sc_rpc::system::error::Error::MalformattedPeerArg);
+				<span class="kw">let _ </span>= sender.send(x);
+			},
+			sc_rpc::system::Request::NetworkRemoveReservedPeer(peer_id, sender) =&gt; {
+				<span class="kw">let _ </span>= <span class="kw">match </span>peer_id.parse::&lt;PeerId&gt;() {
+					<span class="prelude-val">Ok</span>(peer_id) =&gt; {
+						network_service.remove_reserved_peer(peer_id);
+						sender.send(<span class="prelude-val">Ok</span>(()))
+					},
+					<span class="prelude-val">Err</span>(e) =&gt; sender.send(<span class="prelude-val">Err</span>(sc_rpc::system::error::Error::MalformattedPeerArg(
+						e.to_string(),
+					))),
+				};
+			},
+			sc_rpc::system::Request::NetworkReservedPeers(sender) =&gt; {
+				<span class="kw">let </span>reserved_peers = network_service.reserved_peers().<span class="kw">await</span>;
+				<span class="kw">if let </span><span class="prelude-val">Ok</span>(reserved_peers) = reserved_peers {
+					<span class="kw">let </span>reserved_peers =
+						reserved_peers.iter().map(|peer_id| peer_id.to_base58()).collect();
+					<span class="kw">let _ </span>= sender.send(reserved_peers);
+				} <span class="kw">else </span>{
+					<span class="kw">break
+				</span>}
+			},
+			sc_rpc::system::Request::NodeRoles(sender) =&gt; {
+				<span class="kw">use </span>sc_rpc::system::NodeRole;
 
-						<span class="kw">let _ </span>= sender.send(reserved_peers);
-					}
-					sc_rpc::system::Request::NodeRoles(sender) =&gt; {
-						<span class="kw">use </span>sc_rpc::system::NodeRole;
+				<span class="kw">let </span>node_role = <span class="kw">match </span>role {
+					Role::Authority { .. } =&gt; NodeRole::Authority,
+					Role::Full =&gt; NodeRole::Full,
+				};
 
-						<span class="kw">let </span>node_role = <span class="kw">match </span>role {
-							Role::Authority { .. } =&gt; NodeRole::Authority,
-							Role::Full =&gt; NodeRole::Full,
-						};
+				<span class="kw">let _ </span>= sender.send(<span class="macro">vec!</span>[node_role]);
+			},
+			sc_rpc::system::Request::SyncState(sender) =&gt; {
+				<span class="kw">use </span>sc_rpc::system::SyncState;
 
-						<span class="kw">let _ </span>= sender.send(<span class="macro">vec!</span>[node_role]);
-					}
-					sc_rpc::system::Request::SyncState(sender) =&gt; {
-						<span class="kw">use </span>sc_rpc::system::SyncState;
+				<span class="kw">let </span>best_number = client.info().best_number;
 
-						<span class="kw">let </span>best_number = client.info().best_number;
+				<span class="kw">let </span><span class="prelude-val">Ok</span>(status) = chain_sync_service.status().<span class="kw">await else </span>{
+					<span class="macro">debug!</span>(<span class="string">&quot;`ChainSync` has terminated, shutting down the system RPC future.&quot;</span>);
+					<span class="kw">return
+				</span>};
 
-						<span class="kw">let _ </span>= sender.send(SyncState {
-							starting_block,
-							current_block: best_number,
-							highest_block: network.best_seen_block().unwrap_or(best_number),
-						});
-					}
-				}
-			}
-
-			<span class="comment">// The network worker has done something. Nothing special to do, but could be
-			// used in the future to perform actions in response of things that happened on
-			// the network.
-			</span><span class="kw">_ </span>= (<span class="kw-2">&amp;mut </span>network).fuse() =&gt; {}
+				<span class="kw">let _ </span>= sender.send(SyncState {
+					starting_block,
+					current_block: best_number,
+					highest_block: status.best_seen_block.unwrap_or(best_number),
+				});
+			},
 		}
 	}
+	<span class="macro">debug!</span>(<span class="string">&quot;`NetworkWorker` has terminated, shutting down the system RPC future.&quot;</span>);
 }
 
 <span class="comment">// Wrapper for HTTP and WS servers that makes sure they are properly shut down.

@@ -109,6 +109,26 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -127,9 +147,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>libp2p::PeerId;
+</span><span class="kw">use </span>futures::channel::oneshot;
+<span class="kw">use </span>libp2p::PeerId;
 <span class="kw">use </span>sc_consensus::{BlockImportError, BlockImportStatus, JustificationSyncLink, Link};
-<span class="kw">use </span>sc_network_common::service::NetworkSyncForkRequest;
+<span class="kw">use </span>sc_network_common::{service::NetworkSyncForkRequest, sync::SyncStatus};
 <span class="kw">use </span>sc_utils::mpsc::TracingUnboundedSender;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
 
@@ -145,6 +166,10 @@
 		Vec&lt;(<span class="prelude-ty">Result</span>&lt;BlockImportStatus&lt;NumberFor&lt;B&gt;&gt;, BlockImportError&gt;, B::Hash)&gt;,
 	),
 	JustificationImported(PeerId, B::Hash, NumberFor&lt;B&gt;, bool),
+	BlockFinalized(B::Hash, NumberFor&lt;B&gt;),
+	Status {
+		pending_response: oneshot::Sender&lt;SyncStatus&lt;B&gt;&gt;,
+	},
 }
 
 <span class="doccomment">/// Handle for communicating with `ChainSync` asynchronously
@@ -157,6 +182,21 @@
 	<span class="doccomment">/// Create new handle
 	</span><span class="kw">pub fn </span>new(tx: TracingUnboundedSender&lt;ToServiceCommand&lt;B&gt;&gt;) -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{ tx }
+	}
+
+	<span class="doccomment">/// Notify ChainSync about finalized block
+	</span><span class="kw">pub fn </span>on_block_finalized(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: B::Hash, number: NumberFor&lt;B&gt;) {
+		<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(ToServiceCommand::BlockFinalized(hash, number));
+	}
+
+	<span class="doccomment">/// Get sync status
+	///
+	/// Returns an error if `ChainSync` has terminated.
+	</span><span class="kw">pub async fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SyncStatus&lt;B&gt;, ()&gt; {
+		<span class="kw">let </span>(tx, rx) = oneshot::channel();
+		<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(ToServiceCommand::Status { pending_response: tx });
+
+		rx.<span class="kw">await</span>.map_err(|<span class="kw">_</span>| ())
 	}
 }
 
