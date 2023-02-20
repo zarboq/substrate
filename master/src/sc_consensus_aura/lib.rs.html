@@ -975,6 +975,7 @@
 <a href="#975" id="975">975</a>
 <a href="#976" id="976">976</a>
 <a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -1030,7 +1031,6 @@
 <span class="kw">use </span>sp_inherents::CreateInherentDataProviders;
 <span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 <span class="kw">use </span>sp_runtime::{
-	generic::BlockId,
 	traits::{Block <span class="kw">as </span>BlockT, Header, Member, NumberFor, Zero},
 	DigestItem,
 };
@@ -1098,8 +1098,10 @@
 	C: AuxStore + ProvideRuntimeApi&lt;B&gt; + UsageProvider&lt;B&gt;,
 	C::Api: AuraApi&lt;B, A&gt;,
 {
-	<span class="kw">let </span>best_block_id = BlockId::Hash(client.usage_info().chain.best_hash);
-	client.runtime_api().slot_duration(<span class="kw-2">&amp;</span>best_block_id).map_err(|err| err.into())
+	client
+		.runtime_api()
+		.slot_duration(client.usage_info().chain.best_hash)
+		.map_err(|err| err.into())
 }
 
 <span class="doccomment">/// Get slot author for given block along with authorities.
@@ -1590,7 +1592,7 @@
 			<span class="kw">if </span><span class="kw-2">*</span>until &gt; context_block_number {
 				runtime_api
 					.initialize_block(
-						<span class="kw-2">&amp;</span>BlockId::Hash(parent_hash),
+						parent_hash,
 						<span class="kw-2">&amp;</span>B::Header::new(
 							context_block_number,
 							Default::default(),
@@ -1604,7 +1606,7 @@
 	}
 
 	runtime_api
-		.authorities(<span class="kw-2">&amp;</span>BlockId::Hash(parent_hash))
+		.authorities(parent_hash)
 		.ok()
 		.ok_or(sp_consensus::Error::InvalidAuthoritiesSet)
 }

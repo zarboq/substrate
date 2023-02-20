@@ -354,11 +354,6 @@
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
 <a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -395,7 +390,7 @@
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_core::Bytes;
 <span class="kw">use </span>sp_mmr_primitives::{Error <span class="kw">as </span>MmrError, Proof};
-<span class="kw">use </span>sp_runtime::{generic::BlockId, traits::Block <span class="kw">as </span>BlockT};
+<span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
 <span class="kw">pub use </span>sp_mmr_primitives::MmrApi <span class="kw">as </span>MmrRuntimeApi;
 
@@ -515,7 +510,7 @@
 			</span><span class="self">self</span>.client.info().best_hash);
 		<span class="kw">let </span>api = <span class="self">self</span>.client.runtime_api();
 		<span class="kw">let </span>mmr_root = api
-			.mmr_root(<span class="kw-2">&amp;</span>BlockId::Hash(block_hash))
+			.mmr_root(block_hash)
 			.map_err(runtime_error_into_rpc_error)<span class="question-mark">?
 			</span>.map_err(mmr_error_into_rpc_error)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(mmr_root)
@@ -534,7 +529,7 @@
 
 		<span class="kw">let </span>(leaves, proof) = api
 			.generate_proof_with_context(
-				<span class="kw-2">&amp;</span>BlockId::hash(block_hash),
+				block_hash,
 				sp_core::ExecutionContext::OffchainCall(<span class="prelude-val">None</span>),
 				block_numbers,
 				best_known_block_number,
@@ -555,7 +550,7 @@
 			.map_err(|e| CallError::InvalidParams(anyhow::Error::new(e)))<span class="question-mark">?</span>;
 
 		api.verify_proof_with_context(
-			<span class="kw-2">&amp;</span>BlockId::hash(proof.block_hash),
+			proof.block_hash,
 			sp_core::ExecutionContext::OffchainCall(<span class="prelude-val">None</span>),
 			leaves,
 			decoded_proof,
@@ -579,14 +574,9 @@
 		<span class="kw">let </span>decoded_proof = Decode::decode(<span class="kw-2">&amp;mut &amp;</span>proof.proof.<span class="number">0</span>[..])
 			.map_err(|e| CallError::InvalidParams(anyhow::Error::new(e)))<span class="question-mark">?</span>;
 
-		api.verify_proof_stateless(
-			<span class="kw-2">&amp;</span>BlockId::hash(proof.block_hash),
-			mmr_root,
-			leaves,
-			decoded_proof,
-		)
-		.map_err(runtime_error_into_rpc_error)<span class="question-mark">?
-		</span>.map_err(mmr_error_into_rpc_error)<span class="question-mark">?</span>;
+		api.verify_proof_stateless(proof.block_hash, mmr_root, leaves, decoded_proof)
+			.map_err(runtime_error_into_rpc_error)<span class="question-mark">?
+			</span>.map_err(mmr_error_into_rpc_error)<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
 	}

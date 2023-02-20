@@ -1919,7 +1919,6 @@
 <a href="#1919" id="1919">1919</a>
 <a href="#1920" id="1920">1920</a>
 <a href="#1921" id="1921">1921</a>
-<a href="#1922" id="1922">1922</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -2045,7 +2044,7 @@
 <span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentData, InherentDataProvider};
 <span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 <span class="kw">use </span>sp_runtime::{
-	generic::{BlockId, OpaqueDigestItemId},
+	generic::OpaqueDigestItemId,
 	traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, SaturatedConversion, Zero},
 	DigestItem,
 };
@@ -2299,24 +2298,24 @@
 	</span>C: AuxStore + ProvideRuntimeApi&lt;B&gt; + UsageProvider&lt;B&gt;,
 	C::Api: BabeApi&lt;B&gt;,
 {
-	<span class="kw">let </span>block_id = <span class="kw">if </span>client.usage_info().chain.finalized_state.is_some() {
-		BlockId::Hash(client.usage_info().chain.best_hash)
+	<span class="kw">let </span>at_hash = <span class="kw">if </span>client.usage_info().chain.finalized_state.is_some() {
+		client.usage_info().chain.best_hash
 	} <span class="kw">else </span>{
 		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;No finalized state is available. Reading config from genesis&quot;</span>);
-		BlockId::Hash(client.usage_info().chain.genesis_hash)
+		client.usage_info().chain.genesis_hash
 	};
 
 	<span class="kw">let </span>runtime_api = client.runtime_api();
-	<span class="kw">let </span>version = runtime_api.api_version::&lt;<span class="kw">dyn </span>BabeApi&lt;B&gt;&gt;(<span class="kw-2">&amp;</span>block_id)<span class="question-mark">?</span>;
+	<span class="kw">let </span>version = runtime_api.api_version::&lt;<span class="kw">dyn </span>BabeApi&lt;B&gt;&gt;(at_hash)<span class="question-mark">?</span>;
 
 	<span class="kw">let </span>config = <span class="kw">match </span>version {
 		<span class="prelude-val">Some</span>(<span class="number">1</span>) =&gt; {
 			<span class="attr">#[allow(deprecated)]
 			</span>{
-				runtime_api.configuration_before_version_2(<span class="kw-2">&amp;</span>block_id)<span class="question-mark">?</span>.into()
+				runtime_api.configuration_before_version_2(at_hash)<span class="question-mark">?</span>.into()
 			}
 		},
-		<span class="prelude-val">Some</span>(<span class="number">2</span>) =&gt; runtime_api.configuration(<span class="kw-2">&amp;</span>block_id)<span class="question-mark">?</span>,
+		<span class="prelude-val">Some</span>(<span class="number">2</span>) =&gt; runtime_api.configuration(at_hash)<span class="question-mark">?</span>,
 		<span class="kw">_ </span>=&gt;
 			<span class="kw">return </span><span class="prelude-val">Err</span>(sp_blockchain::Error::VersionInvalid(
 				<span class="string">&quot;Unsupported or invalid BabeApi version&quot;</span>.to_string(),
@@ -2945,7 +2944,7 @@
 	<span class="kw">async fn </span>check_inherents(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		block: Block,
-		block_id: BlockId&lt;Block&gt;,
+		at_hash: Block::Hash,
 		inherent_data: InherentData,
 		create_inherent_data_providers: CIDP::InherentDataProviders,
 		execution_context: ExecutionContext,
@@ -2953,7 +2952,7 @@
 		<span class="kw">let </span>inherent_res = <span class="self">self
 			</span>.client
 			.runtime_api()
-			.check_inherents_with_context(<span class="kw-2">&amp;</span>block_id, execution_context, block, inherent_data)
+			.check_inherents_with_context(at_hash, execution_context, block, inherent_data)
 			.map_err(Error::RuntimeApi)<span class="question-mark">?</span>;
 
 		<span class="kw">if </span>!inherent_res.ok() {
@@ -3000,11 +2999,11 @@
 		);
 
 		<span class="comment">// get the best block on which we will build and send the equivocation report.
-		</span><span class="kw">let </span>best_id = <span class="self">self
+		</span><span class="kw">let </span>best_hash = <span class="self">self
 			</span>.select_chain
 			.best_chain()
 			.<span class="kw">await
-			</span>.map(|h| BlockId::Hash(h.hash()))
+			</span>.map(|h| h.hash())
 			.map_err(|e| Error::Client(e.into()))<span class="question-mark">?</span>;
 
 		<span class="comment">// generate a key ownership proof. we start by trying to generate the
@@ -3015,17 +3014,17 @@
 		// equivocation happens on the first block of the session, in which case
 		// its parent would be on the previous session. if generation on the
 		// parent header fails we try with best block as well.
-		</span><span class="kw">let </span>generate_key_owner_proof = |block_id: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;| {
+		</span><span class="kw">let </span>generate_key_owner_proof = |at_hash: Block::Hash| {
 			<span class="self">self</span>.client
 				.runtime_api()
-				.generate_key_ownership_proof(block_id, slot, equivocation_proof.offender.clone())
+				.generate_key_ownership_proof(at_hash, slot, equivocation_proof.offender.clone())
 				.map_err(Error::RuntimeApi)
 		};
 
-		<span class="kw">let </span>parent_id = BlockId::Hash(<span class="kw-2">*</span>header.parent_hash());
-		<span class="kw">let </span>key_owner_proof = <span class="kw">match </span>generate_key_owner_proof(<span class="kw-2">&amp;</span>parent_id)<span class="question-mark">? </span>{
+		<span class="kw">let </span>parent_hash = <span class="kw-2">*</span>header.parent_hash();
+		<span class="kw">let </span>key_owner_proof = <span class="kw">match </span>generate_key_owner_proof(parent_hash)<span class="question-mark">? </span>{
 			<span class="prelude-val">Some</span>(proof) =&gt; proof,
-			<span class="prelude-val">None </span>=&gt; <span class="kw">match </span>generate_key_owner_proof(<span class="kw-2">&amp;</span>best_id)<span class="question-mark">? </span>{
+			<span class="prelude-val">None </span>=&gt; <span class="kw">match </span>generate_key_owner_proof(best_hash)<span class="question-mark">? </span>{
 				<span class="prelude-val">Some</span>(proof) =&gt; proof,
 				<span class="prelude-val">None </span>=&gt; {
 					<span class="macro">debug!</span>(
@@ -3041,7 +3040,7 @@
 		</span><span class="self">self</span>.client
 			.runtime_api()
 			.submit_report_equivocation_unsigned_extrinsic(
-				<span class="kw-2">&amp;</span>best_id,
+				best_hash,
 				equivocation_proof,
 				key_owner_proof,
 			)
@@ -3190,7 +3189,7 @@
 
 						<span class="self">self</span>.check_inherents(
 							new_block.clone(),
-							BlockId::Hash(parent_hash),
+							parent_hash,
 							inherent_data,
 							create_inherent_data_providers,
 							block.origin.into(),
@@ -3317,11 +3316,10 @@
 		};
 
 		<span class="comment">// Read epoch info from the imported state.
-		</span><span class="kw">let </span>block_id = BlockId::hash(hash);
-		<span class="kw">let </span>current_epoch = <span class="self">self</span>.client.runtime_api().current_epoch(<span class="kw-2">&amp;</span>block_id).map_err(|e| {
+		</span><span class="kw">let </span>current_epoch = <span class="self">self</span>.client.runtime_api().current_epoch(hash).map_err(|e| {
 			ConsensusError::ClientImport(babe_err::&lt;Block&gt;(Error::RuntimeApi(e)).into())
 		})<span class="question-mark">?</span>;
-		<span class="kw">let </span>next_epoch = <span class="self">self</span>.client.runtime_api().next_epoch(<span class="kw-2">&amp;</span>block_id).map_err(|e| {
+		<span class="kw">let </span>next_epoch = <span class="self">self</span>.client.runtime_api().next_epoch(hash).map_err(|e| {
 			ConsensusError::ClientImport(babe_err::&lt;Block&gt;(Error::RuntimeApi(e)).into())
 		})<span class="question-mark">?</span>;
 

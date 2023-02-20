@@ -528,19 +528,19 @@
 {
 	<span class="macro">sp_tracing::within_span!</span>(sp_tracing::Level::TRACE, <span class="string">&quot;validate_transaction&quot;</span>;
 	{
+		<span class="kw">let </span>block_hash = client.to_hash(at)
+			.map_err(|e| Error::RuntimeApi(e.to_string()))<span class="question-mark">?
+			</span>.ok_or_else(|| Error::RuntimeApi(<span class="macro">format!</span>(<span class="string">&quot;Could not get hash for block `{:?}`.&quot;</span>, at)))<span class="question-mark">?</span>;
+
 		<span class="kw">let </span>runtime_api = client.runtime_api();
 		<span class="kw">let </span>api_version = <span class="macro">sp_tracing::within_span! </span>{ sp_tracing::Level::TRACE, <span class="string">&quot;check_version&quot;</span>;
 			runtime_api
-				.api_version::&lt;<span class="kw">dyn </span>TaggedTransactionQueue&lt;Block&gt;&gt;(at)
+				.api_version::&lt;<span class="kw">dyn </span>TaggedTransactionQueue&lt;Block&gt;&gt;(block_hash)
 				.map_err(|e| Error::RuntimeApi(e.to_string()))<span class="question-mark">?
 				</span>.ok_or_else(|| Error::RuntimeApi(
 					<span class="macro">format!</span>(<span class="string">&quot;Could not find `TaggedTransactionQueue` api for block `{:?}`.&quot;</span>, at)
 				))
 		}<span class="question-mark">?</span>;
-
-		<span class="kw">let </span>block_hash = client.to_hash(at)
-			.map_err(|e| Error::RuntimeApi(e.to_string()))<span class="question-mark">?
-			</span>.ok_or_else(|| Error::RuntimeApi(<span class="macro">format!</span>(<span class="string">&quot;Could not get hash for block `{:?}`.&quot;</span>, at)))<span class="question-mark">?</span>;
 
 		<span class="kw">use </span>sp_api::Core;
 
@@ -548,7 +548,7 @@
 			sp_tracing::Level::TRACE, <span class="string">&quot;runtime::validate_transaction&quot;</span>;
 		{
 			<span class="kw">if </span>api_version &gt;= <span class="number">3 </span>{
-				runtime_api.validate_transaction(at, source, uxt, block_hash)
+				runtime_api.validate_transaction(block_hash, source, uxt, block_hash)
 					.map_err(|e| Error::RuntimeApi(e.to_string()))
 			} <span class="kw">else </span>{
 				<span class="kw">let </span>block_number = client.to_number(at)
@@ -558,7 +558,7 @@
 					)<span class="question-mark">?</span>;
 
 				<span class="comment">// The old versions require us to call `initialize_block` before.
-				</span>runtime_api.initialize_block(at, <span class="kw-2">&amp;</span>sp_runtime::traits::Header::new(
+				</span>runtime_api.initialize_block(block_hash, <span class="kw-2">&amp;</span>sp_runtime::traits::Header::new(
 					block_number + sp_runtime::traits::One::one(),
 					Default::default(),
 					Default::default(),
@@ -568,11 +568,11 @@
 
 				<span class="kw">if </span>api_version == <span class="number">2 </span>{
 					<span class="attr">#[allow(deprecated)] </span><span class="comment">// old validate_transaction
-					</span>runtime_api.validate_transaction_before_version_3(at, source, uxt)
+					</span>runtime_api.validate_transaction_before_version_3(block_hash, source, uxt)
 						.map_err(|e| Error::RuntimeApi(e.to_string()))
 				} <span class="kw">else </span>{
 					<span class="attr">#[allow(deprecated)] </span><span class="comment">// old validate_transaction
-					</span>runtime_api.validate_transaction_before_version_2(at, uxt)
+					</span>runtime_api.validate_transaction_before_version_2(block_hash, uxt)
 						.map_err(|e| Error::RuntimeApi(e.to_string()))
 				}
 			}

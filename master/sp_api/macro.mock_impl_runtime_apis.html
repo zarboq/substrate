@@ -33,12 +33,12 @@ specified <a href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.
 <h2 id="advanced-attribute"><a href="#advanced-attribute"><code>advanced</code> attribute</a></h2>
 <p>This attribute can be placed above individual function in the mock implementation to
 request more control over the function declaration. From the client side each runtime api
-function is called with the <code>at</code> parameter that is a <a href="../sp_runtime/generic/block/enum.BlockId.html"><code>BlockId</code></a>. When
-using the <code>advanced</code> attribute, the macro expects that the first parameter of the function
-is this <code>at</code> parameter. Besides that the macro also doesn’t do the automatic return value
-rewrite, which means that full return value must be specified. The full return value is
-constructed like <a href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="Result"><code>Result</code></a><code>&lt;&lt;ReturnValue&gt;, Error&gt;</code> while <code>ReturnValue</code> being the return
-value that is specified in the trait declaration.</p>
+function is called with the <code>at</code> parameter that is a <a href="../sp_runtime/traits/trait.Hash.html"><code>Hash</code></a>.
+When using the <code>advanced</code> attribute, the macro expects that the first parameter of the
+function is this <code>at</code> parameter. Besides that the macro also doesn’t do the automatic
+return value rewrite, which means that full return value must be specified. The full return
+value is constructed like <a href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="Result"><code>Result</code></a><code>&lt;&lt;ReturnValue&gt;, Error&gt;</code> while <code>ReturnValue</code> being the
+return value that is specified in the trait declaration.</p>
 <h3 id="example-1"><a href="#example-1">Example</a></h3>
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">struct </span>MockApi {
     balance: u64,
@@ -47,16 +47,14 @@ value that is specified in the trait declaration.</p>
 <span class="macro">sp_api::mock_impl_runtime_apis! </span>{
     <span class="kw">impl </span>Balance&lt;Block&gt; <span class="kw">for </span>MockApi {
         <span class="attr">#[advanced]
-        </span><span class="kw">fn </span>get_balance(<span class="kw-2">&amp;</span><span class="self">self</span>, at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;u64, sp_api::ApiError&gt; {
+        </span><span class="kw">fn </span>get_balance(<span class="kw-2">&amp;</span><span class="self">self</span>, at: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;u64, sp_api::ApiError&gt; {
             <span class="macro">println!</span>(<span class="string">&quot;Being called at: {}&quot;</span>, at);
 
             <span class="prelude-val">Ok</span>(<span class="self">self</span>.balance.into())
         }
         <span class="attr">#[advanced]
-        </span><span class="kw">fn </span>set_balance(at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;, val: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_api::ApiError&gt; {
-            <span class="kw">if let </span>BlockId::Number(<span class="number">1</span>) = at {
-                <span class="macro">println!</span>(<span class="string">&quot;Being called to set balance to: {}&quot;</span>, val);
-            }
+        </span><span class="kw">fn </span>set_balance(at: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash, val: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_api::ApiError&gt; {
+            <span class="macro">println!</span>(<span class="string">&quot;Being called at: {}&quot;</span>, at);
 
             <span class="prelude-val">Ok</span>(().into())
         }

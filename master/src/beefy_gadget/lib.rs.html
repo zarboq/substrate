@@ -491,14 +491,6 @@
 <a href="#491" id="491">491</a>
 <a href="#492" id="492">492</a>
 <a href="#493" id="493">493</a>
-<a href="#494" id="494">494</a>
-<a href="#495" id="495">495</a>
-<a href="#496" id="496">496</a>
-<a href="#497" id="497">497</a>
-<a href="#498" id="498">498</a>
-<a href="#499" id="499">499</a>
-<a href="#500" id="500">500</a>
-<a href="#501" id="501">501</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -553,10 +545,7 @@
 <span class="kw">use </span>sp_consensus::{Error <span class="kw">as </span>ConsensusError, SyncOracle};
 <span class="kw">use </span>sp_keystore::SyncCryptoStorePtr;
 <span class="kw">use </span>sp_mmr_primitives::MmrApi;
-<span class="kw">use </span>sp_runtime::{
-	generic::BlockId,
-	traits::{Block, Zero},
-};
+<span class="kw">use </span>sp_runtime::traits::{Block, Zero};
 <span class="kw">use </span>std::{collections::VecDeque, marker::PhantomData, sync::Arc};
 
 <span class="kw">mod </span>aux_schema;
@@ -846,7 +835,7 @@
 {
 	<span class="kw">let </span>beefy_genesis = runtime
 		.runtime_api()
-		.beefy_genesis(<span class="kw-2">&amp;</span>BlockId::hash(best_grandpa.hash()))
+		.beefy_genesis(best_grandpa.hash())
 		.ok()
 		.flatten()
 		.ok_or_else(|| ClientError::Backend(<span class="string">&quot;BEEFY pallet expected to be active.&quot;</span>.into()))<span class="question-mark">?</span>;
@@ -870,7 +859,7 @@
 			<span class="kw">let </span>best_beefy = <span class="kw-2">*</span>header.number();
 			<span class="comment">// If no session boundaries detected so far, just initialize new rounds here.
 			</span><span class="kw">if </span>sessions.is_empty() {
-				<span class="kw">let </span>active_set = expect_validator_set(runtime, BlockId::hash(header.hash()))<span class="question-mark">?</span>;
+				<span class="kw">let </span>active_set = expect_validator_set(runtime, header.hash())<span class="question-mark">?</span>;
 				<span class="kw">let </span><span class="kw-2">mut </span>rounds = Rounds::new(best_beefy, active_set);
 				<span class="comment">// Mark the round as already finalized.
 				</span>rounds.conclude(best_beefy);
@@ -884,8 +873,8 @@
 
 		<span class="kw">if </span><span class="kw-2">*</span>header.number() == beefy_genesis {
 			<span class="comment">// We&#39;ve reached BEEFY genesis, initialize voter here.
-			</span><span class="kw">let </span>genesis_set = expect_validator_set(runtime, BlockId::hash(header.hash()))
-				.and_then(genesis_set_sanity_check)<span class="question-mark">?</span>;
+			</span><span class="kw">let </span>genesis_set =
+				expect_validator_set(runtime, header.hash()).and_then(genesis_set_sanity_check)<span class="question-mark">?</span>;
 			<span class="macro">info!</span>(
 				target: LOG_TARGET,
 				<span class="string">&quot;🥩 Loading BEEFY voter state from genesis on what appears to be first startup. \
@@ -910,16 +899,11 @@
 
 		<span class="comment">// Check if state is still available if we move up the chain.
 		</span><span class="kw">let </span>parent_hash = <span class="kw-2">*</span>header.parent_hash();
-		runtime
-			.runtime_api()
-			.validator_set(<span class="kw-2">&amp;</span>BlockId::hash(parent_hash))
-			.ok()
-			.flatten()
-			.ok_or_else(|| {
-				<span class="kw">let </span>msg = <span class="macro">format!</span>(<span class="string">&quot;{}. Could not initialize BEEFY voter.&quot;</span>, parent_hash);
-				<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, msg);
-				ClientError::Consensus(sp_consensus::Error::StateUnavailable(msg))
-			})<span class="question-mark">?</span>;
+		runtime.runtime_api().validator_set(parent_hash).ok().flatten().ok_or_else(|| {
+			<span class="kw">let </span>msg = <span class="macro">format!</span>(<span class="string">&quot;{}. Could not initialize BEEFY voter.&quot;</span>, parent_hash);
+			<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, msg);
+			ClientError::Consensus(sp_consensus::Error::StateUnavailable(msg))
+		})<span class="question-mark">?</span>;
 
 		<span class="comment">// Move up the chain.
 		</span>header = blockchain.expect_header(parent_hash)<span class="question-mark">?</span>;
@@ -950,8 +934,8 @@
 					<span class="prelude-val">Some</span>(notif) =&gt; notif,
 					<span class="prelude-val">None </span>=&gt; <span class="kw">break
 				</span>};
-				<span class="kw">let </span>at = BlockId::hash(notif.header.hash());
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(start) = runtime.runtime_api().beefy_genesis(<span class="kw-2">&amp;</span>at).ok().flatten() {
+				<span class="kw">let </span>at = notif.header.hash();
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(start) = runtime.runtime_api().beefy_genesis(at).ok().flatten() {
 					<span class="kw">if </span><span class="kw-2">*</span>notif.header.number() &gt;= start {
 						<span class="comment">// Beefy pallet available, return header for best grandpa at the time.
 						</span><span class="macro">info!</span>(
@@ -986,7 +970,7 @@
 
 <span class="kw">fn </span>expect_validator_set&lt;B, R&gt;(
 	runtime: <span class="kw-2">&amp;</span>R,
-	at: BlockId&lt;B&gt;,
+	at_hash: B::Hash,
 ) -&gt; ClientResult&lt;ValidatorSet&lt;AuthorityId&gt;&gt;
 <span class="kw">where
 	</span>B: Block,
@@ -995,7 +979,7 @@
 {
 	runtime
 		.runtime_api()
-		.validator_set(<span class="kw-2">&amp;</span>at)
+		.validator_set(at_hash)
 		.ok()
 		.flatten()
 		.ok_or_else(|| ClientError::Backend(<span class="string">&quot;BEEFY pallet expected to be active.&quot;</span>.into()))

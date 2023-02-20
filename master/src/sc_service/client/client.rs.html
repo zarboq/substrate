@@ -2149,9 +2149,6 @@
 <a href="#2149" id="2149">2149</a>
 <a href="#2150" id="2150">2150</a>
 <a href="#2151" id="2151">2151</a>
-<a href="#2152" id="2152">2152</a>
-<a href="#2153" id="2153">2153</a>
-<a href="#2154" id="2154">2154</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -2992,7 +2989,6 @@
 			CoreApi&lt;Block&gt; + ApiExt&lt;Block, StateBackend = B::State&gt;,
 	{
 		<span class="kw">let </span>parent_hash = import_block.header.parent_hash();
-		<span class="kw">let </span>at = BlockId::Hash(<span class="kw-2">*</span>parent_hash);
 		<span class="kw">let </span>state_action = std::mem::replace(<span class="kw-2">&amp;mut </span>import_block.state_action, StateAction::Skip);
 		<span class="kw">let </span>(enact_state, storage_changes) = <span class="kw">match </span>(<span class="self">self</span>.block_status(<span class="kw-2">*</span>parent_hash)<span class="question-mark">?</span>, state_action)
 		{
@@ -3024,7 +3020,7 @@
 				<span class="kw">let </span>execution_context = import_block.origin.into();
 
 				runtime_api.execute_block_with_context(
-					<span class="kw-2">&amp;</span>at,
+					<span class="kw-2">*</span>parent_hash,
 					execution_context,
 					Block::new(import_block.header.clone(), body.clone()),
 				)<span class="question-mark">?</span>;
@@ -3879,10 +3875,9 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		params: CallApiAtParams&lt;Block, B::State&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_api::ApiError&gt; {
-		<span class="kw">let </span>at_hash = <span class="self">self</span>.expect_block_hash_from_id(params.at)<span class="question-mark">?</span>;
 		<span class="self">self</span>.executor
 			.contextual_call(
-				at_hash,
+				params.at,
 				params.function,
 				<span class="kw-2">&amp;</span>params.arguments,
 				params.overlayed_changes,
@@ -3893,8 +3888,7 @@
 			.map_err(Into::into)
 	}
 
-	<span class="kw">fn </span>runtime_version_at(<span class="kw-2">&amp;</span><span class="self">self</span>, at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeVersion, sp_api::ApiError&gt; {
-		<span class="kw">let </span>hash = <span class="self">self</span>.backend.blockchain().expect_block_hash_from_id(at)<span class="question-mark">?</span>;
+	<span class="kw">fn </span>runtime_version_at(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeVersion, sp_api::ApiError&gt; {
 		CallExecutor::runtime_version(<span class="kw-2">&amp;</span><span class="self">self</span>.executor, hash).map_err(Into::into)
 	}
 

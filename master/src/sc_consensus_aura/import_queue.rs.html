@@ -425,10 +425,6 @@
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -472,7 +468,6 @@
 <span class="kw">use </span>sp_core::{crypto::Pair, ExecutionContext};
 <span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentDataProvider <span class="kw">as _</span>};
 <span class="kw">use </span>sp_runtime::{
-	generic::BlockId,
 	traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor},
 	DigestItem,
 };
@@ -573,7 +568,7 @@
 	<span class="kw">async fn </span>check_inherents&lt;B: BlockT&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		block: B,
-		block_id: BlockId&lt;B&gt;,
+		at_hash: B::Hash,
 		inherent_data: sp_inherents::InherentData,
 		create_inherent_data_providers: CIDP::InherentDataProviders,
 		execution_context: ExecutionContext,
@@ -586,7 +581,7 @@
 		<span class="kw">let </span>inherent_res = <span class="self">self
 			</span>.client
 			.runtime_api()
-			.check_inherents_with_context(<span class="kw-2">&amp;</span>block_id, execution_context, block, inherent_data)
+			.check_inherents_with_context(at_hash, execution_context, block, inherent_data)
 			.map_err(|e| Error::Client(e.into()))<span class="question-mark">?</span>;
 
 		<span class="kw">if </span>!inherent_res.ok() {
@@ -679,15 +674,12 @@
 					</span><span class="kw">if </span><span class="self">self
 						</span>.client
 						.runtime_api()
-						.has_api_with::&lt;<span class="kw">dyn </span>BlockBuilderApi&lt;B&gt;, <span class="kw">_</span>&gt;(
-							<span class="kw-2">&amp;</span>BlockId::Hash(parent_hash),
-							|v| v &gt;= <span class="number">2</span>,
-						)
+						.has_api_with::&lt;<span class="kw">dyn </span>BlockBuilderApi&lt;B&gt;, <span class="kw">_</span>&gt;(parent_hash, |v| v &gt;= <span class="number">2</span>)
 						.map_err(|e| e.to_string())<span class="question-mark">?
 					</span>{
 						<span class="self">self</span>.check_inherents(
 							new_block.clone(),
-							BlockId::Hash(parent_hash),
+							parent_hash,
 							inherent_data,
 							create_inherent_data_providers,
 							block.origin.into(),

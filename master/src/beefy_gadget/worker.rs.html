@@ -1674,6 +1674,16 @@
 <a href="#1674" id="1674">1674</a>
 <a href="#1675" id="1675">1675</a>
 <a href="#1676" id="1676">1676</a>
+<a href="#1677" id="1677">1677</a>
+<a href="#1678" id="1678">1678</a>
+<a href="#1679" id="1679">1679</a>
+<a href="#1680" id="1680">1680</a>
+<a href="#1681" id="1681">1681</a>
+<a href="#1682" id="1682">1682</a>
+<a href="#1683" id="1683">1683</a>
+<a href="#1684" id="1684">1684</a>
+<a href="#1685" id="1685">1685</a>
+<a href="#1686" id="1686">1686</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -2639,10 +2649,21 @@
 		}
 
 		<span class="kw">let </span>number = <span class="kw-2">*</span>proof.round_number();
+		<span class="kw">let </span>hash = <span class="self">self
+			</span>.backend
+			.blockchain()
+			.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(number))
+			.map_err(|err| {
+				<span class="kw">let </span>err_msg = <span class="macro">format!</span>(
+					<span class="string">&quot;Couldn&#39;t get hash for block #{:?} (error: {:?}), skipping report for equivocation&quot;</span>,
+					number, err
+				);
+				Error::Backend(err_msg)
+			})<span class="question-mark">?</span>;
 		<span class="kw">let </span>runtime_api = <span class="self">self</span>.runtime.runtime_api();
 		<span class="comment">// generate key ownership proof at that block
 		</span><span class="kw">let </span>key_owner_proof = <span class="kw">match </span>runtime_api
-			.generate_key_ownership_proof(<span class="kw-2">&amp;</span>BlockId::Number(number), validator_set_id, offender_id)
+			.generate_key_ownership_proof(hash, validator_set_id, offender_id)
 			.map_err(Error::RuntimeApi)<span class="question-mark">?
 		</span>{
 			<span class="prelude-val">Some</span>(proof) =&gt; proof,
@@ -2658,11 +2679,7 @@
 		<span class="comment">// submit equivocation report at **best** block
 		</span><span class="kw">let </span>best_block_hash = <span class="self">self</span>.backend.blockchain().info().best_hash;
 		runtime_api
-			.submit_report_equivocation_unsigned_extrinsic(
-				<span class="kw-2">&amp;</span>BlockId::Hash(best_block_hash),
-				proof,
-				key_owner_proof,
-			)
+			.submit_report_equivocation_unsigned_extrinsic(best_block_hash, proof, key_owner_proof)
 			.map_err(Error::RuntimeApi)<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(())
@@ -3303,6 +3320,9 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
 		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 		worker.runtime = api_alice.clone();
+
+		<span class="comment">// let there be a block with num = 1:
+		</span><span class="kw">let _ </span>= net.peer(<span class="number">0</span>).push_blocks(<span class="number">1</span>, <span class="bool-val">false</span>);
 
 		<span class="kw">let </span>payload1 = Payload::from_single_entry(MMR_ROOT_ID, <span class="macro">vec!</span>[<span class="number">42</span>]);
 		<span class="kw">let </span>payload2 = Payload::from_single_entry(MMR_ROOT_ID, <span class="macro">vec!</span>[<span class="number">128</span>]);

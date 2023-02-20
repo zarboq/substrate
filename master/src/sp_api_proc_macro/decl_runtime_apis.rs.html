@@ -1107,7 +1107,7 @@
 
 <span class="doccomment">/// Modify the given runtime api declaration to be usable on the client side.
 </span><span class="kw">struct </span>ToClientSideDecl&lt;<span class="lifetime">&#39;a</span>&gt; {
-	block_id: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>TokenStream,
+	block_hash: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>TokenStream,
 	crate_: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>TokenStream,
 	found_attributes: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Attribute&gt;,
 	<span class="doccomment">/// Any error that we found while converting this declaration.
@@ -1120,7 +1120,7 @@
 	</span><span class="kw">fn </span>process(<span class="kw-2">mut </span><span class="self">self</span>, decl: ItemTrait) -&gt; ItemTrait {
 		<span class="kw">let </span><span class="kw-2">mut </span>decl = <span class="self">self</span>.fold_item_trait(decl);
 
-		<span class="kw">let </span>block_id = <span class="self">self</span>.block_id;
+		<span class="kw">let </span>block_hash = <span class="self">self</span>.block_hash;
 		<span class="kw">let </span>crate_ = <span class="self">self</span>.crate_;
 
 		<span class="comment">// Add the special method that will be implemented by the `impl_runtime_apis!` macro
@@ -1130,7 +1130,7 @@
 			</span><span class="attr">#[doc(hidden)]
 			</span><span class="kw">fn </span>__runtime_api_internal_call_api_at(
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: <span class="kw-2">&amp;</span>#block_id,
+				at: #block_hash,
 				context: #crate_::ExecutionContext,
 				params: std::vec::Vec&lt;u8&gt;,
 				fn_name: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(#crate_::RuntimeVersion) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
@@ -1211,7 +1211,7 @@
 		};
 		<span class="kw">let </span>ret_type = return_type_extract_type(<span class="kw-2">&amp;</span>method.sig.output);
 
-		fold_fn_decl_for_client_side(<span class="kw-2">&amp;mut </span>method.sig, <span class="self">self</span>.block_id, <span class="self">self</span>.crate_);
+		fold_fn_decl_for_client_side(<span class="kw-2">&amp;mut </span>method.sig, <span class="self">self</span>.block_hash, <span class="self">self</span>.crate_);
 
 		<span class="kw">let </span>crate_ = <span class="self">self</span>.crate_;
 
@@ -1412,14 +1412,14 @@
 		<span class="kw">let </span>decl = decl.clone();
 
 		<span class="kw">let </span>crate_ = generate_crate_access(HIDDEN_INCLUDES_ID);
-		<span class="kw">let </span>block_id = <span class="macro">quote!</span>( #crate_::BlockId&lt;Block&gt; );
+		<span class="kw">let </span>block_hash = <span class="macro">quote!</span>( &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash );
 		<span class="kw">let </span><span class="kw-2">mut </span>found_attributes = HashMap::new();
 		<span class="kw">let </span><span class="kw-2">mut </span>errors = Vec::new();
 		<span class="kw">let </span>trait_ = decl.ident.clone();
 
 		<span class="kw">let </span>decl = ToClientSideDecl {
 			crate_: <span class="kw-2">&amp;</span>crate_,
-			block_id: <span class="kw-2">&amp;</span>block_id,
+			block_hash: <span class="kw-2">&amp;</span>block_hash,
 			found_attributes: <span class="kw-2">&amp;mut </span>found_attributes,
 			errors: <span class="kw-2">&amp;mut </span>errors,
 			trait_: <span class="kw-2">&amp;</span>trait_,

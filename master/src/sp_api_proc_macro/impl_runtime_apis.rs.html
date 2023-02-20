@@ -710,7 +710,6 @@
 <a href="#710" id="710">710</a>
 <a href="#711" id="711">711</a>
 <a href="#712" id="712">712</a>
-<a href="#713" id="713">713</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
@@ -946,7 +945,7 @@
 
 			<span class="kw">fn </span>has_api&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized&gt;(
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: <span class="kw-2">&amp;</span>#crate_::BlockId&lt;Block&gt;,
+				at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
 			) -&gt; std::result::Result&lt;bool, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
 				#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
 					.map(|v| #crate_::RuntimeVersion::has_api_with(<span class="kw-2">&amp;</span>v, <span class="kw-2">&amp;</span>A::ID, |v| v == A::VERSION))
@@ -954,7 +953,7 @@
 
 			<span class="kw">fn </span>has_api_with&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized, P: Fn(u32) -&gt; bool&gt;(
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: <span class="kw-2">&amp;</span>#crate_::BlockId&lt;Block&gt;,
+				at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
 				pred: P,
 			) -&gt; std::result::Result&lt;bool, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
 				#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
@@ -963,7 +962,7 @@
 
 			<span class="kw">fn </span>api_version&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized&gt;(
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: <span class="kw-2">&amp;</span>#crate_::BlockId&lt;Block&gt;,
+				at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
 			) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;u32&gt;, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
 				#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
 					.map(|v| #crate_::RuntimeVersion::api_version(<span class="kw-2">&amp;</span>v, <span class="kw-2">&amp;</span>A::ID))
@@ -994,8 +993,7 @@
 				#crate_::StorageChanges&lt;C::StateBackend, Block&gt;,
 				String
 			&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
-				<span class="kw">let </span>at = #crate_::BlockId::Hash(std::clone::Clone::clone(<span class="kw-2">&amp;</span>parent_hash));
-				<span class="kw">let </span>state_version = #crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, <span class="kw-2">&amp;</span>at)
+				<span class="kw">let </span>state_version = #crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, std::clone::Clone::clone(<span class="kw-2">&amp;</span>parent_hash))
 					.map(|v| #crate_::RuntimeVersion::state_version(<span class="kw-2">&amp;</span>v))
 					.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to get state version: {}&quot;</span>, e))<span class="question-mark">?</span>;
 
@@ -1137,7 +1135,7 @@
 		input.items.push(<span class="macro">parse_quote! </span>{
 			<span class="kw">fn </span>__runtime_api_internal_call_api_at(
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: <span class="kw-2">&amp;</span>#crate_::BlockId&lt;__SR_API_BLOCK__&gt;,
+				at: &lt;__SR_API_BLOCK__ <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
 				context: #crate_::ExecutionContext,
 				params: std::vec::Vec&lt;u8&gt;,
 				fn_name: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(#crate_::RuntimeVersion) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,

@@ -100,6 +100,7 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -167,7 +168,7 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-	<span class="kw">use </span>sp_api::{BlockId, ProvideRuntimeApi};
+	<span class="kw">use </span>sp_api::ProvideRuntimeApi;
 	<span class="kw">use </span>std::{env, str::FromStr};
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		runtime::TestAPI, DefaultTestClientBuilderExt, ExecutionStrategy, TestClientBuilder,
@@ -184,8 +185,9 @@
 				.set_execution_strategy(ExecutionStrategy::AlwaysWasm)
 				.build();
 			<span class="kw">let </span>runtime_api = client.runtime_api();
-			<span class="kw">let </span>block_id = BlockId::Number(<span class="number">0</span>);
-			runtime_api.do_trace_log(<span class="kw-2">&amp;</span>block_id).expect(<span class="string">&quot;Logging should not fail&quot;</span>);
+			runtime_api
+				.do_trace_log(client.chain_info().genesis_hash)
+				.expect(<span class="string">&quot;Logging should not fail&quot;</span>);
 		} <span class="kw">else </span>{
 			<span class="kw">for </span>(level, should_print) <span class="kw">in </span><span class="kw-2">&amp;</span>[(<span class="string">&quot;trace&quot;</span>, <span class="bool-val">true</span>), (<span class="string">&quot;info&quot;</span>, <span class="bool-val">false</span>)] {
 				<span class="kw">let </span>executable = std::env::current_exe().unwrap();

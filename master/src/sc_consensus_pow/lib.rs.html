@@ -951,7 +951,7 @@
 	<span class="kw">async fn </span>check_inherents(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		block: B,
-		block_id: BlockId&lt;B&gt;,
+		at_hash: B::Hash,
 		inherent_data_providers: CIDP::InherentDataProviders,
 		execution_context: ExecutionContext,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&lt;B&gt;&gt; {
@@ -967,7 +967,7 @@
 		<span class="kw">let </span>inherent_res = <span class="self">self
 			</span>.client
 			.runtime_api()
-			.check_inherents_with_context(<span class="kw-2">&amp;</span>block_id, execution_context, block, inherent_data)
+			.check_inherents_with_context(at_hash, execution_context, block, inherent_data)
 			.map_err(|e| Error::Client(e.into()))<span class="question-mark">?</span>;
 
 		<span class="kw">if </span>!inherent_res.ok() {
@@ -1028,7 +1028,7 @@
 			<span class="kw">if </span>!block.state_action.skip_execution_checks() {
 				<span class="self">self</span>.check_inherents(
 					check_block.clone(),
-					BlockId::Hash(parent_hash),
+					parent_hash,
 					<span class="self">self</span>.create_inherent_data_providers
 						.create_inherent_data_providers(parent_hash, ())
 						.<span class="kw">await</span><span class="question-mark">?</span>,

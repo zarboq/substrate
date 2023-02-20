@@ -369,7 +369,7 @@
 <span class="kw">use </span>sp_block_builder::BlockBuilder;
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_core::{hexdisplay::HexDisplay, Bytes};
-<span class="kw">use </span>sp_runtime::{generic::BlockId, legacy, traits};
+<span class="kw">use </span>sp_runtime::{legacy, traits};
 
 <span class="kw">pub use </span>frame_system_rpc_runtime_api::AccountNonceApi;
 
@@ -438,9 +438,8 @@
 	<span class="kw">async fn </span>nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, account: AccountId) -&gt; RpcResult&lt;Index&gt; {
 		<span class="kw">let </span>api = <span class="self">self</span>.client.runtime_api();
 		<span class="kw">let </span>best = <span class="self">self</span>.client.info().best_hash;
-		<span class="kw">let </span>at = BlockId::hash(best);
 
-		<span class="kw">let </span>nonce = api.account_nonce(<span class="kw-2">&amp;</span>at, account.clone()).map_err(|e| {
+		<span class="kw">let </span>nonce = api.account_nonce(best, account.clone()).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				<span class="string">&quot;Unable to query nonce.&quot;</span>,
@@ -457,9 +456,9 @@
 	) -&gt; RpcResult&lt;Bytes&gt; {
 		<span class="self">self</span>.deny_unsafe.check_if_safe()<span class="question-mark">?</span>;
 		<span class="kw">let </span>api = <span class="self">self</span>.client.runtime_api();
-		<span class="kw">let </span>at = BlockId::&lt;Block&gt;::hash(at.unwrap_or_else(||
+		<span class="kw">let </span>best_hash = at.unwrap_or_else(||
 			<span class="comment">// If the block hash is not supplied assume the best block.
-			</span><span class="self">self</span>.client.info().best_hash));
+			</span><span class="self">self</span>.client.info().best_hash);
 
 		<span class="kw">let </span>uxt: &lt;Block <span class="kw">as </span>traits::Block&gt;::Extrinsic =
 			Decode::decode(<span class="kw-2">&amp;mut &amp;*</span>extrinsic).map_err(|e| {
@@ -471,7 +470,7 @@
 			})<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>api_version = api
-			.api_version::&lt;<span class="kw">dyn </span>BlockBuilder&lt;Block&gt;&gt;(<span class="kw-2">&amp;</span>at)
+			.api_version::&lt;<span class="kw">dyn </span>BlockBuilder&lt;Block&gt;&gt;(best_hash)
 			.map_err(|e| {
 				CallError::Custom(ErrorObject::owned(
 					Error::RuntimeError.into(),
@@ -483,13 +482,13 @@
 				CallError::Custom(ErrorObject::owned(
 					Error::RuntimeError.into(),
 					<span class="string">&quot;Unable to dry run extrinsic.&quot;</span>,
-					<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;Could not find `BlockBuilder` api for block `{:?}`.&quot;</span>, at)),
+					<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;Could not find `BlockBuilder` api for block `{:?}`.&quot;</span>, best_hash)),
 				))
 			})<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>result = <span class="kw">if </span>api_version &lt; <span class="number">6 </span>{
 			<span class="attr">#[allow(deprecated)]
-			</span>api.apply_extrinsic_before_version_6(<span class="kw-2">&amp;</span>at, uxt)
+			</span>api.apply_extrinsic_before_version_6(best_hash, uxt)
 				.map(legacy::byte_sized_error::convert_to_latest)
 				.map_err(|e| {
 					CallError::Custom(ErrorObject::owned(
@@ -499,7 +498,7 @@
 					))
 				})<span class="question-mark">?
 		</span>} <span class="kw">else </span>{
-			api.apply_extrinsic(<span class="kw-2">&amp;</span>at, uxt).map_err(|e| {
+			api.apply_extrinsic(best_hash, uxt).map_err(|e| {
 				CallError::Custom(ErrorObject::owned(
 					Error::RuntimeError.into(),
 					<span class="string">&quot;Unable to dry run extrinsic.&quot;</span>,
@@ -557,6 +556,7 @@
 	<span class="kw">use </span>jsonrpsee::{core::Error <span class="kw">as </span>JsonRpseeError, types::error::CallError};
 	<span class="kw">use </span>sc_transaction_pool::BasicPool;
 	<span class="kw">use </span>sp_runtime::{
+		generic::BlockId,
 		transaction_validity::{InvalidTransaction, TransactionValidityError},
 		ApplyExtrinsicResult,
 	};

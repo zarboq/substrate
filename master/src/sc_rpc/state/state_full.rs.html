@@ -642,11 +642,6 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -697,7 +692,7 @@
 	},
 	Bytes,
 };
-<span class="kw">use </span>sp_runtime::{generic::BlockId, traits::Block <span class="kw">as </span>BlockT};
+<span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 <span class="kw">use </span>sp_version::RuntimeVersion;
 
 <span class="doccomment">/// The maximum time allowed for an RPC call when running without unsafe RPC enabled.
@@ -970,7 +965,7 @@
 		<span class="self">self</span>.block_or_best(block).map_err(client_err).and_then(|block| {
 			<span class="self">self</span>.client
 				.runtime_api()
-				.metadata(<span class="kw-2">&amp;</span>BlockId::Hash(block))
+				.metadata(block)
 				.map(Into::into)
 				.map_err(|e| Error::Client(Box::new(e)))
 		})
@@ -981,9 +976,7 @@
 		block: <span class="prelude-ty">Option</span>&lt;Block::Hash&gt;,
 	) -&gt; std::result::Result&lt;RuntimeVersion, Error&gt; {
 		<span class="self">self</span>.block_or_best(block).map_err(client_err).and_then(|block| {
-			<span class="self">self</span>.client
-				.runtime_version_at(<span class="kw-2">&amp;</span>BlockId::Hash(block))
-				.map_err(|e| Error::Client(Box::new(e)))
+			<span class="self">self</span>.client.runtime_version_at(block).map_err(|e| Error::Client(Box::new(e)))
 		})
 	}
 
@@ -1032,9 +1025,7 @@
 
 		<span class="kw">let </span>initial = <span class="kw">match </span><span class="self">self
 			</span>.block_or_best(<span class="prelude-val">None</span>)
-			.and_then(|block| {
-				<span class="self">self</span>.client.runtime_version_at(<span class="kw-2">&amp;</span>BlockId::Hash(block)).map_err(Into::into)
-			})
+			.and_then(|block| <span class="self">self</span>.client.runtime_version_at(block).map_err(Into::into))
 			.map_err(|e| Error::Client(Box::new(e)))
 		{
 			<span class="prelude-val">Ok</span>(initial) =&gt; initial,
@@ -1051,9 +1042,8 @@
 			.import_notification_stream()
 			.filter(|n| future::ready(n.is_new_best))
 			.filter_map(<span class="kw">move </span>|n| {
-				<span class="kw">let </span>version = client
-					.runtime_version_at(<span class="kw-2">&amp;</span>BlockId::hash(n.hash))
-					.map_err(|e| Error::Client(Box::new(e)));
+				<span class="kw">let </span>version =
+					client.runtime_version_at(n.hash).map_err(|e| Error::Client(Box::new(e)));
 
 				<span class="kw">match </span>version {
 					<span class="prelude-val">Ok</span>(version) <span class="kw">if </span>version != previous_version =&gt; {

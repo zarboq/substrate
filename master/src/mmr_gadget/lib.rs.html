@@ -281,8 +281,6 @@
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -336,10 +334,7 @@
 <span class="kw">use </span>sp_api::ProvideRuntimeApi;
 <span class="kw">use </span>sp_blockchain::{HeaderBackend, HeaderMetadata};
 <span class="kw">use </span>sp_mmr_primitives::{utils, LeafIndex, MmrApi};
-<span class="kw">use </span>sp_runtime::{
-	generic::BlockId,
-	traits::{Block, Header, NumberFor},
-};
+<span class="kw">use </span>sp_runtime::traits::{Block, Header, NumberFor};
 <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
 <span class="doccomment">/// Logging target for the mmr gadget.
@@ -356,15 +351,16 @@
 {
 	<span class="doccomment">/// Get the block number where the mmr pallet was added to the runtime.
 	</span><span class="kw">fn </span>first_mmr_block_num(<span class="kw-2">&amp;</span><span class="self">self</span>, notification: <span class="kw-2">&amp;</span>FinalityNotification&lt;B&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt; {
-		<span class="kw">let </span>best_block = <span class="kw-2">*</span>notification.header.number();
-		<span class="kw">match </span><span class="self">self</span>.runtime_api().mmr_leaf_count(<span class="kw-2">&amp;</span>BlockId::number(best_block)) {
+		<span class="kw">let </span>best_block_hash = notification.header.hash();
+		<span class="kw">let </span>best_block_number = <span class="kw-2">*</span>notification.header.number();
+		<span class="kw">match </span><span class="self">self</span>.runtime_api().mmr_leaf_count(best_block_hash) {
 			<span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(mmr_leaf_count)) =&gt; {
-				<span class="kw">match </span>utils::first_mmr_block_num::&lt;B::Header&gt;(best_block, mmr_leaf_count) {
+				<span class="kw">match </span>utils::first_mmr_block_num::&lt;B::Header&gt;(best_block_number, mmr_leaf_count) {
 					<span class="prelude-val">Ok</span>(first_mmr_block) =&gt; {
 						<span class="macro">debug!</span>(
 							target: LOG_TARGET,
 							<span class="string">&quot;pallet-mmr detected at block {:?} with genesis at block {:?}&quot;</span>,
-							best_block,
+							best_block_number,
 							first_mmr_block
 						);
 						<span class="prelude-val">Some</span>(first_mmr_block)
@@ -382,7 +378,7 @@
 				<span class="macro">trace!</span>(
 					target: LOG_TARGET,
 					<span class="string">&quot;pallet-mmr not detected at block {:?} ... (best finalized {:?})&quot;</span>,
-					best_block,
+					best_block_number,
 					notification.header.number()
 				);
 				<span class="prelude-val">None
