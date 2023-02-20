@@ -2728,7 +2728,7 @@
 	<span class="doccomment">/// The contract that was called is no contract (a plain account).
 	</span>NotCallable = <span class="number">8</span>,
 	<span class="doccomment">/// The call dispatched by `seal_call_runtime` was executed but returned an error.
-	</span>CallRuntimeReturnedError = <span class="number">10</span>,
+	</span>CallRuntimeFailed = <span class="number">10</span>,
 	<span class="doccomment">/// ECDSA pubkey recovery failed (most probably wrong recovery id or signature), or
 	/// ECDSA compressed pubkey conversion into Ethereum address failed (most probably
 	/// wrong pubkey provided).
@@ -5017,21 +5017,21 @@
 	///
 	/// # Parameters
 	///
-	/// - `input_ptr`: the pointer into the linear memory where the input data is placed.
-	/// - `input_len`: the length of the input data in bytes.
+	/// - `call_ptr`: the pointer into the linear memory where the input data is placed.
+	/// - `call_len`: the length of the input data in bytes.
 	///
 	/// # Return Value
 	///
 	/// Returns `ReturnCode::Success` when the dispatchable was succesfully executed and
 	/// returned `Ok`. When the dispatchable was exeuted but returned an error
-	/// `ReturnCode::CallRuntimeReturnedError` is returned. The full error is not
+	/// `ReturnCode::CallRuntimeFailed` is returned. The full error is not
 	/// provided because it is not guaranteed to be stable.
 	///
 	/// # Comparison with `ChainExtension`
 	///
 	/// Just as a chain extension this API allows the runtime to extend the functionality
-	/// of contracts. While making use of this function is generelly easier it cannot be
-	/// used in call cases. Consider writing a chain extension if you need to do perform
+	/// of contracts. While making use of this function is generally easier it cannot be
+	/// used in all cases. Consider writing a chain extension if you need to do perform
 	/// one of the following tasks:
 	///
 	/// - Return data.
@@ -5057,7 +5057,7 @@
 		ctx.adjust_gas(charged, RuntimeCosts::CallRuntime(actual_weight));
 		<span class="kw">match </span>result {
 			<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(ReturnCode::Success),
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(ReturnCode::CallRuntimeReturnedError),
+			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(ReturnCode::CallRuntimeFailed),
 		}
 	}
 
