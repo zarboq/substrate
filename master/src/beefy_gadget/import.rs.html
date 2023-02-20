@@ -177,6 +177,18 @@
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2021-2022 Parity Technologies (UK) Ltd.
@@ -271,13 +283,23 @@
 		number: NumberFor&lt;Block&gt;,
 		hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;BeefyVersionedFinalityProof&lt;Block&gt;, ConsensusError&gt; {
+		<span class="kw">use </span>ConsensusError::ClientImport <span class="kw">as </span>ImportError;
 		<span class="kw">let </span>block_id = BlockId::hash(hash);
+		<span class="kw">let </span>beefy_genesis = <span class="self">self
+			</span>.runtime
+			.runtime_api()
+			.beefy_genesis(<span class="kw-2">&amp;</span>block_id)
+			.map_err(|e| ImportError(e.to_string()))<span class="question-mark">?
+			</span>.ok_or_else(|| ImportError(<span class="string">&quot;Unknown BEEFY genesis&quot;</span>.to_string()))<span class="question-mark">?</span>;
+		<span class="kw">if </span>number &lt; beefy_genesis {
+			<span class="kw">return </span><span class="prelude-val">Err</span>(ImportError(<span class="string">&quot;BEEFY genesis is set for future block&quot;</span>.to_string()))
+		}
 		<span class="kw">let </span>validator_set = <span class="self">self
 			</span>.runtime
 			.runtime_api()
 			.validator_set(<span class="kw-2">&amp;</span>block_id)
-			.map_err(|e| ConsensusError::ClientImport(e.to_string()))<span class="question-mark">?
-			</span>.ok_or_else(|| ConsensusError::ClientImport(<span class="string">&quot;Unknown validator set&quot;</span>.to_string()))<span class="question-mark">?</span>;
+			.map_err(|e| ImportError(e.to_string()))<span class="question-mark">?
+			</span>.ok_or_else(|| ImportError(<span class="string">&quot;Unknown validator set&quot;</span>.to_string()))<span class="question-mark">?</span>;
 
 		decode_and_verify_finality_proof::&lt;Block&gt;(<span class="kw-2">&amp;</span>encoded[..], number, <span class="kw-2">&amp;</span>validator_set)
 	}
@@ -321,26 +343,28 @@
 
 		<span class="kw">match </span>(beefy_encoded, <span class="kw-2">&amp;</span>inner_import_result) {
 			(<span class="prelude-val">Some</span>(encoded), ImportResult::Imported(<span class="kw">_</span>)) =&gt; {
-				<span class="kw">if let </span><span class="prelude-val">Ok</span>(proof) = <span class="self">self</span>.decode_and_verify(<span class="kw-2">&amp;</span>encoded, number, hash) {
-					<span class="comment">// The proof is valid and the block is imported and final, we can import.
-					</span><span class="macro">debug!</span>(
-						target: LOG_TARGET,
-						<span class="string">&quot;🥩 import justif {:?} for block number {:?}.&quot;</span>, proof, number
-					);
-					<span class="comment">// Send the justification to the BEEFY voter for processing.
-					</span><span class="self">self</span>.justification_sender
-						.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(proof))
-						.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
-
-					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_good_justification_imports);
-				} <span class="kw">else </span>{
-					<span class="macro">debug!</span>(
-						target: LOG_TARGET,
-						<span class="string">&quot;🥩 error decoding justification: {:?} for imported block {:?}&quot;</span>,
-						encoded,
-						number,
-					);
-					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_bad_justification_imports);
+				<span class="kw">match </span><span class="self">self</span>.decode_and_verify(<span class="kw-2">&amp;</span>encoded, number, hash) {
+					<span class="prelude-val">Ok</span>(proof) =&gt; {
+						<span class="comment">// The proof is valid and the block is imported and final, we can import.
+						</span><span class="macro">debug!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;🥩 import justif {:?} for block number {:?}.&quot;</span>, proof, number
+						);
+						<span class="comment">// Send the justification to the BEEFY voter for processing.
+						</span><span class="self">self</span>.justification_sender
+							.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(proof))
+							.expect(<span class="string">&quot;the closure always returns Ok; qed.&quot;</span>);
+						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_good_justification_imports);
+					},
+					<span class="prelude-val">Err</span>(err) =&gt; {
+						<span class="macro">debug!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;🥩 error importing BEEFY justification for block {:?}: {:?}&quot;</span>,
+							number,
+							err,
+						);
+						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_bad_justification_imports);
+					},
 				}
 			},
 			<span class="kw">_ </span>=&gt; (),
