@@ -1398,6 +1398,46 @@
 <a href="#1398" id="1398">1398</a>
 <a href="#1399" id="1399">1399</a>
 <a href="#1400" id="1400">1400</a>
+<a href="#1401" id="1401">1401</a>
+<a href="#1402" id="1402">1402</a>
+<a href="#1403" id="1403">1403</a>
+<a href="#1404" id="1404">1404</a>
+<a href="#1405" id="1405">1405</a>
+<a href="#1406" id="1406">1406</a>
+<a href="#1407" id="1407">1407</a>
+<a href="#1408" id="1408">1408</a>
+<a href="#1409" id="1409">1409</a>
+<a href="#1410" id="1410">1410</a>
+<a href="#1411" id="1411">1411</a>
+<a href="#1412" id="1412">1412</a>
+<a href="#1413" id="1413">1413</a>
+<a href="#1414" id="1414">1414</a>
+<a href="#1415" id="1415">1415</a>
+<a href="#1416" id="1416">1416</a>
+<a href="#1417" id="1417">1417</a>
+<a href="#1418" id="1418">1418</a>
+<a href="#1419" id="1419">1419</a>
+<a href="#1420" id="1420">1420</a>
+<a href="#1421" id="1421">1421</a>
+<a href="#1422" id="1422">1422</a>
+<a href="#1423" id="1423">1423</a>
+<a href="#1424" id="1424">1424</a>
+<a href="#1425" id="1425">1425</a>
+<a href="#1426" id="1426">1426</a>
+<a href="#1427" id="1427">1427</a>
+<a href="#1428" id="1428">1428</a>
+<a href="#1429" id="1429">1429</a>
+<a href="#1430" id="1430">1430</a>
+<a href="#1431" id="1431">1431</a>
+<a href="#1432" id="1432">1432</a>
+<a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -1449,7 +1489,7 @@
 		</span>);
 		<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;{}&quot;</span>, <span class="macro-nonterminal">$crate::traits::DEFENSIVE_OP_INTERNAL_ERROR</span>);
 	};
-	(<span class="macro-nonterminal">$error</span>:tt) =&gt; {
+	(<span class="macro-nonterminal">$error</span>:expr $(,)<span class="question-mark">?</span>) =&gt; {
 		<span class="macro">frame_support::log::error!</span>(
 			target: <span class="string">&quot;runtime&quot;</span>,
 			<span class="string">&quot;{}: {:?}&quot;</span>,
@@ -1458,7 +1498,7 @@
 		</span>);
 		<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;{}: {:?}&quot;</span>, <span class="macro-nonterminal">$crate::traits::DEFENSIVE_OP_INTERNAL_ERROR</span>, <span class="macro-nonterminal">$error</span>);
 	};
-	(<span class="macro-nonterminal">$error</span>:tt, <span class="macro-nonterminal">$proof</span>:tt) =&gt; {
+	(<span class="macro-nonterminal">$error</span>:expr, <span class="macro-nonterminal">$proof</span>:expr $(,)<span class="question-mark">?</span>) =&gt; {
 		<span class="macro">frame_support::log::error!</span>(
 			target: <span class="string">&quot;runtime&quot;</span>,
 			<span class="string">&quot;{}: {:?}: {:?}&quot;</span>,
@@ -1468,6 +1508,25 @@
 		);
 		<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;{}: {:?}: {:?}&quot;</span>, <span class="macro-nonterminal">$crate::traits::DEFENSIVE_OP_INTERNAL_ERROR</span>, <span class="macro-nonterminal">$error</span>, <span class="macro-nonterminal">$proof</span>);
 	}
+}
+
+<span class="doccomment">/// Trigger a defensive failure if a condition is not met.
+///
+/// Similar to [`assert!`] but will print an error without `debug_assertions` instead of silently
+/// ignoring it. Only accepts one instead of variable formatting arguments.
+///
+/// # Example
+///
+/// ```should_panic
+/// frame_support::defensive_assert!(1 == 0, &quot;Must fail&quot;)
+/// ```
+</span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules! </span>defensive_assert {
+	(<span class="macro-nonterminal">$cond</span>:expr $(, <span class="macro-nonterminal">$proof</span>:expr )<span class="question-mark">? </span>$(,)<span class="question-mark">?</span>) =&gt; {
+		<span class="kw">if </span>!(<span class="macro-nonterminal">$cond</span>) {
+			<span class="macro-nonterminal">$</span><span class="macro">crate::defensive!</span>(<span class="macro">::core::stringify!</span>(<span class="macro-nonterminal">$cond</span>) $(, <span class="macro-nonterminal">$proof </span>)<span class="question-mark">?</span>);
+		}
+	};
 }
 
 <span class="doccomment">/// Prelude module for all defensive traits to be imported at once.
@@ -2540,6 +2599,27 @@
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>sp_core::bounded::{BoundedSlice, BoundedVec};
 	<span class="kw">use </span>sp_std::marker::PhantomData;
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>defensive_assert_works() {
+		<span class="macro">defensive_assert!</span>(<span class="bool-val">true</span>);
+		<span class="macro">defensive_assert!</span>(<span class="bool-val">true</span>,);
+		<span class="macro">defensive_assert!</span>(<span class="bool-val">true</span>, <span class="string">&quot;must work&quot;</span>);
+		<span class="macro">defensive_assert!</span>(<span class="bool-val">true</span>, <span class="string">&quot;must work&quot;</span>,);
+	}
+
+	<span class="attr">#[test]
+	#[cfg(debug_assertions)]
+	#[should_panic(expected = <span class="string">&quot;Defensive failure has been triggered!: \&quot;1 == 0\&quot;: \&quot;Must fail\&quot;&quot;</span>)]
+	</span><span class="kw">fn </span>defensive_assert_panics() {
+		<span class="macro">defensive_assert!</span>(<span class="number">1 </span>== <span class="number">0</span>, <span class="string">&quot;Must fail&quot;</span>);
+	}
+
+	<span class="attr">#[test]
+	#[cfg(not(debug_assertions))]
+	</span><span class="kw">fn </span>defensive_assert_does_not_panic() {
+		<span class="macro">defensive_assert!</span>(<span class="number">1 </span>== <span class="number">0</span>, <span class="string">&quot;Must fail&quot;</span>);
+	}
 
 	<span class="attr">#[test]
 	#[cfg(not(debug_assertions))]
