@@ -70,6 +70,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_example_basic":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_offchain_worker":["",[],["lib.rs"]],\
 "pallet_fast_unstake":["",[],["benchmarking.rs","lib.rs","migrations.rs","types.rs","weights.rs"]],\
+"pallet_glutton":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_grandpa":["",[["migrations",[],["v4.rs"]]],["benchmarking.rs","default_weights.rs","equivocation.rs","lib.rs","migrations.rs"]],\
 "pallet_identity":["",[],["benchmarking.rs","lib.rs","types.rs","weights.rs"]],\
 "pallet_im_online":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
