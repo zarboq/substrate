@@ -1740,6 +1740,11 @@
 <a href="#1740" id="1740">1740</a>
 <a href="#1741" id="1741">1741</a>
 <a href="#1742" id="1742">1742</a>
+<a href="#1743" id="1743">1743</a>
+<a href="#1744" id="1744">1744</a>
+<a href="#1745" id="1745">1745</a>
+<a href="#1746" id="1746">1746</a>
+<a href="#1747" id="1747">1747</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2050,6 +2055,11 @@
 		/// of a negative-turnout-bias (default-carries) referendum.
 		</span><span class="kw">type </span>ExternalDefaultOrigin: EnsureOrigin&lt;<span class="self">Self</span>::RuntimeOrigin&gt;;
 
+		<span class="doccomment">/// Origin from which the new proposal can be made.
+		///
+		/// The success variant is the account id of the depositor.
+		</span><span class="kw">type </span>SubmitOrigin: EnsureOrigin&lt;<span class="self">Self</span>::RuntimeOrigin, Success = <span class="self">Self</span>::AccountId&gt;;
+
 		<span class="doccomment">/// Origin from which the next majority-carries (or more permissive) referendum may be
 		/// tabled to vote according to the `FastTrackVotingPeriod` asynchronously in a similar
 		/// manner to the emergency origin. It retains its threshold method.
@@ -2332,7 +2342,7 @@
 			proposal: BoundedCallOf&lt;T&gt;,
 			<span class="attr">#[pallet::compact] </span>value: BalanceOf&lt;T&gt;,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
+			<span class="kw">let </span>who = T::SubmitOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(value &gt;= T::MinimumDeposit::get(), Error::&lt;T&gt;::ValueLow);
 
 			<span class="kw">let </span>index = <span class="self">Self</span>::public_prop_count();
