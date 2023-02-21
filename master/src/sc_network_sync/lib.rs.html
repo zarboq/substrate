@@ -4133,12 +4133,9 @@
 <a href="#4133" id="4133">4133</a>
 <a href="#4134" id="4134">4134</a>
 <a href="#4135" id="4135">4135</a>
-<a href="#4136" id="4136">4136</a>
-<a href="#4137" id="4137">4137</a>
-<a href="#4138" id="4138">4138</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
-// Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -7350,7 +7347,6 @@
 	};
 	<span class="kw">use </span>sp_blockchain::HeaderBackend;
 	<span class="kw">use </span>sp_consensus::block_validation::DefaultBlockAnnounceValidator;
-	<span class="kw">use </span>sp_runtime::generic::BlockId;
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		runtime::{Block, Hash, Header},
 		BlockBuilderExt, ClientBlockImportExt, ClientExt, DefaultTestClientBuilderExt, TestClient,
@@ -7587,8 +7583,7 @@
 	</span><span class="kw">fn </span>build_block(client: <span class="kw-2">&amp;mut </span>Arc&lt;TestClient&gt;, at: <span class="prelude-ty">Option</span>&lt;Hash&gt;, fork: bool) -&gt; Block {
 		<span class="kw">let </span>at = at.unwrap_or_else(|| client.info().best_hash);
 
-		<span class="kw">let </span><span class="kw-2">mut </span>block_builder =
-			client.new_block_at(<span class="kw-2">&amp;</span>BlockId::Hash(at), Default::default(), <span class="bool-val">false</span>).unwrap();
+		<span class="kw">let </span><span class="kw-2">mut </span>block_builder = client.new_block_at(at, Default::default(), <span class="bool-val">false</span>).unwrap();
 
 		<span class="kw">if </span>fork {
 			block_builder.push_storage_change(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>])).unwrap();
@@ -7641,8 +7636,7 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>client2 = client.clone();
 		<span class="kw">let </span><span class="kw-2">mut </span>build_block_at = |at, import| {
-			<span class="kw">let </span><span class="kw-2">mut </span>block_builder =
-				client2.new_block_at(<span class="kw-2">&amp;</span>BlockId::Hash(at), Default::default(), <span class="bool-val">false</span>).unwrap();
+			<span class="kw">let </span><span class="kw-2">mut </span>block_builder = client2.new_block_at(at, Default::default(), <span class="bool-val">false</span>).unwrap();
 			<span class="comment">// Make sure we generate a different block as fork
 			</span>block_builder.push_storage_change(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>])).unwrap();
 
