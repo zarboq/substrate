@@ -106,6 +106,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_staking":["",[["pallet",[],["impls.rs","mod.rs"]]],["benchmarking.rs","inflation.rs","lib.rs","migrations.rs","slashing.rs","testing_utils.rs","weights.rs"]],\
 "pallet_staking_reward_curve":["",[],["lib.rs","log.rs"]],\
 "pallet_staking_reward_fn":["",[],["lib.rs"]],\
+"pallet_staking_runtime_api":["",[],["lib.rs"]],\
 "pallet_state_trie_migration":["",[],["lib.rs","weights.rs"]],\
 "pallet_sudo":["",[],["extension.rs","lib.rs"]],\
 "pallet_template":["",[],["benchmarking.rs","lib.rs"]],\

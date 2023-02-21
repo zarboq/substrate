@@ -2608,6 +2608,32 @@
 <a href="#2608" id="2608">2608</a>
 <a href="#2609" id="2609">2609</a>
 <a href="#2610" id="2610">2610</a>
+<a href="#2611" id="2611">2611</a>
+<a href="#2612" id="2612">2612</a>
+<a href="#2613" id="2613">2613</a>
+<a href="#2614" id="2614">2614</a>
+<a href="#2615" id="2615">2615</a>
+<a href="#2616" id="2616">2616</a>
+<a href="#2617" id="2617">2617</a>
+<a href="#2618" id="2618">2618</a>
+<a href="#2619" id="2619">2619</a>
+<a href="#2620" id="2620">2620</a>
+<a href="#2621" id="2621">2621</a>
+<a href="#2622" id="2622">2622</a>
+<a href="#2623" id="2623">2623</a>
+<a href="#2624" id="2624">2624</a>
+<a href="#2625" id="2625">2625</a>
+<a href="#2626" id="2626">2626</a>
+<a href="#2627" id="2627">2627</a>
+<a href="#2628" id="2628">2628</a>
+<a href="#2629" id="2629">2629</a>
+<a href="#2630" id="2630">2630</a>
+<a href="#2631" id="2631">2631</a>
+<a href="#2632" id="2632">2632</a>
+<a href="#2633" id="2633">2633</a>
+<a href="#2634" id="2634">2634</a>
+<a href="#2635" id="2635">2635</a>
+<a href="#2636" id="2636">2636</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
@@ -4752,24 +4778,6 @@
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
-	<span class="doccomment">/// Returns the pending rewards for the specified `member_account`.
-	///
-	/// In the case of error, `None` is returned.
-	</span><span class="kw">pub fn </span>pending_rewards(member_account: T::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt; {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(pool_member) = PoolMembers::&lt;T&gt;::get(member_account) {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>((reward_pool, bonded_pool)) = RewardPools::&lt;T&gt;::get(pool_member.pool_id)
-				.zip(BondedPools::&lt;T&gt;::get(pool_member.pool_id))
-			{
-				<span class="kw">let </span>current_reward_counter = reward_pool
-					.current_reward_counter(pool_member.pool_id, bonded_pool.points)
-					.ok()<span class="question-mark">?</span>;
-				<span class="kw">return </span>pool_member.pending_rewards(current_reward_counter).ok()
-			}
-		}
-
-		<span class="prelude-val">None
-	</span>}
-
 	<span class="doccomment">/// The amount of bond that MUST REMAIN IN BONDED in ALL POOLS.
 	///
 	/// It is the responsibility of the depositor to put these funds into the pool initially. Upon
@@ -5186,6 +5194,50 @@
 		<span class="kw">let </span>points = PoolMembers::&lt;T&gt;::get(<span class="kw-2">&amp;</span>member).map(|d| d.active_points()).unwrap_or_default();
 		<span class="kw">let </span>member_lookup = T::Lookup::unlookup(member);
 		<span class="self">Self</span>::unbond(origin, member_lookup, points)
+	}
+}
+
+<span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
+	<span class="doccomment">/// Returns the pending rewards for the specified `who` account.
+	///
+	/// In the case of error, `None` is returned. Used by runtime API.
+	</span><span class="kw">pub fn </span>api_pending_rewards(who: T::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt; {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(pool_member) = PoolMembers::&lt;T&gt;::get(who) {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>((reward_pool, bonded_pool)) = RewardPools::&lt;T&gt;::get(pool_member.pool_id)
+				.zip(BondedPools::&lt;T&gt;::get(pool_member.pool_id))
+			{
+				<span class="kw">let </span>current_reward_counter = reward_pool
+					.current_reward_counter(pool_member.pool_id, bonded_pool.points)
+					.ok()<span class="question-mark">?</span>;
+				<span class="kw">return </span>pool_member.pending_rewards(current_reward_counter).ok()
+			}
+		}
+
+		<span class="prelude-val">None
+	</span>}
+
+	<span class="doccomment">/// Returns the points to balance conversion for a specified pool.
+	///
+	/// If the pool ID does not exist, it returns 0 ratio points to balance. Used by runtime API.
+	</span><span class="kw">pub fn </span>api_points_to_balance(pool_id: PoolId, points: BalanceOf&lt;T&gt;) -&gt; BalanceOf&lt;T&gt; {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(pool) = BondedPool::&lt;T&gt;::get(pool_id) {
+			pool.points_to_balance(points)
+		} <span class="kw">else </span>{
+			Zero::zero()
+		}
+	}
+
+	<span class="doccomment">/// Returns the equivalent `new_funds` balance to point conversion for a specified pool.
+	///
+	/// If the pool ID does not exist, returns 0 ratio balance to points. Used by runtime API.
+	</span><span class="kw">pub fn </span>api_balance_to_points(pool_id: PoolId, new_funds: BalanceOf&lt;T&gt;) -&gt; BalanceOf&lt;T&gt; {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(pool) = BondedPool::&lt;T&gt;::get(pool_id) {
+			<span class="kw">let </span>bonded_balance =
+				T::Staking::active_stake(<span class="kw-2">&amp;</span>pool.bonded_account()).unwrap_or(Zero::zero());
+			Pallet::&lt;T&gt;::balance_to_point(bonded_balance, pool.points, new_funds)
+		} <span class="kw">else </span>{
+			Zero::zero()
+		}
 	}
 }
 
