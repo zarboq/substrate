@@ -214,20 +214,6 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -256,7 +242,7 @@
 };
 <span class="kw">use </span>sp_state_machine::{
 	backend::{AsTrieBackend, Backend <span class="kw">as </span>StateBackend},
-	TrieBackend,
+	IterArgs, StorageIterator, StorageKey, StorageValue, TrieBackend,
 };
 <span class="kw">use </span>std::sync::Arc;
 
@@ -303,10 +289,43 @@
 	}
 }
 
+<span class="kw">pub struct </span>RawIter&lt;S, B&gt;
+<span class="kw">where
+	</span>S: StateBackend&lt;HashFor&lt;B&gt;&gt;,
+	B: BlockT,
+{
+	inner: &lt;S <span class="kw">as </span>StateBackend&lt;HashFor&lt;B&gt;&gt;&gt;::RawIter,
+}
+
+<span class="kw">impl</span>&lt;S, B&gt; StorageIterator&lt;HashFor&lt;B&gt;&gt; <span class="kw">for </span>RawIter&lt;S, B&gt;
+<span class="kw">where
+	</span>S: StateBackend&lt;HashFor&lt;B&gt;&gt;,
+	B: BlockT,
+{
+	<span class="kw">type </span>Backend = RecordStatsState&lt;S, B&gt;;
+	<span class="kw">type </span>Error = S::Error;
+
+	<span class="kw">fn </span>next_key(<span class="kw-2">&amp;mut </span><span class="self">self</span>, backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::Backend) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;StorageKey, <span class="self">Self</span>::Error&gt;&gt; {
+		<span class="self">self</span>.inner.next_key(<span class="kw-2">&amp;</span>backend.state)
+	}
+
+	<span class="kw">fn </span>next_pair(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::Backend,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;(StorageKey, StorageValue), <span class="self">Self</span>::Error&gt;&gt; {
+		<span class="self">self</span>.inner.next_pair(<span class="kw-2">&amp;</span>backend.state)
+	}
+
+	<span class="kw">fn </span>was_complete(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="self">self</span>.inner.was_complete()
+	}
+}
+
 <span class="kw">impl</span>&lt;S: StateBackend&lt;HashFor&lt;B&gt;&gt;, B: BlockT&gt; StateBackend&lt;HashFor&lt;B&gt;&gt; <span class="kw">for </span>RecordStatsState&lt;S, B&gt; {
 	<span class="kw">type </span>Error = S::Error;
 	<span class="kw">type </span>Transaction = S::Transaction;
 	<span class="kw">type </span>TrieBackendStorage = S::TrieBackendStorage;
+	<span class="kw">type </span>RawIter = RawIter&lt;S, B&gt;;
 
 	<span class="kw">fn </span>storage(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, <span class="self">Self</span>::Error&gt; {
 		<span class="kw">let </span>value = <span class="self">self</span>.state.storage(key)<span class="question-mark">?</span>;
@@ -352,28 +371,6 @@
 		<span class="self">self</span>.state.exists_child_storage(child_info, key)
 	}
 
-	<span class="kw">fn </span>apply_to_key_values_while&lt;F: FnMut(Vec&lt;u8&gt;, Vec&lt;u8&gt;) -&gt; bool&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		f: F,
-		allow_missing: bool,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;bool, <span class="self">Self</span>::Error&gt; {
-		<span class="self">self</span>.state
-			.apply_to_key_values_while(child_info, prefix, start_at, f, allow_missing)
-	}
-
-	<span class="kw">fn </span>apply_to_keys_while&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8]) -&gt; bool&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		f: F,
-	) {
-		<span class="self">self</span>.state.apply_to_keys_while(child_info, prefix, start_at, f)
-	}
-
 	<span class="kw">fn </span>next_storage_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, <span class="self">Self</span>::Error&gt; {
 		<span class="self">self</span>.state.next_storage_key(key)
 	}
@@ -384,23 +381,6 @@
 		key: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, <span class="self">Self</span>::Error&gt; {
 		<span class="self">self</span>.state.next_child_storage_key(child_info, key)
-	}
-
-	<span class="kw">fn </span>for_keys_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8])&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8], f: F) {
-		<span class="self">self</span>.state.for_keys_with_prefix(prefix, f)
-	}
-
-	<span class="kw">fn </span>for_key_values_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8])&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8], f: F) {
-		<span class="self">self</span>.state.for_key_values_with_prefix(prefix, f)
-	}
-
-	<span class="kw">fn </span>for_child_keys_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8])&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="kw-2">&amp;</span>ChildInfo,
-		prefix: <span class="kw-2">&amp;</span>[u8],
-		f: F,
-	) {
-		<span class="self">self</span>.state.for_child_keys_with_prefix(child_info, prefix, f)
 	}
 
 	<span class="kw">fn </span>storage_root&lt;<span class="lifetime">&#39;a</span>&gt;(
@@ -426,16 +406,8 @@
 		<span class="self">self</span>.state.child_storage_root(child_info, delta, state_version)
 	}
 
-	<span class="kw">fn </span>pairs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
-		<span class="self">self</span>.state.pairs()
-	}
-
-	<span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;Vec&lt;u8&gt;&gt; {
-		<span class="self">self</span>.state.keys(prefix)
-	}
-
-	<span class="kw">fn </span>child_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, child_info: <span class="kw-2">&amp;</span>ChildInfo, prefix: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;Vec&lt;u8&gt;&gt; {
-		<span class="self">self</span>.state.child_keys(child_info, prefix)
+	<span class="kw">fn </span>raw_iter(<span class="kw-2">&amp;</span><span class="self">self</span>, args: IterArgs) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::RawIter, <span class="self">Self</span>::Error&gt; {
+		<span class="self">self</span>.state.raw_iter(args).map(|inner| RawIter { inner })
 	}
 
 	<span class="kw">fn </span>register_overlay_stats(<span class="kw-2">&amp;</span><span class="self">self</span>, stats: <span class="kw-2">&amp;</span>sp_state_machine::StateMachineStats) {

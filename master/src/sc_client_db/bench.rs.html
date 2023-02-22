@@ -675,6 +675,40 @@
 <a href="#675" id="675">675</a>
 <a href="#676" id="676">676</a>
 <a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -699,6 +733,7 @@
 <span class="kw">use </span>hash_db::{Hasher, Prefix};
 <span class="kw">use </span>kvdb::{DBTransaction, KeyValueDB};
 <span class="kw">use </span>linked_hash_map::LinkedHashMap;
+<span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>sp_core::{
 	hexdisplay::HexDisplay,
 	storage::{ChildInfo, TrackedStorageKey},
@@ -708,7 +743,8 @@
 	StateVersion, Storage,
 };
 <span class="kw">use </span>sp_state_machine::{
-	backend::Backend <span class="kw">as </span>StateBackend, ChildStorageCollection, DBValue, StorageCollection,
+	backend::Backend <span class="kw">as </span>StateBackend, ChildStorageCollection, DBValue, IterArgs, StorageCollection,
+	StorageIterator, StorageKey, StorageValue,
 };
 <span class="kw">use </span>sp_trie::{
 	cache::{CacheSize, SharedTrieCache},
@@ -736,6 +772,19 @@
 	}
 }
 
+<span class="kw">struct </span>KeyTracker {
+	enable_tracking: bool,
+	<span class="doccomment">/// Key tracker for keys in the main trie.
+	/// We track the total number of reads and writes to these keys,
+	/// not de-duplicated for repeats.
+	</span>main_keys: LinkedHashMap&lt;Vec&lt;u8&gt;, TrackedStorageKey&gt;,
+	<span class="doccomment">/// Key tracker for keys in a child trie.
+	/// Child trie are identified by their storage key (i.e. `ChildInfo::storage_key()`)
+	/// We track the total number of reads and writes to these keys,
+	/// not de-duplicated for repeats.
+	</span>child_keys: LinkedHashMap&lt;Vec&lt;u8&gt;, LinkedHashMap&lt;Vec&lt;u8&gt;, TrackedStorageKey&gt;&gt;,
+}
+
 <span class="doccomment">/// State that manages the backend database reference. Allows runtime to control the database.
 </span><span class="kw">pub struct </span>BenchmarkingState&lt;B: BlockT&gt; {
 	root: Cell&lt;B::Hash&gt;,
@@ -744,20 +793,50 @@
 	db: Cell&lt;<span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>KeyValueDB&gt;&gt;&gt;,
 	genesis: HashMap&lt;Vec&lt;u8&gt;, (Vec&lt;u8&gt;, i32)&gt;,
 	record: Cell&lt;Vec&lt;Vec&lt;u8&gt;&gt;&gt;,
-	<span class="doccomment">/// Key tracker for keys in the main trie.
-	/// We track the total number of reads and writes to these keys,
-	/// not de-duplicated for repeats.
-	</span>main_key_tracker: RefCell&lt;LinkedHashMap&lt;Vec&lt;u8&gt;, TrackedStorageKey&gt;&gt;,
-	<span class="doccomment">/// Key tracker for keys in a child trie.
-	/// Child trie are identified by their storage key (i.e. `ChildInfo::storage_key()`)
-	/// We track the total number of reads and writes to these keys,
-	/// not de-duplicated for repeats.
-	</span>child_key_tracker: RefCell&lt;LinkedHashMap&lt;Vec&lt;u8&gt;, LinkedHashMap&lt;Vec&lt;u8&gt;, TrackedStorageKey&gt;&gt;&gt;,
+	key_tracker: Arc&lt;Mutex&lt;KeyTracker&gt;&gt;,
 	whitelist: RefCell&lt;Vec&lt;TrackedStorageKey&gt;&gt;,
 	proof_recorder: <span class="prelude-ty">Option</span>&lt;sp_trie::recorder::Recorder&lt;HashFor&lt;B&gt;&gt;&gt;,
 	proof_recorder_root: Cell&lt;B::Hash&gt;,
-	enable_tracking: bool,
 	shared_trie_cache: SharedTrieCache&lt;HashFor&lt;B&gt;&gt;,
+}
+
+<span class="doccomment">/// A raw iterator over the `BenchmarkingState`.
+</span><span class="kw">pub struct </span>RawIter&lt;B: BlockT&gt; {
+	inner: &lt;DbState&lt;B&gt; <span class="kw">as </span>StateBackend&lt;HashFor&lt;B&gt;&gt;&gt;::RawIter,
+	child_trie: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+	key_tracker: Arc&lt;Mutex&lt;KeyTracker&gt;&gt;,
+}
+
+<span class="kw">impl</span>&lt;B: BlockT&gt; StorageIterator&lt;HashFor&lt;B&gt;&gt; <span class="kw">for </span>RawIter&lt;B&gt; {
+	<span class="kw">type </span>Backend = BenchmarkingState&lt;B&gt;;
+	<span class="kw">type </span>Error = String;
+
+	<span class="kw">fn </span>next_key(<span class="kw-2">&amp;mut </span><span class="self">self</span>, backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::Backend) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;StorageKey, <span class="self">Self</span>::Error&gt;&gt; {
+		<span class="kw">match </span><span class="self">self</span>.inner.next_key(backend.state.borrow().as_ref()<span class="question-mark">?</span>) {
+			<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(key)) =&gt; {
+				<span class="self">self</span>.key_tracker.lock().add_read_key(<span class="self">self</span>.child_trie.as_deref(), <span class="kw-2">&amp;</span>key);
+				<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(key))
+			},
+			result =&gt; result,
+		}
+	}
+
+	<span class="kw">fn </span>next_pair(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::Backend,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;(StorageKey, StorageValue), <span class="self">Self</span>::Error&gt;&gt; {
+		<span class="kw">match </span><span class="self">self</span>.inner.next_pair(backend.state.borrow().as_ref()<span class="question-mark">?</span>) {
+			<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>((key, value))) =&gt; {
+				<span class="self">self</span>.key_tracker.lock().add_read_key(<span class="self">self</span>.child_trie.as_deref(), <span class="kw-2">&amp;</span>key);
+				<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>((key, value)))
+			},
+			result =&gt; result,
+		}
+	}
+
+	<span class="kw">fn </span>was_complete(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="self">self</span>.inner.was_complete()
+	}
 }
 
 <span class="kw">impl</span>&lt;B: BlockT&gt; BenchmarkingState&lt;B&gt; {
@@ -780,12 +859,14 @@
 			genesis: Default::default(),
 			genesis_root: Default::default(),
 			record: Default::default(),
-			main_key_tracker: Default::default(),
-			child_key_tracker: Default::default(),
+			key_tracker: Arc::new(Mutex::new(KeyTracker {
+				main_keys: Default::default(),
+				child_keys: Default::default(),
+				enable_tracking,
+			})),
 			whitelist: Default::default(),
 			proof_recorder: record_proof.then(Default::default),
 			proof_recorder_root: Cell::new(root),
-			enable_tracking,
 			<span class="comment">// Enable the cache, but do not sync anything to the shared state.
 			</span>shared_trie_cache: SharedTrieCache::new(CacheSize::new(<span class="number">0</span>)),
 		};
@@ -800,7 +881,7 @@
 			)
 		});
 		<span class="kw">let </span>(root, transaction): (B::Hash, <span class="kw">_</span>) =
-			state.state.borrow_mut().as_mut().unwrap().full_storage_root(
+			state.state.borrow().as_ref().unwrap().full_storage_root(
 				genesis.top.iter().map(|(k, v)| (k.as_ref(), <span class="prelude-val">Some</span>(v.as_ref()))),
 				child_delta,
 				state_version,
@@ -834,36 +915,51 @@
 	}
 
 	<span class="kw">fn </span>add_whitelist_to_tracker(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-		<span class="kw">let </span><span class="kw-2">mut </span>main_key_tracker = <span class="self">self</span>.main_key_tracker.borrow_mut();
-
-		<span class="kw">let </span>whitelist = <span class="self">self</span>.whitelist.borrow();
-
-		whitelist.iter().for_each(|key| {
-			<span class="kw">let </span><span class="kw-2">mut </span>whitelisted = TrackedStorageKey::new(key.key.clone());
-			whitelisted.whitelist();
-			main_key_tracker.insert(key.key.clone(), whitelisted);
-		});
+		<span class="self">self</span>.key_tracker.lock().add_whitelist(<span class="kw-2">&amp;</span><span class="self">self</span>.whitelist.borrow());
 	}
 
 	<span class="kw">fn </span>wipe_tracker(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-		<span class="kw-2">*</span><span class="self">self</span>.main_key_tracker.borrow_mut() = LinkedHashMap::new();
-		<span class="kw-2">*</span><span class="self">self</span>.child_key_tracker.borrow_mut() = LinkedHashMap::new();
-		<span class="self">self</span>.add_whitelist_to_tracker();
+		<span class="kw">let </span><span class="kw-2">mut </span>key_tracker = <span class="self">self</span>.key_tracker.lock();
+		key_tracker.main_keys = LinkedHashMap::new();
+		key_tracker.child_keys = LinkedHashMap::new();
+		key_tracker.add_whitelist(<span class="kw-2">&amp;</span><span class="self">self</span>.whitelist.borrow());
+	}
+
+	<span class="kw">fn </span>add_read_key(<span class="kw-2">&amp;</span><span class="self">self</span>, childtrie: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, key: <span class="kw-2">&amp;</span>[u8]) {
+		<span class="self">self</span>.key_tracker.lock().add_read_key(childtrie, key);
+	}
+
+	<span class="kw">fn </span>add_write_key(<span class="kw-2">&amp;</span><span class="self">self</span>, childtrie: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, key: <span class="kw-2">&amp;</span>[u8]) {
+		<span class="self">self</span>.key_tracker.lock().add_write_key(childtrie, key);
+	}
+
+	<span class="kw">fn </span>all_trackers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;TrackedStorageKey&gt; {
+		<span class="self">self</span>.key_tracker.lock().all_trackers()
+	}
+}
+
+<span class="kw">impl </span>KeyTracker {
+	<span class="kw">fn </span>add_whitelist(<span class="kw-2">&amp;mut </span><span class="self">self</span>, whitelist: <span class="kw-2">&amp;</span>[TrackedStorageKey]) {
+		whitelist.iter().for_each(|key| {
+			<span class="kw">let </span><span class="kw-2">mut </span>whitelisted = TrackedStorageKey::new(key.key.clone());
+			whitelisted.whitelist();
+			<span class="self">self</span>.main_keys.insert(key.key.clone(), whitelisted);
+		});
 	}
 
 	<span class="comment">// Childtrie is identified by its storage key (i.e. `ChildInfo::storage_key`)
-	</span><span class="kw">fn </span>add_read_key(<span class="kw-2">&amp;</span><span class="self">self</span>, childtrie: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, key: <span class="kw-2">&amp;</span>[u8]) {
+	</span><span class="kw">fn </span>add_read_key(<span class="kw-2">&amp;mut </span><span class="self">self</span>, childtrie: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, key: <span class="kw-2">&amp;</span>[u8]) {
 		<span class="kw">if </span>!<span class="self">self</span>.enable_tracking {
 			<span class="kw">return
 		</span>}
 
-		<span class="kw">let </span><span class="kw-2">mut </span>child_key_tracker = <span class="self">self</span>.child_key_tracker.borrow_mut();
-		<span class="kw">let </span><span class="kw-2">mut </span>main_key_tracker = <span class="self">self</span>.main_key_tracker.borrow_mut();
+		<span class="kw">let </span>child_key_tracker = <span class="kw-2">&amp;mut </span><span class="self">self</span>.child_keys;
+		<span class="kw">let </span>main_key_tracker = <span class="kw-2">&amp;mut </span><span class="self">self</span>.main_keys;
 
 		<span class="kw">let </span>key_tracker = <span class="kw">if let </span><span class="prelude-val">Some</span>(childtrie) = childtrie {
 			child_key_tracker.entry(childtrie.to_vec()).or_insert_with(LinkedHashMap::new)
 		} <span class="kw">else </span>{
-			<span class="kw-2">&amp;mut </span>main_key_tracker
+			main_key_tracker
 		};
 
 		<span class="kw">let </span>should_log = <span class="kw">match </span>key_tracker.get_mut(key) {
@@ -893,18 +989,18 @@
 	}
 
 	<span class="comment">// Childtrie is identified by its storage key (i.e. `ChildInfo::storage_key`)
-	</span><span class="kw">fn </span>add_write_key(<span class="kw-2">&amp;</span><span class="self">self</span>, childtrie: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, key: <span class="kw-2">&amp;</span>[u8]) {
+	</span><span class="kw">fn </span>add_write_key(<span class="kw-2">&amp;mut </span><span class="self">self</span>, childtrie: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, key: <span class="kw-2">&amp;</span>[u8]) {
 		<span class="kw">if </span>!<span class="self">self</span>.enable_tracking {
 			<span class="kw">return
 		</span>}
 
-		<span class="kw">let </span><span class="kw-2">mut </span>child_key_tracker = <span class="self">self</span>.child_key_tracker.borrow_mut();
-		<span class="kw">let </span><span class="kw-2">mut </span>main_key_tracker = <span class="self">self</span>.main_key_tracker.borrow_mut();
+		<span class="kw">let </span>child_key_tracker = <span class="kw-2">&amp;mut </span><span class="self">self</span>.child_keys;
+		<span class="kw">let </span>main_key_tracker = <span class="kw-2">&amp;mut </span><span class="self">self</span>.main_keys;
 
 		<span class="kw">let </span>key_tracker = <span class="kw">if let </span><span class="prelude-val">Some</span>(childtrie) = childtrie {
 			child_key_tracker.entry(childtrie.to_vec()).or_insert_with(LinkedHashMap::new)
 		} <span class="kw">else </span>{
-			<span class="kw-2">&amp;mut </span>main_key_tracker
+			main_key_tracker
 		};
 
 		<span class="comment">// If we have written to the key, we also consider that we have read from it.
@@ -938,11 +1034,11 @@
 	</span><span class="kw">fn </span>all_trackers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;TrackedStorageKey&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>all_trackers = Vec::new();
 
-		<span class="self">self</span>.main_key_tracker.borrow().iter().for_each(|(<span class="kw">_</span>, tracker)| {
+		<span class="self">self</span>.main_keys.iter().for_each(|(<span class="kw">_</span>, tracker)| {
 			all_trackers.push(tracker.clone());
 		});
 
-		<span class="self">self</span>.child_key_tracker.borrow().iter().for_each(|(<span class="kw">_</span>, child_tracker)| {
+		<span class="self">self</span>.child_keys.iter().for_each(|(<span class="kw">_</span>, child_tracker)| {
 			child_tracker.iter().for_each(|(<span class="kw">_</span>, tracker)| {
 				all_trackers.push(tracker.clone());
 			});
@@ -960,6 +1056,7 @@
 	<span class="kw">type </span>Error = &lt;DbState&lt;B&gt; <span class="kw">as </span>StateBackend&lt;HashFor&lt;B&gt;&gt;&gt;::Error;
 	<span class="kw">type </span>Transaction = &lt;DbState&lt;B&gt; <span class="kw">as </span>StateBackend&lt;HashFor&lt;B&gt;&gt;&gt;::Transaction;
 	<span class="kw">type </span>TrieBackendStorage = &lt;DbState&lt;B&gt; <span class="kw">as </span>StateBackend&lt;HashFor&lt;B&gt;&gt;&gt;::TrieBackendStorage;
+	<span class="kw">type </span>RawIter = RawIter&lt;B&gt;;
 
 	<span class="kw">fn </span>storage(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, <span class="self">Self</span>::Error&gt; {
 		<span class="self">self</span>.add_read_key(<span class="prelude-val">None</span>, key);
@@ -1033,58 +1130,6 @@
 			</span>.next_child_storage_key(child_info, key)
 	}
 
-	<span class="kw">fn </span>for_keys_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8])&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8], f: F) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>state) = <span class="kw-2">*</span><span class="self">self</span>.state.borrow() {
-			state.for_keys_with_prefix(prefix, f)
-		}
-	}
-
-	<span class="kw">fn </span>for_key_values_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8])&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8], f: F) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>state) = <span class="kw-2">*</span><span class="self">self</span>.state.borrow() {
-			state.for_key_values_with_prefix(prefix, f)
-		}
-	}
-
-	<span class="kw">fn </span>apply_to_key_values_while&lt;F: FnMut(Vec&lt;u8&gt;, Vec&lt;u8&gt;) -&gt; bool&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		f: F,
-		allow_missing: bool,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;bool, <span class="self">Self</span>::Error&gt; {
-		<span class="self">self</span>.state.borrow().as_ref().ok_or_else(state_err)<span class="question-mark">?</span>.apply_to_key_values_while(
-			child_info,
-			prefix,
-			start_at,
-			f,
-			allow_missing,
-		)
-	}
-
-	<span class="kw">fn </span>apply_to_keys_while&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8]) -&gt; bool&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		f: F,
-	) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>state) = <span class="kw-2">*</span><span class="self">self</span>.state.borrow() {
-			state.apply_to_keys_while(child_info, prefix, start_at, f)
-		}
-	}
-
-	<span class="kw">fn </span>for_child_keys_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8])&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="kw-2">&amp;</span>ChildInfo,
-		prefix: <span class="kw-2">&amp;</span>[u8],
-		f: F,
-	) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>state) = <span class="kw-2">*</span><span class="self">self</span>.state.borrow() {
-			state.for_child_keys_with_prefix(child_info, prefix, f)
-		}
-	}
-
 	<span class="kw">fn </span>storage_root&lt;<span class="lifetime">&#39;a</span>&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		delta: <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]&gt;)&gt;,
@@ -1114,19 +1159,19 @@
 			.map_or(Default::default(), |s| s.child_storage_root(child_info, delta, state_version))
 	}
 
-	<span class="kw">fn </span>pairs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
-		<span class="self">self</span>.state.borrow().as_ref().map_or(Default::default(), |s| s.pairs())
-	}
-
-	<span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;Vec&lt;u8&gt;&gt; {
-		<span class="self">self</span>.state.borrow().as_ref().map_or(Default::default(), |s| s.keys(prefix))
-	}
-
-	<span class="kw">fn </span>child_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, child_info: <span class="kw-2">&amp;</span>ChildInfo, prefix: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;Vec&lt;u8&gt;&gt; {
+	<span class="kw">fn </span>raw_iter(<span class="kw-2">&amp;</span><span class="self">self</span>, args: IterArgs) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::RawIter, <span class="self">Self</span>::Error&gt; {
+		<span class="kw">let </span>child_trie =
+			args.child_info.as_ref().map(|child_info| child_info.storage_key().to_vec());
 		<span class="self">self</span>.state
 			.borrow()
 			.as_ref()
-			.map_or(Default::default(), |s| s.child_keys(child_info, prefix))
+			.map(|s| s.raw_iter(args))
+			.unwrap_or(<span class="prelude-val">Ok</span>(Default::default()))
+			.map(|raw_iter| RawIter {
+				inner: raw_iter,
+				key_tracker: <span class="self">self</span>.key_tracker.clone(),
+				child_trie,
+			})
 	}
 
 	<span class="kw">fn </span>commit(
@@ -1264,7 +1309,7 @@
 	}
 
 	<span class="kw">fn </span>register_overlay_stats(<span class="kw-2">&amp;</span><span class="self">self</span>, stats: <span class="kw-2">&amp;</span>sp_state_machine::StateMachineStats) {
-		<span class="self">self</span>.state.borrow_mut().as_mut().map(|s| s.register_overlay_stats(stats));
+		<span class="self">self</span>.state.borrow().as_ref().map(|s| s.register_overlay_stats(stats));
 	}
 
 	<span class="kw">fn </span>usage_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; sp_state_machine::UsageInfo {
@@ -1315,6 +1360,29 @@
 </span><span class="kw">mod </span>test {
 	<span class="kw">use </span><span class="kw">crate</span>::bench::BenchmarkingState;
 	<span class="kw">use </span>sp_state_machine::backend::Backend <span class="kw">as _</span>;
+
+	<span class="kw">fn </span>hex(hex: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;u8&gt; {
+		array_bytes::hex2bytes(hex).unwrap()
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>iteration_is_also_counted_in_rw_counts() {
+		<span class="kw">let </span>storage = sp_runtime::Storage {
+			top: <span class="macro">vec!</span>[(
+				hex(<span class="string">&quot;ce6e1397e668c7fcf47744350dc59688455a2c2dbd2e2a649df4e55d93cd7158&quot;</span>),
+				hex(<span class="string">&quot;0102030405060708&quot;</span>),
+			)]
+			.into_iter()
+			.collect(),
+			..sp_runtime::Storage::default()
+		};
+		<span class="kw">let </span>bench_state =
+			BenchmarkingState::&lt;<span class="kw">crate</span>::tests::Block&gt;::new(storage, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>).unwrap();
+
+		<span class="macro">assert_eq!</span>(bench_state.read_write_count(), (<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>));
+		<span class="macro">assert_eq!</span>(bench_state.keys(Default::default()).unwrap().count(), <span class="number">1</span>);
+		<span class="macro">assert_eq!</span>(bench_state.read_write_count(), (<span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>));
+	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>read_to_main_and_child_tries() {

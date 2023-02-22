@@ -61,8 +61,6 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -86,7 +84,10 @@
 <span class="kw">use </span>sp_core::storage::{well_known_keys, ChildInfo, Storage, StorageChild, StorageKey, StorageMap};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
-<span class="kw">use </span>std::{collections::HashMap, sync::Arc};
+<span class="kw">use </span>std::{
+	collections::{BTreeMap, HashMap},
+	sync::Arc,
+};
 
 <span class="doccomment">/// Export the raw state at the given `block`. If `block` is `None`, the
 /// best block will be used.
@@ -96,36 +97,31 @@
 	B: BlockT,
 	BA: sc_client_api::backend::Backend&lt;B&gt;,
 {
-	<span class="kw">let </span>empty_key = StorageKey(Vec::new());
-	<span class="kw">let </span><span class="kw-2">mut </span>top_storage = client.storage_pairs(hash, <span class="kw-2">&amp;</span>empty_key)<span class="question-mark">?</span>;
+	<span class="kw">let </span><span class="kw-2">mut </span>top = BTreeMap::new();
 	<span class="kw">let </span><span class="kw-2">mut </span>children_default = HashMap::new();
 
-	<span class="comment">// Remove all default child storage roots from the top storage and collect the child storage
-	// pairs.
-	</span><span class="kw">while let </span><span class="prelude-val">Some</span>(pos) = top_storage
-		.iter()
-		.position(|(k, <span class="kw">_</span>)| k.<span class="number">0</span>.starts_with(well_known_keys::DEFAULT_CHILD_STORAGE_KEY_PREFIX))
-	{
-		<span class="kw">let </span>(key, <span class="kw">_</span>) = top_storage.swap_remove(pos);
-
-		<span class="kw">let </span>key =
-			StorageKey(key.<span class="number">0</span>[well_known_keys::DEFAULT_CHILD_STORAGE_KEY_PREFIX.len()..].to_vec());
-		<span class="kw">let </span>child_info = ChildInfo::new_default(<span class="kw-2">&amp;</span>key.<span class="number">0</span>);
-
-		<span class="kw">let </span>keys = client.child_storage_keys(hash, <span class="kw-2">&amp;</span>child_info, <span class="kw-2">&amp;</span>empty_key)<span class="question-mark">?</span>;
-		<span class="kw">let </span><span class="kw-2">mut </span>pairs = StorageMap::new();
-		keys.into_iter().try_for_each(|k| {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(value) = client.child_storage(hash, <span class="kw-2">&amp;</span>child_info, <span class="kw-2">&amp;</span>k)<span class="question-mark">? </span>{
-				pairs.insert(k.<span class="number">0</span>, value.<span class="number">0</span>);
+	<span class="kw">for </span>(key, value) <span class="kw">in </span>client.storage_pairs(hash, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+		<span class="comment">// Remove all default child storage roots from the top storage and collect the child storage
+		// pairs.
+		</span><span class="kw">if </span>key.<span class="number">0</span>.starts_with(well_known_keys::DEFAULT_CHILD_STORAGE_KEY_PREFIX) {
+			<span class="kw">let </span>child_root_key = StorageKey(
+				key.<span class="number">0</span>[well_known_keys::DEFAULT_CHILD_STORAGE_KEY_PREFIX.len()..].to_vec(),
+			);
+			<span class="kw">let </span>child_info = ChildInfo::new_default(<span class="kw-2">&amp;</span>child_root_key.<span class="number">0</span>);
+			<span class="kw">let </span><span class="kw-2">mut </span>pairs = StorageMap::new();
+			<span class="kw">for </span>child_key <span class="kw">in </span>client.child_storage_keys(hash, child_info.clone(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(child_value) = client.child_storage(hash, <span class="kw-2">&amp;</span>child_info, <span class="kw-2">&amp;</span>child_key)<span class="question-mark">? </span>{
+					pairs.insert(child_key.<span class="number">0</span>, child_value.<span class="number">0</span>);
+				}
 			}
 
-			<span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Error&gt;(())
-		})<span class="question-mark">?</span>;
+			children_default.insert(child_root_key.<span class="number">0</span>, StorageChild { child_info, data: pairs });
+			<span class="kw">continue
+		</span>}
 
-		children_default.insert(key.<span class="number">0</span>, StorageChild { child_info, data: pairs });
+		top.insert(key.<span class="number">0</span>, value.<span class="number">0</span>);
 	}
 
-	<span class="kw">let </span>top = top_storage.into_iter().map(|(k, v)| (k.<span class="number">0</span>, v.<span class="number">0</span>)).collect();
 	<span class="prelude-val">Ok</span>(Storage { top, children_default })
 }
 </code></pre></div>

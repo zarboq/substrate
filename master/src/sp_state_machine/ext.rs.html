@@ -1129,6 +1129,13 @@
 <a href="#1129" id="1129">1129</a>
 <a href="#1130" id="1130">1130</a>
 <a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1290,9 +1297,10 @@
 		<span class="kw">use </span>std::collections::HashMap;
 
 		<span class="self">self</span>.backend
-			.pairs()
-			.iter()
-			.map(|<span class="kw-2">&amp;</span>(<span class="kw-2">ref </span>k, <span class="kw-2">ref </span>v)| (k.to_vec(), <span class="prelude-val">Some</span>(v.to_vec())))
+			.pairs(Default::default())
+			.expect(<span class="string">&quot;never fails in tests; qed.&quot;</span>)
+			.map(|key_value| key_value.expect(<span class="string">&quot;never fails in tests; qed.&quot;</span>))
+			.map(|(k, v)| (k, <span class="prelude-val">Some</span>(v)))
 			.chain(<span class="self">self</span>.overlay.changes().map(|(k, v)| (k.clone(), v.value().cloned())))
 			.collect::&lt;HashMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()
 			.into_iter()
@@ -1888,28 +1896,34 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>delete_count: u32 = <span class="number">0</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>loop_count: u32 = <span class="number">0</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>maybe_next_key = <span class="prelude-val">None</span>;
-		<span class="self">self</span>.backend
-			.apply_to_keys_while(maybe_child, maybe_prefix, maybe_cursor, |key| {
-				<span class="kw">if </span>maybe_limit.map_or(<span class="bool-val">false</span>, |limit| loop_count == limit) {
-					maybe_next_key = <span class="prelude-val">Some</span>(key.to_vec());
-					<span class="kw">return </span><span class="bool-val">false
-				</span>}
-				<span class="kw">let </span>overlay = <span class="kw">match </span>maybe_child {
-					<span class="prelude-val">Some</span>(child_info) =&gt; <span class="self">self</span>.overlay.child_storage(child_info, key),
-					<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.overlay.storage(key),
-				};
-				<span class="kw">if </span>!<span class="macro">matches!</span>(overlay, <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>)) {
-					<span class="comment">// not pending deletion from the backend - delete it.
-					</span><span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = maybe_child {
-						<span class="self">self</span>.overlay.set_child_storage(child_info, key.to_vec(), <span class="prelude-val">None</span>);
-					} <span class="kw">else </span>{
-						<span class="self">self</span>.overlay.set_storage(key.to_vec(), <span class="prelude-val">None</span>);
+		<span class="kw">let </span>result =
+			<span class="self">self</span>.backend
+				.apply_to_keys_while(maybe_child, maybe_prefix, maybe_cursor, |key| {
+					<span class="kw">if </span>maybe_limit.map_or(<span class="bool-val">false</span>, |limit| loop_count == limit) {
+						maybe_next_key = <span class="prelude-val">Some</span>(key.to_vec());
+						<span class="kw">return </span><span class="bool-val">false
+					</span>}
+					<span class="kw">let </span>overlay = <span class="kw">match </span>maybe_child {
+						<span class="prelude-val">Some</span>(child_info) =&gt; <span class="self">self</span>.overlay.child_storage(child_info, key),
+						<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.overlay.storage(key),
+					};
+					<span class="kw">if </span>!<span class="macro">matches!</span>(overlay, <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>)) {
+						<span class="comment">// not pending deletion from the backend - delete it.
+						</span><span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = maybe_child {
+							<span class="self">self</span>.overlay.set_child_storage(child_info, key.to_vec(), <span class="prelude-val">None</span>);
+						} <span class="kw">else </span>{
+							<span class="self">self</span>.overlay.set_storage(key.to_vec(), <span class="prelude-val">None</span>);
+						}
+						delete_count = delete_count.saturating_add(<span class="number">1</span>);
 					}
-					delete_count = delete_count.saturating_add(<span class="number">1</span>);
-				}
-				loop_count = loop_count.saturating_add(<span class="number">1</span>);
-				<span class="bool-val">true
-			</span>});
+					loop_count = loop_count.saturating_add(<span class="number">1</span>);
+					<span class="bool-val">true
+				</span>});
+
+		<span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
+			<span class="macro">log::debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error while iterating the storage: {}&quot;</span>, error);
+		}
+
 		(maybe_next_key, delete_count, loop_count)
 	}
 }

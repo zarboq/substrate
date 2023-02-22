@@ -642,6 +642,12 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -857,23 +863,29 @@
 			.map_err(client_err)
 	}
 
-	<span class="kw">fn </span>storage_keys(
+	<span class="comment">// TODO: This is horribly broken; either remove it, or make it streaming.
+	</span><span class="kw">fn </span>storage_keys(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		block: <span class="prelude-ty">Option</span>&lt;Block::Hash&gt;,
 		prefix: StorageKey,
 	) -&gt; std::result::Result&lt;Vec&lt;StorageKey&gt;, Error&gt; {
-		<span class="self">self</span>.block_or_best(block)
-			.and_then(|block| <span class="self">self</span>.client.storage_keys(block, <span class="kw-2">&amp;</span>prefix))
+		<span class="comment">// TODO: Remove the `.collect`.
+		</span><span class="self">self</span>.block_or_best(block)
+			.and_then(|block| <span class="self">self</span>.client.storage_keys(block, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>prefix), <span class="prelude-val">None</span>))
+			.map(|iter| iter.collect())
 			.map_err(client_err)
 	}
 
-	<span class="kw">fn </span>storage_pairs(
+	<span class="comment">// TODO: This is horribly broken; either remove it, or make it streaming.
+	</span><span class="kw">fn </span>storage_pairs(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		block: <span class="prelude-ty">Option</span>&lt;Block::Hash&gt;,
 		prefix: StorageKey,
 	) -&gt; std::result::Result&lt;Vec&lt;(StorageKey, StorageData)&gt;, Error&gt; {
-		<span class="self">self</span>.block_or_best(block)
-			.and_then(|block| <span class="self">self</span>.client.storage_pairs(block, <span class="kw-2">&amp;</span>prefix))
+		<span class="comment">// TODO: Remove the `.collect`.
+		</span><span class="self">self</span>.block_or_best(block)
+			.and_then(|block| <span class="self">self</span>.client.storage_pairs(block, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>prefix), <span class="prelude-val">None</span>))
+			.map(|iter| iter.collect())
 			.map_err(client_err)
 	}
 
@@ -885,9 +897,7 @@
 		start_key: <span class="prelude-ty">Option</span>&lt;StorageKey&gt;,
 	) -&gt; std::result::Result&lt;Vec&lt;StorageKey&gt;, Error&gt; {
 		<span class="self">self</span>.block_or_best(block)
-			.and_then(|block| {
-				<span class="self">self</span>.client.storage_keys_iter(block, prefix.as_ref(), start_key.as_ref())
-			})
+			.and_then(|block| <span class="self">self</span>.client.storage_keys(block, prefix.as_ref(), start_key.as_ref()))
 			.map(|iter| iter.take(count <span class="kw">as </span>usize).collect())
 			.map_err(client_err)
 	}
@@ -928,7 +938,7 @@
 			}
 
 			<span class="comment">// The key doesn&#39;t point to anything, so it&#39;s probably a prefix.
-			</span><span class="kw">let </span>iter = <span class="kw">match </span>client.storage_keys_iter(block, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>key), <span class="prelude-val">None</span>).map_err(client_err) {
+			</span><span class="kw">let </span>iter = <span class="kw">match </span>client.storage_keys(block, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>key), <span class="prelude-val">None</span>).map_err(client_err) {
 				<span class="prelude-val">Ok</span>(iter) =&gt; iter,
 				<span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Err</span>(e)),
 			};
@@ -1175,15 +1185,17 @@
 		storage_key: PrefixedStorageKey,
 		prefix: StorageKey,
 	) -&gt; std::result::Result&lt;Vec&lt;StorageKey&gt;, Error&gt; {
-		<span class="self">self</span>.block_or_best(block)
+		<span class="comment">// TODO: Remove the `.collect`.
+		</span><span class="self">self</span>.block_or_best(block)
 			.and_then(|block| {
 				<span class="kw">let </span>child_info = <span class="kw">match </span>ChildType::from_prefixed_key(<span class="kw-2">&amp;</span>storage_key) {
 					<span class="prelude-val">Some</span>((ChildType::ParentKeyId, storage_key)) =&gt;
 						ChildInfo::new_default(storage_key),
 					<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(sp_blockchain::Error::InvalidChildStorageKey),
 				};
-				<span class="self">self</span>.client.child_storage_keys(block, <span class="kw-2">&amp;</span>child_info, <span class="kw-2">&amp;</span>prefix)
+				<span class="self">self</span>.client.child_storage_keys(block, child_info, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>prefix), <span class="prelude-val">None</span>)
 			})
+			.map(|iter| iter.collect())
 			.map_err(client_err)
 	}
 
@@ -1202,7 +1214,7 @@
 						ChildInfo::new_default(storage_key),
 					<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(sp_blockchain::Error::InvalidChildStorageKey),
 				};
-				<span class="self">self</span>.client.child_storage_keys_iter(
+				<span class="self">self</span>.client.child_storage_keys(
 					block,
 					child_info,
 					prefix.as_ref(),

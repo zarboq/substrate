@@ -885,95 +885,6 @@
 <a href="#885" id="885">885</a>
 <a href="#886" id="886">886</a>
 <a href="#887" id="887">887</a>
-<a href="#888" id="888">888</a>
-<a href="#889" id="889">889</a>
-<a href="#890" id="890">890</a>
-<a href="#891" id="891">891</a>
-<a href="#892" id="892">892</a>
-<a href="#893" id="893">893</a>
-<a href="#894" id="894">894</a>
-<a href="#895" id="895">895</a>
-<a href="#896" id="896">896</a>
-<a href="#897" id="897">897</a>
-<a href="#898" id="898">898</a>
-<a href="#899" id="899">899</a>
-<a href="#900" id="900">900</a>
-<a href="#901" id="901">901</a>
-<a href="#902" id="902">902</a>
-<a href="#903" id="903">903</a>
-<a href="#904" id="904">904</a>
-<a href="#905" id="905">905</a>
-<a href="#906" id="906">906</a>
-<a href="#907" id="907">907</a>
-<a href="#908" id="908">908</a>
-<a href="#909" id="909">909</a>
-<a href="#910" id="910">910</a>
-<a href="#911" id="911">911</a>
-<a href="#912" id="912">912</a>
-<a href="#913" id="913">913</a>
-<a href="#914" id="914">914</a>
-<a href="#915" id="915">915</a>
-<a href="#916" id="916">916</a>
-<a href="#917" id="917">917</a>
-<a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
-<a href="#924" id="924">924</a>
-<a href="#925" id="925">925</a>
-<a href="#926" id="926">926</a>
-<a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
-<a href="#931" id="931">931</a>
-<a href="#932" id="932">932</a>
-<a href="#933" id="933">933</a>
-<a href="#934" id="934">934</a>
-<a href="#935" id="935">935</a>
-<a href="#936" id="936">936</a>
-<a href="#937" id="937">937</a>
-<a href="#938" id="938">938</a>
-<a href="#939" id="939">939</a>
-<a href="#940" id="940">940</a>
-<a href="#941" id="941">941</a>
-<a href="#942" id="942">942</a>
-<a href="#943" id="943">943</a>
-<a href="#944" id="944">944</a>
-<a href="#945" id="945">945</a>
-<a href="#946" id="946">946</a>
-<a href="#947" id="947">947</a>
-<a href="#948" id="948">948</a>
-<a href="#949" id="949">949</a>
-<a href="#950" id="950">950</a>
-<a href="#951" id="951">951</a>
-<a href="#952" id="952">952</a>
-<a href="#953" id="953">953</a>
-<a href="#954" id="954">954</a>
-<a href="#955" id="955">955</a>
-<a href="#956" id="956">956</a>
-<a href="#957" id="957">957</a>
-<a href="#958" id="958">958</a>
-<a href="#959" id="959">959</a>
-<a href="#960" id="960">960</a>
-<a href="#961" id="961">961</a>
-<a href="#962" id="962">962</a>
-<a href="#963" id="963">963</a>
-<a href="#964" id="964">964</a>
-<a href="#965" id="965">965</a>
-<a href="#966" id="966">966</a>
-<a href="#967" id="967">967</a>
-<a href="#968" id="968">968</a>
-<a href="#969" id="969">969</a>
-<a href="#970" id="970">970</a>
-<a href="#971" id="971">971</a>
-<a href="#972" id="972">972</a>
-<a href="#973" id="973">973</a>
-<a href="#974" id="974">974</a>
-<a href="#975" id="975">975</a>
-<a href="#976" id="976">976</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -995,24 +906,23 @@
 //! from storage.
 
 </span><span class="kw">use crate</span>::{
-	backend::Consolidate, debug, trie_backend::AsLocalTrieCache, warn, StorageKey, StorageValue,
+	backend::{Consolidate, IterArgs, StorageIterator},
+	trie_backend::AsLocalTrieCache,
+	warn, StorageKey, StorageValue,
 };
 <span class="kw">use </span>codec::Codec;
 <span class="kw">use </span>hash_db::{<span class="self">self</span>, AsHashDB, HashDB, HashDBRef, Hasher, Prefix};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>parking_lot::RwLock;
 <span class="kw">use </span>sp_core::storage::{ChildInfo, ChildType, StateVersion};
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
-</span><span class="kw">use </span>sp_std::marker::PhantomData;
-<span class="kw">use </span>sp_std::{boxed::Box, vec::Vec};
+<span class="kw">use </span>sp_std::{boxed::Box, marker::PhantomData, vec::Vec};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>sp_trie::recorder::Recorder;
 <span class="kw">use </span>sp_trie::{
 	child_delta_trie_root, delta_trie_root, empty_child_trie_root, read_child_trie_hash,
 	read_child_trie_value, read_trie_value,
 	trie_types::{TrieDBBuilder, TrieError},
-	DBValue, KeySpacedDB, NodeCodec, Trie, TrieCache, TrieDBIterator, TrieDBKeyIterator,
-	TrieRecorder,
+	DBValue, KeySpacedDB, NodeCodec, Trie, TrieCache, TrieDBRawIterator, TrieRecorder,
 };
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>std::{collections::HashMap, sync::Arc};
@@ -1049,6 +959,109 @@
 </span><span class="kw">impl</span>&lt;H&gt; Cache&lt;H&gt; {
 	<span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
 		Cache { child_root: HashMap::new() }
+	}
+}
+
+<span class="kw">enum </span>IterState {
+	Pending,
+	FinishedComplete,
+	FinishedIncomplete,
+}
+
+<span class="doccomment">/// A raw iterator over the storage.
+</span><span class="kw">pub struct </span>RawIter&lt;S, H, C&gt;
+<span class="kw">where
+	</span>H: Hasher,
+{
+	stop_on_incomplete_database: bool,
+	root: H::Out,
+	child_info: <span class="prelude-ty">Option</span>&lt;ChildInfo&gt;,
+	trie_iter: TrieDBRawIterator&lt;Layout&lt;H&gt;&gt;,
+	state: IterState,
+	_phantom: PhantomData&lt;(S, C)&gt;,
+}
+
+<span class="kw">impl</span>&lt;S, H, C&gt; RawIter&lt;S, H, C&gt;
+<span class="kw">where
+	</span>H: Hasher,
+	S: TrieBackendStorage&lt;H&gt;,
+	H::Out: Codec + Ord,
+	C: AsLocalTrieCache&lt;H&gt; + Send + Sync,
+{
+	<span class="attr">#[inline]
+	</span><span class="kw">fn </span>prepare&lt;R&gt;(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		backend: <span class="kw-2">&amp;</span>TrieBackendEssence&lt;S, H, C&gt;,
+		callback: <span class="kw">impl </span>FnOnce(
+			<span class="kw-2">&amp;</span>sp_trie::TrieDB&lt;Layout&lt;H&gt;&gt;,
+			<span class="kw-2">&amp;mut </span>TrieDBRawIterator&lt;Layout&lt;H&gt;&gt;,
+		) -&gt; <span class="prelude-ty">Option</span>&lt;core::result::Result&lt;R, Box&lt;TrieError&lt;&lt;H <span class="kw">as </span>Hasher&gt;::Out&gt;&gt;&gt;&gt;,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;R&gt;&gt; {
+		<span class="kw">if </span>!<span class="macro">matches!</span>(<span class="self">self</span>.state, IterState::Pending) {
+			<span class="kw">return </span><span class="prelude-val">None
+		</span>}
+
+		<span class="kw">let </span>result = backend.with_trie_db(<span class="self">self</span>.root, <span class="self">self</span>.child_info.as_ref(), |db| {
+			callback(<span class="kw-2">&amp;</span>db, <span class="kw-2">&amp;mut </span><span class="self">self</span>.trie_iter)
+		});
+		<span class="kw">match </span>result {
+			<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(key_value)) =&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(key_value)),
+			<span class="prelude-val">None </span>=&gt; {
+				<span class="self">self</span>.state = IterState::FinishedComplete;
+				<span class="prelude-val">None
+			</span>},
+			<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(error)) =&gt; {
+				<span class="self">self</span>.state = IterState::FinishedIncomplete;
+				<span class="kw">if </span><span class="macro">matches!</span>(<span class="kw-2">*</span>error, TrieError::IncompleteDatabase(<span class="kw">_</span>)) &amp;&amp;
+					<span class="self">self</span>.stop_on_incomplete_database
+				{
+					<span class="prelude-val">None
+				</span>} <span class="kw">else </span>{
+					<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;TrieDB iteration error: {}&quot;</span>, error)))
+				}
+			},
+		}
+	}
+}
+
+<span class="kw">impl</span>&lt;S, H, C&gt; Default <span class="kw">for </span>RawIter&lt;S, H, C&gt;
+<span class="kw">where
+	</span>H: Hasher,
+{
+	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{
+			stop_on_incomplete_database: <span class="bool-val">false</span>,
+			child_info: <span class="prelude-val">None</span>,
+			root: Default::default(),
+			trie_iter: TrieDBRawIterator::empty(),
+			state: IterState::FinishedComplete,
+			_phantom: Default::default(),
+		}
+	}
+}
+
+<span class="kw">impl</span>&lt;S, H, C&gt; StorageIterator&lt;H&gt; <span class="kw">for </span>RawIter&lt;S, H, C&gt;
+<span class="kw">where
+	</span>H: Hasher,
+	S: TrieBackendStorage&lt;H&gt;,
+	H::Out: Codec + Ord,
+	C: AsLocalTrieCache&lt;H&gt; + Send + Sync,
+{
+	<span class="kw">type </span>Backend = <span class="kw">crate</span>::TrieBackend&lt;S, H, C&gt;;
+	<span class="kw">type </span>Error = <span class="kw">crate</span>::DefaultError;
+
+	<span class="attr">#[inline]
+	</span><span class="kw">fn </span>next_key(<span class="kw-2">&amp;mut </span><span class="self">self</span>, backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::Backend) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;StorageKey&gt;&gt; {
+		<span class="self">self</span>.prepare(<span class="kw-2">&amp;</span>backend.essence, |trie, trie_iter| trie_iter.next_key(<span class="kw-2">&amp;</span>trie))
+	}
+
+	<span class="attr">#[inline]
+	</span><span class="kw">fn </span>next_pair(<span class="kw-2">&amp;mut </span><span class="self">self</span>, backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::Backend) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;(StorageKey, StorageValue)&gt;&gt; {
+		<span class="self">self</span>.prepare(<span class="kw-2">&amp;</span>backend.essence, |trie, trie_iter| trie_iter.next_item(<span class="kw-2">&amp;</span>trie))
+	}
+
+	<span class="kw">fn </span>was_complete(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">matches!</span>(<span class="self">self</span>.state, IterState::FinishedComplete)
 	}
 }
 
@@ -1144,6 +1157,7 @@
 	///
 	/// If the given `storage_root` is `None`, `self.root` will be used.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	#[inline]
 	</span><span class="kw">fn </span>with_recorder_and_cache&lt;R&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		storage_root: <span class="prelude-ty">Option</span>&lt;H::Out&gt;,
@@ -1169,6 +1183,7 @@
 	}
 
 	<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+	#[inline]
 	</span><span class="kw">fn </span>with_recorder_and_cache&lt;R&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;H::Out&gt;,
@@ -1238,6 +1253,31 @@
 <span class="kw">where
 	</span>H::Out: Codec + Ord,
 {
+	<span class="doccomment">/// Calls the given closure with a [`TrieDb`] constructed for the given
+	/// storage root and (optionally) child trie.
+	</span><span class="attr">#[inline]
+	</span><span class="kw">fn </span>with_trie_db&lt;R&gt;(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		root: H::Out,
+		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
+		callback: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span>sp_trie::TrieDB&lt;Layout&lt;H&gt;&gt;) -&gt; R,
+	) -&gt; R {
+		<span class="kw">let </span>backend = <span class="self">self </span><span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>HashDBRef&lt;H, Vec&lt;u8&gt;&gt;;
+		<span class="kw">let </span>db = child_info
+			.as_ref()
+			.map(|child_info| KeySpacedDB::new(backend, child_info.keyspace()));
+		<span class="kw">let </span>db = db.as_ref().map(|db| db <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>HashDBRef&lt;H, Vec&lt;u8&gt;&gt;).unwrap_or(backend);
+
+		<span class="self">self</span>.with_recorder_and_cache(<span class="prelude-val">Some</span>(root), |recorder, cache| {
+			<span class="kw">let </span>trie = TrieDBBuilder::&lt;H&gt;::new(db, <span class="kw-2">&amp;</span>root)
+				.with_optional_recorder(recorder)
+				.with_optional_cache(cache)
+				.build();
+
+			callback(<span class="kw-2">&amp;</span>trie)
+		})
+	}
+
 	<span class="doccomment">/// Return the next key in the trie i.e. the minimum key that is strictly superior to `key` in
 	/// lexicographic order.
 	</span><span class="kw">pub fn </span>next_storage_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;StorageKey&gt;&gt; {
@@ -1292,21 +1332,7 @@
 		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
 		key: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;StorageKey&gt;&gt; {
-		<span class="kw">let </span>dyn_eph: <span class="kw-2">&amp;</span><span class="kw">dyn </span>HashDBRef&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;;
-		<span class="kw">let </span>keyspace_eph;
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = child_info.as_ref() {
-			keyspace_eph = KeySpacedDB::new(<span class="self">self</span>, child_info.keyspace());
-			dyn_eph = <span class="kw-2">&amp;</span>keyspace_eph;
-		} <span class="kw">else </span>{
-			dyn_eph = <span class="self">self</span>;
-		}
-
-		<span class="self">self</span>.with_recorder_and_cache(<span class="prelude-val">Some</span>(<span class="kw-2">*</span>root), |recorder, cache| {
-			<span class="kw">let </span>trie = TrieDBBuilder::&lt;H&gt;::new(dyn_eph, root)
-				.with_optional_recorder(recorder)
-				.with_optional_cache(cache)
-				.build();
-
+		<span class="self">self</span>.with_trie_db(<span class="kw-2">*</span>root, child_info, |trie| {
 			<span class="kw">let </span><span class="kw-2">mut </span>iter = trie.key_iter().map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;TrieDB iteration error: {}&quot;</span>, e))<span class="question-mark">?</span>;
 
 			<span class="comment">// The key just after the one given in input, basically `key++0`.
@@ -1405,246 +1431,42 @@
 		})
 	}
 
-	<span class="doccomment">/// Retrieve all entries keys of storage and call `f` for each of those keys.
-	/// Aborts as soon as `f` returns false.
-	///
-	/// Returns `true` when all keys were iterated.
-	</span><span class="kw">pub fn </span>apply_to_key_values_while(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		f: <span class="kw">impl </span>FnMut(Vec&lt;u8&gt;, Vec&lt;u8&gt;) -&gt; bool,
-		allow_missing_nodes: bool,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-		<span class="kw">let </span>root = <span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = child_info.as_ref() {
-			<span class="kw">match </span><span class="self">self</span>.child_root(child_info)<span class="question-mark">? </span>{
-				<span class="prelude-val">Some</span>(child_root) =&gt; child_root,
-				<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">true</span>),
-			}
+	<span class="doccomment">/// Create a raw iterator over the storage.
+	</span><span class="kw">pub fn </span>raw_iter(<span class="kw-2">&amp;</span><span class="self">self</span>, args: IterArgs) -&gt; <span class="prelude-ty">Result</span>&lt;RawIter&lt;S, H, C&gt;&gt; {
+		<span class="kw">let </span>root = <span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = args.child_info.as_ref() {
+			<span class="kw">let </span>root = <span class="kw">match </span><span class="self">self</span>.child_root(<span class="kw-2">&amp;</span>child_info)<span class="question-mark">? </span>{
+				<span class="prelude-val">Some</span>(root) =&gt; root,
+				<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(Default::default()),
+			};
+			root
 		} <span class="kw">else </span>{
 			<span class="self">self</span>.root
 		};
 
-		<span class="self">self</span>.trie_iter_inner(<span class="kw-2">&amp;</span>root, prefix, f, child_info, start_at, allow_missing_nodes)
-	}
-
-	<span class="doccomment">/// Retrieve all entries keys of a storage and call `f` for each of those keys.
-	/// Aborts as soon as `f` returns false.
-	</span><span class="kw">pub fn </span>apply_to_keys_while&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8]) -&gt; bool&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		f: F,
-	) {
-		<span class="kw">let </span>root = <span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = child_info.as_ref() {
-			<span class="kw">match </span><span class="self">self</span>.child_root(child_info) {
-				<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(v)) =&gt; v,
-				<span class="comment">// If the child trie doesn&#39;t exist, there is no need to continue.
-				</span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="kw">return</span>,
-				<span class="prelude-val">Err</span>(e) =&gt; {
-					<span class="macro">debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error while iterating child storage: {}&quot;</span>, e);
-					<span class="kw">return
-				</span>},
-			}
-		} <span class="kw">else </span>{
-			<span class="self">self</span>.root
-		};
-
-		<span class="self">self</span>.trie_iter_key_inner(<span class="kw-2">&amp;</span>root, prefix, f, child_info, start_at)
-	}
-
-	<span class="doccomment">/// Execute given closure for all keys starting with prefix.
-	</span><span class="kw">pub fn </span>for_child_keys_with_prefix(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		child_info: <span class="kw-2">&amp;</span>ChildInfo,
-		prefix: <span class="kw-2">&amp;</span>[u8],
-		<span class="kw-2">mut </span>f: <span class="kw">impl </span>FnMut(<span class="kw-2">&amp;</span>[u8]),
-	) {
-		<span class="kw">let </span>root = <span class="kw">match </span><span class="self">self</span>.child_root(child_info) {
-			<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(v)) =&gt; v,
-			<span class="comment">// If the child trie doesn&#39;t exist, there is no need to continue.
-			</span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="kw">return</span>,
-			<span class="prelude-val">Err</span>(e) =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error while iterating child storage: {}&quot;</span>, e);
-				<span class="kw">return
-			</span>},
-		};
-
-		<span class="self">self</span>.trie_iter_key_inner(
-			<span class="kw-2">&amp;</span>root,
-			<span class="prelude-val">Some</span>(prefix),
-			|k| {
-				f(k);
-				<span class="bool-val">true
-			</span>},
-			<span class="prelude-val">Some</span>(child_info),
-			<span class="prelude-val">None</span>,
-		)
-	}
-
-	<span class="doccomment">/// Execute given closure for all keys starting with prefix.
-	</span><span class="kw">pub fn </span>for_keys_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8])&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8], <span class="kw-2">mut </span>f: F) {
-		<span class="self">self</span>.trie_iter_key_inner(
-			<span class="kw-2">&amp;</span><span class="self">self</span>.root,
-			<span class="prelude-val">Some</span>(prefix),
-			|k| {
-				f(k);
-				<span class="bool-val">true
-			</span>},
-			<span class="prelude-val">None</span>,
-			<span class="prelude-val">None</span>,
-		)
-	}
-
-	<span class="kw">fn </span>trie_iter_key_inner&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8]) -&gt; bool&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		root: <span class="kw-2">&amp;</span>H::Out,
-		maybe_prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		<span class="kw-2">mut </span>f: F,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		maybe_start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-	) {
-		<span class="kw">let </span><span class="kw-2">mut </span>iter = <span class="kw">move </span>|db| -&gt; sp_std::result::Result&lt;(), Box&lt;TrieError&lt;H::Out&gt;&gt;&gt; {
-			<span class="self">self</span>.with_recorder_and_cache(<span class="prelude-val">Some</span>(<span class="kw-2">*</span>root), |recorder, cache| {
-				<span class="kw">let </span>trie = TrieDBBuilder::&lt;H&gt;::new(db, root)
-					.with_optional_recorder(recorder)
-					.with_optional_cache(cache)
-					.build();
-				<span class="kw">let </span>prefix = maybe_prefix.unwrap_or(<span class="kw-2">&amp;</span>[]);
-				<span class="kw">let </span>iter = <span class="kw">match </span>maybe_start_at {
-					<span class="prelude-val">Some</span>(start_at) =&gt;
-						TrieDBKeyIterator::new_prefixed_then_seek(<span class="kw-2">&amp;</span>trie, prefix, start_at),
-					<span class="prelude-val">None </span>=&gt; TrieDBKeyIterator::new_prefixed(<span class="kw-2">&amp;</span>trie, prefix),
-				}<span class="question-mark">?</span>;
-
-				<span class="kw">for </span>x <span class="kw">in </span>iter {
-					<span class="kw">let </span>key = x<span class="question-mark">?</span>;
-
-					<span class="macro">debug_assert!</span>(maybe_prefix
-						.as_ref()
-						.map(|prefix| key.starts_with(prefix))
-						.unwrap_or(<span class="bool-val">true</span>));
-
-					<span class="kw">if </span>!f(<span class="kw-2">&amp;</span>key) {
-						<span class="kw">break
-					</span>}
-				}
-
-				<span class="prelude-val">Ok</span>(())
-			})
-		};
-
-		<span class="kw">let </span>result = <span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = child_info {
-			<span class="kw">let </span>db = KeySpacedDB::new(<span class="self">self</span>, child_info.keyspace());
-			iter(<span class="kw-2">&amp;</span>db)
-		} <span class="kw">else </span>{
-			iter(<span class="self">self</span>)
-		};
-		<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = result {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error while iterating by prefix: {}&quot;</span>, e);
+		<span class="kw">if </span><span class="self">self</span>.root == Default::default() {
+			<span class="comment">// A special-case for an empty storage root.
+			</span><span class="kw">return </span><span class="prelude-val">Ok</span>(Default::default())
 		}
-	}
 
-	<span class="kw">fn </span>trie_iter_inner&lt;F: FnMut(Vec&lt;u8&gt;, Vec&lt;u8&gt;) -&gt; bool&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		root: <span class="kw-2">&amp;</span>H::Out,
-		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		<span class="kw-2">mut </span>f: F,
-		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
-		allow_missing_nodes: bool,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>iter = <span class="kw">move </span>|db| -&gt; sp_std::result::Result&lt;bool, Box&lt;TrieError&lt;H::Out&gt;&gt;&gt; {
-			<span class="self">self</span>.with_recorder_and_cache(<span class="prelude-val">Some</span>(<span class="kw-2">*</span>root), |recorder, cache| {
-				<span class="kw">let </span>trie = TrieDBBuilder::&lt;H&gt;::new(db, root)
-					.with_optional_recorder(recorder)
-					.with_optional_cache(cache)
-					.build();
-
-				<span class="kw">let </span>prefix = prefix.unwrap_or(<span class="kw-2">&amp;</span>[]);
-				<span class="kw">let </span>iterator = <span class="kw">if let </span><span class="prelude-val">Some</span>(start_at) = start_at {
-					TrieDBIterator::new_prefixed_then_seek(<span class="kw-2">&amp;</span>trie, prefix, start_at)<span class="question-mark">?
-				</span>} <span class="kw">else </span>{
-					TrieDBIterator::new_prefixed(<span class="kw-2">&amp;</span>trie, prefix)<span class="question-mark">?
-				</span>};
-				<span class="kw">for </span>x <span class="kw">in </span>iterator {
-					<span class="kw">let </span>(key, value) = x<span class="question-mark">?</span>;
-
-					<span class="macro">debug_assert!</span>(key.starts_with(prefix));
-
-					<span class="kw">if </span>!f(key, value) {
-						<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
-					}
+		<span class="kw">let </span>trie_iter = <span class="self">self
+			</span>.with_trie_db(root, args.child_info.as_ref(), |db| {
+				<span class="kw">let </span>prefix = args.prefix.as_deref().unwrap_or(<span class="kw-2">&amp;</span>[]);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(start_at) = args.start_at {
+					TrieDBRawIterator::new_prefixed_then_seek(db, prefix, <span class="kw-2">&amp;</span>start_at)
+				} <span class="kw">else </span>{
+					TrieDBRawIterator::new_prefixed(db, prefix)
 				}
-
-				<span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
 			})
-		};
+			.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;TrieDB iteration error: {}&quot;</span>, e))<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>result = <span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = child_info {
-			<span class="kw">let </span>db = KeySpacedDB::new(<span class="self">self</span>, child_info.keyspace());
-			iter(<span class="kw-2">&amp;</span>db)
-		} <span class="kw">else </span>{
-			iter(<span class="self">self</span>)
-		};
-		<span class="kw">match </span>result {
-			<span class="prelude-val">Ok</span>(completed) =&gt; <span class="prelude-val">Ok</span>(completed),
-			<span class="prelude-val">Err</span>(e) <span class="kw">if </span><span class="macro">matches!</span>(<span class="kw-2">*</span>e, TrieError::IncompleteDatabase(<span class="kw">_</span>)) &amp;&amp; allow_missing_nodes =&gt;
-				<span class="prelude-val">Ok</span>(<span class="bool-val">false</span>),
-			<span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;TrieDB iteration error: {}&quot;</span>, e)),
-		}
-	}
-
-	<span class="doccomment">/// Execute given closure for all key and values starting with prefix.
-	</span><span class="kw">pub fn </span>for_key_values_with_prefix&lt;F: FnMut(<span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8])&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8], <span class="kw-2">mut </span>f: F) {
-		<span class="kw">let _ </span>= <span class="self">self</span>.trie_iter_inner(
-			<span class="kw-2">&amp;</span><span class="self">self</span>.root,
-			<span class="prelude-val">Some</span>(prefix),
-			|k, v| {
-				f(<span class="kw-2">&amp;</span>k, <span class="kw-2">&amp;</span>v);
-				<span class="bool-val">true
-			</span>},
-			<span class="prelude-val">None</span>,
-			<span class="prelude-val">None</span>,
-			<span class="bool-val">false</span>,
-		);
-	}
-
-	<span class="doccomment">/// Returns all `(key, value)` pairs in the trie.
-	</span><span class="kw">pub fn </span>pairs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(StorageKey, StorageValue)&gt; {
-		<span class="kw">let </span>collect_all = || -&gt; sp_std::result::Result&lt;<span class="kw">_</span>, Box&lt;TrieError&lt;H::Out&gt;&gt;&gt; {
-			<span class="self">self</span>.with_recorder_and_cache(<span class="prelude-val">None</span>, |recorder, cache| {
-				<span class="kw">let </span>trie = TrieDBBuilder::&lt;H&gt;::new(<span class="self">self</span>, <span class="self">self</span>.root())
-					.with_optional_cache(cache)
-					.with_optional_recorder(recorder)
-					.build();
-
-				<span class="kw">let </span><span class="kw-2">mut </span>v = Vec::new();
-				<span class="kw">for </span>x <span class="kw">in </span>trie.iter()<span class="question-mark">? </span>{
-					<span class="kw">let </span>(key, value) = x<span class="question-mark">?</span>;
-					v.push((key.to_vec(), value.to_vec()));
-				}
-
-				<span class="prelude-val">Ok</span>(v)
-			})
-		};
-
-		<span class="kw">match </span>collect_all() {
-			<span class="prelude-val">Ok</span>(v) =&gt; v,
-			<span class="prelude-val">Err</span>(e) =&gt; {
-				<span class="macro">debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error extracting trie values: {}&quot;</span>, e);
-				Vec::new()
-			},
-		}
-	}
-
-	<span class="doccomment">/// Returns all keys that start with the given `prefix`.
-	</span><span class="kw">pub fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;StorageKey&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>keys = Vec::new();
-		<span class="self">self</span>.for_keys_with_prefix(prefix, |k| keys.push(k.to_vec()));
-		keys
+		<span class="prelude-val">Ok</span>(RawIter {
+			stop_on_incomplete_database: args.stop_on_incomplete_database,
+			child_info: args.child_info,
+			root,
+			trie_iter,
+			state: IterState::Pending,
+			_phantom: Default::default(),
+		})
 	}
 
 	<span class="doccomment">/// Return the storage root after applying the given `delta`.
