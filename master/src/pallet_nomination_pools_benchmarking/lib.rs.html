@@ -660,6 +660,40 @@
 <a href="#660" id="660">660</a>
 <a href="#661" id="661">661</a>
 <a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -692,9 +726,9 @@
 <span class="kw">use </span>frame_support::{assert_ok, ensure, traits::Get};
 <span class="kw">use </span>frame_system::RawOrigin <span class="kw">as </span>RuntimeOrigin;
 <span class="kw">use </span>pallet_nomination_pools::{
-	BalanceOf, BondExtra, BondedPoolInner, BondedPools, ConfigOp, MaxPoolMembers,
-	MaxPoolMembersPerPool, MaxPools, Metadata, MinCreateBond, MinJoinBond, Pallet <span class="kw">as </span>Pools,
-	PoolMembers, PoolRoles, PoolState, RewardPools, SubPoolsStorage,
+	BalanceOf, BondExtra, BondedPoolInner, BondedPools, ClaimPermission, ClaimPermissions,
+	ConfigOp, MaxPoolMembers, MaxPoolMembersPerPool, MaxPools, Metadata, MinCreateBond,
+	MinJoinBond, Pallet <span class="kw">as </span>Pools, PoolMembers, PoolRoles, PoolState, RewardPools, SubPoolsStorage,
 };
 <span class="kw">use </span>sp_runtime::traits::{Bounded, StaticLookup, Zero};
 <span class="kw">use </span>sp_staking::{EraIndex, StakingInterface};
@@ -914,17 +948,22 @@
 		);
 	}
 
-	bond_extra_reward {
+	bond_extra_other {
+		<span class="kw">let </span>claimer: T::AccountId = account(<span class="string">&quot;claimer&quot;</span>, USER_SEED + <span class="number">4</span>, <span class="number">0</span>);
+
 		<span class="kw">let </span>origin_weight = Pools::&lt;T&gt;::depositor_min_bond() * <span class="number">2u32</span>.into();
 		<span class="kw">let </span>scenario = ListScenario::&lt;T&gt;::new(origin_weight, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 		<span class="kw">let </span>extra = (scenario.dest_weight - origin_weight).max(CurrencyOf::&lt;T&gt;::minimum_balance());
+
+		<span class="comment">// set claim preferences to `PermissionlessAll` to any account to bond extra on member&#39;s behalf.
+		</span><span class="kw">let _ </span>= Pools::&lt;T&gt;::set_claim_permission(RuntimeOrigin::Signed(scenario.creator1.clone()).into(), ClaimPermission::PermissionlessAll);
 
 		<span class="comment">// transfer exactly `extra` to the depositor of the src pool (1),
 		</span><span class="kw">let </span>reward_account1 = Pools::&lt;T&gt;::create_reward_account(<span class="number">1</span>);
 		<span class="macro">assert!</span>(extra &gt;= CurrencyOf::&lt;T&gt;::minimum_balance());
 		CurrencyOf::&lt;T&gt;::deposit_creating(<span class="kw-2">&amp;</span>reward_account1, extra);
 
-	}: bond_extra(RuntimeOrigin::Signed(scenario.creator1.clone()), BondExtra::Rewards)
+	}: <span class="kw">_</span>(RuntimeOrigin::Signed(claimer), T::Lookup::unlookup(scenario.creator1.clone()), BondExtra::Rewards)
 	verify {
 		<span class="macro">assert!</span>(
 			T::Staking::active_stake(<span class="kw-2">&amp;</span>scenario.origin1).unwrap() &gt;=
@@ -933,6 +972,8 @@
 	}
 
 	claim_payout {
+		<span class="kw">let </span>claimer: T::AccountId = account(<span class="string">&quot;claimer&quot;</span>, USER_SEED + <span class="number">4</span>, <span class="number">0</span>);
+
 		<span class="kw">let </span>origin_weight = Pools::&lt;T&gt;::depositor_min_bond() * <span class="number">2u32</span>.into();
 		<span class="kw">let </span>ed = CurrencyOf::&lt;T&gt;::minimum_balance();
 		<span class="kw">let </span>(depositor, pool_account) = create_pool_account::&lt;T&gt;(<span class="number">0</span>, origin_weight);
@@ -941,6 +982,10 @@
 		<span class="comment">// Send funds to the reward account of the pool
 		</span>CurrencyOf::&lt;T&gt;::make_free_balance_be(<span class="kw-2">&amp;</span>reward_account, ed + origin_weight);
 
+		<span class="comment">// set claim preferences to `PermissionlessAll` so any account can claim rewards on member&#39;s
+		// behalf.
+		</span><span class="kw">let _ </span>= Pools::&lt;T&gt;::set_claim_permission(RuntimeOrigin::Signed(depositor.clone()).into(), ClaimPermission::PermissionlessAll);
+
 		<span class="comment">// Sanity check
 		</span><span class="macro">assert_eq!</span>(
 			CurrencyOf::&lt;T&gt;::free_balance(<span class="kw-2">&amp;</span>depositor),
@@ -948,7 +993,7 @@
 		);
 
 		<span class="macro">whitelist_account!</span>(depositor);
-	}:<span class="kw">_</span>(RuntimeOrigin::Signed(depositor.clone()))
+	}:claim_payout_other(RuntimeOrigin::Signed(claimer), depositor.clone())
 	verify {
 		<span class="macro">assert_eq!</span>(
 			CurrencyOf::&lt;T&gt;::free_balance(<span class="kw-2">&amp;</span>depositor),
@@ -959,6 +1004,7 @@
 			ed + Zero::zero()
 		);
 	}
+
 
 	unbond {
 		<span class="comment">// The weight the nominator will start at. The value used here is expected to be
@@ -1314,6 +1360,28 @@
 	}:<span class="kw">_</span>(RuntimeOrigin::Signed(depositor.clone()), <span class="number">1</span>)
 	verify {
 		<span class="macro">assert!</span>(T::Staking::nominations(Pools::&lt;T&gt;::create_bonded_account(<span class="number">1</span>)).is_none());
+	}
+
+	set_claim_permission {
+		<span class="comment">// Create a pool
+		</span><span class="kw">let </span>min_create_bond = Pools::&lt;T&gt;::depositor_min_bond();
+		<span class="kw">let </span>(depositor, pool_account) = create_pool_account::&lt;T&gt;(<span class="number">0</span>, min_create_bond);
+
+		<span class="comment">// Join pool
+		</span><span class="kw">let </span>min_join_bond = MinJoinBond::&lt;T&gt;::get().max(CurrencyOf::&lt;T&gt;::minimum_balance());
+		<span class="kw">let </span>joiner = create_funded_user_with_balance::&lt;T&gt;(<span class="string">&quot;joiner&quot;</span>, <span class="number">0</span>, min_join_bond * <span class="number">4u32</span>.into());
+		<span class="kw">let </span>joiner_lookup = T::Lookup::unlookup(joiner.clone());
+		Pools::&lt;T&gt;::join(RuntimeOrigin::Signed(joiner.clone()).into(), min_join_bond, <span class="number">1</span>)
+			.unwrap();
+
+		<span class="comment">// Sanity check join worked
+		</span><span class="macro">assert_eq!</span>(
+			T::Staking::active_stake(<span class="kw-2">&amp;</span>pool_account).unwrap(),
+			min_create_bond + min_join_bond
+		);
+	}:<span class="kw">_</span>(RuntimeOrigin::Signed(joiner.clone()), ClaimPermission::PermissionlessAll)
+	verify {
+		<span class="macro">assert_eq!</span>(ClaimPermissions::&lt;T&gt;::get(joiner), ClaimPermission::PermissionlessAll);
 	}
 
 	<span class="macro">impl_benchmark_test_suite!</span>(
