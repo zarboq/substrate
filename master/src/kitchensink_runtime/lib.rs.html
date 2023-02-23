@@ -2452,12 +2452,6 @@
 <a href="#2452" id="2452">2452</a>
 <a href="#2453" id="2453">2453</a>
 <a href="#2454" id="2454">2454</a>
-<a href="#2455" id="2455">2455</a>
-<a href="#2456" id="2456">2456</a>
-<a href="#2457" id="2457">2457</a>
-<a href="#2458" id="2458">2458</a>
-<a href="#2459" id="2459">2459</a>
-<a href="#2460" id="2460">2460</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2484,8 +2478,7 @@
 
 </span><span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>frame_election_provider_support::{
-	onchain, weights::SubstrateWeight, ApprovalVoting, BalancingConfig, ElectionDataProvider,
-	SequentialPhragmen, VoteWeight,
+	onchain, BalancingConfig, ElectionDataProvider, SequentialPhragmen, VoteWeight,
 };
 <span class="kw">use </span>frame_support::{
 	construct_runtime,
@@ -3471,21 +3464,18 @@
 	<span class="kw">pub const </span>TermDuration: BlockNumber = <span class="number">7 </span>* DAYS;
 	<span class="kw">pub const </span>DesiredMembers: u32 = <span class="number">13</span>;
 	<span class="kw">pub const </span>DesiredRunnersUp: u32 = <span class="number">7</span>;
+	<span class="kw">pub const </span>MaxVotesPerVoter: u32 = <span class="number">16</span>;
 	<span class="kw">pub const </span>MaxVoters: u32 = <span class="number">512</span>;
 	<span class="kw">pub const </span>MaxCandidates: u32 = <span class="number">64</span>;
-	<span class="kw">pub const </span>MaxVotesPerVoter: u32 = <span class="number">16</span>;
-	<span class="comment">// The ElectionsPalletId parameter name was changed along with the renaming of the elections
-	// pallet, but we keep the same lock ID to prevent a migration from current runtimes.
-	// Related to https://github.com/paritytech/substrate/issues/8250
-	</span><span class="kw">pub const </span>ElectionsPalletId: LockIdentifier = <span class="kw-2">*</span><span class="string">b&quot;phrelect&quot;</span>;
+	<span class="kw">pub const </span>ElectionsPhragmenPalletId: LockIdentifier = <span class="kw-2">*</span><span class="string">b&quot;phrelect&quot;</span>;
 }
 
 <span class="comment">// Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
 </span><span class="macro">const_assert!</span>(DesiredMembers::get() &lt;= CouncilMaxMembers::get());
 
-<span class="kw">impl </span>pallet_elections::Config <span class="kw">for </span>Runtime {
+<span class="kw">impl </span>pallet_elections_phragmen::Config <span class="kw">for </span>Runtime {
 	<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
-	<span class="kw">type </span>PalletId = ElectionsPalletId;
+	<span class="kw">type </span>PalletId = ElectionsPhragmenPalletId;
 	<span class="kw">type </span>Currency = Balances;
 	<span class="kw">type </span>ChangeMembers = Council;
 	<span class="comment">// NOTE: this implies that council&#39;s genesis members cannot be set directly and must come from
@@ -3503,9 +3493,7 @@
 	<span class="kw">type </span>MaxVoters = MaxVoters;
 	<span class="kw">type </span>MaxVotesPerVoter = MaxVotesPerVoter;
 	<span class="kw">type </span>MaxCandidates = MaxCandidates;
-	<span class="kw">type </span>ElectionSolver = ApprovalVoting&lt;<span class="self">Self</span>::AccountId, Perbill&gt;;
-	<span class="kw">type </span>SolverWeightInfo = SubstrateWeight&lt;Runtime&gt;;
-	<span class="kw">type </span>WeightInfo = pallet_elections::weights::SubstrateWeight&lt;Runtime&gt;;
+	<span class="kw">type </span>WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight&lt;Runtime&gt;;
 }
 
 <span class="macro">parameter_types! </span>{
@@ -4203,7 +4191,7 @@
 		Democracy: pallet_democracy,
 		Council: pallet_collective::&lt;Instance1&gt;,
 		TechnicalCommittee: pallet_collective::&lt;Instance2&gt;,
-		Elections: pallet_elections,
+		Elections: pallet_elections_phragmen,
 		TechnicalMembership: pallet_membership::&lt;Instance1&gt;,
 		Grandpa: pallet_grandpa,
 		Treasury: pallet_treasury,
@@ -4317,7 +4305,6 @@
 	<span class="macro">frame_benchmarking::define_benchmarks!</span>(
 		[frame_benchmarking, BaselineBench::&lt;Runtime&gt;]
 		[frame_benchmarking_pallet_pov, Pov]
-		[frame_election_provider_support, EPSBench::&lt;Runtime&gt;]
 		[pallet_alliance, Alliance]
 		[pallet_assets, Assets]
 		[pallet_babe, Babe]
@@ -4330,7 +4317,8 @@
 		[pallet_contracts, Contracts]
 		[pallet_democracy, Democracy]
 		[pallet_election_provider_multi_phase, ElectionProviderMultiPhase]
-		[pallet_elections, Elections]
+		[pallet_election_provider_support_benchmarking, EPSBench::&lt;Runtime&gt;]
+		[pallet_elections_phragmen, Elections]
 		[pallet_fast_unstake, FastUnstake]
 		[pallet_nis, Nis]
 		[pallet_grandpa, Grandpa]
@@ -4789,7 +4777,7 @@
 			// which is why we need these two lines below.
 			</span><span class="kw">use </span>pallet_session_benchmarking::Pallet <span class="kw">as </span>SessionBench;
 			<span class="kw">use </span>pallet_offences_benchmarking::Pallet <span class="kw">as </span>OffencesBench;
-			<span class="kw">use </span>frame_election_provider_support::benchmarking::Pallet <span class="kw">as </span>EPSBench;
+			<span class="kw">use </span>pallet_election_provider_support_benchmarking::Pallet <span class="kw">as </span>EPSBench;
 			<span class="kw">use </span>frame_system_benchmarking::Pallet <span class="kw">as </span>SystemBench;
 			<span class="kw">use </span>baseline::Pallet <span class="kw">as </span>BaselineBench;
 			<span class="kw">use </span>pallet_nomination_pools_benchmarking::Pallet <span class="kw">as </span>NominationPoolsBench;
@@ -4812,14 +4800,14 @@
 			// which is why we need these two lines below.
 			</span><span class="kw">use </span>pallet_session_benchmarking::Pallet <span class="kw">as </span>SessionBench;
 			<span class="kw">use </span>pallet_offences_benchmarking::Pallet <span class="kw">as </span>OffencesBench;
-			<span class="kw">use </span>frame_election_provider_support::benchmarking::Pallet <span class="kw">as </span>EPSBench;
+			<span class="kw">use </span>pallet_election_provider_support_benchmarking::Pallet <span class="kw">as </span>EPSBench;
 			<span class="kw">use </span>frame_system_benchmarking::Pallet <span class="kw">as </span>SystemBench;
 			<span class="kw">use </span>baseline::Pallet <span class="kw">as </span>BaselineBench;
 			<span class="kw">use </span>pallet_nomination_pools_benchmarking::Pallet <span class="kw">as </span>NominationPoolsBench;
 
 			<span class="kw">impl </span>pallet_session_benchmarking::Config <span class="kw">for </span>Runtime {}
 			<span class="kw">impl </span>pallet_offences_benchmarking::Config <span class="kw">for </span>Runtime {}
-			<span class="kw">impl </span>frame_election_provider_support::benchmarking::Config <span class="kw">for </span>Runtime {}
+			<span class="kw">impl </span>pallet_election_provider_support_benchmarking::Config <span class="kw">for </span>Runtime {}
 			<span class="kw">impl </span>frame_system_benchmarking::Config <span class="kw">for </span>Runtime {}
 			<span class="kw">impl </span>baseline::Config <span class="kw">for </span>Runtime {}
 			<span class="kw">impl </span>pallet_nomination_pools_benchmarking::Config <span class="kw">for </span>Runtime {}

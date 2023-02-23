@@ -13,7 +13,7 @@ var sourcesIndex = JSON.parse('{\
 "frame_benchmarking_cli":["",[["block",[],["bench.rs","cmd.rs","mod.rs"]],["extrinsic",[],["bench.rs","cmd.rs","extrinsic_factory.rs","mod.rs"]],["machine",[],["hardware.rs","mod.rs"]],["overhead",[],["cmd.rs","mod.rs","template.rs"]],["pallet",[],["command.rs","mod.rs","writer.rs"]],["shared",[],["mod.rs","record.rs","stats.rs","weight_params.rs"]],["storage",[],["cmd.rs","mod.rs","read.rs","template.rs","write.rs"]]],["lib.rs"]],\
 "frame_benchmarking_pallet_pov":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "frame_election_provider_solution_type":["",[],["codec.rs","from_assignment_helpers.rs","index_assignment.rs","lib.rs","single_page.rs"]],\
-"frame_election_provider_support":["",[],["benchmarking.rs","lib.rs","onchain.rs","traits.rs","weights.rs"]],\
+"frame_election_provider_support":["",[],["lib.rs","onchain.rs","traits.rs","weights.rs"]],\
 "frame_executive":["",[],["lib.rs"]],\
 "frame_remote_externalities":["",[],["lib.rs"]],\
 "frame_support":["",[["crypto",[],["ecdsa.rs"]],["storage",[["generator",[],["double_map.rs","map.rs","mod.rs","nmap.rs","value.rs"]],["types",[],["counted_map.rs","double_map.rs","key.rs","map.rs","mod.rs","nmap.rs","value.rs"]]],["bounded_btree_map.rs","bounded_btree_set.rs","bounded_vec.rs","child.rs","hashed.rs","migration.rs","mod.rs","storage_noop_guard.rs","stream_iter.rs","transactional.rs","unhashed.rs","weak_bounded_vec.rs"]],["traits",[["tokens",[["currency",[],["lockable.rs","reservable.rs"]],["fungible",[],["balanced.rs","imbalance.rs"]],["fungibles",[],["approvals.rs","balanced.rs","enumerable.rs","imbalance.rs","metadata.rs","roles.rs"]],["imbalance",[],["on_unbalanced.rs","signed_imbalance.rs","split_two_ways.rs"]]],["currency.rs","fungible.rs","fungibles.rs","imbalance.rs","misc.rs","nonfungible.rs","nonfungible_v2.rs","nonfungibles.rs","nonfungibles_v2.rs"]]],["dispatch.rs","error.rs","filter.rs","hooks.rs","members.rs","messages.rs","metadata.rs","misc.rs","preimages.rs","randomness.rs","schedule.rs","storage.rs","stored_map.rs","tokens.rs","try_runtime.rs","validation.rs","voting.rs"]],["weights",[],["block_weights.rs","extrinsic_weights.rs","paritydb_weights.rs","rocksdb_weights.rs"]]],["crypto.rs","dispatch.rs","error.rs","event.rs","hash.rs","inherent.rs","instances.rs","lib.rs","migrations.rs","traits.rs","weights.rs"]],\
@@ -65,7 +65,8 @@ var sourcesIndex = JSON.parse('{\
 "pallet_conviction_voting":["",[],["benchmarking.rs","conviction.rs","lib.rs","types.rs","vote.rs","weights.rs"]],\
 "pallet_democracy":["",[],["benchmarking.rs","conviction.rs","lib.rs","migrations.rs","types.rs","vote.rs","vote_threshold.rs","weights.rs"]],\
 "pallet_election_provider_multi_phase":["",[],["benchmarking.rs","helpers.rs","lib.rs","migrations.rs","signed.rs","unsigned.rs","weights.rs"]],\
-"pallet_elections":["",[["migrations",[],["mod.rs","v3.rs","v4.rs","v5.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
+"pallet_election_provider_support_benchmarking":["",[],["lib.rs"]],\
+"pallet_elections_phragmen":["",[["migrations",[],["mod.rs","v3.rs","v4.rs","v5.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_basic":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_offchain_worker":["",[],["lib.rs"]],\
 "pallet_fast_unstake":["",[],["benchmarking.rs","lib.rs","migrations.rs","types.rs","weights.rs"]],\
@@ -208,7 +209,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_keystore":["",[],["lib.rs","testing.rs","vrf.rs"]],\
 "sp_maybe_compressed_blob":["",[],["lib.rs"]],\
 "sp_mmr_primitives":["",[],["lib.rs","utils.rs"]],\
-"sp_npos_elections":["",[],["approval_voting.rs","assignments.rs","balancing.rs","helpers.rs","lib.rs","node.rs","phragmen.rs","phragmms.rs","pjr.rs","reduce.rs","traits.rs"]],\
+"sp_npos_elections":["",[],["assignments.rs","balancing.rs","helpers.rs","lib.rs","node.rs","phragmen.rs","phragmms.rs","pjr.rs","reduce.rs","traits.rs"]],\
 "sp_offchain":["",[],["lib.rs"]],\
 "sp_panic_handler":["",[],["lib.rs"]],\
 "sp_rpc":["",[],["lib.rs","list.rs","number.rs","tracing.rs"]],\
