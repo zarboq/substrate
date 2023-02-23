@@ -808,6 +808,9 @@
 <a href="#808" id="808">808</a>
 <a href="#809" id="809">809</a>
 <a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1108,6 +1111,11 @@ directory = \&quot;{cache_dir}\&quot;
 	config.cranelift_opt_level(wasmtime::OptLevel::SpeedAndSize);
 	config.cranelift_nan_canonicalization(semantics.canonicalize_nans);
 
+	<span class="comment">// Since wasmtime 6.0.0 the default for this is `true`, but that heavily regresses
+	// the contracts pallet&#39;s performance, so disable it for now.
+	</span><span class="attr">#[allow(deprecated)]
+	</span>config.cranelift_use_egraphs(<span class="bool-val">false</span>);
+
 	<span class="kw">let </span>profiler = <span class="kw">match </span>std::env::var_os(<span class="string">&quot;WASMTIME_PROFILING_STRATEGY&quot;</span>) {
 		<span class="prelude-val">Some</span>(os_string) <span class="kw">if </span>os_string == <span class="string">&quot;jitdump&quot; </span>=&gt; wasmtime::ProfilingStrategy::JitDump,
 		<span class="prelude-val">None </span>=&gt; wasmtime::ProfilingStrategy::None,
@@ -1178,7 +1186,7 @@ directory = \&quot;{cache_dir}\&quot;
 
 		<span class="kw">let </span><span class="kw-2">mut </span>pooling_config = wasmtime::PoolingAllocationConfig::default();
 		pooling_config
-			.strategy(wasmtime::PoolingAllocationStrategy::ReuseAffinity)
+			.max_unused_warm_slots(<span class="number">4</span>)
 			<span class="comment">// Pooling needs a bunch of hard limits to be set; if we go over
 			// any of these then the instantiation will fail.
 			//
@@ -1490,10 +1498,8 @@ directory = \&quot;{cache_dir}\&quot;
 	<span class="kw">let </span><span class="kw-2">mut </span>linker = wasmtime::Linker::new(<span class="kw-2">&amp;</span>engine);
 	<span class="kw">crate</span>::imports::prepare_imports::&lt;H&gt;(<span class="kw-2">&amp;mut </span>linker, <span class="kw-2">&amp;</span>module, config.allow_missing_func_imports)<span class="question-mark">?</span>;
 
-	<span class="kw">let </span><span class="kw-2">mut </span>store =
-		<span class="kw">crate</span>::instance_wrapper::create_store(module.engine(), config.semantics.max_memory_size);
 	<span class="kw">let </span>instance_pre = linker
-		.instantiate_pre(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>module)
+		.instantiate_pre(<span class="kw-2">&amp;</span>module)
 		.map_err(|e| WasmError::Other(<span class="macro">format!</span>(<span class="string">&quot;cannot preinstantiate module: {:#}&quot;</span>, e)))<span class="question-mark">?</span>;
 
 	<span class="prelude-val">Ok</span>(WasmtimeRuntime {
