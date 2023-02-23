@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["approval_voting","Execute an approvals voting election scheme. The return type is a list of winners. The weight vector of all voters who contribute to the winners, which for this scheme is always 100% per vote."]]};
