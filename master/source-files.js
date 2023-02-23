@@ -81,6 +81,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_mmr":["",[["mmr",[],["mmr.rs","mod.rs","storage.rs"]]],["benchmarking.rs","default_weights.rs","lib.rs"]],\
 "pallet_multisig":["",[],["benchmarking.rs","lib.rs","migrations.rs","weights.rs"]],\
 "pallet_nfts":["",[["features",[],["approvals.rs","atomic_swap.rs","attributes.rs","buy_sell.rs","create_delete_collection.rs","create_delete_item.rs","lock.rs","metadata.rs","mod.rs","roles.rs","settings.rs","transfer.rs"]]],["benchmarking.rs","common_functions.rs","impl_nonfungibles.rs","lib.rs","macros.rs","types.rs","weights.rs"]],\
+"pallet_nfts_runtime_api":["",[],["lib.rs"]],\
 "pallet_nicks":["",[],["lib.rs"]],\
 "pallet_nis":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_node_authorization":["",[],["lib.rs","weights.rs"]],\

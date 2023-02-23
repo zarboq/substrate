@@ -270,6 +270,46 @@
 <a href="#270" id="270">270</a>
 <a href="#271" id="271">271</a>
 <a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -297,10 +337,7 @@
 //! use.
 
 </span><span class="kw">use </span><span class="kw">super</span>::nonfungibles_v2 <span class="kw">as </span>nonfungibles;
-<span class="kw">use crate</span>::{
-	dispatch::DispatchResult,
-	traits::{tokens::misc::AttributeNamespace, Get},
-};
+<span class="kw">use crate</span>::{dispatch::DispatchResult, traits::Get};
 <span class="kw">use </span>codec::{Decode, Encode};
 <span class="kw">use </span>sp_runtime::TokenError;
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
@@ -317,23 +354,53 @@
 	<span class="doccomment">/// Returns the attribute value of `item` corresponding to `key`.
 	///
 	/// By default this is `None`; no attributes are defined.
-	</span><span class="kw">fn </span>attribute(
+	</span><span class="kw">fn </span>attribute(_item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, _key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		<span class="prelude-val">None
+	</span>}
+
+	<span class="doccomment">/// Returns the custom attribute value of `item` corresponding to `key`.
+	///
+	/// By default this is `None`; no attributes are defined.
+	</span><span class="kw">fn </span>custom_attribute(
+		_account: <span class="kw-2">&amp;</span>AccountId,
 		_item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId,
-		_namespace: <span class="kw-2">&amp;</span>AttributeNamespace&lt;AccountId&gt;,
 		_key: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		<span class="prelude-val">None
+	</span>}
+
+	<span class="doccomment">/// Returns the system attribute value of `item` corresponding to `key`.
+	///
+	/// By default this is `None`; no attributes are defined.
+	</span><span class="kw">fn </span>system_attribute(_item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, _key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
 		<span class="prelude-val">None
 	</span>}
 
 	<span class="doccomment">/// Returns the strongly-typed attribute value of `item` corresponding to `key`.
 	///
 	/// By default this just attempts to use `attribute`.
-	</span><span class="kw">fn </span>typed_attribute&lt;K: Encode, V: Decode&gt;(
+	</span><span class="kw">fn </span>typed_attribute&lt;K: Encode, V: Decode&gt;(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
+		key.using_encoded(|d| <span class="self">Self</span>::attribute(item, d))
+			.and_then(|v| V::decode(<span class="kw-2">&amp;mut &amp;</span>v[..]).ok())
+	}
+
+	<span class="doccomment">/// Returns the strongly-typed custom attribute value of `item` corresponding to `key`.
+	///
+	/// By default this just attempts to use `custom_attribute`.
+	</span><span class="kw">fn </span>typed_custom_attribute&lt;K: Encode, V: Decode&gt;(
+		account: <span class="kw-2">&amp;</span>AccountId,
 		item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId,
-		namespace: <span class="kw-2">&amp;</span>AttributeNamespace&lt;AccountId&gt;,
 		key: <span class="kw-2">&amp;</span>K,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
-		key.using_encoded(|d| <span class="self">Self</span>::attribute(item, namespace, d))
+		key.using_encoded(|d| <span class="self">Self</span>::custom_attribute(account, item, d))
+			.and_then(|v| V::decode(<span class="kw-2">&amp;mut &amp;</span>v[..]).ok())
+	}
+
+	<span class="doccomment">/// Returns the strongly-typed system attribute value of `item` corresponding to `key`.
+	///
+	/// By default this just attempts to use `system_attribute`.
+	</span><span class="kw">fn </span>typed_system_attribute&lt;K: Encode, V: Decode&gt;(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
+		key.using_encoded(|d| <span class="self">Self</span>::system_attribute(item, d))
 			.and_then(|v| V::decode(<span class="kw-2">&amp;mut &amp;</span>v[..]).ok())
 	}
 
@@ -439,19 +506,32 @@
 	<span class="kw">fn </span>owner(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId) -&gt; <span class="prelude-ty">Option</span>&lt;AccountId&gt; {
 		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::owner(<span class="kw-2">&amp;</span>A::get(), item)
 	}
-	<span class="kw">fn </span>attribute(
-		item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId,
-		namespace: <span class="kw-2">&amp;</span>AttributeNamespace&lt;AccountId&gt;,
-		key: <span class="kw-2">&amp;</span>[u8],
-	) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::attribute(<span class="kw-2">&amp;</span>A::get(), item, namespace, key)
+	<span class="kw">fn </span>attribute(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::attribute(<span class="kw-2">&amp;</span>A::get(), item, key)
 	}
-	<span class="kw">fn </span>typed_attribute&lt;K: Encode, V: Decode&gt;(
+	<span class="kw">fn </span>custom_attribute(account: <span class="kw-2">&amp;</span>AccountId, item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::custom_attribute(account, <span class="kw-2">&amp;</span>A::get(), item, key)
+	}
+	<span class="kw">fn </span>system_attribute(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::system_attribute(<span class="kw-2">&amp;</span>A::get(), item, key)
+	}
+	<span class="kw">fn </span>typed_attribute&lt;K: Encode, V: Decode&gt;(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
+		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::typed_attribute(<span class="kw-2">&amp;</span>A::get(), item, key)
+	}
+	<span class="kw">fn </span>typed_custom_attribute&lt;K: Encode, V: Decode&gt;(
+		account: <span class="kw-2">&amp;</span>AccountId,
 		item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId,
-		namespace: <span class="kw-2">&amp;</span>AttributeNamespace&lt;AccountId&gt;,
 		key: <span class="kw-2">&amp;</span>K,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
-		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::typed_attribute(<span class="kw-2">&amp;</span>A::get(), item, namespace, key)
+		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::typed_custom_attribute(
+			account,
+			<span class="kw-2">&amp;</span>A::get(),
+			item,
+			key,
+		)
+	}
+	<span class="kw">fn </span>typed_system_attribute&lt;K: Encode, V: Decode&gt;(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
+		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::typed_system_attribute(<span class="kw-2">&amp;</span>A::get(), item, key)
 	}
 	<span class="kw">fn </span>can_transfer(item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId) -&gt; bool {
 		&lt;F <span class="kw">as </span>nonfungibles::Inspect&lt;AccountId&gt;&gt;::can_transfer(<span class="kw-2">&amp;</span>A::get(), item)
