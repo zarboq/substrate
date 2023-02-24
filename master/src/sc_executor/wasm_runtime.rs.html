@@ -596,7 +596,7 @@
 <span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>sc_executor_common::{
 	runtime_blob::RuntimeBlob,
-	wasm_runtime::{WasmInstance, WasmModule},
+	wasm_runtime::{HeapAllocStrategy, WasmInstance, WasmModule},
 };
 <span class="kw">use </span>sp_core::traits::{Externalities, FetchRuntimeCode, RuntimeCode};
 <span class="kw">use </span>sp_version::RuntimeVersion;
@@ -633,8 +633,8 @@
 	</span>code_hash: Vec&lt;u8&gt;,
 	<span class="doccomment">/// Wasm runtime type.
 	</span>wasm_method: WasmExecutionMethod,
-	<span class="doccomment">/// The number of WebAssembly heap pages this instance was created with.
-	</span>heap_pages: u64,
+	<span class="doccomment">/// The heap allocation strategy this runtime was created with.
+	</span>heap_alloc_strategy: HeapAllocStrategy,
 }
 
 <span class="doccomment">/// A Wasm runtime object along with its cached runtime version.
@@ -766,9 +766,11 @@
 	///
 	/// `runtime_code` - The runtime wasm code used setup the runtime.
 	///
-	/// `default_heap_pages` - Number of 64KB pages to allocate for Wasm execution.
+	/// `ext` - The externalities to access the state.
 	///
 	/// `wasm_method` - Type of WASM backend to use.
+	///
+	/// `heap_alloc_strategy` - The heap allocation strategy to use.
 	///
 	/// `allow_missing_func_imports` - Ignore missing function imports.
 	///
@@ -788,7 +790,7 @@
 		runtime_code: <span class="kw-2">&amp;</span><span class="lifetime">&#39;c </span>RuntimeCode&lt;<span class="lifetime">&#39;c</span>&gt;,
 		ext: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Externalities,
 		wasm_method: WasmExecutionMethod,
-		default_heap_pages: u64,
+		heap_alloc_strategy: HeapAllocStrategy,
 		allow_missing_func_imports: bool,
 		f: F,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;R, Error&gt;, Error&gt;
@@ -802,10 +804,9 @@
 		) -&gt; <span class="prelude-ty">Result</span>&lt;R, Error&gt;,
 	{
 		<span class="kw">let </span>code_hash = <span class="kw-2">&amp;</span>runtime_code.hash;
-		<span class="kw">let </span>heap_pages = runtime_code.heap_pages.unwrap_or(default_heap_pages);
 
 		<span class="kw">let </span>versioned_runtime_id =
-			VersionedRuntimeId { code_hash: code_hash.clone(), heap_pages, wasm_method };
+			VersionedRuntimeId { code_hash: code_hash.clone(), heap_alloc_strategy, wasm_method };
 
 		<span class="kw">let </span><span class="kw-2">mut </span>runtimes = <span class="self">self</span>.runtimes.lock(); <span class="comment">// this must be released prior to calling f
 		</span><span class="kw">let </span>versioned_runtime = <span class="kw">if let </span><span class="prelude-val">Some</span>(versioned_runtime) = runtimes.get(<span class="kw-2">&amp;</span>versioned_runtime_id)
@@ -820,7 +821,7 @@
 				<span class="kw-2">&amp;</span>code,
 				ext,
 				wasm_method,
-				heap_pages,
+				heap_alloc_strategy,
 				allow_missing_func_imports,
 				<span class="self">self</span>.max_runtime_instances,
 				<span class="self">self</span>.cache_path.as_deref(),
@@ -858,7 +859,7 @@
 <span class="doccomment">/// Create a wasm runtime with the given `code`.
 </span><span class="kw">pub fn </span>create_wasm_runtime_with_code&lt;H&gt;(
 	wasm_method: WasmExecutionMethod,
-	heap_pages: u64,
+	heap_alloc_strategy: HeapAllocStrategy,
 	blob: RuntimeBlob,
 	allow_missing_func_imports: bool,
 	cache_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Path&gt;,
@@ -876,7 +877,7 @@
 
 			sc_executor_wasmi::create_runtime(
 				blob,
-				heap_pages,
+				heap_alloc_strategy,
 				H::host_functions(),
 				allow_missing_func_imports,
 			)
@@ -889,12 +890,11 @@
 					allow_missing_func_imports,
 					cache_path: cache_path.map(ToOwned::to_owned),
 					semantics: sc_executor_wasmtime::Semantics {
-						extra_heap_pages: heap_pages,
+						heap_alloc_strategy,
 						instantiation_strategy,
 						deterministic_stack_limit: <span class="prelude-val">None</span>,
 						canonicalize_nans: <span class="bool-val">false</span>,
 						parallel_compilation: <span class="bool-val">true</span>,
-						max_memory_size: <span class="prelude-val">None</span>,
 					},
 				},
 			)
@@ -962,7 +962,7 @@
 	code: <span class="kw-2">&amp;</span>[u8],
 	ext: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Externalities,
 	wasm_method: WasmExecutionMethod,
-	heap_pages: u64,
+	heap_alloc_strategy: HeapAllocStrategy,
 	allow_missing_func_imports: bool,
 	max_instances: usize,
 	cache_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Path&gt;,
@@ -977,11 +977,11 @@
 	<span class="comment">// Use the runtime blob to scan if there is any metadata embedded into the wasm binary
 	// pertaining to runtime version. We do it before consuming the runtime blob for creating the
 	// runtime.
-	</span><span class="kw">let </span><span class="kw-2">mut </span>version: <span class="prelude-ty">Option</span>&lt;<span class="kw">_</span>&gt; = read_embedded_version(<span class="kw-2">&amp;</span>blob)<span class="question-mark">?</span>;
+	</span><span class="kw">let </span><span class="kw-2">mut </span>version = read_embedded_version(<span class="kw-2">&amp;</span>blob)<span class="question-mark">?</span>;
 
 	<span class="kw">let </span>runtime = create_wasm_runtime_with_code::&lt;H&gt;(
 		wasm_method,
-		heap_pages,
+		heap_alloc_strategy,
 		blob,
 		allow_missing_func_imports,
 		cache_path,

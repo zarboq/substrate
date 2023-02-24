@@ -771,46 +771,6 @@
 <a href="#771" id="771">771</a>
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
-<a href="#774" id="774">774</a>
-<a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
-<a href="#778" id="778">778</a>
-<a href="#779" id="779">779</a>
-<a href="#780" id="780">780</a>
-<a href="#781" id="781">781</a>
-<a href="#782" id="782">782</a>
-<a href="#783" id="783">783</a>
-<a href="#784" id="784">784</a>
-<a href="#785" id="785">785</a>
-<a href="#786" id="786">786</a>
-<a href="#787" id="787">787</a>
-<a href="#788" id="788">788</a>
-<a href="#789" id="789">789</a>
-<a href="#790" id="790">790</a>
-<a href="#791" id="791">791</a>
-<a href="#792" id="792">792</a>
-<a href="#793" id="793">793</a>
-<a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
-<a href="#796" id="796">796</a>
-<a href="#797" id="797">797</a>
-<a href="#798" id="798">798</a>
-<a href="#799" id="799">799</a>
-<a href="#800" id="800">800</a>
-<a href="#801" id="801">801</a>
-<a href="#802" id="802">802</a>
-<a href="#803" id="803">803</a>
-<a href="#804" id="804">804</a>
-<a href="#805" id="805">805</a>
-<a href="#806" id="806">806</a>
-<a href="#807" id="807">807</a>
-<a href="#808" id="808">808</a>
-<a href="#809" id="809">809</a>
-<a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
-<a href="#813" id="813">813</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -833,7 +793,7 @@
 
 </span><span class="kw">use crate</span>::{
 	host::HostState,
-	instance_wrapper::{EntryPoint, InstanceWrapper},
+	instance_wrapper::{EntryPoint, InstanceWrapper, MemoryWrapper},
 	util::{<span class="self">self</span>, replace_strategy_if_broken},
 };
 
@@ -844,7 +804,7 @@
 		<span class="self">self</span>, DataSegmentsSnapshot, ExposedMutableGlobalsSet, GlobalsSnapshot, RuntimeBlob,
 	},
 	util::checked_range,
-	wasm_runtime::{InvokeMethod, WasmInstance, WasmModule},
+	wasm_runtime::{HeapAllocStrategy, InvokeMethod, WasmInstance, WasmModule},
 };
 <span class="kw">use </span>sp_runtime_interface::unpack_ptr_and_len;
 <span class="kw">use </span>sp_wasm_interface::{HostFunctions, Pointer, Value, WordSize};
@@ -855,12 +815,10 @@
 		Arc,
 	},
 };
-<span class="kw">use </span>wasmtime::{AsContext, Engine, Memory, StoreLimits, Table};
+<span class="kw">use </span>wasmtime::{AsContext, Engine, Memory, Table};
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>StoreData {
-	<span class="doccomment">/// The limits we apply to the store. We need to store it here to return a reference to this
-	/// object when we have the limits enabled.
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) limits: StoreLimits,
+<span class="attr">#[derive(Default)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>StoreData {
 	<span class="doccomment">/// This will only be set when we call into the runtime.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) host_state: <span class="prelude-ty">Option</span>&lt;HostState&gt;,
 	<span class="doccomment">/// This will be always set once the store is initialized.
@@ -896,12 +854,11 @@
 <span class="kw">struct </span>InstanceCreator {
 	engine: wasmtime::Engine,
 	instance_pre: Arc&lt;wasmtime::InstancePre&lt;StoreData&gt;&gt;,
-	max_memory_size: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
 <span class="kw">impl </span>InstanceCreator {
 	<span class="kw">fn </span>instantiate(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;InstanceWrapper&gt; {
-		InstanceWrapper::new(<span class="kw-2">&amp;</span><span class="self">self</span>.engine, <span class="kw-2">&amp;</span><span class="self">self</span>.instance_pre, <span class="self">self</span>.max_memory_size)
+		InstanceWrapper::new(<span class="kw-2">&amp;</span><span class="self">self</span>.engine, <span class="kw-2">&amp;</span><span class="self">self</span>.instance_pre)
 	}
 }
 
@@ -941,18 +898,13 @@
 	engine: wasmtime::Engine,
 	instance_pre: Arc&lt;wasmtime::InstancePre&lt;StoreData&gt;&gt;,
 	instantiation_strategy: InternalInstantiationStrategy,
-	config: Config,
 }
 
 <span class="kw">impl </span>WasmModule <span class="kw">for </span>WasmtimeRuntime {
 	<span class="kw">fn </span>new_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>WasmInstance&gt;&gt; {
 		<span class="kw">let </span>strategy = <span class="kw">match </span><span class="self">self</span>.instantiation_strategy {
 			InternalInstantiationStrategy::LegacyInstanceReuse(<span class="kw-2">ref </span>snapshot_data) =&gt; {
-				<span class="kw">let </span><span class="kw-2">mut </span>instance_wrapper = InstanceWrapper::new(
-					<span class="kw-2">&amp;</span><span class="self">self</span>.engine,
-					<span class="kw-2">&amp;</span><span class="self">self</span>.instance_pre,
-					<span class="self">self</span>.config.semantics.max_memory_size,
-				)<span class="question-mark">?</span>;
+				<span class="kw">let </span><span class="kw-2">mut </span>instance_wrapper = InstanceWrapper::new(<span class="kw-2">&amp;</span><span class="self">self</span>.engine, <span class="kw-2">&amp;</span><span class="self">self</span>.instance_pre)<span class="question-mark">?</span>;
 				<span class="kw">let </span>heap_base = instance_wrapper.extract_heap_base()<span class="question-mark">?</span>;
 
 				<span class="comment">// This function panics if the instance was created from a runtime blob different
@@ -974,7 +926,6 @@
 			InternalInstantiationStrategy::Builtin =&gt; Strategy::RecreateInstance(InstanceCreator {
 				engine: <span class="self">self</span>.engine.clone(),
 				instance_pre: <span class="self">self</span>.instance_pre.clone(),
-				max_memory_size: <span class="self">self</span>.config.semantics.max_memory_size,
 			}),
 		};
 
@@ -1163,25 +1114,22 @@ directory = \&quot;{cache_dir}\&quot;
 		InstantiationStrategy::LegacyInstanceReuse =&gt; (<span class="bool-val">false</span>, <span class="bool-val">false</span>),
 	};
 
+	<span class="kw">const </span>WASM_PAGE_SIZE: u64 = <span class="number">65536</span>;
+
 	config.memory_init_cow(use_cow);
-	config.memory_guaranteed_dense_image_size(
-		semantics.max_memory_size.map(|max| max <span class="kw">as </span>u64).unwrap_or(u64::MAX),
-	);
+	config.memory_guaranteed_dense_image_size(<span class="kw">match </span>semantics.heap_alloc_strategy {
+		HeapAllocStrategy::Dynamic { maximum_pages } =&gt;
+			maximum_pages.map(|p| p <span class="kw">as </span>u64 * WASM_PAGE_SIZE).unwrap_or(u64::MAX),
+		HeapAllocStrategy::Static { .. } =&gt; u64::MAX,
+	});
 
 	<span class="kw">if </span>use_pooling {
-		<span class="kw">const </span>WASM_PAGE_SIZE: u64 = <span class="number">65536</span>;
 		<span class="kw">const </span>MAX_WASM_PAGES: u64 = <span class="number">0x10000</span>;
 
-		<span class="kw">let </span>memory_pages = <span class="kw">if let </span><span class="prelude-val">Some</span>(max_memory_size) = semantics.max_memory_size {
-			<span class="kw">let </span>max_memory_size = max_memory_size <span class="kw">as </span>u64;
-			<span class="kw">let </span><span class="kw-2">mut </span>pages = max_memory_size / WASM_PAGE_SIZE;
-			<span class="kw">if </span>max_memory_size % WASM_PAGE_SIZE != <span class="number">0 </span>{
-				pages += <span class="number">1</span>;
-			}
-
-			std::cmp::min(MAX_WASM_PAGES, pages)
-		} <span class="kw">else </span>{
-			MAX_WASM_PAGES
+		<span class="kw">let </span>memory_pages = <span class="kw">match </span>semantics.heap_alloc_strategy {
+			HeapAllocStrategy::Dynamic { maximum_pages } =&gt;
+				maximum_pages.map(|p| p <span class="kw">as </span>u64).unwrap_or(MAX_WASM_PAGES),
+			HeapAllocStrategy::Static { .. } =&gt; MAX_WASM_PAGES,
 		};
 
 		<span class="kw">let </span><span class="kw-2">mut </span>pooling_config = wasmtime::PoolingAllocationConfig::default();
@@ -1327,25 +1275,8 @@ directory = \&quot;{cache_dir}\&quot;
 	<span class="doccomment">/// Configures wasmtime to use multiple threads for compiling.
 	</span><span class="kw">pub </span>parallel_compilation: bool,
 
-	<span class="doccomment">/// The number of extra WASM pages which will be allocated
-	/// on top of what is requested by the WASM blob itself.
-	</span><span class="kw">pub </span>extra_heap_pages: u64,
-
-	<span class="doccomment">/// The total amount of memory in bytes an instance can request.
-	///
-	/// If specified, the runtime will be able to allocate only that much of wasm memory.
-	/// This is the total number and therefore the [`Semantics::extra_heap_pages`] is accounted
-	/// for.
-	///
-	/// That means that the initial number of pages of a linear memory plus the
-	/// [`Semantics::extra_heap_pages`] multiplied by the wasm page size (64KiB) should be less
-	/// than or equal to `max_memory_size`, otherwise the instance won&#39;t be created.
-	///
-	/// Moreover, `memory.grow` will fail (return -1) if the sum of sizes of currently mounted
-	/// and additional pages exceeds `max_memory_size`.
-	///
-	/// The default is `None`.
-	</span><span class="kw">pub </span>max_memory_size: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+	<span class="doccomment">/// The heap allocation strategy to use.
+	</span><span class="kw">pub </span>heap_alloc_strategy: HeapAllocStrategy,
 }
 
 <span class="attr">#[derive(Clone)]
@@ -1502,12 +1433,7 @@ directory = \&quot;{cache_dir}\&quot;
 		.instantiate_pre(<span class="kw-2">&amp;</span>module)
 		.map_err(|e| WasmError::Other(<span class="macro">format!</span>(<span class="string">&quot;cannot preinstantiate module: {:#}&quot;</span>, e)))<span class="question-mark">?</span>;
 
-	<span class="prelude-val">Ok</span>(WasmtimeRuntime {
-		engine,
-		instance_pre: Arc::new(instance_pre),
-		instantiation_strategy,
-		config,
-	})
+	<span class="prelude-val">Ok</span>(WasmtimeRuntime { engine, instance_pre: Arc::new(instance_pre), instantiation_strategy })
 }
 
 <span class="kw">fn </span>prepare_blob_for_compilation(
@@ -1530,12 +1456,7 @@ directory = \&quot;{cache_dir}\&quot;
 	// now automatically take care of creating the memory for us, and it is also necessary
 	// to enable `wasmtime`&#39;s instance pooling. (Imported memories are ineligible for pooling.)
 	</span>blob.convert_memory_import_into_export()<span class="question-mark">?</span>;
-	blob.add_extra_heap_pages_to_memory_section(
-		semantics
-			.extra_heap_pages
-			.try_into()
-			.map_err(|e| WasmError::Other(<span class="macro">format!</span>(<span class="string">&quot;invalid `extra_heap_pages`: {}&quot;</span>, e)))<span class="question-mark">?</span>,
-	)<span class="question-mark">?</span>;
+	blob.setup_memory_according_to_heap_alloc_strategy(semantics.heap_alloc_strategy)<span class="question-mark">?</span>;
 
 	<span class="prelude-val">Ok</span>(blob)
 }
@@ -1596,9 +1517,8 @@ directory = \&quot;{cache_dir}\&quot;
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(Pointer&lt;u8&gt;, WordSize)&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>ctx = instance.store_mut();
 	<span class="kw">let </span>memory = ctx.data().memory();
-	<span class="kw">let </span>memory = memory.data_mut(<span class="kw-2">&amp;mut </span>ctx);
 	<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>WordSize;
-	<span class="kw">let </span>data_ptr = allocator.allocate(memory, data_len)<span class="question-mark">?</span>;
+	<span class="kw">let </span>data_ptr = allocator.allocate(<span class="kw-2">&amp;mut </span>MemoryWrapper(<span class="kw-2">&amp;</span>memory, <span class="kw-2">&amp;mut </span>ctx), data_len)<span class="question-mark">?</span>;
 	util::write_memory_from(instance.store_mut(), data_ptr, data)<span class="question-mark">?</span>;
 	<span class="prelude-val">Ok</span>((data_ptr, data_len))
 }

@@ -215,6 +215,10 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -233,7 +237,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::error::WasmError;
+</span><span class="kw">use crate</span>::{error::WasmError, wasm_runtime::HeapAllocStrategy};
 <span class="kw">use </span>wasm_instrument::{
 	export_mutable_globals,
 	parity_wasm::elements::{
@@ -374,18 +378,13 @@
 		<span class="prelude-val">Ok</span>(())
 	}
 
-	<span class="doccomment">/// Increases the number of memory pages requested by the WASM blob by
-	/// the given amount of `extra_heap_pages`.
+	<span class="doccomment">/// Modifies the blob&#39;s memory section according to the given `heap_alloc_strategy`.
 	///
 	/// Will return an error in case there is no memory section present,
 	/// or if the memory section is empty.
-	///
-	/// Only modifies the initial size of the memory; the maximum is unmodified
-	/// unless it&#39;s smaller than the initial size, in which case it will be increased
-	/// so that it&#39;s at least as big as the initial size.
-	</span><span class="kw">pub fn </span>add_extra_heap_pages_to_memory_section(
+	</span><span class="kw">pub fn </span>setup_memory_according_to_heap_alloc_strategy(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		extra_heap_pages: u32,
+		heap_alloc_strategy: HeapAllocStrategy,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), WasmError&gt; {
 		<span class="kw">let </span>memory_section = <span class="self">self
 			</span>.raw_module
@@ -396,8 +395,17 @@
 			<span class="kw">return </span><span class="prelude-val">Err</span>(WasmError::Other(<span class="string">&quot;memory section is empty&quot;</span>.into()))
 		}
 		<span class="kw">for </span>memory_ty <span class="kw">in </span>memory_section.entries_mut() {
-			<span class="kw">let </span>min = memory_ty.limits().initial().saturating_add(extra_heap_pages);
-			<span class="kw">let </span>max = memory_ty.limits().maximum().map(|max| std::cmp::max(min, max));
+			<span class="kw">let </span>initial = memory_ty.limits().initial();
+			<span class="kw">let </span>(min, max) = <span class="kw">match </span>heap_alloc_strategy {
+				HeapAllocStrategy::Dynamic { maximum_pages } =&gt; {
+					<span class="comment">// Ensure `initial &lt;= maximum_pages`
+					</span>(maximum_pages.map(|m| m.min(initial)).unwrap_or(initial), maximum_pages)
+				},
+				HeapAllocStrategy::Static { extra_pages } =&gt; {
+					<span class="kw">let </span>pages = initial.saturating_add(extra_pages);
+					(pages, <span class="prelude-val">Some</span>(pages))
+				},
+			};
 			<span class="kw-2">*</span>memory_ty = MemoryType::new(min, max);
 		}
 		<span class="prelude-val">Ok</span>(())

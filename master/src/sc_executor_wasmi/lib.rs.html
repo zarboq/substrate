@@ -597,11 +597,6 @@
 <a href="#597" id="597">597</a>
 <a href="#598" id="598">598</a>
 <a href="#599" id="599">599</a>
-<a href="#600" id="600">600</a>
-<a href="#601" id="601">601</a>
-<a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
-<a href="#604" id="604">604</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -624,22 +619,57 @@
 
 </span><span class="kw">use </span>std::{cell::RefCell, str, sync::Arc};
 
-<span class="kw">use </span>log::{debug, error, trace};
+<span class="kw">use </span>log::{error, trace};
 <span class="kw">use </span>wasmi::{
 	memory_units::Pages,
-	FuncInstance, ImportsBuilder, MemoryInstance, MemoryRef, Module, ModuleInstance, ModuleRef,
+	FuncInstance, ImportsBuilder, MemoryRef, Module, ModuleInstance, ModuleRef,
 	RuntimeValue::{<span class="self">self</span>, I32, I64},
 	TableRef,
 };
 
-<span class="kw">use </span>sc_allocator::AllocationStats;
+<span class="kw">use </span>sc_allocator::{AllocationStats, FreeingBumpHeapAllocator};
 <span class="kw">use </span>sc_executor_common::{
 	error::{Error, MessageWithBacktrace, WasmError},
 	runtime_blob::{DataSegmentsSnapshot, RuntimeBlob},
-	wasm_runtime::{InvokeMethod, WasmInstance, WasmModule},
+	wasm_runtime::{HeapAllocStrategy, InvokeMethod, WasmInstance, WasmModule},
 };
 <span class="kw">use </span>sp_runtime_interface::unpack_ptr_and_len;
 <span class="kw">use </span>sp_wasm_interface::{Function, FunctionContext, Pointer, <span class="prelude-ty">Result </span><span class="kw">as </span>WResult, WordSize};
+
+<span class="doccomment">/// Wrapper around [`MemorRef`] that implements [`sc_allocator::Memory`].
+</span><span class="kw">struct </span>MemoryWrapper&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>MemoryRef);
+
+<span class="kw">impl </span>sc_allocator::Memory <span class="kw">for </span>MemoryWrapper&lt;<span class="lifetime">&#39;_</span>&gt; {
+	<span class="kw">fn </span>with_access_mut&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, run: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>[u8]) -&gt; R) -&gt; R {
+		<span class="self">self</span>.<span class="number">0</span>.with_direct_access_mut(run)
+	}
+
+	<span class="kw">fn </span>with_access&lt;R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, run: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span>[u8]) -&gt; R) -&gt; R {
+		<span class="self">self</span>.<span class="number">0</span>.with_direct_access(run)
+	}
+
+	<span class="kw">fn </span>pages(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+		<span class="self">self</span>.<span class="number">0</span>.current_size().<span class="number">0 </span><span class="kw">as _
+	</span>}
+
+	<span class="kw">fn </span>max_pages(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
+		<span class="self">self</span>.<span class="number">0</span>.maximum().map(|p| p.<span class="number">0 </span><span class="kw">as _</span>)
+	}
+
+	<span class="kw">fn </span>grow(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+		<span class="self">self</span>.<span class="number">0
+			</span>.grow(Pages(additional <span class="kw">as _</span>))
+			.map_err(|e| {
+				<span class="macro">log::error!</span>(
+					target: <span class="string">&quot;wasm-executor&quot;</span>,
+					<span class="string">&quot;Failed to grow memory by {} pages: {}&quot;</span>,
+					additional,
+					e,
+				)
+			})
+			.map(drop)
+	}
+}
 
 <span class="kw">struct </span>FunctionExecutor {
 	heap: RefCell&lt;sc_allocator::FreeingBumpHeapAllocator&gt;,
@@ -659,7 +689,7 @@
 		missing_functions: Arc&lt;Vec&lt;String&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
 		<span class="prelude-val">Ok</span>(FunctionExecutor {
-			heap: RefCell::new(sc_allocator::FreeingBumpHeapAllocator::new(heap_base)),
+			heap: RefCell::new(FreeingBumpHeapAllocator::new(heap_base)),
 			memory: m,
 			host_functions,
 			allow_missing_func_imports,
@@ -679,15 +709,17 @@
 	}
 
 	<span class="kw">fn </span>allocate_memory(<span class="kw-2">&amp;mut </span><span class="self">self</span>, size: WordSize) -&gt; WResult&lt;Pointer&lt;u8&gt;&gt; {
-		<span class="kw">let </span>heap = <span class="kw-2">&amp;mut </span><span class="self">self</span>.heap.borrow_mut();
-		<span class="self">self</span>.memory
-			.with_direct_access_mut(|mem| heap.allocate(mem, size).map_err(|e| e.to_string()))
+		<span class="self">self</span>.heap
+			.borrow_mut()
+			.allocate(<span class="kw-2">&amp;mut </span>MemoryWrapper(<span class="kw-2">&amp;</span><span class="self">self</span>.memory), size)
+			.map_err(|e| e.to_string())
 	}
 
 	<span class="kw">fn </span>deallocate_memory(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: Pointer&lt;u8&gt;) -&gt; WResult&lt;()&gt; {
-		<span class="kw">let </span>heap = <span class="kw-2">&amp;mut </span><span class="self">self</span>.heap.borrow_mut();
-		<span class="self">self</span>.memory
-			.with_direct_access_mut(|mem| heap.deallocate(mem, ptr).map_err(|e| e.to_string()))
+		<span class="self">self</span>.heap
+			.borrow_mut()
+			.deallocate(<span class="kw-2">&amp;mut </span>MemoryWrapper(<span class="kw-2">&amp;</span><span class="self">self</span>.memory), ptr)
+			.map_err(|e| e.to_string())
 	}
 
 	<span class="kw">fn </span>register_panic_error_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
@@ -705,26 +737,17 @@
 	</span>allow_missing_func_imports: bool,
 	<span class="doccomment">/// All the names of functions for that we did not provide a host function.
 	</span>missing_functions: RefCell&lt;Vec&lt;String&gt;&gt;,
-	<span class="doccomment">/// Will be used as initial and maximum size of the imported memory.
-	</span>heap_pages: usize,
-	<span class="doccomment">/// By default, runtimes should import memory and this is `Some(_)` after
-	/// resolving. However, to be backwards compatible, we also support memory
-	/// exported by the WASM blob (this will be `None` after resolving).
-	</span>import_memory: RefCell&lt;<span class="prelude-ty">Option</span>&lt;MemoryRef&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Resolver&lt;<span class="lifetime">&#39;a</span>&gt; {
 	<span class="kw">fn </span>new(
 		host_functions: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw">dyn </span>Function],
 		allow_missing_func_imports: bool,
-		heap_pages: usize,
 	) -&gt; Resolver&lt;<span class="lifetime">&#39;a</span>&gt; {
 		Resolver {
 			host_functions,
 			allow_missing_func_imports,
 			missing_functions: RefCell::new(Vec::new()),
-			heap_pages,
-			import_memory: Default::default(),
 		}
 	}
 }
@@ -752,7 +775,11 @@
 		}
 
 		<span class="kw">if </span><span class="self">self</span>.allow_missing_func_imports {
-			<span class="macro">trace!</span>(target: <span class="string">&quot;wasm-executor&quot;</span>, <span class="string">&quot;Could not find function `{}`, a stub will be provided instead.&quot;</span>, name);
+			<span class="macro">trace!</span>(
+				target: <span class="string">&quot;wasm-executor&quot;</span>,
+				<span class="string">&quot;Could not find function `{}`, a stub will be provided instead.&quot;</span>,
+				name,
+			);
 			<span class="kw">let </span>id = <span class="self">self</span>.missing_functions.borrow().len() + <span class="self">self</span>.host_functions.len();
 			<span class="self">self</span>.missing_functions.borrow_mut().push(name.to_string());
 
@@ -764,44 +791,12 @@
 
 	<span class="kw">fn </span>resolve_memory(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		field_name: <span class="kw-2">&amp;</span>str,
-		memory_type: <span class="kw-2">&amp;</span>wasmi::MemoryDescriptor,
+		<span class="kw">_</span>: <span class="kw-2">&amp;</span>str,
+		<span class="kw">_</span>: <span class="kw-2">&amp;</span>wasmi::MemoryDescriptor,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;MemoryRef, wasmi::Error&gt; {
-		<span class="kw">if </span>field_name == <span class="string">&quot;memory&quot; </span>{
-			<span class="kw">match </span><span class="kw-2">&amp;mut *</span><span class="self">self</span>.import_memory.borrow_mut() {
-				<span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt;
-					<span class="prelude-val">Err</span>(wasmi::Error::Instantiation(<span class="string">&quot;Memory can not be imported twice!&quot;</span>.into())),
-				memory_ref @ <span class="prelude-val">None </span>=&gt; {
-					<span class="kw">if </span>memory_type
-						.maximum()
-						.map(|m| m.saturating_sub(memory_type.initial()))
-						.map(|m| <span class="self">self</span>.heap_pages &gt; m <span class="kw">as </span>usize)
-						.unwrap_or(<span class="bool-val">false</span>)
-					{
-						<span class="prelude-val">Err</span>(wasmi::Error::Instantiation(<span class="macro">format!</span>(
-							<span class="string">&quot;Heap pages ({}) is greater than imported memory maximum ({}).&quot;</span>,
-							<span class="self">self</span>.heap_pages,
-							memory_type
-								.maximum()
-								.map(|m| m.saturating_sub(memory_type.initial()))
-								.expect(<span class="string">&quot;Maximum is set, checked above; qed&quot;</span>),
-						)))
-					} <span class="kw">else </span>{
-						<span class="kw">let </span>memory = MemoryInstance::alloc(
-							Pages(memory_type.initial() <span class="kw">as </span>usize + <span class="self">self</span>.heap_pages),
-							<span class="prelude-val">Some</span>(Pages(memory_type.initial() <span class="kw">as </span>usize + <span class="self">self</span>.heap_pages)),
-						)<span class="question-mark">?</span>;
-						<span class="kw-2">*</span>memory_ref = <span class="prelude-val">Some</span>(memory.clone());
-						<span class="prelude-val">Ok</span>(memory)
-					}
-				},
-			}
-		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(wasmi::Error::Instantiation(<span class="macro">format!</span>(
-				<span class="string">&quot;Unknown memory reference with name: {}&quot;</span>,
-				field_name
-			)))
-		}
+		<span class="prelude-val">Err</span>(wasmi::Error::Instantiation(
+			<span class="string">&quot;Internal error, wasmi expects that the wasm blob exports memory.&quot;</span>.into(),
+		))
 	}
 }
 
@@ -962,12 +957,11 @@
 
 <span class="doccomment">/// Prepare module instance
 </span><span class="kw">fn </span>instantiate_module(
-	heap_pages: usize,
 	module: <span class="kw-2">&amp;</span>Module,
 	host_functions: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw">dyn </span>Function],
 	allow_missing_func_imports: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(ModuleRef, Vec&lt;String&gt;, MemoryRef), Error&gt; {
-	<span class="kw">let </span>resolver = Resolver::new(host_functions, allow_missing_func_imports, heap_pages);
+	<span class="kw">let </span>resolver = Resolver::new(host_functions, allow_missing_func_imports);
 	<span class="comment">// start module instantiation. Don&#39;t run &#39;start&#39; function yet.
 	</span><span class="kw">let </span>intermediate_instance =
 		ModuleInstance::new(module, <span class="kw-2">&amp;</span>ImportsBuilder::new().with_resolver(<span class="string">&quot;env&quot;</span>, <span class="kw-2">&amp;</span>resolver))<span class="question-mark">?</span>;
@@ -975,22 +969,10 @@
 	<span class="comment">// Verify that the module has the heap base global variable.
 	</span><span class="kw">let _ </span>= get_heap_base(intermediate_instance.not_started_instance())<span class="question-mark">?</span>;
 
-	<span class="comment">// Get the memory reference. Runtimes should import memory, but to be backwards
-	// compatible we also support exported memory.
-	</span><span class="kw">let </span>memory = <span class="kw">match </span>resolver.import_memory.into_inner() {
-		<span class="prelude-val">Some</span>(memory) =&gt; memory,
-		<span class="prelude-val">None </span>=&gt; {
-			<span class="macro">debug!</span>(
-				target: <span class="string">&quot;wasm-executor&quot;</span>,
-				<span class="string">&quot;WASM blob does not imports memory, falling back to exported memory&quot;</span>,
-			);
-
-			<span class="kw">let </span>memory = get_mem_instance(intermediate_instance.not_started_instance())<span class="question-mark">?</span>;
-			memory.grow(Pages(heap_pages)).map_err(|<span class="kw">_</span>| Error::Runtime)<span class="question-mark">?</span>;
-
-			memory
-		},
-	};
+	<span class="comment">// The `module` should export the memory with the correct properties (min, max).
+	//
+	// This is ensured by modifying the `RuntimeBlob` before initializing the `Module`.
+	</span><span class="kw">let </span>memory = get_mem_instance(intermediate_instance.not_started_instance())<span class="question-mark">?</span>;
 
 	<span class="kw">if </span>intermediate_instance.has_start() {
 		<span class="comment">// Runtime is not allowed to have the `start` function.
@@ -1055,8 +1037,6 @@
 	<span class="doccomment">/// Enable stub generation for functions that are not available in `host_functions`.
 	/// These stubs will error when the wasm blob tries to call them.
 	</span>allow_missing_func_imports: bool,
-	<span class="doccomment">/// Numer of heap pages this runtime uses.
-	</span>heap_pages: u64,
 
 	global_vals_snapshot: GlobalValsSnapshot,
 	data_segments_snapshot: DataSegmentsSnapshot,
@@ -1065,13 +1045,9 @@
 <span class="kw">impl </span>WasmModule <span class="kw">for </span>WasmiRuntime {
 	<span class="kw">fn </span>new_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>WasmInstance&gt;, Error&gt; {
 		<span class="comment">// Instantiate this module.
-		</span><span class="kw">let </span>(instance, missing_functions, memory) = instantiate_module(
-			<span class="self">self</span>.heap_pages <span class="kw">as </span>usize,
-			<span class="kw-2">&amp;</span><span class="self">self</span>.module,
-			<span class="kw-2">&amp;</span><span class="self">self</span>.host_functions,
-			<span class="self">self</span>.allow_missing_func_imports,
-		)
-		.map_err(|e| WasmError::Instantiation(e.to_string()))<span class="question-mark">?</span>;
+		</span><span class="kw">let </span>(instance, missing_functions, memory) =
+			instantiate_module(<span class="kw-2">&amp;</span><span class="self">self</span>.module, <span class="kw-2">&amp;</span><span class="self">self</span>.host_functions, <span class="self">self</span>.allow_missing_func_imports)
+				.map_err(|e| WasmError::Instantiation(e.to_string()))<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(Box::new(WasmiInstance {
 			instance,
@@ -1081,6 +1057,7 @@
 			host_functions: <span class="self">self</span>.host_functions.clone(),
 			allow_missing_func_imports: <span class="self">self</span>.allow_missing_func_imports,
 			missing_functions: Arc::new(missing_functions),
+			memory_zeroed: <span class="bool-val">true</span>,
 		}))
 	}
 }
@@ -1088,25 +1065,26 @@
 <span class="doccomment">/// Create a new `WasmiRuntime` given the code. This function loads the module and
 /// stores it in the instance.
 </span><span class="kw">pub fn </span>create_runtime(
-	blob: RuntimeBlob,
-	heap_pages: u64,
+	<span class="kw-2">mut </span>blob: RuntimeBlob,
+	heap_alloc_strategy: HeapAllocStrategy,
 	host_functions: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw">dyn </span>Function&gt;,
 	allow_missing_func_imports: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;WasmiRuntime, WasmError&gt; {
 	<span class="kw">let </span>data_segments_snapshot =
 		DataSegmentsSnapshot::take(<span class="kw-2">&amp;</span>blob).map_err(|e| WasmError::Other(e.to_string()))<span class="question-mark">?</span>;
 
+	<span class="comment">// Make sure we only have exported memory to simplify the code of the wasmi executor.
+	</span>blob.convert_memory_import_into_export()<span class="question-mark">?</span>;
+	<span class="comment">// Ensure that the memory uses the correct heap pages.
+	</span>blob.setup_memory_according_to_heap_alloc_strategy(heap_alloc_strategy)<span class="question-mark">?</span>;
+
 	<span class="kw">let </span>module =
 		Module::from_parity_wasm_module(blob.into_inner()).map_err(|<span class="kw">_</span>| WasmError::InvalidModule)<span class="question-mark">?</span>;
 
 	<span class="kw">let </span>global_vals_snapshot = {
-		<span class="kw">let </span>(instance, <span class="kw">_</span>, <span class="kw">_</span>) = instantiate_module(
-			heap_pages <span class="kw">as </span>usize,
-			<span class="kw-2">&amp;</span>module,
-			<span class="kw-2">&amp;</span>host_functions,
-			allow_missing_func_imports,
-		)
-		.map_err(|e| WasmError::Instantiation(e.to_string()))<span class="question-mark">?</span>;
+		<span class="kw">let </span>(instance, <span class="kw">_</span>, <span class="kw">_</span>) =
+			instantiate_module(<span class="kw-2">&amp;</span>module, <span class="kw-2">&amp;</span>host_functions, allow_missing_func_imports)
+				.map_err(|e| WasmError::Instantiation(e.to_string()))<span class="question-mark">?</span>;
 		GlobalValsSnapshot::take(<span class="kw-2">&amp;</span>instance)
 	};
 
@@ -1116,7 +1094,6 @@
 		global_vals_snapshot,
 		host_functions: Arc::new(host_functions),
 		allow_missing_func_imports,
-		heap_pages,
 	})
 }
 
@@ -1126,6 +1103,8 @@
 	</span>instance: ModuleRef,
 	<span class="doccomment">/// The memory instance of used by the wasm module.
 	</span>memory: MemoryRef,
+	<span class="doccomment">/// Is the memory zeroed?
+	</span>memory_zeroed: bool,
 	<span class="doccomment">/// The snapshot of global variable values just after instantiation.
 	</span>global_vals_snapshot: GlobalValsSnapshot,
 	<span class="doccomment">/// The snapshot of data segments.
@@ -1153,14 +1132,16 @@
 		<span class="comment">// We reuse a single wasm instance for multiple calls and a previous call (if any)
 		// altered the state. Therefore, we need to restore the instance to original state.
 
-		// First, zero initialize the linear memory.
-		</span><span class="self">self</span>.memory.erase().map_err(|e| {
-			<span class="comment">// Snapshot restoration failed. This is pretty unexpected since this can happen
-			// if some invariant is broken or if the system is under extreme memory pressure
-			// (so erasing fails).
-			</span><span class="macro">error!</span>(target: <span class="string">&quot;wasm-executor&quot;</span>, <span class="string">&quot;snapshot restoration failed: {}&quot;</span>, e);
-			WasmError::ErasingFailed(e.to_string())
-		})<span class="question-mark">?</span>;
+		</span><span class="kw">if </span>!<span class="self">self</span>.memory_zeroed {
+			<span class="comment">// First, zero initialize the linear memory.
+			</span><span class="self">self</span>.memory.erase().map_err(|e| {
+				<span class="comment">// Snapshot restoration failed. This is pretty unexpected since this can happen
+				// if some invariant is broken or if the system is under extreme memory pressure
+				// (so erasing fails).
+				</span><span class="macro">error!</span>(target: <span class="string">&quot;wasm-executor&quot;</span>, <span class="string">&quot;snapshot restoration failed: {}&quot;</span>, e);
+				WasmError::ErasingFailed(e.to_string())
+			})<span class="question-mark">?</span>;
+		}
 
 		<span class="comment">// Second, reapply data segments into the linear memory.
 		</span><span class="self">self</span>.data_segments_snapshot
@@ -1169,7 +1150,7 @@
 		<span class="comment">// Third, restore the global variables to their initial values.
 		</span><span class="self">self</span>.global_vals_snapshot.apply(<span class="kw-2">&amp;</span><span class="self">self</span>.instance)<span class="question-mark">?</span>;
 
-		call_in_wasm_module(
+		<span class="kw">let </span>res = call_in_wasm_module(
 			<span class="kw-2">&amp;</span><span class="self">self</span>.instance,
 			<span class="kw-2">&amp;</span><span class="self">self</span>.memory,
 			method,
@@ -1178,7 +1159,12 @@
 			<span class="self">self</span>.allow_missing_func_imports,
 			<span class="self">self</span>.missing_functions.clone(),
 			allocation_stats,
-		)
+		);
+
+		<span class="comment">// If we couldn&#39;t unmap it, erase the memory.
+		</span><span class="self">self</span>.memory_zeroed = <span class="self">self</span>.memory.erase().is_ok();
+
+		res
 	}
 }
 
@@ -1204,6 +1190,10 @@
 			)),
 			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
 		}
+	}
+
+	<span class="kw">fn </span>linear_memory_base_ptr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">*const </span>u8&gt; {
+		<span class="prelude-val">Some</span>(<span class="self">self</span>.memory.direct_access().as_ref().as_ptr())
 	}
 }
 </code></pre></div>

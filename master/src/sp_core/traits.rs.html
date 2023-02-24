@@ -267,6 +267,21 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -293,13 +308,27 @@
 
 <span class="kw">pub use </span>sp_externalities::{Externalities, ExternalitiesExt};
 
+<span class="doccomment">/// The context in which a call is done.
+///
+/// Depending on the context the executor may chooses different kind of heap sizes for the runtime
+/// instance.
+</span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+</span><span class="kw">pub enum </span>CallContext {
+	<span class="doccomment">/// The call is happening in some offchain context.
+	</span>Offchain,
+	<span class="doccomment">/// The call is happening in some on-chain context like building or importing a block.
+	</span>Onchain,
+}
+
 <span class="doccomment">/// Code execution engine.
 </span><span class="kw">pub trait </span>CodeExecutor: Sized + Send + Sync + ReadRuntimeVersion + Clone + <span class="lifetime">&#39;static </span>{
 	<span class="doccomment">/// Externalities error type.
 	</span><span class="kw">type </span>Error: Display + Debug + Send + Sync + <span class="lifetime">&#39;static</span>;
 
-	<span class="doccomment">/// Call a given method in the runtime. Returns a tuple of the result (either the output data
-	/// or an execution error) together with a `bool`, which is true if native execution was used.
+	<span class="doccomment">/// Call a given method in the runtime.
+	///
+	/// Returns a tuple of the result (either the output data or an execution error) together with a
+	/// `bool`, which is true if native execution was used.
 	</span><span class="kw">fn </span>call(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		ext: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Externalities,
@@ -307,6 +336,7 @@
 		method: <span class="kw-2">&amp;</span>str,
 		data: <span class="kw-2">&amp;</span>[u8],
 		use_native: bool,
+		context: CallContext,
 	) -&gt; (<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt;, bool);
 }
 

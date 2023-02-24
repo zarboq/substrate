@@ -103,6 +103,29 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -129,20 +152,25 @@
 <span class="kw">use </span>sc_allocator::{AllocationStats, FreeingBumpHeapAllocator};
 <span class="kw">use </span>sp_wasm_interface::{Pointer, WordSize};
 
-<span class="kw">use crate</span>::{runtime::StoreData, util};
+<span class="kw">use crate</span>::{instance_wrapper::MemoryWrapper, runtime::StoreData, util};
 
 <span class="doccomment">/// The state required to construct a HostContext context. The context only lasts for one host
 /// call, whereas the state is maintained for the duration of a Wasm runtime call, which may make
 /// many different host calls that must share state.
 </span><span class="kw">pub struct </span>HostState {
-	allocator: FreeingBumpHeapAllocator,
+	<span class="doccomment">/// The allocator instance to keep track of allocated memory.
+	///
+	/// This is stored as an `Option` as we need to temporarly set this to `None` when we are
+	/// allocating/deallocating memory. The problem being that we can only mutable access `caller`
+	/// once.
+	</span>allocator: <span class="prelude-ty">Option</span>&lt;FreeingBumpHeapAllocator&gt;,
 	panic_message: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="kw">impl </span>HostState {
 	<span class="doccomment">/// Constructs a new `HostState`.
 	</span><span class="kw">pub fn </span>new(allocator: FreeingBumpHeapAllocator) -&gt; <span class="self">Self </span>{
-		HostState { allocator, panic_message: <span class="prelude-val">None </span>}
+		HostState { allocator: <span class="prelude-val">Some</span>(allocator), panic_message: <span class="prelude-val">None </span>}
 	}
 
 	<span class="doccomment">/// Takes the error message out of the host state, leaving a `None` in its place.
@@ -151,7 +179,9 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>allocation_stats(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AllocationStats {
-		<span class="self">self</span>.allocator.stats()
+		<span class="self">self</span>.allocator.as_ref()
+			.expect(<span class="string">&quot;Allocator is always set and only unavailable when doing an allocation/deallocation; qed&quot;</span>)
+			.stats()
 	}
 }
 
@@ -186,22 +216,38 @@
 
 	<span class="kw">fn </span>allocate_memory(<span class="kw-2">&amp;mut </span><span class="self">self</span>, size: WordSize) -&gt; sp_wasm_interface::Result&lt;Pointer&lt;u8&gt;&gt; {
 		<span class="kw">let </span>memory = <span class="self">self</span>.caller.data().memory();
-		<span class="kw">let </span>(memory, data) = memory.data_and_store_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.caller);
-		data.host_state_mut()
-			.expect(<span class="string">&quot;host state is not empty when calling a function in wasm; qed&quot;</span>)
+		<span class="kw">let </span><span class="kw-2">mut </span>allocator = <span class="self">self
+			</span>.host_state_mut()
 			.allocator
-			.allocate(memory, size)
-			.map_err(|e| e.to_string())
+			.take()
+			.expect(<span class="string">&quot;allocator is not empty when calling a function in wasm; qed&quot;</span>);
+
+		<span class="comment">// We can not return on error early, as we need to store back allocator.
+		</span><span class="kw">let </span>res = allocator
+			.allocate(<span class="kw-2">&amp;mut </span>MemoryWrapper(<span class="kw-2">&amp;</span>memory, <span class="kw-2">&amp;mut </span><span class="self">self</span>.caller), size)
+			.map_err(|e| e.to_string());
+
+		<span class="self">self</span>.host_state_mut().allocator = <span class="prelude-val">Some</span>(allocator);
+
+		res
 	}
 
 	<span class="kw">fn </span>deallocate_memory(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: Pointer&lt;u8&gt;) -&gt; sp_wasm_interface::Result&lt;()&gt; {
 		<span class="kw">let </span>memory = <span class="self">self</span>.caller.data().memory();
-		<span class="kw">let </span>(memory, data) = memory.data_and_store_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.caller);
-		data.host_state_mut()
-			.expect(<span class="string">&quot;host state is not empty when calling a function in wasm; qed&quot;</span>)
+		<span class="kw">let </span><span class="kw-2">mut </span>allocator = <span class="self">self
+			</span>.host_state_mut()
 			.allocator
-			.deallocate(memory, ptr)
-			.map_err(|e| e.to_string())
+			.take()
+			.expect(<span class="string">&quot;allocator is not empty when calling a function in wasm; qed&quot;</span>);
+
+		<span class="comment">// We can not return on error early, as we need to store back allocator.
+		</span><span class="kw">let </span>res = allocator
+			.deallocate(<span class="kw-2">&amp;mut </span>MemoryWrapper(<span class="kw-2">&amp;</span>memory, <span class="kw-2">&amp;mut </span><span class="self">self</span>.caller), ptr)
+			.map_err(|e| e.to_string());
+
+		<span class="self">self</span>.host_state_mut().allocator = <span class="prelude-val">Some</span>(allocator);
+
+		res
 	}
 
 	<span class="kw">fn </span>register_panic_error_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {

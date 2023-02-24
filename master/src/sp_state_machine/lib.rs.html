@@ -2196,6 +2196,16 @@
 <a href="#2196" id="2196">2196</a>
 <a href="#2197" id="2197">2197</a>
 <a href="#2198" id="2198">2198</a>
+<a href="#2199" id="2199">2199</a>
+<a href="#2200" id="2200">2200</a>
+<a href="#2201" id="2201">2201</a>
+<a href="#2202" id="2202">2202</a>
+<a href="#2203" id="2203">2203</a>
+<a href="#2204" id="2204">2204</a>
+<a href="#2205" id="2205">2205</a>
+<a href="#2206" id="2206">2206</a>
+<a href="#2207" id="2207">2207</a>
+<a href="#2208" id="2208">2208</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2361,7 +2371,7 @@
 	<span class="kw">use </span>sp_core::{
 		hexdisplay::HexDisplay,
 		storage::{ChildInfo, ChildType, PrefixedStorageKey},
-		traits::{CodeExecutor, ReadRuntimeVersionExt, RuntimeCode, SpawnNamed},
+		traits::{CallContext, CodeExecutor, ReadRuntimeVersionExt, RuntimeCode, SpawnNamed},
 	};
 	<span class="kw">use </span>sp_externalities::Extensions;
 	<span class="kw">use </span>std::{
@@ -2493,6 +2503,7 @@
 		///
 		/// Used for logging.
 		</span>parent_hash: <span class="prelude-ty">Option</span>&lt;H::Out&gt;,
+		context: CallContext,
 	}
 
 	<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, B, H, Exec&gt; Drop <span class="kw">for </span>StateMachine&lt;<span class="lifetime">&#39;a</span>, B, H, Exec&gt;
@@ -2522,6 +2533,7 @@
 			<span class="kw-2">mut </span>extensions: Extensions,
 			runtime_code: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RuntimeCode,
 			spawn_handle: <span class="kw">impl </span>SpawnNamed + Send + <span class="lifetime">&#39;static</span>,
+			context: CallContext,
 		) -&gt; <span class="self">Self </span>{
 			extensions.register(ReadRuntimeVersionExt::new(exec.clone()));
 			extensions.register(sp_core::traits::TaskExecutorExt::new(spawn_handle));
@@ -2537,6 +2549,7 @@
 				runtime_code,
 				stats: StateMachineStats::default(),
 				parent_hash: <span class="prelude-val">None</span>,
+				context,
 			}
 		}
 
@@ -2606,6 +2619,7 @@
 				<span class="self">self</span>.method,
 				<span class="self">self</span>.call_data,
 				use_native,
+				<span class="self">self</span>.context,
 			);
 
 			<span class="self">self</span>.overlay
@@ -2772,6 +2786,7 @@
 			extensions,
 			runtime_code,
 			spawn_handle,
+			CallContext::Offchain,
 		)
 		.execute_using_consensus_failure_handler::&lt;<span class="kw">_</span>&gt;(always_wasm())<span class="question-mark">?</span>;
 
@@ -2836,6 +2851,7 @@
 			Extensions::default(),
 			runtime_code,
 			spawn_handle,
+			CallContext::Offchain,
 		)
 		.execute_using_consensus_failure_handler(always_untrusted_wasm())
 	}
@@ -3516,7 +3532,7 @@
 		map,
 		storage::{ChildInfo, StateVersion},
 		testing::TaskExecutor,
-		traits::{CodeExecutor, Externalities, RuntimeCode},
+		traits::{CallContext, CodeExecutor, Externalities, RuntimeCode},
 	};
 	<span class="kw">use </span>sp_runtime::traits::BlakeTwo256;
 	<span class="kw">use </span>sp_trie::trie_types::{TrieDBMutBuilderV0, TrieDBMutBuilderV1};
@@ -3539,6 +3555,7 @@
 			_method: <span class="kw-2">&amp;</span>str,
 			_data: <span class="kw-2">&amp;</span>[u8],
 			use_native: bool,
+			<span class="kw">_</span>: CallContext,
 		) -&gt; (CallResult&lt;<span class="self">Self</span>::Error&gt;, bool) {
 			<span class="kw">let </span>using_native = use_native &amp;&amp; <span class="self">self</span>.native_available;
 			<span class="kw">match </span>(using_native, <span class="self">self</span>.native_succeeds, <span class="self">self</span>.fallback_succeeds) {
@@ -3586,6 +3603,7 @@
 			Default::default(),
 			<span class="kw-2">&amp;</span>wasm_code,
 			TaskExecutor::new(),
+			CallContext::Offchain,
 		);
 
 		<span class="macro">assert_eq!</span>(state_machine.execute(ExecutionStrategy::NativeWhenPossible).unwrap(), <span class="macro">vec!</span>[<span class="number">66</span>]);
@@ -3614,6 +3632,7 @@
 			Default::default(),
 			<span class="kw-2">&amp;</span>wasm_code,
 			TaskExecutor::new(),
+			CallContext::Offchain,
 		);
 
 		<span class="macro">assert_eq!</span>(state_machine.execute(ExecutionStrategy::NativeElseWasm).unwrap(), <span class="macro">vec!</span>[<span class="number">66</span>]);
@@ -3643,6 +3662,7 @@
 			Default::default(),
 			<span class="kw-2">&amp;</span>wasm_code,
 			TaskExecutor::new(),
+			CallContext::Offchain,
 		);
 
 		<span class="macro">assert!</span>(state_machine

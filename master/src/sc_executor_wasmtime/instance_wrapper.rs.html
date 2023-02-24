@@ -403,12 +403,6 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -437,8 +431,7 @@
 };
 <span class="kw">use </span>sp_wasm_interface::{Pointer, Value, WordSize};
 <span class="kw">use </span>wasmtime::{
-	AsContext, AsContextMut, Engine, Extern, Func, Global, Instance, InstancePre, Memory, Table,
-	Val,
+	AsContext, AsContextMut, Engine, Extern, Instance, InstancePre, Memory, Table, Val,
 };
 
 <span class="doccomment">/// Invoked entrypoint format.
@@ -524,66 +517,58 @@
 	}
 }
 
+<span class="doccomment">/// Wrapper around [`Memory`] that implements [`sc_allocator::Memory`].
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>MemoryWrapper&lt;<span class="lifetime">&#39;a</span>, C&gt;(<span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>wasmtime::Memory, <span class="kw">pub </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>C);
+
+<span class="kw">impl</span>&lt;C: AsContextMut&gt; sc_allocator::Memory <span class="kw">for </span>MemoryWrapper&lt;<span class="lifetime">&#39;_</span>, C&gt; {
+	<span class="kw">fn </span>with_access&lt;R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, run: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span>[u8]) -&gt; R) -&gt; R {
+		run(<span class="self">self</span>.<span class="number">0</span>.data(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">1</span>))
+	}
+
+	<span class="kw">fn </span>with_access_mut&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, run: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>[u8]) -&gt; R) -&gt; R {
+		run(<span class="self">self</span>.<span class="number">0</span>.data_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">1</span>))
+	}
+
+	<span class="kw">fn </span>grow(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: u32) -&gt; std::result::Result&lt;(), ()&gt; {
+		<span class="self">self</span>.<span class="number">0
+			</span>.grow(<span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">1</span>, additional <span class="kw">as </span>u64)
+			.map_err(|e| {
+				<span class="macro">log::error!</span>(
+					target: <span class="string">&quot;wasm-executor&quot;</span>,
+					<span class="string">&quot;Failed to grow memory by {} pages: {}&quot;</span>,
+					additional,
+					e,
+				)
+			})
+			.map(drop)
+	}
+
+	<span class="kw">fn </span>pages(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+		<span class="self">self</span>.<span class="number">0</span>.size(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">1</span>) <span class="kw">as </span>u32
+	}
+
+	<span class="kw">fn </span>max_pages(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
+		<span class="self">self</span>.<span class="number">0</span>.ty(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">1</span>).maximum().map(|p| p <span class="kw">as _</span>)
+	}
+}
+
 <span class="doccomment">/// Wrap the given WebAssembly Instance of a wasm module with Substrate-runtime.
 ///
 /// This struct is a handy wrapper around a wasmtime `Instance` that provides substrate specific
 /// routines.
 </span><span class="kw">pub struct </span>InstanceWrapper {
 	instance: Instance,
-	memory: Memory,
+	<span class="doccomment">/// The memory instance of the `instance`.
+	///
+	/// It is important to make sure that we don&#39;t make any copies of this to make it easier to
+	/// proof
+	</span>memory: Memory,
 	store: Store,
 }
 
-<span class="kw">fn </span>extern_memory(extern_: <span class="kw-2">&amp;</span>Extern) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Memory&gt; {
-	<span class="kw">match </span>extern_ {
-		Extern::Memory(mem) =&gt; <span class="prelude-val">Some</span>(mem),
-		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-	}
-}
-
-<span class="kw">fn </span>extern_global(extern_: <span class="kw-2">&amp;</span>Extern) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Global&gt; {
-	<span class="kw">match </span>extern_ {
-		Extern::Global(glob) =&gt; <span class="prelude-val">Some</span>(glob),
-		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-	}
-}
-
-<span class="kw">fn </span>extern_table(extern_: <span class="kw-2">&amp;</span>Extern) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Table&gt; {
-	<span class="kw">match </span>extern_ {
-		Extern::Table(table) =&gt; <span class="prelude-val">Some</span>(table),
-		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-	}
-}
-
-<span class="kw">fn </span>extern_func(extern_: <span class="kw-2">&amp;</span>Extern) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Func&gt; {
-	<span class="kw">match </span>extern_ {
-		Extern::Func(func) =&gt; <span class="prelude-val">Some</span>(func),
-		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-	}
-}
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>create_store(engine: <span class="kw-2">&amp;</span>wasmtime::Engine, max_memory_size: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; Store {
-	<span class="kw">let </span>limits = <span class="kw">if let </span><span class="prelude-val">Some</span>(max_memory_size) = max_memory_size {
-		wasmtime::StoreLimitsBuilder::new().memory_size(max_memory_size).build()
-	} <span class="kw">else </span>{
-		Default::default()
-	};
-
-	<span class="kw">let </span><span class="kw-2">mut </span>store =
-		Store::new(engine, StoreData { limits, host_state: <span class="prelude-val">None</span>, memory: <span class="prelude-val">None</span>, table: <span class="prelude-val">None </span>});
-	<span class="kw">if </span>max_memory_size.is_some() {
-		store.limiter(|s| <span class="kw-2">&amp;mut </span>s.limits);
-	}
-	store
-}
-
 <span class="kw">impl </span>InstanceWrapper {
-	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
-		engine: <span class="kw-2">&amp;</span>Engine,
-		instance_pre: <span class="kw-2">&amp;</span>InstancePre&lt;StoreData&gt;,
-		max_memory_size: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>store = create_store(engine, max_memory_size);
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(engine: <span class="kw-2">&amp;</span>Engine, instance_pre: <span class="kw-2">&amp;</span>InstancePre&lt;StoreData&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>store = Store::new(engine, Default::default());
 		<span class="kw">let </span>instance = instance_pre.instantiate(<span class="kw-2">&amp;mut </span>store).map_err(|error| {
 			WasmError::Other(<span class="macro">format!</span>(
 				<span class="string">&quot;failed to instantiate a new WASM module instance: {:#}&quot;</span>,
@@ -612,9 +597,10 @@
 					<span class="self">self</span>.instance.get_export(<span class="kw-2">&amp;mut </span><span class="self">self</span>.store, method).ok_or_else(|| {
 						Error::from(<span class="macro">format!</span>(<span class="string">&quot;Exported method {} is not found&quot;</span>, method))
 					})<span class="question-mark">?</span>;
-				<span class="kw">let </span>func = extern_func(<span class="kw-2">&amp;</span>export)
+				<span class="kw">let </span>func = export
+					.into_func()
 					.ok_or_else(|| Error::from(<span class="macro">format!</span>(<span class="string">&quot;Export {} is not a function&quot;</span>, method)))<span class="question-mark">?</span>;
-				EntryPoint::direct(<span class="kw-2">*</span>func, <span class="kw-2">&amp;</span><span class="self">self</span>.store).map_err(|<span class="kw">_</span>| {
+				EntryPoint::direct(func, <span class="kw-2">&amp;</span><span class="self">self</span>.store).map_err(|<span class="kw">_</span>| {
 					Error::from(<span class="macro">format!</span>(<span class="string">&quot;Exported function &#39;{}&#39; has invalid signature.&quot;</span>, method))
 				})<span class="question-mark">?
 			</span>},
@@ -670,7 +656,8 @@
 			.get_export(<span class="kw-2">&amp;mut </span><span class="self">self</span>.store, <span class="string">&quot;__heap_base&quot;</span>)
 			.ok_or_else(|| Error::from(<span class="string">&quot;__heap_base is not found&quot;</span>))<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>heap_base_global = extern_global(<span class="kw-2">&amp;</span>heap_base_export)
+		<span class="kw">let </span>heap_base_global = heap_base_export
+			.into_global()
 			.ok_or_else(|| Error::from(<span class="string">&quot;__heap_base is not a global&quot;</span>))<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>heap_base = heap_base_global
@@ -688,7 +675,7 @@
 			<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
 		};
 
-		<span class="kw">let </span>global = extern_global(<span class="kw-2">&amp;</span>global).ok_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;`{}` is not a global&quot;</span>, name))<span class="question-mark">?</span>;
+		<span class="kw">let </span>global = global.into_global().ok_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;`{}` is not a global&quot;</span>, name))<span class="question-mark">?</span>;
 
 		<span class="kw">match </span>global.get(<span class="kw-2">&amp;mut </span><span class="self">self</span>.store) {
 			Val::I32(val) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Value::I32(val))),
@@ -711,7 +698,8 @@
 		.get_export(ctx, <span class="string">&quot;memory&quot;</span>)
 		.ok_or_else(|| Error::from(<span class="string">&quot;memory is not exported under `memory` name&quot;</span>))<span class="question-mark">?</span>;
 
-	<span class="kw">let </span>memory = <span class="kw-2">*</span>extern_memory(<span class="kw-2">&amp;</span>memory_export)
+	<span class="kw">let </span>memory = memory_export
+		.into_memory()
 		.ok_or_else(|| Error::from(<span class="string">&quot;the `memory` export should have memory type&quot;</span>))<span class="question-mark">?</span>;
 
 	<span class="prelude-val">Ok</span>(memory)
@@ -722,8 +710,8 @@
 	instance
 		.get_export(ctx, <span class="string">&quot;__indirect_function_table&quot;</span>)
 		.as_ref()
-		.and_then(extern_table)
 		.cloned()
+		.and_then(Extern::into_table)
 }
 
 <span class="doccomment">/// Functions related to memory.
@@ -814,7 +802,7 @@
 	<span class="kw">let </span>module = wasmtime::Module::new(<span class="kw-2">&amp;</span>engine, code).unwrap();
 	<span class="kw">let </span>linker = wasmtime::Linker::new(<span class="kw-2">&amp;</span>engine);
 	<span class="kw">let </span>instance_pre = linker.instantiate_pre(<span class="kw-2">&amp;</span>module).unwrap();
-	<span class="kw">let </span><span class="kw-2">mut </span>wrapper = InstanceWrapper::new(<span class="kw-2">&amp;</span>engine, <span class="kw-2">&amp;</span>instance_pre, <span class="prelude-val">None</span>).unwrap();
+	<span class="kw">let </span><span class="kw-2">mut </span>wrapper = InstanceWrapper::new(<span class="kw-2">&amp;</span>engine, <span class="kw-2">&amp;</span>instance_pre).unwrap();
 	<span class="kw">unsafe </span>{ <span class="kw-2">*</span>wrapper.memory.data_ptr(<span class="kw-2">&amp;</span>wrapper.store) = <span class="number">42 </span>};
 	<span class="macro">assert_eq!</span>(<span class="kw">unsafe </span>{ <span class="kw-2">*</span>wrapper.memory.data_ptr(<span class="kw-2">&amp;</span>wrapper.store) }, <span class="number">42</span>);
 	wrapper.decommit();

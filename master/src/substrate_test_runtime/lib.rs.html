@@ -1428,6 +1428,11 @@
 <a href="#1428" id="1428">1428</a>
 <a href="#1429" id="1429">1429</a>
 <a href="#1430" id="1430">1430</a>
+<a href="#1431" id="1431">1431</a>
+<a href="#1432" id="1432">1432</a>
+<a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2782,7 +2787,7 @@
 	<span class="kw">use </span>sc_block_builder::BlockBuilderProvider;
 	<span class="kw">use </span>sp_api::ProvideRuntimeApi;
 	<span class="kw">use </span>sp_consensus::BlockOrigin;
-	<span class="kw">use </span>sp_core::storage::well_known_keys::HEAP_PAGES;
+	<span class="kw">use </span>sp_core::{storage::well_known_keys::HEAP_PAGES, ExecutionContext};
 	<span class="kw">use </span>sp_state_machine::ExecutionStrategy;
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		prelude::<span class="kw-2">*</span>, runtime::TestAPI, DefaultTestClientBuilderExt, TestClientBuilder,
@@ -2801,7 +2806,12 @@
 
 		<span class="comment">// Try to allocate 1024k of memory on heap. This is going to fail since it is twice larger
 		// than the heap.
-		</span><span class="kw">let </span>ret = client.runtime_api().vec_with_capacity(best_hash, <span class="number">1048576</span>);
+		</span><span class="kw">let </span>ret = client.runtime_api().vec_with_capacity_with_context(
+			best_hash,
+			<span class="comment">// Use `BlockImport` to ensure we use the on chain heap pages as configured above.
+			</span>ExecutionContext::Importing,
+			<span class="number">1048576</span>,
+		);
 		<span class="macro">assert!</span>(ret.is_err());
 
 		<span class="comment">// Create a block that sets the `:heap_pages` to 32 pages of memory which corresponds to
