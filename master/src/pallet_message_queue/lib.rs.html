@@ -1309,6 +1309,31 @@
 <a href="#1309" id="1309">1309</a>
 <a href="#1310" id="1310">1310</a>
 <a href="#1311" id="1311">1311</a>
+<a href="#1312" id="1312">1312</a>
+<a href="#1313" id="1313">1313</a>
+<a href="#1314" id="1314">1314</a>
+<a href="#1315" id="1315">1315</a>
+<a href="#1316" id="1316">1316</a>
+<a href="#1317" id="1317">1317</a>
+<a href="#1318" id="1318">1318</a>
+<a href="#1319" id="1319">1319</a>
+<a href="#1320" id="1320">1320</a>
+<a href="#1321" id="1321">1321</a>
+<a href="#1322" id="1322">1322</a>
+<a href="#1323" id="1323">1323</a>
+<a href="#1324" id="1324">1324</a>
+<a href="#1325" id="1325">1325</a>
+<a href="#1326" id="1326">1326</a>
+<a href="#1327" id="1327">1327</a>
+<a href="#1328" id="1328">1328</a>
+<a href="#1329" id="1329">1329</a>
+<a href="#1330" id="1330">1330</a>
+<a href="#1331" id="1331">1331</a>
+<a href="#1332" id="1332">1332</a>
+<a href="#1333" id="1333">1333</a>
+<a href="#1334" id="1334">1334</a>
+<a href="#1335" id="1335">1335</a>
+<a href="#1336" id="1336">1336</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1844,6 +1869,11 @@
 		</span>Queued,
 		<span class="doccomment">/// There is temporarily not enough weight to continue servicing messages.
 		</span>InsufficientWeight,
+		<span class="doccomment">/// This message is temporarily unprocessable.
+		///
+		/// Such errors are expected, but not guaranteed, to resolve themselves eventually through
+		/// retrying.
+		</span>TemporarilyUnprocessable,
 	}
 
 	<span class="doccomment">/// The index of the first and last (non-empty) pages.
@@ -1899,6 +1929,9 @@
 
 		<span class="doccomment">/// Execute an overweight message.
 		///
+		/// Temporary processing errors will be propagated whereas permanent errors are treated
+		/// as success condition.
+		///
 		/// - `origin`: Must be `Signed`.
 		/// - `message_origin`: The origin from which the message to be executed arrived.
 		/// - `page`: The page in the queue in which the message to be executed is sitting.
@@ -1932,6 +1965,10 @@
 </span><span class="kw">enum </span>PageExecutionStatus {
 	<span class="doccomment">/// The execution bailed because there was not enough weight remaining.
 	</span>Bailed,
+	<span class="doccomment">/// The page did not make any progress on its execution.
+	///
+	/// This is a transient condition and can be handled by retrying - exactly like [Bailed].
+	</span>NoProgress,
 	<span class="doccomment">/// No more messages could be loaded. This does _not_ imply `page.is_complete()`.
 	///
 	/// The reasons for this status are:
@@ -1945,6 +1982,10 @@
 </span><span class="kw">enum </span>ItemExecutionStatus {
 	<span class="doccomment">/// The execution bailed because there was not enough weight remaining.
 	</span>Bailed,
+	<span class="doccomment">/// The item did not make any progress on its execution.
+	///
+	/// This is a transient condition and can be handled by retrying - exactly like [Bailed].
+	</span>NoProgress,
 	<span class="doccomment">/// The item was not found.
 	</span>NoItem,
 	<span class="doccomment">/// Whether the execution of an item resulted in it being processed.
@@ -1962,8 +2003,8 @@
 	</span>Overweight,
 	<span class="doccomment">/// The message was processed successfully.
 	</span>Processed,
-	<span class="doccomment">/// The message was processed and resulted in a permanent error.
-	</span>Unprocessable,
+	<span class="doccomment">/// The message was processed and resulted in a, possibly permanent, error.
+	</span>Unprocessable { permanent: bool },
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
@@ -2125,7 +2166,8 @@
 			// additional overweight event being deposited.
 		</span>) {
 			Overweight | InsufficientWeight =&gt; <span class="prelude-val">Err</span>(Error::&lt;T&gt;::InsufficientWeight),
-			Unprocessable | Processed =&gt; {
+			Unprocessable { permanent: <span class="bool-val">false </span>} =&gt; <span class="prelude-val">Err</span>(Error::&lt;T&gt;::TemporarilyUnprocessable),
+			Unprocessable { permanent: <span class="bool-val">true </span>} | Processed =&gt; {
 				page.note_processed_at_pos(pos);
 				book_state.message_count.saturating_dec();
 				book_state.size.saturating_reduce(payload_len);
@@ -2232,6 +2274,7 @@
 		weight: <span class="kw-2">&amp;mut </span>WeightMeter,
 		overweight_limit: Weight,
 	) -&gt; (bool, <span class="prelude-ty">Option</span>&lt;MessageOriginOf&lt;T&gt;&gt;) {
+		<span class="kw">use </span>PageExecutionStatus::<span class="kw-2">*</span>;
 		<span class="kw">if </span>!weight.check_accrue(
 			T::WeightInfo::service_queue_base().saturating_add(T::WeightInfo::ready_ring_unknit()),
 		) {
@@ -2247,9 +2290,9 @@
 			total_processed.saturating_accrue(processed);
 			<span class="kw">match </span>status {
 				<span class="comment">// Store the page progress and do not go to the next one.
-				</span>PageExecutionStatus::Bailed =&gt; <span class="kw">break</span>,
+				</span>Bailed | NoProgress =&gt; <span class="kw">break</span>,
 				<span class="comment">// Go to the next page if this one is at the end.
-				</span>PageExecutionStatus::NoMore =&gt; (),
+				</span>NoMore =&gt; (),
 			};
 			book_state.begin.saturating_inc();
 		}
@@ -2314,6 +2357,7 @@
 			) {
 				Bailed =&gt; <span class="kw">break </span>PageExecutionStatus::Bailed,
 				NoItem =&gt; <span class="kw">break </span>PageExecutionStatus::NoMore,
+				NoProgress =&gt; <span class="kw">break </span>PageExecutionStatus::NoProgress,
 				<span class="comment">// Keep going as long as we make progress...
 				</span>Executed(<span class="bool-val">true</span>) =&gt; total_processed.saturating_inc(),
 				Executed(<span class="bool-val">false</span>) =&gt; (),
@@ -2364,7 +2408,8 @@
 			overweight_limit,
 		) {
 			InsufficientWeight =&gt; <span class="kw">return </span>ItemExecutionStatus::Bailed,
-			Processed | Unprocessable =&gt; <span class="bool-val">true</span>,
+			Unprocessable { permanent: <span class="bool-val">false </span>} =&gt; <span class="kw">return </span>ItemExecutionStatus::NoProgress,
+			Processed | Unprocessable { permanent: <span class="bool-val">true </span>} =&gt; <span class="bool-val">true</span>,
 			Overweight =&gt; <span class="bool-val">false</span>,
 		};
 
@@ -2436,12 +2481,14 @@
 		page_index: PageIndex,
 		message_index: T::Size,
 		message: <span class="kw-2">&amp;</span>[u8],
-		weight: <span class="kw-2">&amp;mut </span>WeightMeter,
+		meter: <span class="kw-2">&amp;mut </span>WeightMeter,
 		overweight_limit: Weight,
 	) -&gt; MessageExecutionStatus {
 		<span class="kw">let </span>hash = T::Hashing::hash(message);
-		<span class="kw">use </span>ProcessMessageError::Overweight;
-		<span class="kw">match </span>T::MessageProcessor::process_message(message, origin.clone(), weight.remaining()) {
+		<span class="kw">use </span>ProcessMessageError::<span class="kw-2">*</span>;
+		<span class="kw">let </span>prev_consumed = meter.consumed;
+
+		<span class="kw">match </span>T::MessageProcessor::process_message(message, origin.clone(), meter) {
 			<span class="prelude-val">Err</span>(Overweight(w)) <span class="kw">if </span>w.any_gt(overweight_limit) =&gt; {
 				<span class="comment">// Permanently overweight.
 				</span><span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::OverweightEnqueued {
@@ -2457,16 +2504,19 @@
 				// queue.
 				</span>MessageExecutionStatus::InsufficientWeight
 			},
-			<span class="prelude-val">Err</span>(error) =&gt; {
+			<span class="prelude-val">Err</span>(Yield) =&gt; {
+				<span class="comment">// Processing should be reattempted later.
+				</span>MessageExecutionStatus::Unprocessable { permanent: <span class="bool-val">false </span>}
+			},
+			<span class="prelude-val">Err</span>(error @ BadFormat | error @ Corrupt | error @ Unsupported) =&gt; {
 				<span class="comment">// Permanent error - drop
 				</span><span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::ProcessingFailed { hash, origin, error });
-				MessageExecutionStatus::Unprocessable
+				MessageExecutionStatus::Unprocessable { permanent: <span class="bool-val">true </span>}
 			},
-			<span class="prelude-val">Ok</span>((success, weight_used)) =&gt; {
+			<span class="prelude-val">Ok</span>(success) =&gt; {
 				<span class="comment">// Success
-				</span>weight.defensive_saturating_accrue(weight_used);
-				<span class="kw">let </span>event = Event::&lt;T&gt;::Processed { hash, origin, weight_used, success };
-				<span class="self">Self</span>::deposit_event(event);
+				</span><span class="kw">let </span>weight_used = meter.consumed.saturating_sub(prev_consumed);
+				<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::Processed { hash, origin, weight_used, success });
 				MessageExecutionStatus::Processed
 			},
 		}

@@ -200,6 +200,25 @@
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -224,7 +243,7 @@
 <span class="kw">use </span>sp_core::{ConstU32, Get, TypedGet};
 <span class="kw">use </span>sp_runtime::{traits::Convert, BoundedSlice, RuntimeDebug};
 <span class="kw">use </span>sp_std::{fmt::Debug, marker::PhantomData, prelude::<span class="kw-2">*</span>};
-<span class="kw">use </span>sp_weights::Weight;
+<span class="kw">use </span>sp_weights::{Weight, WeightMeter};
 
 <span class="doccomment">/// Errors that can happen when attempting to process a message with
 /// [`ProcessMessage::process_message()`].
@@ -240,6 +259,13 @@
 	/// would be respected. The parameter gives the maximum weight which the message could take
 	/// to process.
 	</span>Overweight(Weight),
+	<span class="doccomment">/// The queue wants to give up its current processing slot.
+	///
+	/// Hints the message processor to cease servicing this queue and proceed to the next
+	/// one. This is seen as a *hint*, not an instruction. Implementations must therefore handle
+	/// the case that a queue is re-serviced within the same block after *yielding*. A queue is
+	/// not required to *yield* again when it is being re-serviced withing the same block.
+	</span>Yield,
 }
 
 <span class="doccomment">/// Can process messages from a specific origin.
@@ -247,12 +273,14 @@
 	<span class="doccomment">/// The transport from where a message originates.
 	</span><span class="kw">type </span>Origin: FullCodec + MaxEncodedLen + Clone + Eq + PartialEq + TypeInfo + Debug;
 
-	<span class="doccomment">/// Process the given message, using no more than `weight_limit` in weight to do so.
+	<span class="doccomment">/// Process the given message, using no more than the remaining `meter` weight to do so.
+	///
+	/// Returns whether the message was processed.
 	</span><span class="kw">fn </span>process_message(
 		message: <span class="kw-2">&amp;</span>[u8],
 		origin: <span class="self">Self</span>::Origin,
-		weight_limit: Weight,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, Weight), ProcessMessageError&gt;;
+		meter: <span class="kw-2">&amp;mut </span>WeightMeter,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;bool, ProcessMessageError&gt;;
 }
 
 <span class="doccomment">/// Errors that can happen when attempting to execute an overweight message with
@@ -284,6 +312,16 @@
 		_address: <span class="self">Self</span>::OverweightMessageAddress,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, ExecuteOverweightError&gt; {
 		<span class="prelude-val">Err</span>(ExecuteOverweightError::NotFound)
+	}
+}
+
+<span class="doccomment">/// Services queues by doing nothing.
+</span><span class="kw">pub struct </span>NoopServiceQueues&lt;OverweightAddr&gt;(PhantomData&lt;OverweightAddr&gt;);
+<span class="kw">impl</span>&lt;OverweightAddr&gt; ServiceQueues <span class="kw">for </span>NoopServiceQueues&lt;OverweightAddr&gt; {
+	<span class="kw">type </span>OverweightMessageAddress = OverweightAddr;
+
+	<span class="kw">fn </span>service_queues(<span class="kw">_</span>: Weight) -&gt; Weight {
+		Weight::zero()
 	}
 }
 

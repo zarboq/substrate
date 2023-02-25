@@ -184,6 +184,12 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -233,22 +239,28 @@
 	}
 }
 
-<span class="doccomment">/// Processes any message and consumes (1, 1) weight per message.
-</span><span class="kw">pub struct </span>NoopMessageProcessor;
-<span class="kw">impl </span>ProcessMessage <span class="kw">for </span>NoopMessageProcessor {
-	<span class="kw">type </span>Origin = MessageOrigin;
+<span class="doccomment">/// Processes any message and consumes `(REQUIRED_WEIGHT, REQUIRED_WEIGHT)` weight.
+///
+/// Returns [ProcessMessageError::Overweight] error if the weight limit is not sufficient.
+</span><span class="kw">pub struct </span>NoopMessageProcessor&lt;Origin, <span class="kw">const </span>REQUIRED_WEIGHT: u64 = <span class="number">1</span>&gt;(PhantomData&lt;Origin&gt;);
+<span class="kw">impl</span>&lt;Origin, <span class="kw">const </span>REQUIRED_WEIGHT: u64&gt; ProcessMessage
+	<span class="kw">for </span>NoopMessageProcessor&lt;Origin, REQUIRED_WEIGHT&gt;
+<span class="kw">where
+	</span>Origin: codec::FullCodec + MaxEncodedLen + Clone + Eq + PartialEq + TypeInfo + Debug,
+{
+	<span class="kw">type </span>Origin = Origin;
 
 	<span class="kw">fn </span>process_message(
 		_message: <span class="kw-2">&amp;</span>[u8],
 		_origin: <span class="self">Self</span>::Origin,
-		weight_limit: Weight,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, Weight), ProcessMessageError&gt; {
-		<span class="kw">let </span>weight = Weight::from_parts(<span class="number">1</span>, <span class="number">1</span>);
+		meter: <span class="kw-2">&amp;mut </span>WeightMeter,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;bool, ProcessMessageError&gt; {
+		<span class="kw">let </span>required = Weight::from_parts(REQUIRED_WEIGHT, REQUIRED_WEIGHT);
 
-		<span class="kw">if </span>weight.all_lte(weight_limit) {
-			<span class="prelude-val">Ok</span>((<span class="bool-val">true</span>, weight))
+		<span class="kw">if </span>meter.check_accrue(required) {
+			<span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
 		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(ProcessMessageError::Overweight(weight))
+			<span class="prelude-val">Err</span>(ProcessMessageError::Overweight(required))
 		}
 	}
 }
