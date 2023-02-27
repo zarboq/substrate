@@ -145,11 +145,6 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -169,10 +164,10 @@
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
 </span><span class="kw">use </span>clap::Args;
-<span class="kw">use </span>nix::{errno::Errno, sys::statvfs::statvfs};
 <span class="kw">use </span>sc_client_db::DatabaseSource;
 <span class="kw">use </span>sp_core::traits::SpawnEssentialNamed;
 <span class="kw">use </span>std::{
+	io,
 	path::{Path, PathBuf},
 	time::Duration,
 };
@@ -183,7 +178,7 @@
 </span><span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error {
 	<span class="attr">#[error(<span class="string">&quot;IO Error&quot;</span>)]
-	</span>IOError(<span class="attr">#[from] </span>Errno),
+	</span>IOError(<span class="attr">#[from] </span>io::Error),
 	<span class="attr">#[error(<span class="string">&quot;Out of storage space: available {0}MB, required {1}MB&quot;</span>)]
 	</span>StorageOutOfSpace(u64, u64),
 }
@@ -269,12 +264,7 @@
 
 	<span class="doccomment">/// Returns free space in MB, or error if statvfs failed.
 	</span><span class="kw">fn </span>free_space(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
-		statvfs(path)
-			.map(|stats| {
-				u64::from(stats.blocks_available()).saturating_mul(u64::from(stats.block_size())) /
-					<span class="number">1_000_000
-			</span>})
-			.map_err(Error::from)
+		<span class="prelude-val">Ok</span>(fs4::available_space(path).map(|s| s / <span class="number">1_000_000</span>)<span class="question-mark">?</span>)
 	}
 
 	<span class="doccomment">/// Checks if the amount of free space for given `path` is above given `threshold`.
