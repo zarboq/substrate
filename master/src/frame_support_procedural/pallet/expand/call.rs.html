@@ -366,6 +366,8 @@
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -701,22 +703,24 @@
 				<span class="self">self</span>,
 				origin: <span class="self">Self</span>::RuntimeOrigin
 			) -&gt; #frame_support::dispatch::DispatchResultWithPostInfo {
-				<span class="kw">match </span><span class="self">self </span>{
-					#(
-						<span class="self">Self</span>::#fn_name { #( #args_name_pattern, )* } =&gt; {
-							#<span class="macro">frame_support::sp_tracing::enter_span!</span>(
-								#<span class="macro">frame_support::sp_tracing::trace_span!</span>(<span class="macro">stringify!</span>(#fn_name))
-							);
-							#maybe_allow_attrs
-							&lt;#pallet_ident&lt;#type_use_gen&gt;&gt;::#fn_name(origin, #( #args_name, )* )
-								.map(Into::into).map_err(Into::into)
+				#frame_support::dispatch_context::run_in_context(|| {
+					<span class="kw">match </span><span class="self">self </span>{
+						#(
+							<span class="self">Self</span>::#fn_name { #( #args_name_pattern, )* } =&gt; {
+								#<span class="macro">frame_support::sp_tracing::enter_span!</span>(
+									#<span class="macro">frame_support::sp_tracing::trace_span!</span>(<span class="macro">stringify!</span>(#fn_name))
+								);
+								#maybe_allow_attrs
+								&lt;#pallet_ident&lt;#type_use_gen&gt;&gt;::#fn_name(origin, #( #args_name, )* )
+									.map(Into::into).map_err(Into::into)
+							},
+						)*
+						<span class="self">Self</span>::__Ignore(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
+							<span class="kw">let _ </span>= origin; <span class="comment">// Use origin for empty Call enum
+							</span><span class="macro">unreachable!</span>(<span class="string">&quot;__PhantomItem cannot be used.&quot;</span>);
 						},
-					)*
-					<span class="self">Self</span>::__Ignore(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
-						<span class="kw">let _ </span>= origin; <span class="comment">// Use origin for empty Call enum
-						</span><span class="macro">unreachable!</span>(<span class="string">&quot;__PhantomItem cannot be used.&quot;</span>);
-					},
-				}
+					}
+				})
 			}
 		}
 
