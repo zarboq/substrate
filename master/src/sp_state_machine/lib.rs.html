@@ -2206,6 +2206,26 @@
 <a href="#2206" id="2206">2206</a>
 <a href="#2207" id="2207">2207</a>
 <a href="#2208" id="2208">2208</a>
+<a href="#2209" id="2209">2209</a>
+<a href="#2210" id="2210">2210</a>
+<a href="#2211" id="2211">2211</a>
+<a href="#2212" id="2212">2212</a>
+<a href="#2213" id="2213">2213</a>
+<a href="#2214" id="2214">2214</a>
+<a href="#2215" id="2215">2215</a>
+<a href="#2216" id="2216">2216</a>
+<a href="#2217" id="2217">2217</a>
+<a href="#2218" id="2218">2218</a>
+<a href="#2219" id="2219">2219</a>
+<a href="#2220" id="2220">2220</a>
+<a href="#2221" id="2221">2221</a>
+<a href="#2222" id="2222">2222</a>
+<a href="#2223" id="2223">2223</a>
+<a href="#2224" id="2224">2224</a>
+<a href="#2225" id="2225">2225</a>
+<a href="#2226" id="2226">2226</a>
+<a href="#2227" id="2227">2227</a>
+<a href="#2228" id="2228">2228</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3057,47 +3077,36 @@
 
 			<span class="kw">let </span>start_at_ref = start_at.as_ref().map(AsRef::as_ref);
 			<span class="kw">let </span><span class="kw-2">mut </span>switch_child_key = <span class="prelude-val">None</span>;
-			<span class="kw">let </span><span class="kw-2">mut </span>first = start_at.is_some();
-			<span class="kw">let </span>completed = proving_backend
-				.apply_to_key_values_while(
-					child_info.as_ref(),
-					<span class="prelude-val">None</span>,
-					start_at_ref,
-					|key, value| {
-						<span class="kw">if </span>first &amp;&amp;
-							start_at_ref
-								.as_ref()
-								.map(|start| <span class="kw-2">&amp;</span>key.as_slice() &gt; start)
-								.unwrap_or(<span class="bool-val">true</span>)
-						{
-							first = <span class="bool-val">false</span>;
-						}
-
-						<span class="kw">if </span>first {
-							<span class="bool-val">true
-						</span>} <span class="kw">else if </span>depth &lt; MAX_NESTED_TRIE_DEPTH &amp;&amp;
-							sp_core::storage::well_known_keys::is_child_storage_key(
-								key.as_slice(),
-							) {
-							count += <span class="number">1</span>;
-							<span class="kw">if </span>!child_roots.contains(value.as_slice()) {
-								child_roots.insert(value);
-								switch_child_key = <span class="prelude-val">Some</span>(key);
-								<span class="bool-val">false
-							</span>} <span class="kw">else </span>{
-								<span class="comment">// do not add two child trie with same root
-								</span><span class="bool-val">true
-							</span>}
-						} <span class="kw">else if </span>recorder.estimate_encoded_size() &lt;= size_limit {
-							count += <span class="number">1</span>;
-							<span class="bool-val">true
-						</span>} <span class="kw">else </span>{
-							<span class="bool-val">false
-						</span>}
-					},
-					<span class="bool-val">false</span>,
-				)
+			<span class="kw">let </span><span class="kw-2">mut </span>iter = proving_backend
+				.pairs(IterArgs {
+					child_info,
+					start_at: start_at_ref,
+					start_at_exclusive: <span class="bool-val">true</span>,
+					..IterArgs::default()
+				})
 				.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+
+			<span class="kw">while let </span><span class="prelude-val">Some</span>(item) = iter.next() {
+				<span class="kw">let </span>(key, value) = item.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+
+				<span class="kw">if </span>depth &lt; MAX_NESTED_TRIE_DEPTH &amp;&amp;
+					sp_core::storage::well_known_keys::is_child_storage_key(key.as_slice())
+				{
+					count += <span class="number">1</span>;
+					<span class="comment">// do not add two child trie with same root
+					</span><span class="kw">if </span>!child_roots.contains(value.as_slice()) {
+						child_roots.insert(value);
+						switch_child_key = <span class="prelude-val">Some</span>(key);
+						<span class="kw">break
+					</span>}
+				} <span class="kw">else if </span>recorder.estimate_encoded_size() &lt;= size_limit {
+					count += <span class="number">1</span>;
+				} <span class="kw">else </span>{
+					<span class="kw">break
+				</span>}
+			}
+
+			<span class="kw">let </span>completed = iter.was_complete();
 
 			<span class="kw">if </span>switch_child_key.is_none() {
 				<span class="kw">if </span>depth == <span class="number">1 </span>{
@@ -3159,22 +3168,26 @@
 		<span class="kw">let </span>proving_backend =
 			TrieBackendBuilder::wrap(trie_backend).with_recorder(recorder.clone()).build();
 		<span class="kw">let </span><span class="kw-2">mut </span>count = <span class="number">0</span>;
-		proving_backend
-			.apply_to_key_values_while(
-				child_info,
+		<span class="kw">let </span>iter = proving_backend
+			<span class="comment">// NOTE: Even though the loop below doesn&#39;t use these values
+			//       this *must* fetch both the keys and the values so that
+			//       the proof is correct.
+			</span>.pairs(IterArgs {
+				child_info: child_info.cloned(),
 				prefix,
 				start_at,
-				|_key, _value| {
-					<span class="kw">if </span>count == <span class="number">0 </span>|| recorder.estimate_encoded_size() &lt;= size_limit {
-						count += <span class="number">1</span>;
-						<span class="bool-val">true
-					</span>} <span class="kw">else </span>{
-						<span class="bool-val">false
-					</span>}
-				},
-				<span class="bool-val">false</span>,
-			)
+				..IterArgs::default()
+			})
 			.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+
+		<span class="kw">for </span>item <span class="kw">in </span>iter {
+			item.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+			<span class="kw">if </span>count == <span class="number">0 </span>|| recorder.estimate_encoded_size() &lt;= size_limit {
+				count += <span class="number">1</span>;
+			} <span class="kw">else </span>{
+				<span class="kw">break
+			</span>}
+		}
 
 		<span class="kw">let </span>proof = proving_backend
 			.extract_proof()
@@ -3381,20 +3394,25 @@
 		H::Out: Ord + Codec,
 	{
 		<span class="kw">let </span><span class="kw-2">mut </span>values = Vec::new();
-		<span class="kw">let </span>result = proving_backend.apply_to_key_values_while(
-			child_info,
-			prefix,
-			start_at,
-			|key, value| {
-				values.push((key.to_vec(), value.to_vec()));
-				count.as_ref().map_or(<span class="bool-val">true</span>, |c| (values.len() <span class="kw">as </span>u32) &lt; <span class="kw-2">*</span>c)
-			},
-			<span class="bool-val">true</span>,
-		);
-		<span class="kw">match </span>result {
-			<span class="prelude-val">Ok</span>(completed) =&gt; <span class="prelude-val">Ok</span>((values, completed)),
-			<span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;),
+		<span class="kw">let </span><span class="kw-2">mut </span>iter = proving_backend
+			.pairs(IterArgs {
+				child_info: child_info.cloned(),
+				prefix,
+				start_at,
+				stop_on_incomplete_database: <span class="bool-val">true</span>,
+				..IterArgs::default()
+			})
+			.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+
+		<span class="kw">while let </span><span class="prelude-val">Some</span>(item) = iter.next() {
+			<span class="kw">let </span>(key, value) = item.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+			values.push((key, value));
+			<span class="kw">if </span>!count.as_ref().map_or(<span class="bool-val">true</span>, |c| (values.len() <span class="kw">as </span>u32) &lt; <span class="kw-2">*</span>c) {
+				<span class="kw">break
+			</span>}
 		}
+
+		<span class="prelude-val">Ok</span>((values, iter.was_complete()))
 	}
 
 	<span class="doccomment">/// Check storage range proof on pre-created proving backend.
@@ -3463,46 +3481,34 @@
 			};
 			<span class="kw">let </span>start_at_ref = start_at.as_ref().map(AsRef::as_ref);
 			<span class="kw">let </span><span class="kw-2">mut </span>switch_child_key = <span class="prelude-val">None</span>;
-			<span class="kw">let </span><span class="kw-2">mut </span>first = start_at.is_some();
-			<span class="kw">let </span>completed = proving_backend
-				.apply_to_key_values_while(
-					child_info.as_ref(),
-					<span class="prelude-val">None</span>,
-					start_at_ref,
-					|key, value| {
-						<span class="kw">if </span>first &amp;&amp;
-							start_at_ref
-								.as_ref()
-								.map(|start| <span class="kw-2">&amp;</span>key.as_slice() &gt; start)
-								.unwrap_or(<span class="bool-val">true</span>)
-						{
-							first = <span class="bool-val">false</span>;
-						}
 
-						<span class="kw">if </span>!first {
-							values.push((key.to_vec(), value.to_vec()));
-						}
-						<span class="kw">if </span>first {
-							<span class="bool-val">true
-						</span>} <span class="kw">else if </span>depth &lt; MAX_NESTED_TRIE_DEPTH &amp;&amp;
-							sp_core::storage::well_known_keys::is_child_storage_key(
-								key.as_slice(),
-							) {
-							<span class="kw">if </span>child_roots.contains(value.as_slice()) {
-								<span class="comment">// Do not add two chid trie with same root.
-								</span><span class="bool-val">true
-							</span>} <span class="kw">else </span>{
-								child_roots.insert(value.clone());
-								switch_child_key = <span class="prelude-val">Some</span>((key, value));
-								<span class="bool-val">false
-							</span>}
-						} <span class="kw">else </span>{
-							<span class="bool-val">true
-						</span>}
-					},
-					<span class="bool-val">true</span>,
-				)
+			<span class="kw">let </span><span class="kw-2">mut </span>iter = proving_backend
+				.pairs(IterArgs {
+					child_info,
+					start_at: start_at_ref,
+					start_at_exclusive: <span class="bool-val">true</span>,
+					stop_on_incomplete_database: <span class="bool-val">true</span>,
+					..IterArgs::default()
+				})
 				.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+
+			<span class="kw">while let </span><span class="prelude-val">Some</span>(item) = iter.next() {
+				<span class="kw">let </span>(key, value) = item.map_err(|e| Box::new(e) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Error&gt;)<span class="question-mark">?</span>;
+				values.push((key.to_vec(), value.to_vec()));
+
+				<span class="kw">if </span>depth &lt; MAX_NESTED_TRIE_DEPTH &amp;&amp;
+					sp_core::storage::well_known_keys::is_child_storage_key(key.as_slice())
+				{
+					<span class="comment">// Do not add two chid trie with same root.
+					</span><span class="kw">if </span>!child_roots.contains(value.as_slice()) {
+						child_roots.insert(value.clone());
+						switch_child_key = <span class="prelude-val">Some</span>((key, value));
+						<span class="kw">break
+					</span>}
+				}
+			}
+
+			<span class="kw">let </span>completed = iter.was_complete();
 
 			<span class="kw">if </span>switch_child_key.is_none() {
 				<span class="kw">if </span>!completed {
@@ -3533,9 +3539,13 @@
 		storage::{ChildInfo, StateVersion},
 		testing::TaskExecutor,
 		traits::{CallContext, CodeExecutor, Externalities, RuntimeCode},
+		H256,
 	};
 	<span class="kw">use </span>sp_runtime::traits::BlakeTwo256;
-	<span class="kw">use </span>sp_trie::trie_types::{TrieDBMutBuilderV0, TrieDBMutBuilderV1};
+	<span class="kw">use </span>sp_trie::{
+		trie_types::{TrieDBMutBuilderV0, TrieDBMutBuilderV1},
+		KeySpacedDBMut, PrefixedMemoryDB,
+	};
 	<span class="kw">use </span>std::collections::{BTreeMap, HashMap};
 
 	<span class="attr">#[derive(Clone)]
@@ -4161,12 +4171,14 @@
 		<span class="comment">// Always contains at least some nodes.
 		</span><span class="macro">assert_eq!</span>(proof.to_memory_db::&lt;BlakeTwo256&gt;().drain().len(), <span class="number">3</span>);
 		<span class="macro">assert_eq!</span>(count, <span class="number">1</span>);
+		<span class="macro">assert_eq!</span>(proof.encoded_size(), <span class="number">443</span>);
 
 		<span class="kw">let </span>remote_backend = trie_backend::tests::test_trie(state_version, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
 		<span class="kw">let </span>(proof, count) =
 			prove_range_read_with_size(remote_backend, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="number">800</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[])).unwrap();
 		<span class="macro">assert_eq!</span>(proof.to_memory_db::&lt;BlakeTwo256&gt;().drain().len(), <span class="number">9</span>);
 		<span class="macro">assert_eq!</span>(count, <span class="number">85</span>);
+		<span class="macro">assert_eq!</span>(proof.encoded_size(), <span class="number">857</span>);
 		<span class="kw">let </span>(results, completed) = read_range_proof_check::&lt;BlakeTwo256&gt;(
 			remote_root,
 			proof.clone(),
@@ -4190,11 +4202,39 @@
 			prove_range_read_with_size(remote_backend, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="number">50000</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[])).unwrap();
 		<span class="macro">assert_eq!</span>(proof.to_memory_db::&lt;BlakeTwo256&gt;().drain().len(), <span class="number">11</span>);
 		<span class="macro">assert_eq!</span>(count, <span class="number">132</span>);
+		<span class="macro">assert_eq!</span>(proof.encoded_size(), <span class="number">990</span>);
+
 		<span class="kw">let </span>(results, completed) =
 			read_range_proof_check::&lt;BlakeTwo256&gt;(remote_root, proof, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
 				.unwrap();
 		<span class="macro">assert_eq!</span>(results.len() <span class="kw">as </span>u32, count);
 		<span class="macro">assert_eq!</span>(completed, <span class="bool-val">true</span>);
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>prove_read_with_size_limit_proof_size() {
+		<span class="kw">let </span><span class="kw-2">mut </span>root = H256::default();
+		<span class="kw">let </span><span class="kw-2">mut </span>mdb = PrefixedMemoryDB::&lt;BlakeTwo256&gt;::default();
+		{
+			<span class="kw">let </span><span class="kw-2">mut </span>mdb = KeySpacedDBMut::new(<span class="kw-2">&amp;mut </span>mdb, <span class="string">b&quot;&quot;</span>);
+			<span class="kw">let </span><span class="kw-2">mut </span>trie = TrieDBMutBuilderV1::new(<span class="kw-2">&amp;mut </span>mdb, <span class="kw-2">&amp;mut </span>root).build();
+			trie.insert(<span class="string">b&quot;value1&quot;</span>, <span class="kw-2">&amp;</span>[<span class="number">123</span>; <span class="number">1</span>]).unwrap();
+			trie.insert(<span class="string">b&quot;value2&quot;</span>, <span class="kw-2">&amp;</span>[<span class="number">123</span>; <span class="number">10</span>]).unwrap();
+			trie.insert(<span class="string">b&quot;value3&quot;</span>, <span class="kw-2">&amp;</span>[<span class="number">123</span>; <span class="number">100</span>]).unwrap();
+			trie.insert(<span class="string">b&quot;value4&quot;</span>, <span class="kw-2">&amp;</span>[<span class="number">123</span>; <span class="number">1000</span>]).unwrap();
+		}
+
+		<span class="kw">let </span>remote_backend: TrieBackend&lt;PrefixedMemoryDB&lt;BlakeTwo256&gt;, BlakeTwo256&gt; =
+			TrieBackendBuilder::new(mdb, root)
+				.with_optional_cache(<span class="prelude-val">None</span>)
+				.with_optional_recorder(<span class="prelude-val">None</span>)
+				.build();
+
+		<span class="kw">let </span>(proof, count) =
+			prove_range_read_with_size(remote_backend, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="number">1000</span>, <span class="prelude-val">None</span>).unwrap();
+
+		<span class="macro">assert_eq!</span>(proof.encoded_size(), <span class="number">1267</span>);
+		<span class="macro">assert_eq!</span>(count, <span class="number">3</span>);
 	}
 
 	<span class="attr">#[test]

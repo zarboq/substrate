@@ -1136,6 +1136,22 @@
 <a href="#1136" id="1136">1136</a>
 <a href="#1137" id="1137">1137</a>
 <a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
+<a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
+<a href="#1152" id="1152">1152</a>
+<a href="#1153" id="1153">1153</a>
+<a href="#1154" id="1154">1154</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1157,7 +1173,9 @@
 
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::overlayed_changes::OverlayedExtensions;
-<span class="kw">use crate</span>::{backend::Backend, IndexOperation, OverlayedChanges, StorageKey, StorageValue};
+<span class="kw">use crate</span>::{
+	backend::Backend, IndexOperation, IterArgs, OverlayedChanges, StorageKey, StorageValue,
+};
 <span class="kw">use </span>codec::{Decode, Encode, EncodeAppend};
 <span class="kw">use </span>hash_db::Hasher;
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
@@ -1888,40 +1906,54 @@
 {
 	<span class="kw">fn </span>limit_remove_from_backend(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		maybe_child: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
-		maybe_prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
+		child_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ChildInfo&gt;,
+		prefix: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
 		maybe_limit: <span class="prelude-ty">Option</span>&lt;u32&gt;,
-		maybe_cursor: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
+		start_at: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
 	) -&gt; (<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, u32, u32) {
+		<span class="kw">let </span>iter = <span class="kw">match </span><span class="self">self</span>.backend.keys(IterArgs {
+			child_info: child_info.cloned(),
+			prefix,
+			start_at,
+			..IterArgs::default()
+		}) {
+			<span class="prelude-val">Ok</span>(iter) =&gt; iter,
+			<span class="prelude-val">Err</span>(error) =&gt; {
+				<span class="macro">log::debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error while iterating the storage: {}&quot;</span>, error);
+				<span class="kw">return </span>(<span class="prelude-val">None</span>, <span class="number">0</span>, <span class="number">0</span>)
+			},
+		};
+
 		<span class="kw">let </span><span class="kw-2">mut </span>delete_count: u32 = <span class="number">0</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>loop_count: u32 = <span class="number">0</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>maybe_next_key = <span class="prelude-val">None</span>;
-		<span class="kw">let </span>result =
-			<span class="self">self</span>.backend
-				.apply_to_keys_while(maybe_child, maybe_prefix, maybe_cursor, |key| {
-					<span class="kw">if </span>maybe_limit.map_or(<span class="bool-val">false</span>, |limit| loop_count == limit) {
-						maybe_next_key = <span class="prelude-val">Some</span>(key.to_vec());
-						<span class="kw">return </span><span class="bool-val">false
-					</span>}
-					<span class="kw">let </span>overlay = <span class="kw">match </span>maybe_child {
-						<span class="prelude-val">Some</span>(child_info) =&gt; <span class="self">self</span>.overlay.child_storage(child_info, key),
-						<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.overlay.storage(key),
-					};
-					<span class="kw">if </span>!<span class="macro">matches!</span>(overlay, <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>)) {
-						<span class="comment">// not pending deletion from the backend - delete it.
-						</span><span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = maybe_child {
-							<span class="self">self</span>.overlay.set_child_storage(child_info, key.to_vec(), <span class="prelude-val">None</span>);
-						} <span class="kw">else </span>{
-							<span class="self">self</span>.overlay.set_storage(key.to_vec(), <span class="prelude-val">None</span>);
-						}
-						delete_count = delete_count.saturating_add(<span class="number">1</span>);
-					}
-					loop_count = loop_count.saturating_add(<span class="number">1</span>);
-					<span class="bool-val">true
-				</span>});
+		<span class="kw">for </span>key <span class="kw">in </span>iter {
+			<span class="kw">let </span>key = <span class="kw">match </span>key {
+				<span class="prelude-val">Ok</span>(key) =&gt; key,
+				<span class="prelude-val">Err</span>(error) =&gt; {
+					<span class="macro">log::debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error while iterating the storage: {}&quot;</span>, error);
+					<span class="kw">break
+				</span>},
+			};
 
-		<span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;trie&quot;</span>, <span class="string">&quot;Error while iterating the storage: {}&quot;</span>, error);
+			<span class="kw">if </span>maybe_limit.map_or(<span class="bool-val">false</span>, |limit| loop_count == limit) {
+				maybe_next_key = <span class="prelude-val">Some</span>(key);
+				<span class="kw">break
+			</span>}
+			<span class="kw">let </span>overlay = <span class="kw">match </span>child_info {
+				<span class="prelude-val">Some</span>(child_info) =&gt; <span class="self">self</span>.overlay.child_storage(child_info, <span class="kw-2">&amp;</span>key),
+				<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.overlay.storage(<span class="kw-2">&amp;</span>key),
+			};
+			<span class="kw">if </span>!<span class="macro">matches!</span>(overlay, <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>)) {
+				<span class="comment">// not pending deletion from the backend - delete it.
+				</span><span class="kw">if let </span><span class="prelude-val">Some</span>(child_info) = child_info {
+					<span class="self">self</span>.overlay.set_child_storage(child_info, key, <span class="prelude-val">None</span>);
+				} <span class="kw">else </span>{
+					<span class="self">self</span>.overlay.set_storage(key, <span class="prelude-val">None</span>);
+				}
+				delete_count = delete_count.saturating_add(<span class="number">1</span>);
+			}
+			loop_count = loop_count.saturating_add(<span class="number">1</span>);
 		}
 
 		(maybe_next_key, delete_count, loop_count)
