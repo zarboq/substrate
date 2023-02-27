@@ -607,8 +607,6 @@
 <a href="#607" id="607">607</a>
 <a href="#608" id="608">608</a>
 <a href="#609" id="609">609</a>
-<a href="#610" id="610">610</a>
-<a href="#611" id="611">611</a>
 </pre><pre class="rust"><code><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 </span><span class="comment">// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 </span><span class="attr">#![recursion_limit = <span class="string">&quot;256&quot;</span>]
@@ -617,9 +615,7 @@
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/wasm_binary.rs&quot;</span>));
 
-<span class="kw">use </span>pallet_grandpa::{
-	fg_primitives, AuthorityId <span class="kw">as </span>GrandpaId, AuthorityList <span class="kw">as </span>GrandpaAuthorityList,
-};
+<span class="kw">use </span>pallet_grandpa::AuthorityId <span class="kw">as </span>GrandpaId;
 <span class="kw">use </span>sp_api::impl_runtime_apis;
 <span class="kw">use </span>sp_consensus_aura::sr25519::AuthorityId <span class="kw">as </span>AuraId;
 <span class="kw">use </span>sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -1040,29 +1036,29 @@
 		}
 	}
 
-	<span class="kw">impl </span>fg_primitives::GrandpaApi&lt;Block&gt; <span class="kw">for </span>Runtime {
-		<span class="kw">fn </span>grandpa_authorities() -&gt; GrandpaAuthorityList {
+	<span class="kw">impl </span>sp_consensus_grandpa::GrandpaApi&lt;Block&gt; <span class="kw">for </span>Runtime {
+		<span class="kw">fn </span>grandpa_authorities() -&gt; sp_consensus_grandpa::AuthorityList {
 			Grandpa::grandpa_authorities()
 		}
 
-		<span class="kw">fn </span>current_set_id() -&gt; fg_primitives::SetId {
+		<span class="kw">fn </span>current_set_id() -&gt; sp_consensus_grandpa::SetId {
 			Grandpa::current_set_id()
 		}
 
 		<span class="kw">fn </span>submit_report_equivocation_unsigned_extrinsic(
-			_equivocation_proof: fg_primitives::EquivocationProof&lt;
+			_equivocation_proof: sp_consensus_grandpa::EquivocationProof&lt;
 				&lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
 				NumberFor&lt;Block&gt;,
 			&gt;,
-			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
+			_key_owner_proof: sp_consensus_grandpa::OpaqueKeyOwnershipProof,
 		) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
 			<span class="prelude-val">None
 		</span>}
 
 		<span class="kw">fn </span>generate_key_ownership_proof(
-			_set_id: fg_primitives::SetId,
+			_set_id: sp_consensus_grandpa::SetId,
 			_authority_id: GrandpaId,
-		) -&gt; <span class="prelude-ty">Option</span>&lt;fg_primitives::OpaqueKeyOwnershipProof&gt; {
+		) -&gt; <span class="prelude-ty">Option</span>&lt;sp_consensus_grandpa::OpaqueKeyOwnershipProof&gt; {
 			<span class="comment">// NOTE: this is the only implementation possible since we&#39;ve
 			// defined our key owner proof type as a bottom type (i.e. a type
 			// with no values).

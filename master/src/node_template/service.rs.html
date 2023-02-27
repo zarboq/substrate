@@ -343,8 +343,8 @@
 </span><span class="kw">use </span>node_template_runtime::{<span class="self">self</span>, opaque::Block, RuntimeApi};
 <span class="kw">use </span>sc_client_api::BlockBackend;
 <span class="kw">use </span>sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
+<span class="kw">use </span>sc_consensus_grandpa::SharedVoterState;
 <span class="kw">pub use </span>sc_executor::NativeElseWasmExecutor;
-<span class="kw">use </span>sc_finality_grandpa::SharedVoterState;
 <span class="kw">use </span>sc_keystore::LocalKeystore;
 <span class="kw">use </span>sc_service::{error::Error <span class="kw">as </span>ServiceError, Configuration, TaskManager, WarpSyncParams};
 <span class="kw">use </span>sc_telemetry::{Telemetry, TelemetryWorker};
@@ -386,13 +386,13 @@
 		sc_consensus::DefaultImportQueue&lt;Block, FullClient&gt;,
 		sc_transaction_pool::FullPool&lt;Block, FullClient&gt;,
 		(
-			sc_finality_grandpa::GrandpaBlockImport&lt;
+			sc_consensus_grandpa::GrandpaBlockImport&lt;
 				FullBackend,
 				Block,
 				FullClient,
 				FullSelectChain,
 			&gt;,
-			sc_finality_grandpa::LinkHalf&lt;Block, FullClient, FullSelectChain&gt;,
+			sc_consensus_grandpa::LinkHalf&lt;Block, FullClient, FullSelectChain&gt;,
 			<span class="prelude-ty">Option</span>&lt;Telemetry&gt;,
 		),
 	&gt;,
@@ -443,7 +443,7 @@
 		client.clone(),
 	);
 
-	<span class="kw">let </span>(grandpa_block_import, grandpa_link) = sc_finality_grandpa::block_import(
+	<span class="kw">let </span>(grandpa_block_import, grandpa_link) = sc_consensus_grandpa::block_import(
 		client.clone(),
 		<span class="kw-2">&amp;</span>(client.clone() <span class="kw">as </span>Arc&lt;<span class="kw">_</span>&gt;),
 		select_chain.clone(),
@@ -517,7 +517,7 @@
 				))),
 		};
 	}
-	<span class="kw">let </span>grandpa_protocol_name = sc_finality_grandpa::protocol_standard_name(
+	<span class="kw">let </span>grandpa_protocol_name = sc_consensus_grandpa::protocol_standard_name(
 		<span class="kw-2">&amp;</span>client.block_hash(<span class="number">0</span>).ok().flatten().expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>),
 		<span class="kw-2">&amp;</span>config.chain_spec,
 	);
@@ -525,8 +525,8 @@
 	config
 		.network
 		.extra_sets
-		.push(sc_finality_grandpa::grandpa_peers_set_config(grandpa_protocol_name.clone()));
-	<span class="kw">let </span>warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
+		.push(sc_consensus_grandpa::grandpa_peers_set_config(grandpa_protocol_name.clone()));
+	<span class="kw">let </span>warp_sync = Arc::new(sc_consensus_grandpa::warp_proof::NetworkProvider::new(
 		backend.clone(),
 		grandpa_link.shared_authority_set().clone(),
 		Vec::default(),
@@ -638,7 +638,7 @@
 		</span><span class="kw">let </span>keystore =
 			<span class="kw">if </span>role.is_authority() { <span class="prelude-val">Some</span>(keystore_container.sync_keystore()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 
-		<span class="kw">let </span>grandpa_config = sc_finality_grandpa::Config {
+		<span class="kw">let </span>grandpa_config = sc_consensus_grandpa::Config {
 			<span class="comment">// FIXME #1578 make this available through chainspec
 			</span>gossip_duration: Duration::from_millis(<span class="number">333</span>),
 			justification_period: <span class="number">512</span>,
@@ -656,11 +656,11 @@
 		// and vote data availability than the observer. The observer has not
 		// been tested extensively yet and having most nodes in a network run it
 		// could lead to finality stalls.
-		</span><span class="kw">let </span>grandpa_config = sc_finality_grandpa::GrandpaParams {
+		</span><span class="kw">let </span>grandpa_config = sc_consensus_grandpa::GrandpaParams {
 			config: grandpa_config,
 			link: grandpa_link,
 			network,
-			voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
+			voting_rule: sc_consensus_grandpa::VotingRulesBuilder::default().build(),
 			prometheus_registry,
 			shared_voter_state: SharedVoterState::empty(),
 			telemetry: telemetry.as_ref().map(|x| x.handle()),
@@ -671,7 +671,7 @@
 		</span>task_manager.spawn_essential_handle().spawn_blocking(
 			<span class="string">&quot;grandpa-voter&quot;</span>,
 			<span class="prelude-val">None</span>,
-			sc_finality_grandpa::run_grandpa_voter(grandpa_config)<span class="question-mark">?</span>,
+			sc_consensus_grandpa::run_grandpa_voter(grandpa_config)<span class="question-mark">?</span>,
 		);
 	}
 

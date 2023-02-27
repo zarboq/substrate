@@ -142,6 +142,8 @@ var sourcesIndex = JSON.parse('{\
 "sc_consensus_babe":["",[],["authorship.rs","aux_schema.rs","lib.rs","migration.rs","verification.rs"]],\
 "sc_consensus_babe_rpc":["",[],["lib.rs"]],\
 "sc_consensus_epochs":["",[],["lib.rs","migration.rs"]],\
+"sc_consensus_grandpa":["",[["communication",[],["gossip.rs","mod.rs","periodic.rs"]]],["authorities.rs","aux_schema.rs","environment.rs","finality_proof.rs","import.rs","justification.rs","lib.rs","notification.rs","observer.rs","until_imported.rs","voting_rule.rs","warp_proof.rs"]],\
+"sc_consensus_grandpa_rpc":["",[],["error.rs","finality.rs","lib.rs","notification.rs","report.rs"]],\
 "sc_consensus_manual_seal":["",[["consensus",[],["aura.rs","babe.rs","timestamp.rs"]]],["consensus.rs","error.rs","finalize_block.rs","lib.rs","rpc.rs","seal_block.rs"]],\
 "sc_consensus_pow":["",[],["lib.rs","worker.rs"]],\
 "sc_consensus_slots":["",[],["aux_schema.rs","lib.rs","slots.rs"]],\
@@ -149,8 +151,6 @@ var sourcesIndex = JSON.parse('{\
 "sc_executor_common":["",[["runtime_blob",[],["data_segments_snapshot.rs","globals_snapshot.rs","mod.rs","runtime_blob.rs"]]],["error.rs","lib.rs","util.rs","wasm_runtime.rs"]],\
 "sc_executor_wasmi":["",[],["lib.rs"]],\
 "sc_executor_wasmtime":["",[],["host.rs","imports.rs","instance_wrapper.rs","lib.rs","runtime.rs","util.rs"]],\
-"sc_finality_grandpa":["",[["communication",[],["gossip.rs","mod.rs","periodic.rs"]]],["authorities.rs","aux_schema.rs","environment.rs","finality_proof.rs","import.rs","justification.rs","lib.rs","notification.rs","observer.rs","until_imported.rs","voting_rule.rs","warp_proof.rs"]],\
-"sc_finality_grandpa_rpc":["",[],["error.rs","finality.rs","lib.rs","notification.rs","report.rs"]],\
 "sc_informant":["",[],["display.rs","lib.rs"]],\
 "sc_keystore":["",[],["lib.rs","local.rs"]],\
 "sc_network":["",[["protocol",[["notifications",[["upgrade",[],["collec.rs","notifications.rs"]]],["behaviour.rs","handler.rs","upgrade.rs"]]],["message.rs","notifications.rs"]],["service",[],["metrics.rs","out_events.rs"]]],["behaviour.rs","config.rs","discovery.rs","lib.rs","network_state.rs","peer_info.rs","protocol.rs","request_responses.rs","service.rs","transport.rs"]],\
@@ -193,6 +193,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_consensus":["",[],["block_validation.rs","error.rs","lib.rs","select_chain.rs"]],\
 "sp_consensus_aura":["",[],["digests.rs","inherents.rs","lib.rs"]],\
 "sp_consensus_babe":["",[],["digests.rs","inherents.rs","lib.rs"]],\
+"sp_consensus_grandpa":["",[],["lib.rs"]],\
 "sp_consensus_pow":["",[],["lib.rs"]],\
 "sp_consensus_slots":["",[],["lib.rs"]],\
 "sp_consensus_vrf":["",[],["lib.rs","schnorrkel.rs"]],\
@@ -202,7 +203,6 @@ var sourcesIndex = JSON.parse('{\
 "sp_database":["",[],["error.rs","kvdb.rs","lib.rs","mem.rs"]],\
 "sp_debug_derive":["",[],["impls.rs","lib.rs"]],\
 "sp_externalities":["",[],["extensions.rs","lib.rs","scope_limited.rs"]],\
-"sp_finality_grandpa":["",[],["lib.rs"]],\
 "sp_inherents":["",[],["client_side.rs","lib.rs"]],\
 "sp_io":["",[],["batch_verifier.rs","lib.rs"]],\
 "sp_keyring":["",[],["ed25519.rs","lib.rs","sr25519.rs"]],\
