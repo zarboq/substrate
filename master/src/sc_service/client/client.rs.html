@@ -2119,6 +2119,70 @@
 <a href="#2119" id="2119">2119</a>
 <a href="#2120" id="2120">2120</a>
 <a href="#2121" id="2121">2121</a>
+<a href="#2122" id="2122">2122</a>
+<a href="#2123" id="2123">2123</a>
+<a href="#2124" id="2124">2124</a>
+<a href="#2125" id="2125">2125</a>
+<a href="#2126" id="2126">2126</a>
+<a href="#2127" id="2127">2127</a>
+<a href="#2128" id="2128">2128</a>
+<a href="#2129" id="2129">2129</a>
+<a href="#2130" id="2130">2130</a>
+<a href="#2131" id="2131">2131</a>
+<a href="#2132" id="2132">2132</a>
+<a href="#2133" id="2133">2133</a>
+<a href="#2134" id="2134">2134</a>
+<a href="#2135" id="2135">2135</a>
+<a href="#2136" id="2136">2136</a>
+<a href="#2137" id="2137">2137</a>
+<a href="#2138" id="2138">2138</a>
+<a href="#2139" id="2139">2139</a>
+<a href="#2140" id="2140">2140</a>
+<a href="#2141" id="2141">2141</a>
+<a href="#2142" id="2142">2142</a>
+<a href="#2143" id="2143">2143</a>
+<a href="#2144" id="2144">2144</a>
+<a href="#2145" id="2145">2145</a>
+<a href="#2146" id="2146">2146</a>
+<a href="#2147" id="2147">2147</a>
+<a href="#2148" id="2148">2148</a>
+<a href="#2149" id="2149">2149</a>
+<a href="#2150" id="2150">2150</a>
+<a href="#2151" id="2151">2151</a>
+<a href="#2152" id="2152">2152</a>
+<a href="#2153" id="2153">2153</a>
+<a href="#2154" id="2154">2154</a>
+<a href="#2155" id="2155">2155</a>
+<a href="#2156" id="2156">2156</a>
+<a href="#2157" id="2157">2157</a>
+<a href="#2158" id="2158">2158</a>
+<a href="#2159" id="2159">2159</a>
+<a href="#2160" id="2160">2160</a>
+<a href="#2161" id="2161">2161</a>
+<a href="#2162" id="2162">2162</a>
+<a href="#2163" id="2163">2163</a>
+<a href="#2164" id="2164">2164</a>
+<a href="#2165" id="2165">2165</a>
+<a href="#2166" id="2166">2166</a>
+<a href="#2167" id="2167">2167</a>
+<a href="#2168" id="2168">2168</a>
+<a href="#2169" id="2169">2169</a>
+<a href="#2170" id="2170">2170</a>
+<a href="#2171" id="2171">2171</a>
+<a href="#2172" id="2172">2172</a>
+<a href="#2173" id="2173">2173</a>
+<a href="#2174" id="2174">2174</a>
+<a href="#2175" id="2175">2175</a>
+<a href="#2176" id="2176">2176</a>
+<a href="#2177" id="2177">2177</a>
+<a href="#2178" id="2178">2178</a>
+<a href="#2179" id="2179">2179</a>
+<a href="#2180" id="2180">2180</a>
+<a href="#2181" id="2181">2181</a>
+<a href="#2182" id="2182">2182</a>
+<a href="#2183" id="2183">2183</a>
+<a href="#2184" id="2184">2184</a>
+<a href="#2185" id="2185">2185</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2152,7 +2216,7 @@
 <span class="kw">use </span>sc_client_api::{
 	backend::{
 		<span class="self">self</span>, apply_aux, BlockImportOperation, ClientImportOperation, FinalizeSummary, Finalizer,
-		ImportSummary, LockImportRun, NewBlockState, StorageProvider,
+		ImportNotificationAction, ImportSummary, LockImportRun, NewBlockState, StorageProvider,
 	},
 	client::{
 		BadBlocks, BlockBackend, BlockImportNotification, BlockOf, BlockchainEvents, ClientInfo,
@@ -2227,6 +2291,7 @@
 	executor: E,
 	storage_notifications: StorageNotifications&lt;Block&gt;,
 	import_notification_sinks: NotificationSinks&lt;BlockImportNotification&lt;Block&gt;&gt;,
+	every_import_notification_sinks: NotificationSinks&lt;BlockImportNotification&lt;Block&gt;&gt;,
 	finality_notification_sinks: NotificationSinks&lt;FinalityNotification&lt;Block&gt;&gt;,
 	<span class="comment">// Collects auxiliary operations to be performed atomically together with
 	// block import operations.
@@ -2425,19 +2490,22 @@
 				FinalityNotification::from_summary(summary, <span class="self">self</span>.unpin_worker_sender.clone())
 			});
 
-			<span class="kw">let </span>(import_notification, storage_changes) = <span class="kw">match </span>notify_imported {
-				<span class="prelude-val">Some</span>(<span class="kw-2">mut </span>summary) =&gt; {
-					<span class="kw">let </span>storage_changes = summary.storage_changes.take();
-					(
-						<span class="prelude-val">Some</span>(BlockImportNotification::from_summary(
-							summary,
-							<span class="self">self</span>.unpin_worker_sender.clone(),
-						)),
-						storage_changes,
-					)
-				},
-				<span class="prelude-val">None </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
-			};
+			<span class="kw">let </span>(import_notification, storage_changes, import_notification_action) =
+				<span class="kw">match </span>notify_imported {
+					<span class="prelude-val">Some</span>(<span class="kw-2">mut </span>summary) =&gt; {
+						<span class="kw">let </span>import_notification_action = summary.import_notification_action;
+						<span class="kw">let </span>storage_changes = summary.storage_changes.take();
+						(
+							<span class="prelude-val">Some</span>(BlockImportNotification::from_summary(
+								summary,
+								<span class="self">self</span>.unpin_worker_sender.clone(),
+							)),
+							storage_changes,
+							import_notification_action,
+						)
+					},
+					<span class="prelude-val">None </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, ImportNotificationAction::None),
+				};
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>notification) = finality_notification {
 				<span class="kw">for </span>action <span class="kw">in </span><span class="self">self</span>.finality_actions.lock().iter_mut() {
@@ -2474,7 +2542,7 @@
 			}
 
 			<span class="self">self</span>.notify_finalized(finality_notification)<span class="question-mark">?</span>;
-			<span class="self">self</span>.notify_imported(import_notification, storage_changes)<span class="question-mark">?</span>;
+			<span class="self">self</span>.notify_imported(import_notification, import_notification_action, storage_changes)<span class="question-mark">?</span>;
 
 			<span class="prelude-val">Ok</span>(r)
 		};
@@ -2572,6 +2640,7 @@
 			executor,
 			storage_notifications: StorageNotifications::new(prometheus_registry),
 			import_notification_sinks: Default::default(),
+			every_import_notification_sinks: Default::default(),
 			finality_notification_sinks: Default::default(),
 			import_actions: Default::default(),
 			finality_actions: Default::default(),
@@ -2890,11 +2959,15 @@
 
 		operation.op.insert_aux(aux)<span class="question-mark">?</span>;
 
-		<span class="comment">// We only notify when we are already synced to the tip of the chain
+		<span class="kw">let </span>should_notify_every_block = !<span class="self">self</span>.every_import_notification_sinks.lock().is_empty();
+
+		<span class="comment">// Notify when we are already synced to the tip of the chain
 		// or if this import triggers a re-org
-		</span><span class="kw">if </span>make_notifications || tree_route.is_some() {
+		</span><span class="kw">let </span>should_notify_recent_block = make_notifications || tree_route.is_some();
+
+		<span class="kw">if </span>should_notify_every_block || should_notify_recent_block {
 			<span class="kw">let </span>header = import_headers.into_post();
-			<span class="kw">if </span>finalized {
+			<span class="kw">if </span>finalized &amp;&amp; should_notify_recent_block {
 				<span class="kw">let </span><span class="kw-2">mut </span>summary = <span class="kw">match </span>operation.notify_finalized.take() {
 					<span class="prelude-val">Some</span>(<span class="kw-2">mut </span>summary) =&gt; {
 						summary.header = header.clone();
@@ -2931,6 +3004,16 @@
 				operation.notify_finalized = <span class="prelude-val">Some</span>(summary);
 			}
 
+			<span class="kw">let </span>import_notification_action = <span class="kw">if </span>should_notify_every_block {
+				<span class="kw">if </span>should_notify_recent_block {
+					ImportNotificationAction::Both
+				} <span class="kw">else </span>{
+					ImportNotificationAction::EveryBlock
+				}
+			} <span class="kw">else </span>{
+				ImportNotificationAction::RecentBlock
+			};
+
 			operation.notify_imported = <span class="prelude-val">Some</span>(ImportSummary {
 				hash,
 				origin,
@@ -2938,6 +3021,7 @@
 				is_new_best,
 				storage_changes,
 				tree_route,
+				import_notification_action,
 			})
 		}
 
@@ -3133,6 +3217,7 @@
 	<span class="kw">fn </span>notify_imported(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		notification: <span class="prelude-ty">Option</span>&lt;BlockImportNotification&lt;Block&gt;&gt;,
+		import_notification_action: ImportNotificationAction,
 		storage_changes: <span class="prelude-ty">Option</span>&lt;(StorageCollection, ChildStorageCollection)&gt;,
 	) -&gt; sp_blockchain::Result&lt;()&gt; {
 		<span class="kw">let </span>notification = <span class="kw">match </span>notification {
@@ -3145,22 +3230,59 @@
 				// temporary leak of closed/discarded notification sinks (e.g.
 				// from consensus code).
 				</span><span class="self">self</span>.import_notification_sinks.lock().retain(|sink| !sink.is_closed());
+
+				<span class="self">self</span>.every_import_notification_sinks.lock().retain(|sink| !sink.is_closed());
+
 				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 			},
 		};
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(storage_changes) = storage_changes {
-			<span class="comment">// TODO [ToDr] How to handle re-orgs? Should we re-emit all storage changes?
-			</span><span class="self">self</span>.storage_notifications.trigger(
-				<span class="kw-2">&amp;</span>notification.hash,
-				storage_changes.<span class="number">0</span>.into_iter(),
-				storage_changes.<span class="number">1</span>.into_iter().map(|(sk, v)| (sk, v.into_iter())),
-			);
-		}
+		<span class="kw">let </span>trigger_storage_changes_notification = || {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(storage_changes) = storage_changes {
+				<span class="comment">// TODO [ToDr] How to handle re-orgs? Should we re-emit all storage changes?
+				</span><span class="self">self</span>.storage_notifications.trigger(
+					<span class="kw-2">&amp;</span>notification.hash,
+					storage_changes.<span class="number">0</span>.into_iter(),
+					storage_changes.<span class="number">1</span>.into_iter().map(|(sk, v)| (sk, v.into_iter())),
+				);
+			}
+		};
 
-		<span class="self">self</span>.import_notification_sinks
-			.lock()
-			.retain(|sink| sink.unbounded_send(notification.clone()).is_ok());
+		<span class="kw">match </span>import_notification_action {
+			ImportNotificationAction::Both =&gt; {
+				trigger_storage_changes_notification();
+				<span class="self">self</span>.import_notification_sinks
+					.lock()
+					.retain(|sink| sink.unbounded_send(notification.clone()).is_ok());
+
+				<span class="self">self</span>.every_import_notification_sinks
+					.lock()
+					.retain(|sink| sink.unbounded_send(notification.clone()).is_ok());
+			},
+			ImportNotificationAction::RecentBlock =&gt; {
+				trigger_storage_changes_notification();
+				<span class="self">self</span>.import_notification_sinks
+					.lock()
+					.retain(|sink| sink.unbounded_send(notification.clone()).is_ok());
+
+				<span class="self">self</span>.every_import_notification_sinks.lock().retain(|sink| !sink.is_closed());
+			},
+			ImportNotificationAction::EveryBlock =&gt; {
+				<span class="self">self</span>.every_import_notification_sinks
+					.lock()
+					.retain(|sink| sink.unbounded_send(notification.clone()).is_ok());
+
+				<span class="self">self</span>.import_notification_sinks.lock().retain(|sink| !sink.is_closed());
+			},
+			ImportNotificationAction::None =&gt; {
+				<span class="comment">// This branch is unreachable in fact because the block import notification must be
+				// Some(_) instead of None (it&#39;s already handled at the beginning of this function)
+				// at this point.
+				</span><span class="self">self</span>.import_notification_sinks.lock().retain(|sink| !sink.is_closed());
+
+				<span class="self">self</span>.every_import_notification_sinks.lock().retain(|sink| !sink.is_closed());
+			},
+		}
 
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -4062,6 +4184,12 @@
 	</span><span class="kw">fn </span>import_notification_stream(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ImportNotifications&lt;Block&gt; {
 		<span class="kw">let </span>(sink, stream) = tracing_unbounded(<span class="string">&quot;mpsc_import_notification_stream&quot;</span>, <span class="number">100_000</span>);
 		<span class="self">self</span>.import_notification_sinks.lock().push(sink);
+		stream
+	}
+
+	<span class="kw">fn </span>every_import_notification_stream(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ImportNotifications&lt;Block&gt; {
+		<span class="kw">let </span>(sink, stream) = tracing_unbounded(<span class="string">&quot;mpsc_every_import_notification_stream&quot;</span>, <span class="number">100_000</span>);
+		<span class="self">self</span>.every_import_notification_sinks.lock().push(sink);
 		stream
 	}
 
