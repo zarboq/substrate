@@ -2149,40 +2149,6 @@
 <a href="#2149" id="2149">2149</a>
 <a href="#2150" id="2150">2150</a>
 <a href="#2151" id="2151">2151</a>
-<a href="#2152" id="2152">2152</a>
-<a href="#2153" id="2153">2153</a>
-<a href="#2154" id="2154">2154</a>
-<a href="#2155" id="2155">2155</a>
-<a href="#2156" id="2156">2156</a>
-<a href="#2157" id="2157">2157</a>
-<a href="#2158" id="2158">2158</a>
-<a href="#2159" id="2159">2159</a>
-<a href="#2160" id="2160">2160</a>
-<a href="#2161" id="2161">2161</a>
-<a href="#2162" id="2162">2162</a>
-<a href="#2163" id="2163">2163</a>
-<a href="#2164" id="2164">2164</a>
-<a href="#2165" id="2165">2165</a>
-<a href="#2166" id="2166">2166</a>
-<a href="#2167" id="2167">2167</a>
-<a href="#2168" id="2168">2168</a>
-<a href="#2169" id="2169">2169</a>
-<a href="#2170" id="2170">2170</a>
-<a href="#2171" id="2171">2171</a>
-<a href="#2172" id="2172">2172</a>
-<a href="#2173" id="2173">2173</a>
-<a href="#2174" id="2174">2174</a>
-<a href="#2175" id="2175">2175</a>
-<a href="#2176" id="2176">2176</a>
-<a href="#2177" id="2177">2177</a>
-<a href="#2178" id="2178">2178</a>
-<a href="#2179" id="2179">2179</a>
-<a href="#2180" id="2180">2180</a>
-<a href="#2181" id="2181">2181</a>
-<a href="#2182" id="2182">2182</a>
-<a href="#2183" id="2183">2183</a>
-<a href="#2184" id="2184">2184</a>
-<a href="#2185" id="2185">2185</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2203,16 +2169,14 @@
 
 </span><span class="doccomment">//! Substrate Client
 
-</span><span class="kw">use super</span>::{
-	block_rules::{BlockRules, LookupResult <span class="kw">as </span>BlockLookupResult},
-	genesis::BuildGenesisBlock,
-};
+</span><span class="kw">use </span><span class="kw">super</span>::block_rules::{BlockRules, LookupResult <span class="kw">as </span>BlockLookupResult};
 <span class="kw">use </span>futures::{FutureExt, StreamExt};
 <span class="kw">use </span>log::{error, info, trace, warn};
 <span class="kw">use </span>parking_lot::{Mutex, RwLock};
 <span class="kw">use </span>prometheus_endpoint::Registry;
 <span class="kw">use </span>rand::Rng;
 <span class="kw">use </span>sc_block_builder::{BlockBuilderApi, BlockBuilderProvider, RecordProof};
+<span class="kw">use </span>sc_chain_spec::{resolve_state_version_from_wasm, BuildGenesisBlock};
 <span class="kw">use </span>sc_client_api::{
 	backend::{
 		<span class="self">self</span>, apply_aux, BlockImportOperation, ClientImportOperation, FinalizeSummary, Finalizer,
@@ -2231,7 +2195,7 @@
 <span class="kw">use </span>sc_consensus::{
 	BlockCheckParams, BlockImportParams, ForkChoiceStrategy, ImportResult, StateAction,
 };
-<span class="kw">use </span>sc_executor::{RuntimeVersion, RuntimeVersionOf};
+<span class="kw">use </span>sc_executor::RuntimeVersion;
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, SUBSTRATE_INFO};
 <span class="kw">use </span>sp_api::{
 	ApiExt, ApiRef, CallApiAt, CallApiAtParams, ConstructRuntimeApi, Core <span class="kw">as </span>CoreApi,
@@ -2246,8 +2210,8 @@
 <span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedSender};
 <span class="kw">use </span>sp_core::{
 	storage::{
-		well_known_keys, ChildInfo, ChildType, PrefixedStorageKey, Storage, StorageChild,
-		StorageData, StorageKey,
+		well_known_keys, ChildInfo, ChildType, PrefixedStorageKey, StorageChild, StorageData,
+		StorageKey,
 	},
 	traits::SpawnNamed,
 };
@@ -2269,7 +2233,7 @@
 };
 <span class="kw">use </span>sp_trie::{CompactProof, StorageProof};
 <span class="kw">use </span>std::{
-	collections::{hash_map::DefaultHasher, HashMap, HashSet},
+	collections::{HashMap, HashSet},
 	marker::PhantomData,
 	path::PathBuf,
 	sync::Arc,
@@ -2357,7 +2321,7 @@
 	Client&lt;in_mem::Backend&lt;Block&gt;, LocalCallExecutor&lt;Block, in_mem::Backend&lt;Block&gt;, E&gt;, Block, RA&gt;,
 &gt;
 <span class="kw">where
-	</span>E: CodeExecutor + RuntimeVersionOf,
+	</span>E: CodeExecutor + sc_executor::RuntimeVersionOf,
 	Block: BlockT,
 	G: BuildGenesisBlock&lt;
 			Block,
@@ -2418,7 +2382,7 @@
 	config: ClientConfig&lt;Block&gt;,
 ) -&gt; sp_blockchain::Result&lt;Client&lt;B, LocalCallExecutor&lt;Block, B, E&gt;, Block, RA&gt;&gt;
 <span class="kw">where
-	</span>E: CodeExecutor + RuntimeVersionOf,
+	</span>E: CodeExecutor + sc_executor::RuntimeVersionOf,
 	G: BuildGenesisBlock&lt;
 		Block,
 		BlockImportOperation = &lt;B <span class="kw">as </span>backend::Backend&lt;Block&gt;&gt;::BlockImportOperation,
@@ -3404,38 +3368,6 @@
 		}
 		<span class="macro">trace!</span>(<span class="string">&quot;Collected {} uncles&quot;</span>, uncles.len());
 		<span class="prelude-val">Ok</span>(uncles)
-	}
-}
-
-<span class="doccomment">/// Return the genesis state version given the genesis storage and executor.
-</span><span class="kw">pub fn </span>resolve_state_version_from_wasm&lt;E&gt;(
-	storage: <span class="kw-2">&amp;</span>Storage,
-	executor: <span class="kw-2">&amp;</span>E,
-) -&gt; sp_blockchain::Result&lt;StateVersion&gt;
-<span class="kw">where
-	</span>E: RuntimeVersionOf,
-{
-	<span class="kw">if let </span><span class="prelude-val">Some</span>(wasm) = storage.top.get(well_known_keys::CODE) {
-		<span class="kw">let </span><span class="kw-2">mut </span>ext = sp_state_machine::BasicExternalities::new_empty(); <span class="comment">// just to read runtime version.
-
-		</span><span class="kw">let </span>code_fetcher = sp_core::traits::WrappedRuntimeCode(wasm.as_slice().into());
-		<span class="kw">let </span>runtime_code = sp_core::traits::RuntimeCode {
-			code_fetcher: <span class="kw-2">&amp;</span>code_fetcher,
-			heap_pages: <span class="prelude-val">None</span>,
-			hash: {
-				<span class="kw">use </span>std::hash::{Hash, Hasher};
-				<span class="kw">let </span><span class="kw-2">mut </span>state = DefaultHasher::new();
-				wasm.hash(<span class="kw-2">&amp;mut </span>state);
-				state.finish().to_le_bytes().to_vec()
-			},
-		};
-		<span class="kw">let </span>runtime_version = RuntimeVersionOf::runtime_version(executor, <span class="kw-2">&amp;mut </span>ext, <span class="kw-2">&amp;</span>runtime_code)
-			.map_err(|e| sp_blockchain::Error::VersionInvalid(e.to_string()))<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(runtime_version.state_version())
-	} <span class="kw">else </span>{
-		<span class="prelude-val">Err</span>(sp_blockchain::Error::VersionInvalid(
-			<span class="string">&quot;Runtime missing from initial storage, could not read state version.&quot;</span>.to_string(),
-		))
 	}
 }
 

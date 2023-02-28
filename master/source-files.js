@@ -130,7 +130,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_authority_discovery":["",[["worker",[],["addr_cache.rs"]]],["error.rs","interval.rs","lib.rs","service.rs","worker.rs"]],\
 "sc_basic_authorship":["",[],["basic_authorship.rs","lib.rs"]],\
 "sc_block_builder":["",[],["lib.rs"]],\
-"sc_chain_spec":["",[],["chain_spec.rs","extension.rs","lib.rs"]],\
+"sc_chain_spec":["",[],["chain_spec.rs","extension.rs","genesis.rs","lib.rs"]],\
 "sc_chain_spec_derive":["",[],["impls.rs","lib.rs"]],\
 "sc_cli":["",[["commands",[["test",[],["mod.rs"]]],["build_spec_cmd.rs","chain_info_cmd.rs","check_block_cmd.rs","export_blocks_cmd.rs","export_state_cmd.rs","generate.rs","generate_node_key.rs","import_blocks_cmd.rs","insert_key.rs","inspect_key.rs","inspect_node_key.rs","key.rs","mod.rs","purge_chain_cmd.rs","revert_cmd.rs","run_cmd.rs","sign.rs","utils.rs","vanity.rs","verify.rs"]],["params",[],["database_params.rs","import_params.rs","keystore_params.rs","message_params.rs","mod.rs","network_params.rs","node_key_params.rs","offchain_worker_params.rs","pruning_params.rs","shared_params.rs","transaction_pool_params.rs"]]],["arg_enums.rs","config.rs","error.rs","lib.rs","runner.rs"]],\
 "sc_client_api":["",[["notifications",[],["registry.rs"]]],["backend.rs","call_executor.rs","client.rs","execution_extensions.rs","in_mem.rs","leaves.rs","lib.rs","notifications.rs","proof_provider.rs"]],\
@@ -169,7 +169,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_rpc_server":["",[],["lib.rs","middleware.rs"]],\
 "sc_rpc_spec_v2":["",[["chain_head",[],["api.rs","chain_head.rs","error.rs","event.rs","mod.rs","subscription.rs"]],["chain_spec",[],["api.rs","chain_spec.rs","mod.rs"]],["transaction",[],["api.rs","error.rs","event.rs","mod.rs","transaction.rs"]]],["lib.rs"]],\
 "sc_runtime_test":["",[],["lib.rs"]],\
-"sc_service":["",[["chain_ops",[],["check_block.rs","export_blocks.rs","export_raw_state.rs","import_blocks.rs","mod.rs","revert_chain.rs"]],["client",[],["block_rules.rs","call_executor.rs","client.rs","genesis.rs","mod.rs","wasm_override.rs","wasm_substitutes.rs"]],["task_manager",[],["mod.rs","prometheus_future.rs"]]],["builder.rs","config.rs","error.rs","lib.rs","metrics.rs"]],\
+"sc_service":["",[["chain_ops",[],["check_block.rs","export_blocks.rs","export_raw_state.rs","import_blocks.rs","mod.rs","revert_chain.rs"]],["client",[],["block_rules.rs","call_executor.rs","client.rs","mod.rs","wasm_override.rs","wasm_substitutes.rs"]],["task_manager",[],["mod.rs","prometheus_future.rs"]]],["builder.rs","config.rs","error.rs","lib.rs","metrics.rs"]],\
 "sc_service_test":["",[],["lib.rs"]],\
 "sc_state_db":["",[],["lib.rs","noncanonical.rs","pruning.rs"]],\
 "sc_storage_monitor":["",[],["lib.rs"]],\

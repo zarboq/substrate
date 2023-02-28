@@ -293,9 +293,6 @@
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -328,6 +325,8 @@
 
 <span class="kw">pub use </span><span class="self">self</span>::block_builder_ext::BlockBuilderExt;
 
+<span class="kw">use </span>sc_chain_spec::construct_genesis_block;
+<span class="kw">use </span>sp_api::StateVersion;
 <span class="kw">use </span>sp_core::{
 	sr25519,
 	storage::{ChildInfo, Storage, StorageChild},
@@ -420,7 +419,7 @@
 	}
 }
 
-<span class="kw">impl </span>substrate_test_client::GenesisInit <span class="kw">for </span>GenesisParameters {
+<span class="kw">impl </span>GenesisInit <span class="kw">for </span>GenesisParameters {
 	<span class="kw">fn </span>genesis_storage(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Storage {
 		<span class="kw">use </span>codec::Encode;
 
@@ -446,7 +445,7 @@
 				storage.top.clone().into_iter().chain(child_roots).collect(),
 				sp_runtime::StateVersion::V1,
 			);
-		<span class="kw">let </span>block: runtime::Block = client::genesis::construct_genesis_block(state_root);
+		<span class="kw">let </span>block: runtime::Block = construct_genesis_block(state_root, StateVersion::V1);
 		storage.top.extend(additional_storage_with_genesis(<span class="kw-2">&amp;</span>block));
 
 		storage
@@ -558,7 +557,7 @@
 		client::LocalCallExecutor&lt;
 			substrate_test_runtime::Block,
 			B,
-			sc_executor::NativeElseWasmExecutor&lt;LocalExecutorDispatch&gt;,
+			NativeElseWasmExecutor&lt;LocalExecutorDispatch&gt;,
 		&gt;,
 		B,
 	&gt; <span class="kw">where
@@ -586,13 +585,8 @@
 }
 
 <span class="doccomment">/// Create a new native executor.
-</span><span class="kw">pub fn </span>new_native_executor() -&gt; sc_executor::NativeElseWasmExecutor&lt;LocalExecutorDispatch&gt; {
-	sc_executor::NativeElseWasmExecutor::new(
-		sc_executor::WasmExecutionMethod::Interpreted,
-		<span class="prelude-val">None</span>,
-		<span class="number">8</span>,
-		<span class="number">2</span>,
-	)
+</span><span class="kw">pub fn </span>new_native_executor() -&gt; NativeElseWasmExecutor&lt;LocalExecutorDispatch&gt; {
+	NativeElseWasmExecutor::new(sc_executor::WasmExecutionMethod::Interpreted, <span class="prelude-val">None</span>, <span class="number">8</span>, <span class="number">2</span>)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="substrate_test_runtime_client" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
