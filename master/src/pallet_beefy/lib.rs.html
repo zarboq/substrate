@@ -550,7 +550,7 @@
 <span class="kw">use </span>sp_staking::SessionIndex;
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">use </span>beefy_primitives::{
+<span class="kw">use </span>sp_consensus_beefy::{
 	AuthorityIndex, BeefyAuthorityId, ConsensusLog, EquivocationProof, OnNewValidatorSet,
 	ValidatorSet, BEEFY_ENGINE_ID, GENESIS_AUTHORITY_SET_ID,
 };
@@ -645,7 +645,7 @@
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>validator_set_id)]
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>ValidatorSetId&lt;T: Config&gt; =
-		StorageValue&lt;<span class="kw">_</span>, beefy_primitives::ValidatorSetId, ValueQuery&gt;;
+		StorageValue&lt;<span class="kw">_</span>, sp_consensus_beefy::ValidatorSetId, ValueQuery&gt;;
 
 	<span class="doccomment">/// Authorities set scheduled to be used with the next session
 	</span><span class="attr">#[pallet::storage]
@@ -666,7 +666,7 @@
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>session_for_set)]
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>SetIdSession&lt;T: Config&gt; =
-		StorageMap&lt;<span class="kw">_</span>, Twox64Concat, beefy_primitives::ValidatorSetId, SessionIndex&gt;;
+		StorageMap&lt;<span class="kw">_</span>, Twox64Concat, sp_consensus_beefy::ValidatorSetId, SessionIndex&gt;;
 
 	<span class="doccomment">/// Block number where BEEFY consensus is enabled/started.
 	/// If changing this, make sure `Self::ValidatorSetId` is also reset to
@@ -790,7 +790,7 @@
 	<span class="doccomment">/// Return the current active BEEFY validator set.
 	</span><span class="kw">pub fn </span>validator_set() -&gt; <span class="prelude-ty">Option</span>&lt;ValidatorSet&lt;T::BeefyId&gt;&gt; {
 		<span class="kw">let </span>validators: BoundedVec&lt;T::BeefyId, T::MaxAuthorities&gt; = <span class="self">Self</span>::authorities();
-		<span class="kw">let </span>id: beefy_primitives::ValidatorSetId = <span class="self">Self</span>::validator_set_id();
+		<span class="kw">let </span>id: sp_consensus_beefy::ValidatorSetId = <span class="self">Self</span>::validator_set_id();
 		ValidatorSet::&lt;T::BeefyId&gt;::new(validators, id)
 	}
 
@@ -900,13 +900,13 @@
 
 		<span class="comment">// validate the key ownership proof extracting the id of the offender.
 		</span><span class="kw">let </span>offender = T::KeyOwnerProofSystem::check_proof(
-			(beefy_primitives::KEY_TYPE, offender_id),
+			(sp_consensus_beefy::KEY_TYPE, offender_id),
 			key_owner_proof,
 		)
 		.ok_or(Error::&lt;T&gt;::InvalidKeyOwnershipProof)<span class="question-mark">?</span>;
 
 		<span class="comment">// validate equivocation proof (check votes are different and signatures are valid).
-		</span><span class="kw">if </span>!beefy_primitives::check_equivocation_proof(<span class="kw-2">&amp;</span>equivocation_proof) {
+		</span><span class="kw">if </span>!sp_consensus_beefy::check_equivocation_proof(<span class="kw-2">&amp;</span>equivocation_proof) {
 			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::InvalidEquivocationProof.into())
 		}
 

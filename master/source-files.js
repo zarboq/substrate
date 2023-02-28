@@ -1,7 +1,5 @@
 var sourcesIndex = JSON.parse('{\
 "bags_list":["",[],["main.rs"]],\
-"beefy_gadget":["",[["communication",[["request_response",[],["incoming_requests_handler.rs","mod.rs","outgoing_requests_engine.rs"]]],["gossip.rs","mod.rs","notification.rs","peers.rs"]]],["aux_schema.rs","error.rs","import.rs","justification.rs","keystore.rs","lib.rs","metrics.rs","round.rs","worker.rs"]],\
-"beefy_gadget_rpc":["",[],["lib.rs","notification.rs"]],\
 "biguint":["",[],["biguint.rs"]],\
 "binary_merkle_tree":["",[],["lib.rs"]],\
 "call":["",[],["call.rs"]],\
@@ -141,6 +139,8 @@ var sourcesIndex = JSON.parse('{\
 "sc_consensus_aura":["",[],["import_queue.rs","lib.rs"]],\
 "sc_consensus_babe":["",[],["authorship.rs","aux_schema.rs","lib.rs","migration.rs","verification.rs"]],\
 "sc_consensus_babe_rpc":["",[],["lib.rs"]],\
+"sc_consensus_beefy":["",[["communication",[["request_response",[],["incoming_requests_handler.rs","mod.rs","outgoing_requests_engine.rs"]]],["gossip.rs","mod.rs","notification.rs","peers.rs"]]],["aux_schema.rs","error.rs","import.rs","justification.rs","keystore.rs","lib.rs","metrics.rs","round.rs","worker.rs"]],\
+"sc_consensus_beefy_rpc":["",[],["lib.rs","notification.rs"]],\
 "sc_consensus_epochs":["",[],["lib.rs","migration.rs"]],\
 "sc_consensus_grandpa":["",[["communication",[],["gossip.rs","mod.rs","periodic.rs"]]],["authorities.rs","aux_schema.rs","environment.rs","finality_proof.rs","import.rs","justification.rs","lib.rs","notification.rs","observer.rs","until_imported.rs","voting_rule.rs","warp_proof.rs"]],\
 "sc_consensus_grandpa_rpc":["",[],["error.rs","finality.rs","lib.rs","notification.rs","report.rs"]],\
@@ -187,12 +187,12 @@ var sourcesIndex = JSON.parse('{\
 "sp_application_crypto_test":["",[],["lib.rs"]],\
 "sp_arithmetic":["",[],["biguint.rs","fixed_point.rs","helpers_128bit.rs","lib.rs","per_things.rs","rational.rs","traits.rs"]],\
 "sp_authority_discovery":["",[],["lib.rs"]],\
-"sp_beefy":["",[],["commitment.rs","lib.rs","mmr.rs","payload.rs","test_utils.rs","witness.rs"]],\
 "sp_block_builder":["",[],["lib.rs"]],\
 "sp_blockchain":["",[],["backend.rs","error.rs","header_metadata.rs","lib.rs"]],\
 "sp_consensus":["",[],["block_validation.rs","error.rs","lib.rs","select_chain.rs"]],\
 "sp_consensus_aura":["",[],["digests.rs","inherents.rs","lib.rs"]],\
 "sp_consensus_babe":["",[],["digests.rs","inherents.rs","lib.rs"]],\
+"sp_consensus_beefy":["",[],["commitment.rs","lib.rs","mmr.rs","payload.rs","test_utils.rs","witness.rs"]],\
 "sp_consensus_grandpa":["",[],["lib.rs"]],\
 "sp_consensus_pow":["",[],["lib.rs"]],\
 "sp_consensus_slots":["",[],["lib.rs"]],\

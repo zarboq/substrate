@@ -259,11 +259,11 @@
 </span><span class="kw">use </span>sp_runtime::traits::{Convert, Member};
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">use </span>beefy_primitives::{
+<span class="kw">use </span>pallet_mmr::{LeafDataProvider, ParentNumberAndHash};
+<span class="kw">use </span>sp_consensus_beefy::{
 	mmr::{BeefyAuthoritySet, BeefyDataProvider, BeefyNextAuthoritySet, MmrLeaf, MmrLeafVersion},
 	ValidatorSet <span class="kw">as </span>BeefyValidatorSet,
 };
-<span class="kw">use </span>pallet_mmr::{LeafDataProvider, ParentNumberAndHash};
 
 <span class="kw">use </span>frame_support::{crypto::ecdsa::ECDSAExt, traits::Get};
 
@@ -277,15 +277,15 @@
 <span class="doccomment">/// A BEEFY consensus digest item with MMR root hash.
 </span><span class="kw">pub struct </span>DepositBeefyDigest&lt;T&gt;(sp_std::marker::PhantomData&lt;T&gt;);
 
-<span class="kw">impl</span>&lt;T&gt; pallet_mmr::primitives::OnNewRoot&lt;beefy_primitives::MmrRootHash&gt; <span class="kw">for </span>DepositBeefyDigest&lt;T&gt;
+<span class="kw">impl</span>&lt;T&gt; pallet_mmr::primitives::OnNewRoot&lt;sp_consensus_beefy::MmrRootHash&gt; <span class="kw">for </span>DepositBeefyDigest&lt;T&gt;
 <span class="kw">where
-	</span>T: pallet_mmr::Config&lt;Hash = beefy_primitives::MmrRootHash&gt;,
+	</span>T: pallet_mmr::Config&lt;Hash = sp_consensus_beefy::MmrRootHash&gt;,
 	T: pallet_beefy::Config,
 {
 	<span class="kw">fn </span>on_new_root(root: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>pallet_mmr::Config&gt;::Hash) {
 		<span class="kw">let </span>digest = sp_runtime::generic::DigestItem::Consensus(
-			beefy_primitives::BEEFY_ENGINE_ID,
-			codec::Encode::encode(<span class="kw-2">&amp;</span>beefy_primitives::ConsensusLog::&lt;
+			sp_consensus_beefy::BEEFY_ENGINE_ID,
+			codec::Encode::encode(<span class="kw-2">&amp;</span>sp_consensus_beefy::ConsensusLog::&lt;
 				&lt;T <span class="kw">as </span>pallet_beefy::Config&gt;::BeefyId,
 			&gt;::MmrRoot(<span class="kw-2">*</span>root)),
 		);
@@ -295,8 +295,8 @@
 
 <span class="doccomment">/// Convert BEEFY secp256k1 public keys into Ethereum addresses
 </span><span class="kw">pub struct </span>BeefyEcdsaToEthereum;
-<span class="kw">impl </span>Convert&lt;beefy_primitives::crypto::AuthorityId, Vec&lt;u8&gt;&gt; <span class="kw">for </span>BeefyEcdsaToEthereum {
-	<span class="kw">fn </span>convert(beefy_id: beefy_primitives::crypto::AuthorityId) -&gt; Vec&lt;u8&gt; {
+<span class="kw">impl </span>Convert&lt;sp_consensus_beefy::crypto::AuthorityId, Vec&lt;u8&gt;&gt; <span class="kw">for </span>BeefyEcdsaToEthereum {
+	<span class="kw">fn </span>convert(beefy_id: sp_consensus_beefy::crypto::AuthorityId) -&gt; Vec&lt;u8&gt; {
 		sp_core::ecdsa::Public::from(beefy_id)
 			.to_eth_address()
 			.map(|v| v.to_vec())
@@ -379,7 +379,7 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T&gt; beefy_primitives::OnNewValidatorSet&lt;&lt;T <span class="kw">as </span>pallet_beefy::Config&gt;::BeefyId&gt; <span class="kw">for </span>Pallet&lt;T&gt;
+<span class="kw">impl</span>&lt;T&gt; sp_consensus_beefy::OnNewValidatorSet&lt;&lt;T <span class="kw">as </span>pallet_beefy::Config&gt;::BeefyId&gt; <span class="kw">for </span>Pallet&lt;T&gt;
 <span class="kw">where
 	</span>T: pallet::Config,
 {
