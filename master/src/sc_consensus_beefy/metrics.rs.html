@@ -347,6 +347,26 @@
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
 <a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -367,7 +387,8 @@
 
 </span><span class="doccomment">//! BEEFY Prometheus metrics definition
 
-</span><span class="kw">use </span>log::debug;
+</span><span class="kw">use </span><span class="kw">crate</span>::LOG_TARGET;
+<span class="kw">use </span>log::{debug, error};
 <span class="kw">use </span>prometheus::{register, Counter, Gauge, PrometheusError, Registry, U64};
 
 <span class="doccomment">/// Helper trait for registering BEEFY metrics to Prometheus registry.
@@ -478,13 +499,13 @@
 			)<span class="question-mark">?</span>,
 			beefy_equivocation_votes: register(
 				Counter::new(
-					<span class="string">&quot;substrate_beefy_stale_votes&quot;</span>,
+					<span class="string">&quot;substrate_beefy_equivocation_votes&quot;</span>,
 					<span class="string">&quot;Number of equivocation votes received&quot;</span>,
 				)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,
 			beefy_invalid_votes: register(
-				Counter::new(<span class="string">&quot;substrate_beefy_stale_votes&quot;</span>, <span class="string">&quot;Number of invalid votes received&quot;</span>)<span class="question-mark">?</span>,
+				Counter::new(<span class="string">&quot;substrate_beefy_invalid_votes&quot;</span>, <span class="string">&quot;Number of invalid votes received&quot;</span>)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,
 			beefy_stale_votes: register(
@@ -549,14 +570,14 @@
 			beefy_good_justification_imports: register(
 				Counter::new(
 					<span class="string">&quot;substrate_beefy_good_justification_imports&quot;</span>,
-					<span class="string">&quot;Number of Good Justification imports&quot;</span>,
+					<span class="string">&quot;Number of good justifications on block-import&quot;</span>,
 				)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,
 			beefy_bad_justification_imports: register(
 				Counter::new(
 					<span class="string">&quot;substrate_beefy_bad_justification_imports&quot;</span>,
-					<span class="string">&quot;Number of Bad Justification imports&quot;</span>,
+					<span class="string">&quot;Number of bad justifications on block-import&quot;</span>,
 				)<span class="question-mark">?</span>,
 				registry,
 			)<span class="question-mark">?</span>,
@@ -658,11 +679,16 @@
 ) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
 	prometheus_registry.as_ref().map(T::register).and_then(|result| <span class="kw">match </span>result {
 		<span class="prelude-val">Ok</span>(metrics) =&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Registered {} metrics&quot;</span>, T::DESCRIPTION);
+			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Registered {} metrics&quot;</span>, T::DESCRIPTION);
 			<span class="prelude-val">Some</span>(metrics)
 		},
 		<span class="prelude-val">Err</span>(err) =&gt; {
-			<span class="macro">debug!</span>(target: <span class="string">&quot;beefy&quot;</span>, <span class="string">&quot;🥩 Failed to register {} metrics: {:?}&quot;</span>, T::DESCRIPTION, err);
+			<span class="macro">error!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;🥩 Failed to register {} metrics: {:?}&quot;</span>,
+				T::DESCRIPTION,
+				err
+			);
 			<span class="prelude-val">None
 		</span>},
 	})
@@ -695,6 +721,20 @@
 	(<span class="macro-nonterminal">$self</span>:ident, <span class="macro-nonterminal">$m</span>:ident) =&gt; {{
 		<span class="macro-nonterminal">$self</span>.metrics.as_ref().map(|metrics| metrics.<span class="macro-nonterminal">$m</span>.clone())
 	}};
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>should_register_metrics() {
+		<span class="kw">let </span>registry = <span class="prelude-val">Some</span>(Registry::new());
+		<span class="macro">assert!</span>(register_metrics::&lt;VoterMetrics&gt;(registry.clone()).is_some());
+		<span class="macro">assert!</span>(register_metrics::&lt;BlockImportMetrics&gt;(registry.clone()).is_some());
+		<span class="macro">assert!</span>(register_metrics::&lt;OnDemandIncomingRequestsMetrics&gt;(registry.clone()).is_some());
+		<span class="macro">assert!</span>(register_metrics::&lt;OnDemandOutgoingRequestsMetrics&gt;(registry.clone()).is_some());
+	}
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sc_consensus_beefy" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
