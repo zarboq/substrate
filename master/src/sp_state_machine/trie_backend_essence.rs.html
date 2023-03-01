@@ -914,6 +914,13 @@
 <a href="#914" id="914">914</a>
 <a href="#915" id="915">915</a>
 <a href="#916" id="916">916</a>
+<a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1331,9 +1338,14 @@
 		})
 	}
 
-	<span class="doccomment">/// Return the next key in the trie i.e. the minimum key that is strictly superior to `key` in
+	<span class="doccomment">/// Returns the next key in the trie i.e. the minimum key that is strictly superior to `key` in
 	/// lexicographic order.
-	</span><span class="kw">pub fn </span>next_storage_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;StorageKey&gt;&gt; {
+	///
+	/// Will always traverse the trie from scratch in search of the key, which is slow.
+	/// Used only when debug assertions are enabled to crosscheck the results of finding
+	/// the next key through an iterator.
+	</span><span class="attr">#[cfg(debug_assertions)]
+	</span><span class="kw">pub fn </span>next_storage_key_slow(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;StorageKey&gt;&gt; {
 		<span class="self">self</span>.next_storage_key_from_root(<span class="kw-2">&amp;</span><span class="self">self</span>.root, <span class="prelude-val">None</span>, key)
 	}
 
@@ -1775,6 +1787,7 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+	<span class="kw">use crate</span>::{Backend, TrieBackend};
 	<span class="kw">use </span>sp_core::{Blake2Hasher, H256};
 	<span class="kw">use </span>sp_trie::{
 		cache::LocalTrieCache, trie_types::TrieDBMutBuilderV1 <span class="kw">as </span>TrieDBMutBuilder, KeySpacedDBMut,
@@ -1813,6 +1826,8 @@
 		};
 
 		<span class="kw">let </span>essence_1 = TrieBackendEssence::&lt;<span class="kw">_</span>, <span class="kw">_</span>, LocalTrieCache&lt;<span class="kw">_</span>&gt;&gt;::new(mdb, root_1);
+		<span class="kw">let </span>mdb = essence_1.backend_storage().clone();
+		<span class="kw">let </span>essence_1 = TrieBackend::from_essence(essence_1);
 
 		<span class="macro">assert_eq!</span>(essence_1.next_storage_key(<span class="string">b&quot;2&quot;</span>), <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="string">b&quot;3&quot;</span>.to_vec())));
 		<span class="macro">assert_eq!</span>(essence_1.next_storage_key(<span class="string">b&quot;3&quot;</span>), <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="string">b&quot;4&quot;</span>.to_vec())));
@@ -1820,7 +1835,6 @@
 		<span class="macro">assert_eq!</span>(essence_1.next_storage_key(<span class="string">b&quot;5&quot;</span>), <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="string">b&quot;6&quot;</span>.to_vec())));
 		<span class="macro">assert_eq!</span>(essence_1.next_storage_key(<span class="string">b&quot;6&quot;</span>), <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>));
 
-		<span class="kw">let </span>mdb = essence_1.backend_storage().clone();
 		<span class="kw">let </span>essence_2 = TrieBackendEssence::&lt;<span class="kw">_</span>, <span class="kw">_</span>, LocalTrieCache&lt;<span class="kw">_</span>&gt;&gt;::new(mdb, root_2);
 
 		<span class="macro">assert_eq!</span>(essence_2.next_child_storage_key(child_info, <span class="string">b&quot;2&quot;</span>), <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="string">b&quot;3&quot;</span>.to_vec())));
