@@ -2376,12 +2376,12 @@
 			// one with block number arg and one without
 			</span><span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
 				<span class="macro">println!</span>(<span class="string">&quot;on_initialize({})&quot;</span>, n);
-				Weight::from_ref_time(<span class="number">175</span>)
+				Weight::from_parts(<span class="number">175</span>, <span class="number">0</span>)
 			}
 
 			<span class="kw">fn </span>on_idle(n: T::BlockNumber, remaining_weight: Weight) -&gt; Weight {
 				<span class="macro">println!</span>(<span class="string">&quot;on_idle{}, {})&quot;</span>, n, remaining_weight);
-				Weight::from_ref_time(<span class="number">175</span>)
+				Weight::from_parts(<span class="number">175</span>, <span class="number">0</span>)
 			}
 
 			<span class="kw">fn </span>on_finalize(n: T::BlockNumber) {
@@ -2390,7 +2390,7 @@
 
 			<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight {
 				sp_io::storage::set(<span class="kw">super</span>::TEST_KEY, <span class="string">&quot;module&quot;</span>.as_bytes());
-				Weight::from_ref_time(<span class="number">200</span>)
+				Weight::from_parts(<span class="number">200</span>, <span class="number">0</span>)
 			}
 
 			<span class="kw">fn </span>offchain_worker(n: T::BlockNumber) {
@@ -2511,9 +2511,9 @@
 	<span class="macro">parameter_types! </span>{
 		<span class="kw">pub </span>BlockWeights: frame_system::limits::BlockWeights =
 			frame_system::limits::BlockWeights::builder()
-				.base_block(Weight::from_ref_time(<span class="number">10</span>))
-				.for_class(DispatchClass::all(), |weights| weights.base_extrinsic = Weight::from_ref_time(<span class="number">5</span>))
-				.for_class(DispatchClass::non_mandatory(), |weights| weights.max_total = Weight::from_ref_time(<span class="number">1024</span>).set_proof_size(u64::MAX).into())
+				.base_block(Weight::from_parts(<span class="number">10</span>, <span class="number">0</span>))
+				.for_class(DispatchClass::all(), |weights| weights.base_extrinsic = Weight::from_parts(<span class="number">5</span>, <span class="number">0</span>))
+				.for_class(DispatchClass::non_mandatory(), |weights| weights.max_total = Weight::from_parts(<span class="number">1024</span>, u64::MAX).into())
 				.build_or_panic();
 		<span class="kw">pub const </span>DbWeight: RuntimeDbWeight = RuntimeDbWeight {
 			read: <span class="number">10</span>,
@@ -2604,7 +2604,7 @@
 			sp_io::storage::set(TEST_KEY, <span class="string">&quot;custom_upgrade&quot;</span>.as_bytes());
 			sp_io::storage::set(CUSTOM_ON_RUNTIME_KEY, <span class="kw-2">&amp;</span><span class="bool-val">true</span>.encode());
 			System::deposit_event(frame_system::Event::CodeUpdated);
-			Weight::from_ref_time(<span class="number">100</span>)
+			Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>)
 		}
 	}
 
@@ -2782,7 +2782,7 @@
 		<span class="kw">let </span>encoded_len = encoded.len() <span class="kw">as </span>u64;
 		<span class="comment">// on_initialize weight + base block execution weight
 		</span><span class="kw">let </span>block_weights = &lt;Runtime <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get();
-		<span class="kw">let </span>base_block_weight = Weight::from_ref_time(<span class="number">175</span>) + block_weights.base_block;
+		<span class="kw">let </span>base_block_weight = Weight::from_parts(<span class="number">175</span>, <span class="number">0</span>) + block_weights.base_block;
 		<span class="kw">let </span>limit = block_weights.get(DispatchClass::Normal).max_total.unwrap() - base_block_weight;
 		<span class="kw">let </span>num_to_exhaust_block = limit.ref_time() / (encoded_len + <span class="number">5</span>);
 		t.execute_with(|| {
@@ -2807,7 +2807,7 @@
 					<span class="macro">assert_eq!</span>(
 						&lt;frame_system::Pallet&lt;Runtime&gt;&gt;::block_weight().total(),
 						<span class="comment">//--------------------- on_initialize + block_execution + extrinsic_base weight
-						</span>Weight::from_ref_time((encoded_len + <span class="number">5</span>) * (nonce + <span class="number">1</span>)) + base_block_weight,
+						</span>Weight::from_parts((encoded_len + <span class="number">5</span>) * (nonce + <span class="number">1</span>), <span class="number">0</span>) + base_block_weight,
 					);
 					<span class="macro">assert_eq!</span>(
 						&lt;frame_system::Pallet&lt;Runtime&gt;&gt;::extrinsic_index(),
@@ -2838,7 +2838,7 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>t = new_test_ext(<span class="number">1</span>);
 		t.execute_with(|| {
 			<span class="comment">// Block execution weight + on_initialize weight from custom module
-			</span><span class="kw">let </span>base_block_weight = Weight::from_ref_time(<span class="number">175</span>) +
+			</span><span class="kw">let </span>base_block_weight = Weight::from_parts(<span class="number">175</span>, <span class="number">0</span>) +
 				&lt;Runtime <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get().base_block;
 
 			Executive::initialize_block(<span class="kw-2">&amp;</span>Header::new(
@@ -2857,7 +2857,7 @@
 			<span class="macro">assert!</span>(Executive::apply_extrinsic(x2.clone()).unwrap().is_ok());
 
 			<span class="comment">// default weight for `TestXt` == encoded length.
-			</span><span class="kw">let </span>extrinsic_weight = Weight::from_ref_time(len <span class="kw">as </span>u64) +
+			</span><span class="kw">let </span>extrinsic_weight = Weight::from_parts(len <span class="kw">as </span>u64, <span class="number">0</span>) +
 				&lt;Runtime <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get()
 					.get(DispatchClass::Normal)
 					.base_extrinsic;
@@ -2973,7 +2973,7 @@
 			// the `on_initialize` weight defined in the custom test module.
 			</span><span class="macro">assert_eq!</span>(
 				&lt;frame_system::Pallet&lt;Runtime&gt;&gt;::block_weight().total(),
-				Weight::from_ref_time(<span class="number">175 </span>+ <span class="number">175 </span>+ <span class="number">10</span>)
+				Weight::from_parts(<span class="number">175 </span>+ <span class="number">175 </span>+ <span class="number">10</span>, <span class="number">0</span>)
 			);
 		})
 	}

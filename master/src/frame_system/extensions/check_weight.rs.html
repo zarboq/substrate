@@ -1022,7 +1022,7 @@
 		new_test_ext().execute_with(|| {
 			<span class="kw">let </span>max = DispatchInfo {
 				weight: block_weights().get(DispatchClass::Normal).max_extrinsic.unwrap() +
-					Weight::from_ref_time(<span class="number">1</span>),
+					Weight::from_parts(<span class="number">1</span>, <span class="number">0</span>),
 				class: DispatchClass::Normal,
 				..Default::default()
 			};
@@ -1048,7 +1048,7 @@
 			<span class="kw">let </span>okay =
 				DispatchInfo { weight, class: DispatchClass::Operational, ..Default::default() };
 			<span class="kw">let </span>max = DispatchInfo {
-				weight: weight + Weight::from_ref_time(<span class="number">1</span>),
+				weight: weight + Weight::from_parts(<span class="number">1</span>, <span class="number">0</span>),
 				class: DispatchClass::Operational,
 				..Default::default()
 			};
@@ -1080,9 +1080,9 @@
 			// So normal extrinsic can be 758 weight (-5 for base extrinsic weight)
 			// And Operational can be 246 to produce a full block (-10 for base)
 			</span><span class="kw">let </span>max_normal =
-				DispatchInfo { weight: Weight::from_ref_time(<span class="number">753</span>), ..Default::default() };
+				DispatchInfo { weight: Weight::from_parts(<span class="number">753</span>, <span class="number">0</span>), ..Default::default() };
 			<span class="kw">let </span>rest_operational = DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">246</span>),
+				weight: Weight::from_parts(<span class="number">246</span>, <span class="number">0</span>),
 				class: DispatchClass::Operational,
 				..Default::default()
 			};
@@ -1090,9 +1090,9 @@
 			<span class="kw">let </span>len = <span class="number">0_usize</span>;
 
 			<span class="macro">assert_ok!</span>(CheckWeight::&lt;Test&gt;::do_pre_dispatch(<span class="kw-2">&amp;</span>max_normal, len));
-			<span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_ref_time(<span class="number">768</span>));
+			<span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_parts(<span class="number">768</span>, <span class="number">0</span>));
 			<span class="macro">assert_ok!</span>(CheckWeight::&lt;Test&gt;::do_pre_dispatch(<span class="kw-2">&amp;</span>rest_operational, len));
-			<span class="macro">assert_eq!</span>(block_weight_limit(), Weight::from_ref_time(<span class="number">1024</span>).set_proof_size(u64::MAX));
+			<span class="macro">assert_eq!</span>(block_weight_limit(), Weight::from_parts(<span class="number">1024</span>, u64::MAX));
 			<span class="macro">assert_eq!</span>(System::block_weight().total(), block_weight_limit().set_proof_size(<span class="number">0</span>));
 			<span class="comment">// Checking single extrinsic should not take current block weight into account.
 			</span><span class="macro">assert_eq!</span>(CheckWeight::&lt;Test&gt;::check_extrinsic_weight(<span class="kw-2">&amp;</span>rest_operational), <span class="prelude-val">Ok</span>(()));
@@ -1104,9 +1104,9 @@
 		new_test_ext().execute_with(|| {
 			<span class="comment">// We switch the order of `full_block_with_normal_and_operational`
 			</span><span class="kw">let </span>max_normal =
-				DispatchInfo { weight: Weight::from_ref_time(<span class="number">753</span>), ..Default::default() };
+				DispatchInfo { weight: Weight::from_parts(<span class="number">753</span>, <span class="number">0</span>), ..Default::default() };
 			<span class="kw">let </span>rest_operational = DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">246</span>),
+				weight: Weight::from_parts(<span class="number">246</span>, <span class="number">0</span>),
 				class: DispatchClass::Operational,
 				..Default::default()
 			};
@@ -1115,9 +1115,9 @@
 
 			<span class="macro">assert_ok!</span>(CheckWeight::&lt;Test&gt;::do_pre_dispatch(<span class="kw-2">&amp;</span>rest_operational, len));
 			<span class="comment">// Extra 20 here from block execution + base extrinsic weight
-			</span><span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_ref_time(<span class="number">266</span>));
+			</span><span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_parts(<span class="number">266</span>, <span class="number">0</span>));
 			<span class="macro">assert_ok!</span>(CheckWeight::&lt;Test&gt;::do_pre_dispatch(<span class="kw-2">&amp;</span>max_normal, len));
-			<span class="macro">assert_eq!</span>(block_weight_limit(), Weight::from_ref_time(<span class="number">1024</span>).set_proof_size(u64::MAX));
+			<span class="macro">assert_eq!</span>(block_weight_limit(), Weight::from_parts(<span class="number">1024</span>, u64::MAX));
 			<span class="macro">assert_eq!</span>(System::block_weight().total(), block_weight_limit().set_proof_size(<span class="number">0</span>));
 		});
 	}
@@ -1128,12 +1128,12 @@
 			<span class="comment">// An on_initialize takes up the whole block! (Every time!)
 			</span>System::register_extra_weight_unchecked(Weight::MAX, DispatchClass::Mandatory);
 			<span class="kw">let </span>dispatch_normal = DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">251</span>),
+				weight: Weight::from_parts(<span class="number">251</span>, <span class="number">0</span>),
 				class: DispatchClass::Normal,
 				..Default::default()
 			};
 			<span class="kw">let </span>dispatch_operational = DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">246</span>),
+				weight: Weight::from_parts(<span class="number">246</span>, <span class="number">0</span>),
 				class: DispatchClass::Operational,
 				..Default::default()
 			};
@@ -1159,9 +1159,9 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>signed_ext_check_weight_works_operational_tx() {
 		new_test_ext().execute_with(|| {
-			<span class="kw">let </span>normal = DispatchInfo { weight: Weight::from_ref_time(<span class="number">100</span>), ..Default::default() };
+			<span class="kw">let </span>normal = DispatchInfo { weight: Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>), ..Default::default() };
 			<span class="kw">let </span>op = DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">100</span>),
+				weight: Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>),
 				class: DispatchClass::Operational,
 				pays_fee: Pays::Yes,
 			};
@@ -1227,12 +1227,12 @@
 	</span><span class="kw">fn </span>signed_ext_check_weight_works_normal_tx() {
 		new_test_ext().execute_with(|| {
 			<span class="kw">let </span>normal_limit = normal_weight_limit();
-			<span class="kw">let </span>small = DispatchInfo { weight: Weight::from_ref_time(<span class="number">100</span>), ..Default::default() };
+			<span class="kw">let </span>small = DispatchInfo { weight: Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>), ..Default::default() };
 			<span class="kw">let </span>base_extrinsic = block_weights().get(DispatchClass::Normal).base_extrinsic;
 			<span class="kw">let </span>medium =
 				DispatchInfo { weight: normal_limit - base_extrinsic, ..Default::default() };
 			<span class="kw">let </span>big = DispatchInfo {
-				weight: normal_limit - base_extrinsic + Weight::from_ref_time(<span class="number">1</span>),
+				weight: normal_limit - base_extrinsic + Weight::from_parts(<span class="number">1</span>, <span class="number">0</span>),
 				..Default::default()
 			};
 			<span class="kw">let </span>len = <span class="number">0_usize</span>;
@@ -1251,7 +1251,7 @@
 
 			reset_check_weight(<span class="kw-2">&amp;</span>small, <span class="bool-val">false</span>, Weight::zero());
 			reset_check_weight(<span class="kw-2">&amp;</span>medium, <span class="bool-val">false</span>, Weight::zero());
-			reset_check_weight(<span class="kw-2">&amp;</span>big, <span class="bool-val">true</span>, Weight::from_ref_time(<span class="number">1</span>));
+			reset_check_weight(<span class="kw-2">&amp;</span>big, <span class="bool-val">true</span>, Weight::from_parts(<span class="number">1</span>, <span class="number">0</span>));
 		})
 	}
 
@@ -1259,9 +1259,9 @@
 	</span><span class="kw">fn </span>signed_ext_check_weight_refund_works() {
 		new_test_ext().execute_with(|| {
 			<span class="comment">// This is half of the max block weight
-			</span><span class="kw">let </span>info = DispatchInfo { weight: Weight::from_ref_time(<span class="number">512</span>), ..Default::default() };
+			</span><span class="kw">let </span>info = DispatchInfo { weight: Weight::from_parts(<span class="number">512</span>, <span class="number">0</span>), ..Default::default() };
 			<span class="kw">let </span>post_info = PostDispatchInfo {
-				actual_weight: <span class="prelude-val">Some</span>(Weight::from_ref_time(<span class="number">128</span>)),
+				actual_weight: <span class="prelude-val">Some</span>(Weight::from_parts(<span class="number">128</span>, <span class="number">0</span>)),
 				pays_fee: Default::default(),
 			};
 			<span class="kw">let </span>len = <span class="number">0_usize</span>;
@@ -1271,13 +1271,13 @@
 			</span>BlockWeight::&lt;Test&gt;::mutate(|current_weight| {
 				current_weight.set(Weight::zero(), DispatchClass::Mandatory);
 				current_weight
-					.set(Weight::from_ref_time(<span class="number">256</span>) - base_extrinsic, DispatchClass::Normal);
+					.set(Weight::from_parts(<span class="number">256</span>, <span class="number">0</span>) - base_extrinsic, DispatchClass::Normal);
 			});
 
 			<span class="kw">let </span>pre = CheckWeight::&lt;Test&gt;(PhantomData).pre_dispatch(<span class="kw-2">&amp;</span><span class="number">1</span>, CALL, <span class="kw-2">&amp;</span>info, len).unwrap();
 			<span class="macro">assert_eq!</span>(
 				BlockWeight::&lt;Test&gt;::get().total(),
-				info.weight + Weight::from_ref_time(<span class="number">256</span>)
+				info.weight + Weight::from_parts(<span class="number">256</span>, <span class="number">0</span>)
 			);
 
 			<span class="macro">assert_ok!</span>(CheckWeight::&lt;Test&gt;::post_dispatch(
@@ -1289,7 +1289,7 @@
 			));
 			<span class="macro">assert_eq!</span>(
 				BlockWeight::&lt;Test&gt;::get().total(),
-				post_info.actual_weight.unwrap() + Weight::from_ref_time(<span class="number">256</span>)
+				post_info.actual_weight.unwrap() + Weight::from_parts(<span class="number">256</span>, <span class="number">0</span>)
 			);
 		})
 	}
@@ -1297,23 +1297,23 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>signed_ext_check_weight_actual_weight_higher_than_max_is_capped() {
 		new_test_ext().execute_with(|| {
-			<span class="kw">let </span>info = DispatchInfo { weight: Weight::from_ref_time(<span class="number">512</span>), ..Default::default() };
+			<span class="kw">let </span>info = DispatchInfo { weight: Weight::from_parts(<span class="number">512</span>, <span class="number">0</span>), ..Default::default() };
 			<span class="kw">let </span>post_info = PostDispatchInfo {
-				actual_weight: <span class="prelude-val">Some</span>(Weight::from_ref_time(<span class="number">700</span>)),
+				actual_weight: <span class="prelude-val">Some</span>(Weight::from_parts(<span class="number">700</span>, <span class="number">0</span>)),
 				pays_fee: Default::default(),
 			};
 			<span class="kw">let </span>len = <span class="number">0_usize</span>;
 
 			BlockWeight::&lt;Test&gt;::mutate(|current_weight| {
 				current_weight.set(Weight::zero(), DispatchClass::Mandatory);
-				current_weight.set(Weight::from_ref_time(<span class="number">128</span>), DispatchClass::Normal);
+				current_weight.set(Weight::from_parts(<span class="number">128</span>, <span class="number">0</span>), DispatchClass::Normal);
 			});
 
 			<span class="kw">let </span>pre = CheckWeight::&lt;Test&gt;(PhantomData).pre_dispatch(<span class="kw-2">&amp;</span><span class="number">1</span>, CALL, <span class="kw-2">&amp;</span>info, len).unwrap();
 			<span class="macro">assert_eq!</span>(
 				BlockWeight::&lt;Test&gt;::get().total(),
 				info.weight +
-					Weight::from_ref_time(<span class="number">128</span>) +
+					Weight::from_parts(<span class="number">128</span>, <span class="number">0</span>) +
 					block_weights().get(DispatchClass::Normal).base_extrinsic,
 			);
 
@@ -1327,7 +1327,7 @@
 			<span class="macro">assert_eq!</span>(
 				BlockWeight::&lt;Test&gt;::get().total(),
 				info.weight +
-					Weight::from_ref_time(<span class="number">128</span>) +
+					Weight::from_parts(<span class="number">128</span>, <span class="number">0</span>) +
 					block_weights().get(DispatchClass::Normal).base_extrinsic,
 			);
 		})
@@ -1357,9 +1357,9 @@
 			// Max normal is 768 (75%)
 			// Max mandatory is unlimited
 			</span><span class="kw">let </span>max_normal =
-				DispatchInfo { weight: Weight::from_ref_time(<span class="number">753</span>), ..Default::default() };
+				DispatchInfo { weight: Weight::from_parts(<span class="number">753</span>, <span class="number">0</span>), ..Default::default() };
 			<span class="kw">let </span>mandatory = DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">1019</span>),
+				weight: Weight::from_parts(<span class="number">1019</span>, <span class="number">0</span>),
 				class: DispatchClass::Mandatory,
 				..Default::default()
 			};
@@ -1367,10 +1367,10 @@
 			<span class="kw">let </span>len = <span class="number">0_usize</span>;
 
 			<span class="macro">assert_ok!</span>(CheckWeight::&lt;Test&gt;::do_pre_dispatch(<span class="kw-2">&amp;</span>max_normal, len));
-			<span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_ref_time(<span class="number">768</span>));
+			<span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_parts(<span class="number">768</span>, <span class="number">0</span>));
 			<span class="macro">assert_ok!</span>(CheckWeight::&lt;Test&gt;::do_pre_dispatch(<span class="kw-2">&amp;</span>mandatory, len));
-			<span class="macro">assert_eq!</span>(block_weight_limit(), Weight::from_ref_time(<span class="number">1024</span>).set_proof_size(u64::MAX));
-			<span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_ref_time(<span class="number">1024 </span>+ <span class="number">768</span>));
+			<span class="macro">assert_eq!</span>(block_weight_limit(), Weight::from_parts(<span class="number">1024</span>, u64::MAX));
+			<span class="macro">assert_eq!</span>(System::block_weight().total(), Weight::from_parts(<span class="number">1024 </span>+ <span class="number">768</span>, <span class="number">0</span>));
 			<span class="macro">assert_eq!</span>(CheckWeight::&lt;Test&gt;::check_extrinsic_weight(<span class="kw-2">&amp;</span>mandatory), <span class="prelude-val">Ok</span>(()));
 		});
 	}
@@ -1382,30 +1382,30 @@
 			.base_block(Weight::zero())
 			.for_class(DispatchClass::non_mandatory(), |w| {
 				w.base_extrinsic = Weight::zero();
-				w.max_total = <span class="prelude-val">Some</span>(Weight::from_ref_time(<span class="number">20</span>).set_proof_size(u64::MAX));
+				w.max_total = <span class="prelude-val">Some</span>(Weight::from_parts(<span class="number">20</span>, u64::MAX));
 			})
 			.for_class(DispatchClass::Mandatory, |w| {
 				w.base_extrinsic = Weight::zero();
-				w.reserved = <span class="prelude-val">Some</span>(Weight::from_ref_time(<span class="number">5</span>).set_proof_size(u64::MAX));
+				w.reserved = <span class="prelude-val">Some</span>(Weight::from_parts(<span class="number">5</span>, u64::MAX));
 				w.max_total = <span class="prelude-val">None</span>;
 			})
 			.build_or_panic();
 		<span class="kw">let </span>all_weight = <span class="kw">crate</span>::ConsumedWeight::new(|class| <span class="kw">match </span>class {
-			DispatchClass::Normal =&gt; Weight::from_ref_time(<span class="number">10</span>),
-			DispatchClass::Operational =&gt; Weight::from_ref_time(<span class="number">10</span>),
+			DispatchClass::Normal =&gt; Weight::from_parts(<span class="number">10</span>, <span class="number">0</span>),
+			DispatchClass::Operational =&gt; Weight::from_parts(<span class="number">10</span>, <span class="number">0</span>),
 			DispatchClass::Mandatory =&gt; Weight::zero(),
 		});
 		<span class="macro">assert_eq!</span>(maximum_weight.max_block, all_weight.total().set_proof_size(u64::MAX));
 
 		<span class="comment">// fits into reserved
 		</span><span class="kw">let </span>mandatory1 = DispatchInfo {
-			weight: Weight::from_ref_time(<span class="number">5</span>),
+			weight: Weight::from_parts(<span class="number">5</span>, <span class="number">0</span>),
 			class: DispatchClass::Mandatory,
 			..Default::default()
 		};
 		<span class="comment">// does not fit into reserved and the block is full.
 		</span><span class="kw">let </span>mandatory2 = DispatchInfo {
-			weight: Weight::from_ref_time(<span class="number">6</span>),
+			weight: Weight::from_parts(<span class="number">6</span>, <span class="number">0</span>),
 			class: DispatchClass::Mandatory,
 			..Default::default()
 		};

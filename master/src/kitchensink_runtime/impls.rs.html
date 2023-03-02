@@ -652,8 +652,8 @@
 		<span class="kw">let </span>fm = Multiplier::saturating_from_rational(<span class="number">1</span>, <span class="number">2</span>);
 		<span class="kw">let </span>test_set = <span class="macro">vec!</span>[
 			(Weight::zero(), fm),
-			(Weight::from_ref_time(<span class="number">100</span>), fm),
-			(Weight::from_ref_time(<span class="number">1000</span>), fm),
+			(Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>), fm),
+			(Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>), fm),
 			(target(), fm),
 			(max_normal() / <span class="number">2</span>, fm),
 			(max_normal(), fm),
@@ -738,7 +738,7 @@
 
 		// almost full. The entire quota of normal transactions is taken.
 		</span><span class="kw">let </span>block_weight = BlockWeights::get().get(DispatchClass::Normal).max_total.unwrap() -
-			Weight::from_ref_time(<span class="number">100</span>);
+			Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>);
 
 		<span class="comment">// Default substrate weight.
 		</span><span class="kw">let </span>tx_weight = frame_support::weights::constants::ExtrinsicBaseWeight::get();
@@ -862,23 +862,23 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>weight_to_fee_should_not_overflow_on_large_weights() {
-		<span class="kw">let </span>kb = Weight::from_ref_time(<span class="number">1024</span>);
+		<span class="kw">let </span>kb = Weight::from_parts(<span class="number">1024</span>, <span class="number">0</span>);
 		<span class="kw">let </span>mb = <span class="number">1024u64 </span>* kb;
 		<span class="kw">let </span>max_fm = Multiplier::saturating_from_integer(i128::MAX);
 
 		<span class="comment">// check that for all values it can compute, correctly.
 		</span><span class="macro">vec!</span>[
 			Weight::zero(),
-			Weight::from_ref_time(<span class="number">1</span>),
-			Weight::from_ref_time(<span class="number">10</span>),
-			Weight::from_ref_time(<span class="number">1000</span>),
+			Weight::from_parts(<span class="number">1</span>, <span class="number">0</span>),
+			Weight::from_parts(<span class="number">10</span>, <span class="number">0</span>),
+			Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>),
 			kb,
 			<span class="number">10u64 </span>* kb,
 			<span class="number">100u64 </span>* kb,
 			mb,
 			<span class="number">10u64 </span>* mb,
-			Weight::from_ref_time(<span class="number">2147483647</span>),
-			Weight::from_ref_time(<span class="number">4294967295</span>),
+			Weight::from_parts(<span class="number">2147483647</span>, <span class="number">0</span>),
+			Weight::from_parts(<span class="number">4294967295</span>, <span class="number">0</span>),
 			BlockWeights::get().max_block / <span class="number">2</span>,
 			BlockWeights::get().max_block,
 			Weight::MAX / <span class="number">2</span>,
@@ -895,7 +895,7 @@
 
 		<span class="comment">// Some values that are all above the target and will cause an increase.
 		</span><span class="kw">let </span>t = target();
-		<span class="macro">vec!</span>[t + Weight::from_ref_time(<span class="number">100</span>), t * <span class="number">2</span>, t * <span class="number">4</span>].into_iter().for_each(|i| {
+		<span class="macro">vec!</span>[t + Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>), t * <span class="number">2</span>, t * <span class="number">4</span>].into_iter().for_each(|i| {
 			run_with_system_weight(i, || {
 				<span class="kw">let </span>fm = runtime_multiplier_update(max_fm);
 				<span class="comment">// won&#39;t grow. The convert saturates everything.

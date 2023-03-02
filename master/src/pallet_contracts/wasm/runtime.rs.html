@@ -2895,7 +2895,7 @@
 	<span class="kw">fn </span>token&lt;T: Config&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, s: <span class="kw-2">&amp;</span>HostFnWeights&lt;T&gt;) -&gt; RuntimeToken {
 		<span class="kw">use </span><span class="self">self</span>::RuntimeCosts::<span class="kw-2">*</span>;
 		<span class="kw">let </span>weight = <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
-			MeteringBlock(amount) =&gt; s.gas.saturating_add(Weight::from_ref_time(amount)),
+			MeteringBlock(amount) =&gt; s.gas.saturating_add(Weight::from_parts(amount, <span class="number">0</span>)),
 			CopyFromContract(len) =&gt; s.return_per_byte.saturating_mul(len.into()),
 			CopyToContract(len) =&gt; s.input_per_byte.saturating_mul(len.into()),
 			Caller =&gt; s.caller,
@@ -3516,7 +3516,7 @@
 					<span class="self">self</span>.charge_gas(RuntimeCosts::CallSurchargeTransfer)<span class="question-mark">?</span>;
 				}
 				<span class="self">self</span>.ext.call(
-					Weight::from_ref_time(gas),
+					Weight::from_parts(gas, <span class="number">0</span>),
 					callee,
 					value,
 					input_data,
@@ -3571,7 +3571,7 @@
 		salt_ptr: u32,
 		salt_len: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ReturnCode, TrapReason&gt; {
-		<span class="kw">let </span>gas = Weight::from_ref_time(gas);
+		<span class="kw">let </span>gas = Weight::from_parts(gas, <span class="number">0</span>);
 		<span class="self">self</span>.charge_gas(RuntimeCosts::InstantiateBase { input_data_len, salt_len })<span class="question-mark">?</span>;
 		<span class="kw">let </span>value: BalanceOf&lt;&lt;E <span class="kw">as </span>Ext&gt;::T&gt; = <span class="self">self</span>.read_sandbox_memory_as(memory, value_ptr)<span class="question-mark">?</span>;
 		<span class="kw">if </span>value &gt; <span class="number">0u32</span>.into() {
@@ -4415,7 +4415,7 @@
 		out_ptr: u32,
 		out_len_ptr: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
-		<span class="kw">let </span>gas = Weight::from_ref_time(gas);
+		<span class="kw">let </span>gas = Weight::from_parts(gas, <span class="number">0</span>);
 		ctx.charge_gas(RuntimeCosts::WeightToFee)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(ctx.write_sandbox_output(
 			memory,

@@ -4186,7 +4186,7 @@
 	/// # Example
 	///
 	/// ```ignore
-	/// let who = ensure_signed(origin).map_err(|e| e.with_weight(Weight::from_ref_time(100)))?;
+	/// let who = ensure_signed(origin).map_err(|e| e.with_weight(Weight::from_parts(100, 0)))?;
 	/// ensure!(who == me, Error::&lt;T&gt;::NotMe.with_weight(200_000));
 	/// ```
 	</span><span class="kw">fn </span>with_weight(<span class="self">self</span>, actual_weight: Weight) -&gt; DispatchErrorWithPostInfo;
@@ -4237,7 +4237,7 @@
 	<span class="kw">fn </span>get_dispatch_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DispatchInfo {
 		<span class="comment">// for testing: weight == size.
 		</span>DispatchInfo {
-			weight: Weight::from_ref_time(<span class="self">self</span>.encode().len() <span class="kw">as _</span>),
+			weight: Weight::from_parts(<span class="self">self</span>.encode().len() <span class="kw">as _</span>, <span class="number">0</span>),
 			pays_fee: Pays::Yes,
 			class: <span class="self">self</span>.call.get_dispatch_info().class,
 		}
@@ -4424,7 +4424,7 @@
 </span><span class="kw">impl </span>From&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; <span class="kw">for </span>PostDispatchInfo {
 	<span class="kw">fn </span>from(maybe_actual_computation: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>actual_weight = <span class="kw">match </span>maybe_actual_computation {
-			<span class="prelude-val">Some</span>(actual_computation) =&gt; <span class="prelude-val">Some</span>(Weight::zero().set_ref_time(actual_computation)),
+			<span class="prelude-val">Some</span>(actual_computation) =&gt; <span class="prelude-val">Some</span>(Weight::from_parts(actual_computation, <span class="number">0</span>)),
 			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
 		};
 		<span class="self">Self </span>{ actual_weight, pays_fee: Default::default() }
@@ -4435,7 +4435,7 @@
 	<span class="kw">fn </span>from(post_weight_info: (<span class="prelude-ty">Option</span>&lt;u64&gt;, Pays)) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>(maybe_actual_time, pays_fee) = post_weight_info;
 		<span class="kw">let </span>actual_weight = <span class="kw">match </span>maybe_actual_time {
-			<span class="prelude-val">Some</span>(actual_time) =&gt; <span class="prelude-val">Some</span>(Weight::zero().set_ref_time(actual_time)),
+			<span class="prelude-val">Some</span>(actual_time) =&gt; <span class="prelude-val">Some</span>(Weight::from_parts(actual_time, <span class="number">0</span>)),
 			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
 		};
 		<span class="self">Self </span>{ actual_weight, pays_fee }
@@ -4456,7 +4456,7 @@
 
 <span class="kw">impl</span>&lt;T&gt; WeighData&lt;T&gt; <span class="kw">for </span>u64 {
 	<span class="kw">fn </span>weigh_data(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: T) -&gt; Weight {
-		<span class="kw">return </span>Weight::zero().set_ref_time(<span class="kw-2">*</span><span class="self">self</span>)
+		<span class="kw">return </span>Weight::from_parts(<span class="kw-2">*</span><span class="self">self</span>, <span class="number">0</span>)
 	}
 }
 
@@ -4607,7 +4607,7 @@
 /// 	pub struct Module&lt;T: Config&gt; for enum Call where origin: T::RuntimeOrigin {
 /// 		#[weight = 1_000_000]
 /// 		fn my_long_function(origin, do_expensive_calc: bool) -&gt; DispatchResultWithPostInfo {
-/// 			ensure_signed(origin).map_err(|e| e.with_weight(Weight::from_ref_time(100_000)))?;
+/// 			ensure_signed(origin).map_err(|e| e.with_weight(Weight::from_parts(100_000, 0)))?;
 /// 			if do_expensive_calc {
 /// 				// do the expensive calculation
 /// 				// ...
@@ -7111,13 +7111,13 @@
 			<span class="attr">#[weight = (<span class="number">5</span>, DispatchClass::Operational)]
 			</span><span class="kw">fn </span>operational(_origin) { <span class="macro">unreachable!</span>() }
 
-			<span class="kw">fn </span>on_initialize(n: T::BlockNumber,) -&gt; Weight { <span class="kw">if </span>n.into() == <span class="number">42 </span>{ <span class="macro">panic!</span>(<span class="string">&quot;on_initialize&quot;</span>) } Weight::from_ref_time(<span class="number">7</span>) }
+			<span class="kw">fn </span>on_initialize(n: T::BlockNumber,) -&gt; Weight { <span class="kw">if </span>n.into() == <span class="number">42 </span>{ <span class="macro">panic!</span>(<span class="string">&quot;on_initialize&quot;</span>) } Weight::from_parts(<span class="number">7</span>, <span class="number">0</span>) }
 			<span class="kw">fn </span>on_idle(n: T::BlockNumber, remaining_weight: Weight,) -&gt; Weight {
-				<span class="kw">if </span>n.into() == <span class="number">42 </span>|| remaining_weight == Weight::from_ref_time(<span class="number">42</span>)  { <span class="macro">panic!</span>(<span class="string">&quot;on_idle&quot;</span>) }
-				Weight::from_ref_time(<span class="number">7</span>)
+				<span class="kw">if </span>n.into() == <span class="number">42 </span>|| remaining_weight == Weight::from_parts(<span class="number">42</span>, <span class="number">0</span>)  { <span class="macro">panic!</span>(<span class="string">&quot;on_idle&quot;</span>) }
+				Weight::from_parts(<span class="number">7</span>, <span class="number">0</span>)
 			}
 			<span class="kw">fn </span>on_finalize(n: T::BlockNumber,) { <span class="kw">if </span>n.into() == <span class="number">42 </span>{ <span class="macro">panic!</span>(<span class="string">&quot;on_finalize&quot;</span>) } }
-			<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight { Weight::from_ref_time(<span class="number">10</span>) }
+			<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight { Weight::from_parts(<span class="number">10</span>, <span class="number">0</span>) }
 			<span class="kw">fn </span>offchain_worker() {}
 			<span class="doccomment">/// Some doc
 			</span><span class="kw">fn </span>integrity_test() { <span class="macro">panic!</span>(<span class="string">&quot;integrity_test&quot;</span>) }
@@ -7295,27 +7295,27 @@
 	</span><span class="kw">fn </span>on_initialize_should_work_2() {
 		<span class="macro">assert_eq!</span>(
 			&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnInitialize&lt;u32&gt;&gt;::on_initialize(<span class="number">10</span>),
-			Weight::from_ref_time(<span class="number">7</span>)
+			Weight::from_parts(<span class="number">7</span>, <span class="number">0</span>)
 		);
 	}
 
 	<span class="attr">#[test]
 	#[should_panic(expected = <span class="string">&quot;on_idle&quot;</span>)]
 	</span><span class="kw">fn </span>on_idle_should_work_1() {
-		&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnIdle&lt;u32&gt;&gt;::on_idle(<span class="number">42</span>, Weight::from_ref_time(<span class="number">9</span>));
+		&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnIdle&lt;u32&gt;&gt;::on_idle(<span class="number">42</span>, Weight::from_parts(<span class="number">9</span>, <span class="number">0</span>));
 	}
 
 	<span class="attr">#[test]
 	#[should_panic(expected = <span class="string">&quot;on_idle&quot;</span>)]
 	</span><span class="kw">fn </span>on_idle_should_work_2() {
-		&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnIdle&lt;u32&gt;&gt;::on_idle(<span class="number">9</span>, Weight::from_ref_time(<span class="number">42</span>));
+		&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnIdle&lt;u32&gt;&gt;::on_idle(<span class="number">9</span>, Weight::from_parts(<span class="number">42</span>, <span class="number">0</span>));
 	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>on_idle_should_work_3() {
 		<span class="macro">assert_eq!</span>(
-			&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnIdle&lt;u32&gt;&gt;::on_idle(<span class="number">10</span>, Weight::from_ref_time(<span class="number">11</span>)),
-			Weight::from_ref_time(<span class="number">7</span>)
+			&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnIdle&lt;u32&gt;&gt;::on_idle(<span class="number">10</span>, Weight::from_parts(<span class="number">11</span>, <span class="number">0</span>)),
+			Weight::from_parts(<span class="number">7</span>, <span class="number">0</span>)
 		);
 	}
 
@@ -7330,7 +7330,7 @@
 		sp_io::TestExternalities::default().execute_with(|| {
 			<span class="macro">assert_eq!</span>(
 				&lt;Module&lt;TraitImpl&gt; <span class="kw">as </span>OnRuntimeUpgrade&gt;::on_runtime_upgrade(),
-				Weight::from_ref_time(<span class="number">10</span>)
+				Weight::from_parts(<span class="number">10</span>, <span class="number">0</span>)
 			)
 		});
 	}
@@ -7341,7 +7341,7 @@
 		</span><span class="macro">assert_eq!</span>(
 			Call::&lt;TraitImpl&gt;::operational {}.get_dispatch_info(),
 			DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">5</span>),
+				weight: Weight::from_parts(<span class="number">5</span>, <span class="number">0</span>),
 				class: DispatchClass::Operational,
 				pays_fee: Pays::Yes
 			},
@@ -7350,7 +7350,7 @@
 		</span><span class="macro">assert_eq!</span>(
 			Call::&lt;TraitImpl&gt;::aux_3 {}.get_dispatch_info(),
 			DispatchInfo {
-				weight: Weight::from_ref_time(<span class="number">3</span>),
+				weight: Weight::from_parts(<span class="number">3</span>, <span class="number">0</span>),
 				class: DispatchClass::Normal,
 				pays_fee: Pays::Yes
 			},
@@ -7439,10 +7439,10 @@
 			<span class="attr">#[weight = (<span class="number">0</span>, DispatchClass::Operational, Pays::Yes)]
 			</span><span class="kw">fn </span>f12(_origin, _a: u32, _eb: u32) { <span class="macro">unimplemented!</span>(); }
 
-			<span class="attr">#[weight = T::DbWeight::get().reads(<span class="number">3</span>) + T::DbWeight::get().writes(<span class="number">2</span>) + Weight::from_ref_time(<span class="number">10_000</span>)]
+			<span class="attr">#[weight = T::DbWeight::get().reads(<span class="number">3</span>) + T::DbWeight::get().writes(<span class="number">2</span>) + Weight::from_parts(<span class="number">10_000</span>, <span class="number">0</span>)]
 			</span><span class="kw">fn </span>f20(_origin) { <span class="macro">unimplemented!</span>(); }
 
-			<span class="attr">#[weight = T::DbWeight::get().reads_writes(<span class="number">6</span>, <span class="number">5</span>) + Weight::from_ref_time(<span class="number">40_000</span>)]
+			<span class="attr">#[weight = T::DbWeight::get().reads_writes(<span class="number">6</span>, <span class="number">5</span>) + Weight::from_parts(<span class="number">40_000</span>, <span class="number">0</span>)]
 			</span><span class="kw">fn </span>f21(_origin) { <span class="macro">unimplemented!</span>(); }
 
 		}
@@ -7452,96 +7452,96 @@
 	</span><span class="kw">fn </span>weights_are_correct() {
 		<span class="comment">// #[weight = 1000]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f00 {}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">1000</span>));
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>));
 		<span class="macro">assert_eq!</span>(info.class, DispatchClass::Normal);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::Yes);
 
 		<span class="comment">// #[weight = (1000, DispatchClass::Mandatory)]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f01 {}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">1000</span>));
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>));
 		<span class="macro">assert_eq!</span>(info.class, DispatchClass::Mandatory);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::Yes);
 
 		<span class="comment">// #[weight = (1000, Pays::No)]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f02 {}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">1000</span>));
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>));
 		<span class="macro">assert_eq!</span>(info.class, DispatchClass::Normal);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::No);
 
 		<span class="comment">// #[weight = (1000, DispatchClass::Operational, Pays::No)]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f03 {}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">1000</span>));
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>));
 		<span class="macro">assert_eq!</span>(info.class, DispatchClass::Operational);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::No);
 
 		<span class="comment">// #[weight = ((_a * 10 + _eb * 1) as Weight, DispatchClass::Normal, Pays::Yes)]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f11 { _a: <span class="number">13</span>, _eb: <span class="number">20 </span>}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">150</span>)); <span class="comment">// 13*10 + 20
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">150</span>, <span class="number">0</span>)); <span class="comment">// 13*10 + 20
 		</span><span class="macro">assert_eq!</span>(info.class, DispatchClass::Normal);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::Yes);
 
 		<span class="comment">// #[weight = (0, DispatchClass::Operational, Pays::Yes)]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f12 { _a: <span class="number">10</span>, _eb: <span class="number">20 </span>}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">0</span>));
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">0</span>, <span class="number">0</span>));
 		<span class="macro">assert_eq!</span>(info.class, DispatchClass::Operational);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::Yes);
 
 		<span class="comment">// #[weight = T::DbWeight::get().reads(3) + T::DbWeight::get().writes(2) + 10_000]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f20 {}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">12300</span>)); <span class="comment">// 100*3 + 1000*2 + 10_1000
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">12300</span>, <span class="number">0</span>)); <span class="comment">// 100*3 + 1000*2 + 10_1000
 		</span><span class="macro">assert_eq!</span>(info.class, DispatchClass::Normal);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::Yes);
 
 		<span class="comment">// #[weight = T::DbWeight::get().reads_writes(6, 5) + 40_000]
 		</span><span class="kw">let </span>info = Call::&lt;TraitImpl&gt;::f21 {}.get_dispatch_info();
-		<span class="macro">assert_eq!</span>(info.weight, Weight::from_ref_time(<span class="number">45600</span>)); <span class="comment">// 100*6 + 1000*5 + 40_1000
+		<span class="macro">assert_eq!</span>(info.weight, Weight::from_parts(<span class="number">45600</span>, <span class="number">0</span>)); <span class="comment">// 100*6 + 1000*5 + 40_1000
 		</span><span class="macro">assert_eq!</span>(info.class, DispatchClass::Normal);
 		<span class="macro">assert_eq!</span>(info.pays_fee, Pays::Yes);
 	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>extract_actual_weight_works() {
-		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_ref_time(<span class="number">1000</span>), ..Default::default() };
-		<span class="macro">assert_eq!</span>(extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">7</span>).into()), <span class="kw-2">&amp;</span>pre), Weight::from_ref_time(<span class="number">7</span>));
+		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>), ..Default::default() };
+		<span class="macro">assert_eq!</span>(extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">7</span>).into()), <span class="kw-2">&amp;</span>pre), Weight::from_parts(<span class="number">7</span>, <span class="number">0</span>));
 		<span class="macro">assert_eq!</span>(
 			extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">1000</span>).into()), <span class="kw-2">&amp;</span>pre),
-			Weight::from_ref_time(<span class="number">1000</span>)
+			Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>)
 		);
 		<span class="macro">assert_eq!</span>(
 			extract_actual_weight(
-				<span class="kw-2">&amp;</span><span class="prelude-val">Err</span>(DispatchError::BadOrigin.with_weight(Weight::from_ref_time(<span class="number">9</span>))),
+				<span class="kw-2">&amp;</span><span class="prelude-val">Err</span>(DispatchError::BadOrigin.with_weight(Weight::from_parts(<span class="number">9</span>, <span class="number">0</span>))),
 				<span class="kw-2">&amp;</span>pre
 			),
-			Weight::from_ref_time(<span class="number">9</span>)
+			Weight::from_parts(<span class="number">9</span>, <span class="number">0</span>)
 		);
 	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>extract_actual_weight_caps_at_pre_weight() {
-		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_ref_time(<span class="number">1000</span>), ..Default::default() };
+		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>), ..Default::default() };
 		<span class="macro">assert_eq!</span>(
 			extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">1250</span>).into()), <span class="kw-2">&amp;</span>pre),
-			Weight::from_ref_time(<span class="number">1000</span>)
+			Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>)
 		);
 		<span class="macro">assert_eq!</span>(
 			extract_actual_weight(
-				<span class="kw-2">&amp;</span><span class="prelude-val">Err</span>(DispatchError::BadOrigin.with_weight(Weight::from_ref_time(<span class="number">1300</span>))),
+				<span class="kw-2">&amp;</span><span class="prelude-val">Err</span>(DispatchError::BadOrigin.with_weight(Weight::from_parts(<span class="number">1300</span>, <span class="number">0</span>))),
 				<span class="kw-2">&amp;</span>pre
 			),
-			Weight::from_ref_time(<span class="number">1000</span>),
+			Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>),
 		);
 	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>extract_actual_pays_fee_works() {
-		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_ref_time(<span class="number">1000</span>), ..Default::default() };
+		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>), ..Default::default() };
 		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">7</span>).into()), <span class="kw-2">&amp;</span>pre), Pays::Yes);
 		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">1000</span>).into()), <span class="kw-2">&amp;</span>pre), Pays::Yes);
 		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>((<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::Yes).into()), <span class="kw-2">&amp;</span>pre), Pays::Yes);
 		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>((<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::No).into()), <span class="kw-2">&amp;</span>pre), Pays::No);
 		<span class="macro">assert_eq!</span>(
 			extract_actual_pays_fee(
-				<span class="kw-2">&amp;</span><span class="prelude-val">Err</span>(DispatchError::BadOrigin.with_weight(Weight::from_ref_time(<span class="number">9</span>))),
+				<span class="kw-2">&amp;</span><span class="prelude-val">Err</span>(DispatchError::BadOrigin.with_weight(Weight::from_parts(<span class="number">9</span>, <span class="number">0</span>))),
 				<span class="kw-2">&amp;</span>pre
 			),
 			Pays::Yes
@@ -7558,7 +7558,7 @@
 		);
 
 		<span class="kw">let </span>pre = DispatchInfo {
-			weight: Weight::from_ref_time(<span class="number">1000</span>),
+			weight: Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>),
 			pays_fee: Pays::No,
 			..Default::default()
 		};
