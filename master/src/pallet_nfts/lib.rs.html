@@ -1863,6 +1863,21 @@
 <a href="#1863" id="1863">1863</a>
 <a href="#1864" id="1864">1864</a>
 <a href="#1865" id="1865">1865</a>
+<a href="#1866" id="1866">1866</a>
+<a href="#1867" id="1867">1867</a>
+<a href="#1868" id="1868">1868</a>
+<a href="#1869" id="1869">1869</a>
+<a href="#1870" id="1870">1870</a>
+<a href="#1871" id="1871">1871</a>
+<a href="#1872" id="1872">1872</a>
+<a href="#1873" id="1873">1873</a>
+<a href="#1874" id="1874">1874</a>
+<a href="#1875" id="1875">1875</a>
+<a href="#1876" id="1876">1876</a>
+<a href="#1877" id="1877">1877</a>
+<a href="#1878" id="1878">1878</a>
+<a href="#1879" id="1879">1879</a>
+<a href="#1880" id="1880">1880</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2397,6 +2412,14 @@
 			item: T::ItemId,
 			namespace: AttributeNamespace&lt;T::AccountId&gt;,
 		},
+		<span class="doccomment">/// A new attribute in the `Pallet` namespace was set for the `collection` or an `item`
+		/// within that `collection`.
+		</span>PalletAttributeSet {
+			collection: T::CollectionId,
+			item: <span class="prelude-ty">Option</span>&lt;T::ItemId&gt;,
+			attribute: PalletAttributes&lt;T::CollectionId&gt;,
+			value: BoundedVec&lt;u8, T::ValueLimit&gt;,
+		},
 	}
 
 	<span class="attr">#[pallet::error]
@@ -2669,32 +2692,39 @@
 							<span class="kw">let </span>MintWitness { owner_of_item } =
 								witness_data.ok_or(Error::&lt;T, I&gt;::BadWitness)<span class="question-mark">?</span>;
 
-							<span class="kw">let </span>has_item = Account::&lt;T, I&gt;::contains_key((
+							<span class="kw">let </span>owns_item = Account::&lt;T, I&gt;::contains_key((
 								<span class="kw-2">&amp;</span>caller,
 								<span class="kw-2">&amp;</span>collection_id,
 								<span class="kw-2">&amp;</span>owner_of_item,
 							));
-							<span class="macro">ensure!</span>(has_item, Error::&lt;T, I&gt;::BadWitness);
+							<span class="macro">ensure!</span>(owns_item, Error::&lt;T, I&gt;::BadWitness);
 
-							<span class="kw">let </span>attribute_key = <span class="self">Self</span>::construct_attribute_key(
-								PalletAttributes::&lt;T::CollectionId&gt;::UsedToClaim(collection)
-									.encode(),
-							)<span class="question-mark">?</span>;
+							<span class="kw">let </span>pallet_attribute =
+								PalletAttributes::&lt;T::CollectionId&gt;::UsedToClaim(collection);
 
 							<span class="kw">let </span>key = (
 								<span class="kw-2">&amp;</span>collection_id,
 								<span class="prelude-val">Some</span>(owner_of_item),
 								AttributeNamespace::Pallet,
-								<span class="kw-2">&amp;</span>attribute_key,
+								<span class="kw-2">&amp;</span><span class="self">Self</span>::construct_attribute_key(pallet_attribute.encode())<span class="question-mark">?</span>,
 							);
 							<span class="kw">let </span>already_claimed = Attribute::&lt;T, I&gt;::contains_key(key.clone());
 							<span class="macro">ensure!</span>(!already_claimed, Error::&lt;T, I&gt;::AlreadyClaimed);
 
-							<span class="kw">let </span>value = <span class="self">Self</span>::construct_attribute_value(<span class="macro">vec!</span>[<span class="number">0</span>])<span class="question-mark">?</span>;
+							<span class="kw">let </span>attribute_value = <span class="self">Self</span>::construct_attribute_value(<span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 							Attribute::&lt;T, I&gt;::insert(
 								key,
-								(value, AttributeDeposit { account: <span class="prelude-val">None</span>, amount: Zero::zero() }),
+								(
+									attribute_value.clone(),
+									AttributeDeposit { account: <span class="prelude-val">None</span>, amount: Zero::zero() },
+								),
 							);
+							<span class="self">Self</span>::deposit_event(Event::PalletAttributeSet {
+								collection,
+								item: <span class="prelude-val">Some</span>(item),
+								attribute: pallet_attribute,
+								value: attribute_value,
+							});
 						},
 						<span class="kw">_ </span>=&gt; {},
 					}
