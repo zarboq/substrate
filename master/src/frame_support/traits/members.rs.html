@@ -359,6 +359,30 @@
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -379,6 +403,8 @@
 </span><span class="doccomment">//! Traits for dealing with the idea of membership.
 
 </span><span class="kw">use </span>impl_trait_for_tuples::impl_for_tuples;
+<span class="kw">use </span>sp_arithmetic::traits::AtLeast16BitUnsigned;
+<span class="kw">use </span>sp_runtime::DispatchResult;
 <span class="kw">use </span>sp_std::{marker::PhantomData, prelude::<span class="kw-2">*</span>};
 
 <span class="doccomment">/// A trait for querying whether a type can be said to &quot;contain&quot; a value.
@@ -624,6 +650,28 @@
 	</span><span class="kw">fn </span>min_len() -&gt; usize;
 	<span class="doccomment">/// Maximum number of elements contained
 	</span><span class="kw">fn </span>max_len() -&gt; usize;
+}
+
+<span class="doccomment">/// Ranked membership data structure.
+</span><span class="kw">pub trait </span>RankedMembers {
+	<span class="kw">type </span>AccountId;
+	<span class="kw">type </span>Rank: AtLeast16BitUnsigned;
+
+	<span class="doccomment">/// The lowest rank possible in this membership organisation.
+	</span><span class="kw">fn </span>min_rank() -&gt; <span class="self">Self</span>::Rank;
+
+	<span class="doccomment">/// Return the rank of the given ID, or `None` if they are not a member.
+	</span><span class="kw">fn </span>rank_of(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Rank&gt;;
+
+	<span class="doccomment">/// Add a member to the group at the `min_rank()`.
+	</span><span class="kw">fn </span>induct(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult;
+
+	<span class="doccomment">/// Promote a member to the next higher rank.
+	</span><span class="kw">fn </span>promote(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult;
+
+	<span class="doccomment">/// Demote a member to the next lower rank; demoting beyond the `min_rank` removes the
+	/// member entirely.
+	</span><span class="kw">fn </span>demote(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult;
 }
 
 <span class="doccomment">/// Trait for type that can handle the initialization of account IDs at genesis.

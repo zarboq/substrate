@@ -692,6 +692,41 @@
 <a href="#692" id="692">692</a>
 <a href="#693" id="693">693</a>
 <a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -748,7 +783,7 @@
 	codec::{Decode, Encode, MaxEncodedLen},
 	dispatch::{DispatchError, DispatchResultWithPostInfo, PostDispatchInfo},
 	ensure,
-	traits::{EnsureOrigin, PollStatus, Polling, VoteTally},
+	traits::{EnsureOrigin, PollStatus, Polling, RankedMembers, VoteTally},
 	CloneNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
 
@@ -1166,24 +1201,7 @@
 		</span><span class="kw">pub fn </span>demote_member(origin: OriginFor&lt;T&gt;, who: AccountIdLookupOf&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>max_rank = T::DemoteOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>who = T::Lookup::lookup(who)<span class="question-mark">?</span>;
-			<span class="kw">let </span><span class="kw-2">mut </span>record = <span class="self">Self</span>::ensure_member(<span class="kw-2">&amp;</span>who)<span class="question-mark">?</span>;
-			<span class="kw">let </span>rank = record.rank;
-			<span class="macro">ensure!</span>(max_rank &gt;= rank, Error::&lt;T, I&gt;::NoPermission);
-
-			<span class="self">Self</span>::remove_from_rank(<span class="kw-2">&amp;</span>who, rank)<span class="question-mark">?</span>;
-			<span class="kw">let </span>maybe_rank = rank.checked_sub(<span class="number">1</span>);
-			<span class="kw">match </span>maybe_rank {
-				<span class="prelude-val">None </span>=&gt; {
-					Members::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>who);
-					<span class="self">Self</span>::deposit_event(Event::MemberRemoved { who, rank: <span class="number">0 </span>});
-				},
-				<span class="prelude-val">Some</span>(rank) =&gt; {
-					record.rank = rank;
-					Members::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;</span>record);
-					<span class="self">Self</span>::deposit_event(Event::RankChanged { who, rank });
-				},
-			}
-			<span class="prelude-val">Ok</span>(())
+			<span class="self">Self</span>::do_demote_member(who, <span class="prelude-val">Some</span>(max_rank))
 		}
 
 		<span class="doccomment">/// Remove the member entirely.
@@ -1353,7 +1371,7 @@
 			<span class="prelude-val">Ok</span>(())
 		}
 
-		<span class="doccomment">/// Promotes a member in the ranked collective into the next role.
+		<span class="doccomment">/// Promotes a member in the ranked collective into the next higher rank.
 		///
 		/// A `maybe_max_rank` may be provided to check that the member does not get promoted beyond
 		/// a certain rank. Is `None` is provided, then the rank will be incremented without checks.
@@ -1375,6 +1393,33 @@
 			<span class="prelude-val">Ok</span>(())
 		}
 
+		<span class="doccomment">/// Demotes a member in the ranked collective into the next lower rank.
+		///
+		/// A `maybe_max_rank` may be provided to check that the member does not get demoted from
+		/// a certain rank. Is `None` is provided, then the rank will be decremented without checks.
+		</span><span class="kw">fn </span>do_demote_member(who: T::AccountId, maybe_max_rank: <span class="prelude-ty">Option</span>&lt;Rank&gt;) -&gt; DispatchResult {
+			<span class="kw">let </span><span class="kw-2">mut </span>record = <span class="self">Self</span>::ensure_member(<span class="kw-2">&amp;</span>who)<span class="question-mark">?</span>;
+			<span class="kw">let </span>rank = record.rank;
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(max_rank) = maybe_max_rank {
+				<span class="macro">ensure!</span>(max_rank &gt;= rank, Error::&lt;T, I&gt;::NoPermission);
+			}
+
+			<span class="self">Self</span>::remove_from_rank(<span class="kw-2">&amp;</span>who, rank)<span class="question-mark">?</span>;
+			<span class="kw">let </span>maybe_rank = rank.checked_sub(<span class="number">1</span>);
+			<span class="kw">match </span>maybe_rank {
+				<span class="prelude-val">None </span>=&gt; {
+					Members::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>who);
+					<span class="self">Self</span>::deposit_event(Event::MemberRemoved { who, rank: <span class="number">0 </span>});
+				},
+				<span class="prelude-val">Some</span>(rank) =&gt; {
+					record.rank = rank;
+					Members::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;</span>record);
+					<span class="self">Self</span>::deposit_event(Event::RankChanged { who, rank });
+				},
+			}
+			<span class="prelude-val">Ok</span>(())
+		}
+
 		<span class="doccomment">/// Add a member to the rank collective, and continue to promote them until a certain rank
 		/// is reached.
 		</span><span class="kw">pub fn </span>do_add_member_to_rank(who: T::AccountId, rank: Rank) -&gt; DispatchResult {
@@ -1383,6 +1428,31 @@
 				<span class="self">Self</span>::do_promote_member(who.clone(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 			}
 			<span class="prelude-val">Ok</span>(())
+		}
+	}
+
+	<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; RankedMembers <span class="kw">for </span>Pallet&lt;T, I&gt; {
+		<span class="kw">type </span>AccountId = T::AccountId;
+		<span class="kw">type </span>Rank = Rank;
+
+		<span class="kw">fn </span>min_rank() -&gt; <span class="self">Self</span>::Rank {
+			<span class="number">0
+		</span>}
+
+		<span class="kw">fn </span>rank_of(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Rank&gt; {
+			<span class="prelude-val">Some</span>(<span class="self">Self</span>::ensure_member(<span class="kw-2">&amp;</span>who).ok()<span class="question-mark">?</span>.rank)
+		}
+
+		<span class="kw">fn </span>induct(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult {
+			<span class="self">Self</span>::do_add_member(who.clone())
+		}
+
+		<span class="kw">fn </span>promote(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult {
+			<span class="self">Self</span>::do_promote_member(who.clone(), <span class="prelude-val">None</span>)
+		}
+
+		<span class="kw">fn </span>demote(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult {
+			<span class="self">Self</span>::do_demote_member(who.clone(), <span class="prelude-val">None</span>)
 		}
 	}
 }
