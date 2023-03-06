@@ -1317,6 +1317,75 @@
 <a href="#1317" id="1317">1317</a>
 <a href="#1318" id="1318">1318</a>
 <a href="#1319" id="1319">1319</a>
+<a href="#1320" id="1320">1320</a>
+<a href="#1321" id="1321">1321</a>
+<a href="#1322" id="1322">1322</a>
+<a href="#1323" id="1323">1323</a>
+<a href="#1324" id="1324">1324</a>
+<a href="#1325" id="1325">1325</a>
+<a href="#1326" id="1326">1326</a>
+<a href="#1327" id="1327">1327</a>
+<a href="#1328" id="1328">1328</a>
+<a href="#1329" id="1329">1329</a>
+<a href="#1330" id="1330">1330</a>
+<a href="#1331" id="1331">1331</a>
+<a href="#1332" id="1332">1332</a>
+<a href="#1333" id="1333">1333</a>
+<a href="#1334" id="1334">1334</a>
+<a href="#1335" id="1335">1335</a>
+<a href="#1336" id="1336">1336</a>
+<a href="#1337" id="1337">1337</a>
+<a href="#1338" id="1338">1338</a>
+<a href="#1339" id="1339">1339</a>
+<a href="#1340" id="1340">1340</a>
+<a href="#1341" id="1341">1341</a>
+<a href="#1342" id="1342">1342</a>
+<a href="#1343" id="1343">1343</a>
+<a href="#1344" id="1344">1344</a>
+<a href="#1345" id="1345">1345</a>
+<a href="#1346" id="1346">1346</a>
+<a href="#1347" id="1347">1347</a>
+<a href="#1348" id="1348">1348</a>
+<a href="#1349" id="1349">1349</a>
+<a href="#1350" id="1350">1350</a>
+<a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
+<a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
+<a href="#1357" id="1357">1357</a>
+<a href="#1358" id="1358">1358</a>
+<a href="#1359" id="1359">1359</a>
+<a href="#1360" id="1360">1360</a>
+<a href="#1361" id="1361">1361</a>
+<a href="#1362" id="1362">1362</a>
+<a href="#1363" id="1363">1363</a>
+<a href="#1364" id="1364">1364</a>
+<a href="#1365" id="1365">1365</a>
+<a href="#1366" id="1366">1366</a>
+<a href="#1367" id="1367">1367</a>
+<a href="#1368" id="1368">1368</a>
+<a href="#1369" id="1369">1369</a>
+<a href="#1370" id="1370">1370</a>
+<a href="#1371" id="1371">1371</a>
+<a href="#1372" id="1372">1372</a>
+<a href="#1373" id="1373">1373</a>
+<a href="#1374" id="1374">1374</a>
+<a href="#1375" id="1375">1375</a>
+<a href="#1376" id="1376">1376</a>
+<a href="#1377" id="1377">1377</a>
+<a href="#1378" id="1378">1378</a>
+<a href="#1379" id="1379">1379</a>
+<a href="#1380" id="1380">1380</a>
+<a href="#1381" id="1381">1381</a>
+<a href="#1382" id="1382">1382</a>
+<a href="#1383" id="1383">1383</a>
+<a href="#1384" id="1384">1384</a>
+<a href="#1385" id="1385">1385</a>
+<a href="#1386" id="1386">1386</a>
+<a href="#1387" id="1387">1387</a>
+<a href="#1388" id="1388">1388</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1419,13 +1488,14 @@
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">use crate</span>::{
-	exec::{AccountIdOf, ExecError, Executable, Stack <span class="kw">as </span>ExecStack},
+	exec::{AccountIdOf, ErrorOrigin, ExecError, Executable, Stack <span class="kw">as </span>ExecStack},
 	gas::GasMeter,
 	storage::{meter::Meter <span class="kw">as </span>StorageMeter, ContractInfo, DeletedContract},
 	wasm::{OwnerInfo, PrefabWasmModule, TryInstantiate},
 	weights::WeightInfo,
 };
 <span class="kw">use </span>codec::{Codec, Encode, HasCompact};
+<span class="kw">use </span>environmental::<span class="kw-2">*</span>;
 <span class="kw">use </span>frame_support::{
 	dispatch::{Dispatchable, GetDispatchInfo, Pays, PostDispatchInfo},
 	ensure,
@@ -1935,16 +2005,16 @@
 			<span class="kw">let </span>gas_limit: Weight = gas_limit.into();
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>dest = T::Lookup::lookup(dest)<span class="question-mark">?</span>;
-			<span class="kw">let </span><span class="kw-2">mut </span>output = <span class="self">Self</span>::internal_call(
+			<span class="kw">let </span>common = CommonInput {
 				origin,
-				dest,
 				value,
-				gas_limit,
-				storage_deposit_limit.map(Into::into),
 				data,
-				<span class="prelude-val">None</span>,
-				Determinism::Deterministic,
-			);
+				gas_limit,
+				storage_deposit_limit: storage_deposit_limit.map(Into::into),
+				debug_message: <span class="prelude-val">None</span>,
+			};
+			<span class="kw">let </span><span class="kw-2">mut </span>output = CallInput::&lt;T&gt; { dest, determinism: Determinism::Deterministic }
+				.run_guarded(common);
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>(retval) = <span class="kw-2">&amp;</span>output.result {
 				<span class="kw">if </span>retval.did_revert() {
 					output.result = <span class="prelude-val">Err</span>(&lt;Error&lt;T&gt;&gt;::ContractReverted.into());
@@ -1997,16 +2067,16 @@
 			<span class="kw">let </span>code_len = code.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>salt_len = salt.len() <span class="kw">as </span>u32;
-			<span class="kw">let </span><span class="kw-2">mut </span>output = <span class="self">Self</span>::internal_instantiate(
+			<span class="kw">let </span>common = CommonInput {
 				origin,
 				value,
-				gas_limit,
-				storage_deposit_limit.map(Into::into),
-				Code::Upload(code),
 				data,
-				salt,
-				<span class="prelude-val">None</span>,
-			);
+				gas_limit,
+				storage_deposit_limit: storage_deposit_limit.map(Into::into),
+				debug_message: <span class="prelude-val">None</span>,
+			};
+			<span class="kw">let </span><span class="kw-2">mut </span>output =
+				InstantiateInput::&lt;T&gt; { code: Code::Upload(code), salt }.run_guarded(common);
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>(retval) = <span class="kw-2">&amp;</span>output.result {
 				<span class="kw">if </span>retval.<span class="number">1</span>.did_revert() {
 					output.result = <span class="prelude-val">Err</span>(&lt;Error&lt;T&gt;&gt;::ContractReverted.into());
@@ -2039,16 +2109,16 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>salt_len = salt.len() <span class="kw">as </span>u32;
-			<span class="kw">let </span><span class="kw-2">mut </span>output = <span class="self">Self</span>::internal_instantiate(
+			<span class="kw">let </span>common = CommonInput {
 				origin,
 				value,
-				gas_limit,
-				storage_deposit_limit.map(Into::into),
-				Code::Existing(code_hash),
 				data,
-				salt,
-				<span class="prelude-val">None</span>,
-			);
+				gas_limit,
+				storage_deposit_limit: storage_deposit_limit.map(Into::into),
+				debug_message: <span class="prelude-val">None</span>,
+			};
+			<span class="kw">let </span><span class="kw-2">mut </span>output =
+				InstantiateInput::&lt;T&gt; { code: Code::Existing(code_hash), salt }.run_guarded(common);
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>(retval) = <span class="kw-2">&amp;</span>output.result {
 				<span class="kw">if </span>retval.<span class="number">1</span>.did_revert() {
 					output.result = <span class="prelude-val">Err</span>(&lt;Error&lt;T&gt;&gt;::ContractReverted.into());
@@ -2191,6 +2261,9 @@
 		/// This can be triggered by a call to `seal_terminate`.
 		</span>TerminatedInConstructor,
 		<span class="doccomment">/// A call tried to invoke a contract that is flagged as non-reentrant.
+		/// The only other cause is that a call from a contract into the runtime tried to call back
+		/// into `pallet-contracts`. This would make the whole pallet reentrant with regard to
+		/// contract code execution which is not supported.
 		</span>ReentranceDenied,
 		<span class="doccomment">/// Origin doesn&#39;t have enough balance to pay the required storage deposits.
 		</span>StorageDepositNotEnoughFunds,
@@ -2270,11 +2343,27 @@
 		StorageValue&lt;<span class="kw">_</span>, BoundedVec&lt;DeletedContract, T::DeletionQueueDepth&gt;, ValueQuery&gt;;
 }
 
-<span class="doccomment">/// Return type of the private [`Pallet::internal_call`] function.
-</span><span class="kw">type </span>InternalCallOutput&lt;T&gt; = InternalOutput&lt;T, ExecReturnValue&gt;;
+<span class="doccomment">/// Context of a contract invocation.
+</span><span class="kw">struct </span>CommonInput&lt;<span class="lifetime">&#39;a</span>, T: Config&gt; {
+	origin: T::AccountId,
+	value: BalanceOf&lt;T&gt;,
+	data: Vec&lt;u8&gt;,
+	gas_limit: Weight,
+	storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
+	debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>DebugBufferVec&lt;T&gt;&gt;,
+}
 
-<span class="doccomment">/// Return type of the private [`Pallet::internal_instantiate`] function.
-</span><span class="kw">type </span>InternalInstantiateOutput&lt;T&gt; = InternalOutput&lt;T, (AccountIdOf&lt;T&gt;, ExecReturnValue)&gt;;
+<span class="doccomment">/// Input specific to a call into contract.
+</span><span class="kw">struct </span>CallInput&lt;T: Config&gt; {
+	dest: T::AccountId,
+	determinism: Determinism,
+}
+
+<span class="doccomment">/// Input specific to a contract instantiation invocation.
+</span><span class="kw">struct </span>InstantiateInput&lt;T: Config&gt; {
+	code: Code&lt;CodeHash&lt;T&gt;&gt;,
+	salt: Vec&lt;u8&gt;,
+}
 
 <span class="doccomment">/// Return type of private helper functions.
 </span><span class="kw">struct </span>InternalOutput&lt;T: Config, O&gt; {
@@ -2284,6 +2373,164 @@
 	</span>storage_deposit: StorageDeposit&lt;BalanceOf&lt;T&gt;&gt;,
 	<span class="doccomment">/// The result of the call.
 	</span>result: <span class="prelude-ty">Result</span>&lt;O, ExecError&gt;,
+}
+
+<span class="doccomment">/// Helper trait to wrap contract execution entry points into a signle function
+/// [`Invokable::run_guarded`].
+</span><span class="kw">trait </span>Invokable&lt;T: Config&gt; {
+	<span class="doccomment">/// What is returned as a result of a successful invocation.
+	</span><span class="kw">type </span>Output;
+
+	<span class="doccomment">/// Single entry point to contract execution.
+	/// Downstream execution flow is branched by implementations of [`Invokable`] trait:
+	///
+	/// - [`InstantiateInput::run`] runs contract instantiation,
+	/// - [`CallInput::run`] runs contract call.
+	///
+	/// We enforce a re-entrancy guard here by initializing and checking a boolean flag through a
+	/// global reference.
+	</span><span class="kw">fn </span>run_guarded(<span class="kw-2">&amp;</span><span class="self">self</span>, common: CommonInput&lt;T&gt;) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
+		<span class="comment">// Set up a global reference to the boolean flag used for the re-entrancy guard.
+		</span><span class="macro">environmental!</span>(executing_contract: bool);
+
+		<span class="kw">let </span>gas_limit = common.gas_limit;
+		executing_contract::using_once(<span class="kw-2">&amp;mut </span><span class="bool-val">false</span>, || {
+			executing_contract::with(|f| {
+				<span class="comment">// Fail if already entered contract execution
+				</span><span class="kw">if </span><span class="kw-2">*</span>f {
+					<span class="kw">return </span><span class="prelude-val">Err</span>(())
+				}
+				<span class="comment">// We are entering contract execution
+				</span><span class="kw-2">*</span>f = <span class="bool-val">true</span>;
+				<span class="prelude-val">Ok</span>(())
+			})
+			.expect(<span class="string">&quot;Returns `Ok` if called within `using_once`. It is syntactically obvious that this is the case; qed&quot;</span>)
+			.map_or_else(
+				|<span class="kw">_</span>| InternalOutput {
+					gas_meter: GasMeter::new(gas_limit),
+					storage_deposit: Default::default(),
+					result: <span class="prelude-val">Err</span>(ExecError {
+						error: &lt;Error&lt;T&gt;&gt;::ReentranceDenied.into(),
+						origin: ErrorOrigin::Caller,
+					}),
+				},
+				<span class="comment">// Enter contract call.
+				</span>|<span class="kw">_</span>| <span class="self">self</span>.run(common, GasMeter::new(gas_limit)),
+			)
+		})
+	}
+
+	<span class="doccomment">/// Method that does the actual call to a contract. It can be either a call to a deployed
+	/// contract or a instantiation of a new one.
+	///
+	/// Called by dispatchables and public functions through the [`Invokable::run_guarded`].
+	</span><span class="kw">fn </span>run(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		common: CommonInput&lt;T&gt;,
+		gas_meter: GasMeter&lt;T&gt;,
+	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt;;
+}
+
+<span class="kw">impl</span>&lt;T: Config&gt; Invokable&lt;T&gt; <span class="kw">for </span>CallInput&lt;T&gt; {
+	<span class="kw">type </span>Output = ExecReturnValue;
+
+	<span class="kw">fn </span>run(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		common: CommonInput&lt;T&gt;,
+		<span class="kw-2">mut </span>gas_meter: GasMeter&lt;T&gt;,
+	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
+			<span class="kw">match </span>StorageMeter::new(<span class="kw-2">&amp;</span>common.origin, common.storage_deposit_limit, common.value) {
+				<span class="prelude-val">Ok</span>(meter) =&gt; meter,
+				<span class="prelude-val">Err</span>(err) =&gt;
+					<span class="kw">return </span>InternalOutput {
+						result: <span class="prelude-val">Err</span>(err.into()),
+						gas_meter,
+						storage_deposit: Default::default(),
+					},
+			};
+		<span class="kw">let </span>schedule = T::Schedule::get();
+		<span class="kw">let </span>CallInput { dest, determinism } = <span class="self">self</span>;
+		<span class="kw">let </span>CommonInput { origin, value, data, debug_message, .. } = common;
+		<span class="kw">let </span>result = ExecStack::&lt;T, PrefabWasmModule&lt;T&gt;&gt;::run_call(
+			origin.clone(),
+			dest.clone(),
+			<span class="kw-2">&amp;mut </span>gas_meter,
+			<span class="kw-2">&amp;mut </span>storage_meter,
+			<span class="kw-2">&amp;</span>schedule,
+			value,
+			data.clone(),
+			debug_message,
+			<span class="kw-2">*</span>determinism,
+		);
+		InternalOutput { gas_meter, storage_deposit: storage_meter.into_deposit(<span class="kw-2">&amp;</span>origin), result }
+	}
+}
+
+<span class="kw">impl</span>&lt;T: Config&gt; Invokable&lt;T&gt; <span class="kw">for </span>InstantiateInput&lt;T&gt; {
+	<span class="kw">type </span>Output = (AccountIdOf&lt;T&gt;, ExecReturnValue);
+
+	<span class="kw">fn </span>run(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		<span class="kw-2">mut </span>common: CommonInput&lt;T&gt;,
+		<span class="kw-2">mut </span>gas_meter: GasMeter&lt;T&gt;,
+	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>storage_deposit = Default::default();
+		<span class="kw">let </span>try_exec = || {
+			<span class="kw">let </span>schedule = T::Schedule::get();
+			<span class="kw">let </span>(extra_deposit, executable) = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.code {
+				Code::Upload(binary) =&gt; {
+					<span class="kw">let </span>executable = PrefabWasmModule::from_code(
+						binary.clone(),
+						<span class="kw-2">&amp;</span>schedule,
+						common.origin.clone(),
+						Determinism::Deterministic,
+						TryInstantiate::Skip,
+					)
+					.map_err(|(err, msg)| {
+						common
+							.debug_message
+							.as_mut()
+							.map(|buffer| buffer.try_extend(<span class="kw-2">&amp;mut </span>msg.bytes()));
+						err
+					})<span class="question-mark">?</span>;
+					<span class="comment">// The open deposit will be charged during execution when the
+					// uploaded module does not already exist. This deposit is not part of the
+					// storage meter because it is not transferred to the contract but
+					// reserved on the uploading account.
+					</span>(executable.open_deposit(), executable)
+				},
+				Code::Existing(hash) =&gt; (
+					Default::default(),
+					PrefabWasmModule::from_storage(<span class="kw-2">*</span>hash, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter)<span class="question-mark">?</span>,
+				),
+			};
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = StorageMeter::new(
+				<span class="kw-2">&amp;</span>common.origin,
+				common.storage_deposit_limit,
+				common.value.saturating_add(extra_deposit),
+			)<span class="question-mark">?</span>;
+
+			<span class="kw">let </span>InstantiateInput { salt, .. } = <span class="self">self</span>;
+			<span class="kw">let </span>CommonInput { origin, value, data, debug_message, .. } = common;
+			<span class="kw">let </span>result = ExecStack::&lt;T, PrefabWasmModule&lt;T&gt;&gt;::run_instantiate(
+				origin.clone(),
+				executable,
+				<span class="kw-2">&amp;mut </span>gas_meter,
+				<span class="kw-2">&amp;mut </span>storage_meter,
+				<span class="kw-2">&amp;</span>schedule,
+				value,
+				data.clone(),
+				<span class="kw-2">&amp;</span>salt,
+				debug_message,
+			);
+			storage_deposit = storage_meter
+				.into_deposit(<span class="kw-2">&amp;</span>origin)
+				.saturating_add(<span class="kw-2">&amp;</span>StorageDeposit::Charge(extra_deposit));
+			result
+		};
+		InternalOutput { result: try_exec(), gas_meter, storage_deposit }
+	}
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
@@ -2310,16 +2557,15 @@
 		determinism: Determinism,
 	) -&gt; ContractExecResult&lt;BalanceOf&lt;T&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
-		<span class="kw">let </span>output = <span class="self">Self</span>::internal_call(
+		<span class="kw">let </span>common = CommonInput {
 			origin,
-			dest,
 			value,
+			data,
 			gas_limit,
 			storage_deposit_limit,
-			data,
-			debug_message.as_mut(),
-			determinism,
-		);
+			debug_message: debug_message.as_mut(),
+		};
+		<span class="kw">let </span>output = CallInput::&lt;T&gt; { dest, determinism }.run_guarded(common);
 		ContractExecResult {
 			result: output.result.map_err(|r| r.error),
 			gas_consumed: output.gas_meter.gas_consumed(),
@@ -2352,16 +2598,15 @@
 		debug: bool,
 	) -&gt; ContractInstantiateResult&lt;T::AccountId, BalanceOf&lt;T&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
-		<span class="kw">let </span>output = <span class="self">Self</span>::internal_instantiate(
+		<span class="kw">let </span>common = CommonInput {
 			origin,
 			value,
+			data,
 			gas_limit,
 			storage_deposit_limit,
-			code,
-			data,
-			salt,
-			debug_message.as_mut(),
-		);
+			debug_message: debug_message.as_mut(),
+		};
+		<span class="kw">let </span>output = InstantiateInput::&lt;T&gt; { code, salt }.run_guarded(common);
 		ContractInstantiateResult {
 			result: output
 				.result
@@ -2449,113 +2694,6 @@
 		schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
 	) -&gt; frame_support::dispatch::DispatchResult {
 		<span class="self">self</span>::wasm::reinstrument(module, schedule).map(|<span class="kw">_</span>| ())
-	}
-
-	<span class="doccomment">/// Internal function that does the actual call.
-	///
-	/// Called by dispatchables and public functions.
-	</span><span class="kw">fn </span>internal_call(
-		origin: T::AccountId,
-		dest: T::AccountId,
-		value: BalanceOf&lt;T&gt;,
-		gas_limit: Weight,
-		storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
-		data: Vec&lt;u8&gt;,
-		debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>DebugBufferVec&lt;T&gt;&gt;,
-		determinism: Determinism,
-	) -&gt; InternalCallOutput&lt;T&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::new(gas_limit);
-		<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = <span class="kw">match </span>StorageMeter::new(<span class="kw-2">&amp;</span>origin, storage_deposit_limit, value) {
-			<span class="prelude-val">Ok</span>(meter) =&gt; meter,
-			<span class="prelude-val">Err</span>(err) =&gt;
-				<span class="kw">return </span>InternalCallOutput {
-					result: <span class="prelude-val">Err</span>(err.into()),
-					gas_meter,
-					storage_deposit: Default::default(),
-				},
-		};
-		<span class="kw">let </span>schedule = T::Schedule::get();
-		<span class="kw">let </span>result = ExecStack::&lt;T, PrefabWasmModule&lt;T&gt;&gt;::run_call(
-			origin.clone(),
-			dest,
-			<span class="kw-2">&amp;mut </span>gas_meter,
-			<span class="kw-2">&amp;mut </span>storage_meter,
-			<span class="kw-2">&amp;</span>schedule,
-			value,
-			data,
-			debug_message,
-			determinism,
-		);
-		InternalCallOutput {
-			result,
-			gas_meter,
-			storage_deposit: storage_meter.into_deposit(<span class="kw-2">&amp;</span>origin),
-		}
-	}
-
-	<span class="doccomment">/// Internal function that does the actual instantiation.
-	///
-	/// Called by dispatchables and public functions.
-	</span><span class="kw">fn </span>internal_instantiate(
-		origin: T::AccountId,
-		value: BalanceOf&lt;T&gt;,
-		gas_limit: Weight,
-		storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
-		code: Code&lt;CodeHash&lt;T&gt;&gt;,
-		data: Vec&lt;u8&gt;,
-		salt: Vec&lt;u8&gt;,
-		<span class="kw-2">mut </span>debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>DebugBufferVec&lt;T&gt;&gt;,
-	) -&gt; InternalInstantiateOutput&lt;T&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>storage_deposit = Default::default();
-		<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::new(gas_limit);
-		<span class="kw">let </span>try_exec = || {
-			<span class="kw">let </span>schedule = T::Schedule::get();
-			<span class="kw">let </span>(extra_deposit, executable) = <span class="kw">match </span>code {
-				Code::Upload(binary) =&gt; {
-					<span class="kw">let </span>executable = PrefabWasmModule::from_code(
-						binary,
-						<span class="kw-2">&amp;</span>schedule,
-						origin.clone(),
-						Determinism::Deterministic,
-						TryInstantiate::Skip,
-					)
-					.map_err(|(err, msg)| {
-						debug_message.as_mut().map(|buffer| buffer.try_extend(<span class="kw-2">&amp;mut </span>msg.bytes()));
-						err
-					})<span class="question-mark">?</span>;
-					<span class="comment">// The open deposit will be charged during execution when the
-					// uploaded module does not already exist. This deposit is not part of the
-					// storage meter because it is not transferred to the contract but
-					// reserved on the uploading account.
-					</span>(executable.open_deposit(), executable)
-				},
-				Code::Existing(hash) =&gt; (
-					Default::default(),
-					PrefabWasmModule::from_storage(hash, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter)<span class="question-mark">?</span>,
-				),
-			};
-			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = StorageMeter::new(
-				<span class="kw-2">&amp;</span>origin,
-				storage_deposit_limit,
-				value.saturating_add(extra_deposit),
-			)<span class="question-mark">?</span>;
-			<span class="kw">let </span>result = ExecStack::&lt;T, PrefabWasmModule&lt;T&gt;&gt;::run_instantiate(
-				origin.clone(),
-				executable,
-				<span class="kw-2">&amp;mut </span>gas_meter,
-				<span class="kw-2">&amp;mut </span>storage_meter,
-				<span class="kw-2">&amp;</span>schedule,
-				value,
-				data,
-				<span class="kw-2">&amp;</span>salt,
-				debug_message,
-			);
-			storage_deposit = storage_meter
-				.into_deposit(<span class="kw-2">&amp;</span>origin)
-				.saturating_add(<span class="kw-2">&amp;</span>StorageDeposit::Charge(extra_deposit));
-			result
-		};
-		InternalInstantiateOutput { result: try_exec(), gas_meter, storage_deposit }
 	}
 
 	<span class="doccomment">/// Deposit a pallet contracts event. Handles the conversion to the overarching event type.
