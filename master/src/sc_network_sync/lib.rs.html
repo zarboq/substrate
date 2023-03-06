@@ -4086,53 +4086,6 @@
 <a href="#4086" id="4086">4086</a>
 <a href="#4087" id="4087">4087</a>
 <a href="#4088" id="4088">4088</a>
-<a href="#4089" id="4089">4089</a>
-<a href="#4090" id="4090">4090</a>
-<a href="#4091" id="4091">4091</a>
-<a href="#4092" id="4092">4092</a>
-<a href="#4093" id="4093">4093</a>
-<a href="#4094" id="4094">4094</a>
-<a href="#4095" id="4095">4095</a>
-<a href="#4096" id="4096">4096</a>
-<a href="#4097" id="4097">4097</a>
-<a href="#4098" id="4098">4098</a>
-<a href="#4099" id="4099">4099</a>
-<a href="#4100" id="4100">4100</a>
-<a href="#4101" id="4101">4101</a>
-<a href="#4102" id="4102">4102</a>
-<a href="#4103" id="4103">4103</a>
-<a href="#4104" id="4104">4104</a>
-<a href="#4105" id="4105">4105</a>
-<a href="#4106" id="4106">4106</a>
-<a href="#4107" id="4107">4107</a>
-<a href="#4108" id="4108">4108</a>
-<a href="#4109" id="4109">4109</a>
-<a href="#4110" id="4110">4110</a>
-<a href="#4111" id="4111">4111</a>
-<a href="#4112" id="4112">4112</a>
-<a href="#4113" id="4113">4113</a>
-<a href="#4114" id="4114">4114</a>
-<a href="#4115" id="4115">4115</a>
-<a href="#4116" id="4116">4116</a>
-<a href="#4117" id="4117">4117</a>
-<a href="#4118" id="4118">4118</a>
-<a href="#4119" id="4119">4119</a>
-<a href="#4120" id="4120">4120</a>
-<a href="#4121" id="4121">4121</a>
-<a href="#4122" id="4122">4122</a>
-<a href="#4123" id="4123">4123</a>
-<a href="#4124" id="4124">4124</a>
-<a href="#4125" id="4125">4125</a>
-<a href="#4126" id="4126">4126</a>
-<a href="#4127" id="4127">4127</a>
-<a href="#4128" id="4128">4128</a>
-<a href="#4129" id="4129">4129</a>
-<a href="#4130" id="4130">4130</a>
-<a href="#4131" id="4131">4131</a>
-<a href="#4132" id="4132">4132</a>
-<a href="#4133" id="4133">4133</a>
-<a href="#4134" id="4134">4134</a>
-<a href="#4135" id="4135">4135</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4165,20 +4118,18 @@
 
 </span><span class="kw">pub mod </span>block_request_handler;
 <span class="kw">pub mod </span>blocks;
+<span class="kw">pub mod </span>engine;
 <span class="kw">pub mod </span>mock;
 <span class="kw">mod </span>schema;
 <span class="kw">pub mod </span>service;
 <span class="kw">pub mod </span>state;
 <span class="kw">pub mod </span>state_request_handler;
-<span class="attr">#[cfg(test)]
-</span><span class="kw">mod </span>tests;
 <span class="kw">pub mod </span>warp;
 <span class="kw">pub mod </span>warp_request_handler;
 
 <span class="kw">use crate</span>::{
 	blocks::BlockCollection,
 	schema::v1::{StateRequest, StateResponse},
-	service::chain_sync::{ChainSyncInterfaceHandle, ToServiceCommand},
 	state::StateSync,
 	warp::{WarpProofImportResult, WarpSync},
 };
@@ -4213,7 +4164,7 @@
 		SyncState, SyncStatus,
 	},
 };
-<span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver};
+<span class="kw">pub use </span>service::chain_sync::SyncingService;
 <span class="kw">use </span>sp_arithmetic::traits::Saturating;
 <span class="kw">use </span>sp_blockchain::{Error <span class="kw">as </span>ClientError, HeaderBackend, HeaderMetadata};
 <span class="kw">use </span>sp_consensus::{
@@ -4462,8 +4413,6 @@
 	</span>import_existing: bool,
 	<span class="doccomment">/// Gap download process.
 	</span>gap_sync: <span class="prelude-ty">Option</span>&lt;GapSync&lt;B&gt;&gt;,
-	<span class="doccomment">/// Channel for receiving service commands
-	</span>service_rx: TracingUnboundedReceiver&lt;ToServiceCommand&lt;B&gt;&gt;,
 	<span class="doccomment">/// Handle for communicating with `NetworkService`
 	</span>network_service: service::network::NetworkServiceHandle,
 	<span class="doccomment">/// Protocol name used for block announcements
@@ -5461,47 +5410,6 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		cx: <span class="kw-2">&amp;mut </span>std::task::Context,
 	) -&gt; Poll&lt;PollBlockAnnounceValidation&lt;B::Header&gt;&gt; {
-		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(event)) = <span class="self">self</span>.service_rx.poll_next_unpin(cx) {
-			<span class="kw">match </span>event {
-				ToServiceCommand::SetSyncForkRequest(peers, hash, number) =&gt; {
-					<span class="self">self</span>.set_sync_fork_request(peers, <span class="kw-2">&amp;</span>hash, number);
-				},
-				ToServiceCommand::RequestJustification(hash, number) =&gt;
-					<span class="self">self</span>.request_justification(<span class="kw-2">&amp;</span>hash, number),
-				ToServiceCommand::ClearJustificationRequests =&gt; <span class="self">self</span>.clear_justification_requests(),
-				ToServiceCommand::BlocksProcessed(imported, count, results) =&gt; {
-					<span class="kw">for </span>result <span class="kw">in </span><span class="self">self</span>.on_blocks_processed(imported, count, results) {
-						<span class="kw">match </span>result {
-							<span class="prelude-val">Ok</span>((id, req)) =&gt; <span class="self">self</span>.send_block_request(id, req),
-							<span class="prelude-val">Err</span>(BadPeer(id, repu)) =&gt; {
-								<span class="self">self</span>.network_service
-									.disconnect_peer(id, <span class="self">self</span>.block_announce_protocol_name.clone());
-								<span class="self">self</span>.network_service.report_peer(id, repu)
-							},
-						}
-					}
-				},
-				ToServiceCommand::JustificationImported(peer, hash, number, success) =&gt; {
-					<span class="self">self</span>.on_justification_import(hash, number, success);
-					<span class="kw">if </span>!success {
-						<span class="macro">info!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;💔 Invalid justification provided by {} for #{}&quot;</span>, peer, hash);
-						<span class="self">self</span>.network_service
-							.disconnect_peer(peer, <span class="self">self</span>.block_announce_protocol_name.clone());
-						<span class="self">self</span>.network_service.report_peer(
-							peer,
-							sc_peerset::ReputationChange::new_fatal(<span class="string">&quot;Invalid justification&quot;</span>),
-						);
-					}
-				},
-				ToServiceCommand::BlockFinalized(hash, number) =&gt; {
-					<span class="self">self</span>.on_block_finalized(<span class="kw-2">&amp;</span>hash, number);
-				},
-				ToServiceCommand::Status { pending_response } =&gt; {
-					<span class="kw">let _ </span>= pending_response.send(<span class="self">self</span>.status());
-				},
-			}
-		}
-
 		<span class="comment">// Should be called before `process_outbound_requests` to ensure
 		// that a potential target block is directly leading to requests.
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(warp_sync) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.warp_sync {
@@ -5583,8 +5491,7 @@
 		block_request_protocol_name: ProtocolName,
 		state_request_protocol_name: ProtocolName,
 		warp_sync_protocol_name: <span class="prelude-ty">Option</span>&lt;ProtocolName&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, ChainSyncInterfaceHandle&lt;B&gt;, NonDefaultSetConfig), ClientError&gt; {
-		<span class="kw">let </span>(tx, service_rx) = tracing_unbounded(<span class="string">&quot;mpsc_chain_sync&quot;</span>, <span class="number">100_000</span>);
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, NonDefaultSetConfig), ClientError&gt; {
 		<span class="kw">let </span>block_announce_config = <span class="self">Self</span>::get_block_announce_proto_config(
 			protocol_id,
 			fork_id,
@@ -5618,7 +5525,6 @@
 			warp_sync: <span class="prelude-val">None</span>,
 			import_existing: <span class="bool-val">false</span>,
 			gap_sync: <span class="prelude-val">None</span>,
-			service_rx,
 			network_service,
 			block_request_protocol_name,
 			state_request_protocol_name,
@@ -5644,7 +5550,7 @@
 		};
 
 		sync.reset_sync_start_point()<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>((sync, ChainSyncInterfaceHandle::new(tx), block_announce_config))
+		<span class="prelude-val">Ok</span>((sync, block_announce_config))
 	}
 
 	<span class="doccomment">/// Returns the median seen block number.
@@ -7366,7 +7272,7 @@
 		<span class="kw">let </span>import_queue = Box::new(sc_consensus::import_queue::mock::MockImportQueueHandle::new());
 		<span class="kw">let </span>(_chain_sync_network_provider, chain_sync_network_handle) =
 			NetworkServiceProvider::new();
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),
@@ -7432,7 +7338,7 @@
 		<span class="kw">let </span>(_chain_sync_network_provider, chain_sync_network_handle) =
 			NetworkServiceProvider::new();
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),
@@ -7613,7 +7519,7 @@
 		<span class="kw">let </span>(_chain_sync_network_provider, chain_sync_network_handle) =
 			NetworkServiceProvider::new();
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),
@@ -7739,7 +7645,7 @@
 			NetworkServiceProvider::new();
 		<span class="kw">let </span>info = client.info();
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),
@@ -7895,7 +7801,7 @@
 
 		<span class="kw">let </span>info = client.info();
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),
@@ -8036,7 +7942,7 @@
 
 		<span class="kw">let </span>info = client.info();
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),
@@ -8177,7 +8083,7 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>client = Arc::new(TestClientBuilder::new().build());
 		<span class="kw">let </span>blocks = (<span class="number">0</span>..<span class="number">3</span>).map(|<span class="kw">_</span>| build_block(<span class="kw-2">&amp;mut </span>client, <span class="prelude-val">None</span>, <span class="bool-val">false</span>)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),
@@ -8222,7 +8128,7 @@
 
 		<span class="kw">let </span>empty_client = Arc::new(TestClientBuilder::new().build());
 
-		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>, <span class="kw">_</span>) = ChainSync::new(
+		<span class="kw">let </span>(<span class="kw-2">mut </span>sync, <span class="kw">_</span>) = ChainSync::new(
 			SyncMode::Full,
 			empty_client.clone(),
 			ProtocolId::from(<span class="string">&quot;test-protocol-name&quot;</span>),

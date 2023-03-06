@@ -4474,42 +4474,6 @@
 <a href="#4474" id="4474">4474</a>
 <a href="#4475" id="4475">4475</a>
 <a href="#4476" id="4476">4476</a>
-<a href="#4477" id="4477">4477</a>
-<a href="#4478" id="4478">4478</a>
-<a href="#4479" id="4479">4479</a>
-<a href="#4480" id="4480">4480</a>
-<a href="#4481" id="4481">4481</a>
-<a href="#4482" id="4482">4482</a>
-<a href="#4483" id="4483">4483</a>
-<a href="#4484" id="4484">4484</a>
-<a href="#4485" id="4485">4485</a>
-<a href="#4486" id="4486">4486</a>
-<a href="#4487" id="4487">4487</a>
-<a href="#4488" id="4488">4488</a>
-<a href="#4489" id="4489">4489</a>
-<a href="#4490" id="4490">4490</a>
-<a href="#4491" id="4491">4491</a>
-<a href="#4492" id="4492">4492</a>
-<a href="#4493" id="4493">4493</a>
-<a href="#4494" id="4494">4494</a>
-<a href="#4495" id="4495">4495</a>
-<a href="#4496" id="4496">4496</a>
-<a href="#4497" id="4497">4497</a>
-<a href="#4498" id="4498">4498</a>
-<a href="#4499" id="4499">4499</a>
-<a href="#4500" id="4500">4500</a>
-<a href="#4501" id="4501">4501</a>
-<a href="#4502" id="4502">4502</a>
-<a href="#4503" id="4503">4503</a>
-<a href="#4504" id="4504">4504</a>
-<a href="#4505" id="4505">4505</a>
-<a href="#4506" id="4506">4506</a>
-<a href="#4507" id="4507">4507</a>
-<a href="#4508" id="4508">4508</a>
-<a href="#4509" id="4509">4509</a>
-<a href="#4510" id="4510">4510</a>
-<a href="#4511" id="4511">4511</a>
-<a href="#4512" id="4512">4512</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -5048,48 +5012,6 @@
 	<span class="doccomment">/// Returns the list of reserved peers.
 	</span><span class="kw">pub fn </span>reserved_peers(<span class="kw-2">&amp;</span><span class="self">self</span>, set_id: sc_peerset::SetId) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>PeerId&gt; {
 		<span class="self">self</span>.peerset.reserved_peers(set_id)
-	}
-
-	<span class="doccomment">/// Sends a notification to a peer.
-	///
-	/// Has no effect if the custom protocol is not open with the given peer.
-	///
-	/// Also note that even if we have a valid open substream, it may in fact be already closed
-	/// without us knowing, in which case the packet will not be received.
-	///
-	/// The `fallback` parameter is used for backwards-compatibility reason if the remote doesn&#39;t
-	/// support our protocol. One needs to pass the equivalent of what would have been passed
-	/// with `send_packet`.
-	</span><span class="kw">pub fn </span>write_notification(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		target: <span class="kw-2">&amp;</span>PeerId,
-		set_id: sc_peerset::SetId,
-		message: <span class="kw">impl </span>Into&lt;Vec&lt;u8&gt;&gt;,
-	) {
-		<span class="kw">let </span>notifs_sink = <span class="kw">match </span><span class="self">self</span>.peers.get(<span class="kw-2">&amp;</span>(<span class="kw-2">*</span>target, set_id)).and_then(|p| p.get_open()) {
-			<span class="prelude-val">None </span>=&gt; {
-				<span class="macro">trace!</span>(
-					target: <span class="string">&quot;sub-libp2p&quot;</span>,
-					<span class="string">&quot;Tried to sent notification to {:?} without an open channel.&quot;</span>,
-					target,
-				);
-				<span class="kw">return
-			</span>},
-			<span class="prelude-val">Some</span>(sink) =&gt; sink,
-		};
-
-		<span class="kw">let </span>message = message.into();
-
-		<span class="macro">trace!</span>(
-			target: <span class="string">&quot;sub-libp2p&quot;</span>,
-			<span class="string">&quot;External API =&gt; Notification({:?}, {:?}, {} bytes)&quot;</span>,
-			target,
-			set_id,
-			message.len(),
-		);
-		<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}) &lt;= Sync notification&quot;</span>, target);
-
-		notifs_sink.send_sync_notification(message);
 	}
 
 	<span class="doccomment">/// Returns the state of the peerset manager, for debugging purposes.
@@ -7570,7 +7492,13 @@
 			<span class="macro">panic!</span>(<span class="string">&quot;invalid state&quot;</span>);
 		}
 
-		notif.write_notification(<span class="kw-2">&amp;</span>peer, set_id, <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">3</span>, <span class="number">3</span>, <span class="number">7</span>]);
+		notif
+			.peers
+			.get(<span class="kw-2">&amp;</span>(peer, set_id))
+			.unwrap()
+			.get_open()
+			.unwrap()
+			.send_sync_notification(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">3</span>, <span class="number">3</span>, <span class="number">7</span>]);
 		<span class="macro">assert_eq!</span>(conn_yielder.get_next_event(peer, set_id.into()).<span class="kw">await</span>, <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">3</span>, <span class="number">3</span>, <span class="number">7</span>]));
 	}
 

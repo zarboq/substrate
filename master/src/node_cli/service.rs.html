@@ -820,6 +820,20 @@
 <a href="#820" id="820">820</a>
 <a href="#821" id="821">821</a>
 <a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -857,6 +871,7 @@
 <span class="kw">use </span>sc_network_common::{
 	protocol::event::Event, service::NetworkEventStream, sync::warp::WarpSyncParams,
 };
+<span class="kw">use </span>sc_network_sync::SyncingService;
 <span class="kw">use </span>sc_service::{config::Configuration, error::Error <span class="kw">as </span>ServiceError, RpcHandlers, TaskManager};
 <span class="kw">use </span>sc_telemetry::{Telemetry, TelemetryWorker};
 <span class="kw">use </span>sp_api::ProvideRuntimeApi;
@@ -1125,6 +1140,8 @@
 	</span><span class="kw">pub </span>client: Arc&lt;FullClient&gt;,
 	<span class="doccomment">/// The networking service of the node.
 	</span><span class="kw">pub </span>network: Arc&lt;NetworkService&lt;Block, &lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt;&gt;,
+	<span class="doccomment">/// The syncing service of the node.
+	</span><span class="kw">pub </span>sync: Arc&lt;SyncingService&lt;Block&gt;&gt;,
 	<span class="doccomment">/// The transaction pool of the node.
 	</span><span class="kw">pub </span>transaction_pool: Arc&lt;TransactionPool&gt;,
 	<span class="doccomment">/// The rpc handlers of the node.
@@ -1175,7 +1192,7 @@
 		Vec::default(),
 	));
 
-	<span class="kw">let </span>(network, system_rpc_tx, tx_handler_controller, network_starter) =
+	<span class="kw">let </span>(network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: <span class="kw-2">&amp;</span>config,
 			client: client.clone(),
@@ -1214,6 +1231,7 @@
 		task_manager: <span class="kw-2">&amp;mut </span>task_manager,
 		system_rpc_tx,
 		tx_handler_controller,
+		sync_service: sync_service.clone(),
 		telemetry: telemetry.as_mut(),
 	})<span class="question-mark">?</span>;
 
@@ -1256,8 +1274,8 @@
 			select_chain,
 			env: proposer,
 			block_import,
-			sync_oracle: network.clone(),
-			justification_sync_link: network.clone(),
+			sync_oracle: sync_service.clone(),
+			justification_sync_link: sync_service.clone(),
 			create_inherent_data_providers: <span class="kw">move </span>|parent, ()| {
 				<span class="kw">let </span>client_clone = client_clone.clone();
 				<span class="kw">async move </span>{
@@ -1353,6 +1371,7 @@
 			config,
 			link: grandpa_link,
 			network: network.clone(),
+			sync: Arc::new(sync_service.clone()),
 			telemetry: telemetry.as_ref().map(|x| x.handle()),
 			voting_rule: grandpa::VotingRulesBuilder::default().build(),
 			prometheus_registry,
@@ -1369,7 +1388,14 @@
 	}
 
 	network_starter.start_network();
-	<span class="prelude-val">Ok</span>(NewFullBase { task_manager, client, network, transaction_pool, rpc_handlers })
+	<span class="prelude-val">Ok</span>(NewFullBase {
+		task_manager,
+		client,
+		network,
+		sync: sync_service,
+		transaction_pool,
+		rpc_handlers,
+	})
 }
 
 <span class="doccomment">/// Builds a new service for a full client.
@@ -1449,7 +1475,7 @@
 			chain_spec,
 			|config| {
 				<span class="kw">let </span><span class="kw-2">mut </span>setup_handles = <span class="prelude-val">None</span>;
-				<span class="kw">let </span>NewFullBase { task_manager, client, network, transaction_pool, .. } =
+				<span class="kw">let </span>NewFullBase { task_manager, client, network, sync, transaction_pool, .. } =
 					new_full_base(
 						config,
 						<span class="bool-val">false</span>,
@@ -1463,6 +1489,7 @@
 					task_manager,
 					client,
 					network,
+					sync,
 					transaction_pool,
 				);
 				<span class="prelude-val">Ok</span>((node, setup_handles.unwrap()))
@@ -1629,12 +1656,13 @@
 		sc_service_test::consensus(
 			<span class="kw">crate</span>::chain_spec::tests::integration_test_config_with_two_authorities(),
 			|config| {
-				<span class="kw">let </span>NewFullBase { task_manager, client, network, transaction_pool, .. } =
+				<span class="kw">let </span>NewFullBase { task_manager, client, network, sync, transaction_pool, .. } =
 					new_full_base(config, <span class="bool-val">false</span>, |<span class="kw">_</span>, <span class="kw">_</span>| ())<span class="question-mark">?</span>;
 				<span class="prelude-val">Ok</span>(sc_service_test::TestNetComponents::new(
 					task_manager,
 					client,
 					network,
+					sync,
 					transaction_pool,
 				))
 			},

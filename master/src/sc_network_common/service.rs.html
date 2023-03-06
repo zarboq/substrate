@@ -629,13 +629,6 @@
 <a href="#629" id="629">629</a>
 <a href="#630" id="630">630</a>
 <a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
-<a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 //
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -660,14 +653,12 @@
 	config::MultiaddrWithPeerId,
 	protocol::{event::Event, ProtocolName},
 	request_responses::{IfDisconnected, RequestFailure},
-	sync::{warp::WarpSyncProgress, StateDownloadProgress, SyncState},
 };
 <span class="kw">use </span>futures::{channel::oneshot, Stream};
 <span class="kw">pub use </span>libp2p::{identity::error::SigningError, kad::record::Key <span class="kw">as </span>KademliaKey};
 <span class="kw">use </span>libp2p::{Multiaddr, PeerId};
 <span class="kw">use </span>sc_peerset::ReputationChange;
 <span class="kw">pub use </span>signature::Signature;
-<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
 <span class="kw">use </span>std::{collections::HashSet, future::Future, pin::Pin, sync::Arc};
 
 <span class="kw">mod </span>signature;
@@ -734,45 +725,33 @@
 
 <span class="doccomment">/// Overview status of the network.
 </span><span class="attr">#[derive(Clone)]
-</span><span class="kw">pub struct </span>NetworkStatus&lt;B: BlockT&gt; {
-	<span class="doccomment">/// Current global sync state.
-	</span><span class="kw">pub </span>sync_state: SyncState&lt;NumberFor&lt;B&gt;&gt;,
-	<span class="doccomment">/// Target sync block number.
-	</span><span class="kw">pub </span>best_seen_block: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt;,
-	<span class="doccomment">/// Number of peers participating in syncing.
-	</span><span class="kw">pub </span>num_sync_peers: u32,
-	<span class="doccomment">/// Total number of connected peers
+</span><span class="kw">pub struct </span>NetworkStatus {
+	<span class="doccomment">/// Total number of connected peers.
 	</span><span class="kw">pub </span>num_connected_peers: usize,
-	<span class="doccomment">/// Total number of active peers.
-	</span><span class="kw">pub </span>num_active_peers: usize,
 	<span class="doccomment">/// The total number of bytes received.
 	</span><span class="kw">pub </span>total_bytes_inbound: u64,
 	<span class="doccomment">/// The total number of bytes sent.
 	</span><span class="kw">pub </span>total_bytes_outbound: u64,
-	<span class="doccomment">/// State sync in progress.
-	</span><span class="kw">pub </span>state_sync: <span class="prelude-ty">Option</span>&lt;StateDownloadProgress&gt;,
-	<span class="doccomment">/// Warp sync in progress.
-	</span><span class="kw">pub </span>warp_sync: <span class="prelude-ty">Option</span>&lt;WarpSyncProgress&lt;B&gt;&gt;,
 }
 
 <span class="doccomment">/// Provides high-level status information about network.
 </span><span class="attr">#[async_trait::async_trait]
-</span><span class="kw">pub trait </span>NetworkStatusProvider&lt;Block: BlockT&gt; {
+</span><span class="kw">pub trait </span>NetworkStatusProvider {
 	<span class="doccomment">/// High-level network status information.
 	///
 	/// Returns an error if the `NetworkWorker` is no longer running.
-	</span><span class="kw">async fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;NetworkStatus&lt;Block&gt;, ()&gt;;
+	</span><span class="kw">async fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;NetworkStatus, ()&gt;;
 }
 
 <span class="comment">// Manual implementation to avoid extra boxing here
-</span><span class="kw">impl</span>&lt;T, Block: BlockT&gt; NetworkStatusProvider&lt;Block&gt; <span class="kw">for </span>Arc&lt;T&gt;
+</span><span class="kw">impl</span>&lt;T&gt; NetworkStatusProvider <span class="kw">for </span>Arc&lt;T&gt;
 <span class="kw">where
 	</span>T: <span class="question-mark">?</span>Sized,
-	T: NetworkStatusProvider&lt;Block&gt;,
+	T: NetworkStatusProvider,
 {
 	<span class="kw">fn </span>status&lt;<span class="lifetime">&#39;life0</span>, <span class="lifetime">&#39;async_trait</span>&gt;(
 		<span class="kw-2">&amp;</span><span class="lifetime">&#39;life0 </span><span class="self">self</span>,
-	) -&gt; Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;NetworkStatus&lt;Block&gt;, ()&gt;&gt; + Send + <span class="lifetime">&#39;async_trait</span>&gt;&gt;
+	) -&gt; Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;NetworkStatus, ()&gt;&gt; + Send + <span class="lifetime">&#39;async_trait</span>&gt;&gt;
 	<span class="kw">where
 		</span><span class="lifetime">&#39;life0</span>: <span class="lifetime">&#39;async_trait</span>,
 		<span class="self">Self</span>: <span class="lifetime">&#39;async_trait</span>,
@@ -1149,6 +1128,9 @@
 		target: PeerId,
 		protocol: ProtocolName,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>NotificationSender&gt;, NotificationSenderError&gt;;
+
+	<span class="doccomment">/// Set handshake for the notification protocol.
+	</span><span class="kw">fn </span>set_notification_handshake(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, handshake: Vec&lt;u8&gt;);
 }
 
 <span class="kw">impl</span>&lt;T&gt; NetworkNotification <span class="kw">for </span>Arc&lt;T&gt;
@@ -1166,6 +1148,10 @@
 		protocol: ProtocolName,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>NotificationSender&gt;, NotificationSenderError&gt; {
 		T::notification_sender(<span class="self">self</span>, target, protocol)
+	}
+
+	<span class="kw">fn </span>set_notification_handshake(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, handshake: Vec&lt;u8&gt;) {
+		T::set_notification_handshake(<span class="self">self</span>, protocol, handshake)
 	}
 }
 

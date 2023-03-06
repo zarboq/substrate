@@ -629,13 +629,6 @@
 <a href="#629" id="629">629</a>
 <a href="#630" id="630">630</a>
 <a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
-<a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -684,7 +677,7 @@
 	config::MultiaddrWithPeerId,
 	service::{NetworkBlock, NetworkPeers},
 };
-<span class="kw">use </span>sc_network_sync::service::chain_sync::ChainSyncInterfaceHandle;
+<span class="kw">use </span>sc_network_sync::SyncingService;
 <span class="kw">use </span>sc_utils::mpsc::TracingUnboundedReceiver;
 <span class="kw">use </span>sp_blockchain::HeaderMetadata;
 <span class="kw">use </span>sp_consensus::SyncOracle;
@@ -796,17 +789,15 @@
 		+ <span class="lifetime">&#39;static</span>,
 	H: sc_network_common::ExHashT,
 &gt;(
-	network: sc_network::NetworkWorker&lt;B, H, C&gt;,
+	network: sc_network::NetworkWorker&lt;B, H&gt;,
 	client: Arc&lt;C&gt;,
-	chain_sync_service: ChainSyncInterfaceHandle&lt;B&gt;,
+	sync_service: Arc&lt;SyncingService&lt;B&gt;&gt;,
 	announce_imported_blocks: bool,
 ) {
 	<span class="kw">let </span><span class="kw-2">mut </span>imported_blocks_stream = client.import_notification_stream().fuse();
 
 	<span class="comment">// Stream of finalized blocks reported by the client.
 	</span><span class="kw">let </span><span class="kw-2">mut </span>finality_notification_stream = client.finality_notification_stream().fuse();
-
-	<span class="kw">let </span>network_service = network.service().clone();
 
 	<span class="kw">let </span>network_run = network.run().fuse();
 	<span class="macro">pin_mut!</span>(network_run);
@@ -826,11 +817,11 @@
 				};
 
 				<span class="kw">if </span>announce_imported_blocks {
-					network_service.announce_block(notification.hash, <span class="prelude-val">None</span>);
+					sync_service.announce_block(notification.hash, <span class="prelude-val">None</span>);
 				}
 
 				<span class="kw">if </span>notification.is_new_best {
-					network_service.new_best_block_imported(
+					sync_service.new_best_block_imported(
 						notification.hash,
 						<span class="kw-2">*</span>notification.header.number(),
 					);
@@ -839,7 +830,7 @@
 
 			<span class="comment">// List of blocks that the client has finalized.
 			</span>notification = finality_notification_stream.select_next_some() =&gt; {
-				chain_sync_service.on_block_finalized(notification.hash, <span class="kw-2">*</span>notification.header.number());
+				sync_service.on_block_finalized(notification.hash, notification.header);
 			}
 
 			<span class="comment">// Drive the network. Shut down the network future if `NetworkWorker` has terminated.
@@ -866,7 +857,7 @@
 &gt;(
 	role: Role,
 	network_service: Arc&lt;sc_network::NetworkService&lt;B, H&gt;&gt;,
-	chain_sync_service: ChainSyncInterfaceHandle&lt;B&gt;,
+	sync_service: Arc&lt;SyncingService&lt;B&gt;&gt;,
 	client: Arc&lt;C&gt;,
 	<span class="kw-2">mut </span>rpc_rx: TracingUnboundedReceiver&lt;sc_rpc::system::Request&lt;B&gt;&gt;,
 	should_have_peers: bool,
@@ -882,23 +873,21 @@
 		};
 
 		<span class="kw">match </span>req {
-			sc_rpc::system::Request::Health(sender) =&gt; {
-				<span class="kw">let </span>peers = network_service.peers_debug_info().<span class="kw">await</span>;
-				<span class="kw">if let </span><span class="prelude-val">Ok</span>(peers) = peers {
+			sc_rpc::system::Request::Health(sender) =&gt; <span class="kw">match </span>sync_service.peers_info().<span class="kw">await </span>{
+				<span class="prelude-val">Ok</span>(info) =&gt; {
 					<span class="kw">let _ </span>= sender.send(sc_rpc::system::Health {
-						peers: peers.len(),
-						is_syncing: network_service.is_major_syncing(),
+						peers: info.len(),
+						is_syncing: sync_service.is_major_syncing(),
 						should_have_peers,
 					});
-				} <span class="kw">else </span>{
-					<span class="kw">break
-				</span>}
+				},
+				<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;`SyncingEngine` shut down&quot;</span>),
 			},
 			sc_rpc::system::Request::LocalPeerId(sender) =&gt; {
 				<span class="kw">let _ </span>= sender.send(network_service.local_peer_id().to_base58());
 			},
 			sc_rpc::system::Request::LocalListenAddresses(sender) =&gt; {
-				<span class="kw">let </span>peer_id = network_service.local_peer_id().into();
+				<span class="kw">let </span>peer_id = (network_service.local_peer_id()).into();
 				<span class="kw">let </span>p2p_proto_suffix = sc_network::multiaddr::Protocol::P2p(peer_id);
 				<span class="kw">let </span>addresses = network_service
 					.listen_addresses()
@@ -907,12 +896,10 @@
 					.collect();
 				<span class="kw">let _ </span>= sender.send(addresses);
 			},
-			sc_rpc::system::Request::Peers(sender) =&gt; {
-				<span class="kw">let </span>peers = network_service.peers_debug_info().<span class="kw">await</span>;
-				<span class="kw">if let </span><span class="prelude-val">Ok</span>(peers) = peers {
+			sc_rpc::system::Request::Peers(sender) =&gt; <span class="kw">match </span>sync_service.peers_info().<span class="kw">await </span>{
+				<span class="prelude-val">Ok</span>(info) =&gt; {
 					<span class="kw">let _ </span>= sender.send(
-						peers
-							.into_iter()
+						info.into_iter()
 							.map(|(peer_id, p)| sc_rpc::system::PeerInfo {
 								peer_id: peer_id.to_base58(),
 								roles: <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, p.roles),
@@ -921,9 +908,8 @@
 							})
 							.collect(),
 					);
-				} <span class="kw">else </span>{
-					<span class="kw">break
-				</span>}
+				},
+				<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;`SyncingEngine` shut down&quot;</span>),
 			},
 			sc_rpc::system::Request::NetworkState(sender) =&gt; {
 				<span class="kw">let </span>network_state = network_service.network_state().<span class="kw">await</span>;
@@ -977,21 +963,21 @@
 			sc_rpc::system::Request::SyncState(sender) =&gt; {
 				<span class="kw">use </span>sc_rpc::system::SyncState;
 
-				<span class="kw">let </span>best_number = client.info().best_number;
-
-				<span class="kw">let </span><span class="prelude-val">Ok</span>(status) = chain_sync_service.status().<span class="kw">await else </span>{
-					<span class="macro">debug!</span>(<span class="string">&quot;`ChainSync` has terminated, shutting down the system RPC future.&quot;</span>);
-					<span class="kw">return
-				</span>};
-
-				<span class="kw">let _ </span>= sender.send(SyncState {
-					starting_block,
-					current_block: best_number,
-					highest_block: status.best_seen_block.unwrap_or(best_number),
-				});
+				<span class="kw">match </span>sync_service.best_seen_block().<span class="kw">await </span>{
+					<span class="prelude-val">Ok</span>(best_seen_block) =&gt; {
+						<span class="kw">let </span>best_number = client.info().best_number;
+						<span class="kw">let _ </span>= sender.send(SyncState {
+							starting_block,
+							current_block: best_number,
+							highest_block: best_seen_block.unwrap_or(best_number),
+						});
+					},
+					<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;`SyncingEngine` shut down&quot;</span>),
+				}
 			},
 		}
 	}
+
 	<span class="macro">debug!</span>(<span class="string">&quot;`NetworkWorker` has terminated, shutting down the system RPC future.&quot;</span>);
 }
 

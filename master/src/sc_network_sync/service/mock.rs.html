@@ -126,6 +126,19 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -151,7 +164,10 @@
 	config::MultiaddrWithPeerId,
 	protocol::ProtocolName,
 	request_responses::{IfDisconnected, RequestFailure},
-	service::{NetworkPeers, NetworkRequest, NetworkSyncForkRequest},
+	service::{
+		NetworkNotification, NetworkPeers, NetworkRequest, NetworkSyncForkRequest,
+		NotificationSender, NotificationSenderError,
+	},
 };
 <span class="kw">use </span>sc_peerset::ReputationChange;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
@@ -252,6 +268,16 @@
 			tx: oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, RequestFailure&gt;&gt;,
 			connect: IfDisconnected,
 		);
+	}
+
+	<span class="kw">impl </span>NetworkNotification <span class="kw">for </span>Network {
+		<span class="kw">fn </span>write_notification(<span class="kw-2">&amp;</span><span class="self">self</span>, target: PeerId, protocol: ProtocolName, message: Vec&lt;u8&gt;);
+		<span class="kw">fn </span>notification_sender(
+			<span class="kw-2">&amp;</span><span class="self">self</span>,
+			target: PeerId,
+			protocol: ProtocolName,
+		) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>NotificationSender&gt;, NotificationSenderError&gt;;
+		<span class="kw">fn </span>set_notification_handshake(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, handshake: Vec&lt;u8&gt;);
 	}
 }
 </code></pre></div>

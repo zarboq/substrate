@@ -1189,6 +1189,15 @@
 <a href="#1189" id="1189">1189</a>
 <a href="#1190" id="1190">1190</a>
 <a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1332,7 +1341,7 @@
 };
 
 <span class="kw">use </span>aux_schema::PersistentData;
-<span class="kw">use </span>communication::{Network <span class="kw">as </span>NetworkT, NetworkBridge};
+<span class="kw">use </span>communication::{Network <span class="kw">as </span>NetworkT, NetworkBridge, Syncing <span class="kw">as </span>SyncingT};
 <span class="kw">use </span>environment::{Environment, VoterSetState};
 <span class="kw">use </span>until_imported::UntilGlobalMessageBlocksImported;
 
@@ -1540,10 +1549,11 @@
 	);
 }
 
-<span class="kw">impl</span>&lt;Block, Network&gt; BlockSyncRequester&lt;Block&gt; <span class="kw">for </span>NetworkBridge&lt;Block, Network&gt;
+<span class="kw">impl</span>&lt;Block, Network, Syncing&gt; BlockSyncRequester&lt;Block&gt; <span class="kw">for </span>NetworkBridge&lt;Block, Network, Syncing&gt;
 <span class="kw">where
 	</span>Block: BlockT,
 	Network: NetworkT&lt;Block&gt;,
+	Syncing: SyncingT&lt;Block&gt;,
 {
 	<span class="kw">fn </span>set_sync_fork_request(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -1808,11 +1818,11 @@
 	))
 }
 
-<span class="kw">fn </span>global_communication&lt;BE, Block: BlockT, C, N&gt;(
+<span class="kw">fn </span>global_communication&lt;BE, Block: BlockT, C, N, S&gt;(
 	set_id: SetId,
 	voters: <span class="kw-2">&amp;</span>Arc&lt;VoterSet&lt;AuthorityId&gt;&gt;,
 	client: Arc&lt;C&gt;,
-	network: <span class="kw-2">&amp;</span>NetworkBridge&lt;Block, N&gt;,
+	network: <span class="kw-2">&amp;</span>NetworkBridge&lt;Block, N, S&gt;,
 	keystore: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>SyncCryptoStorePtr&gt;,
 	metrics: <span class="prelude-ty">Option</span>&lt;until_imported::Metrics&gt;,
 ) -&gt; (
@@ -1831,6 +1841,7 @@
 	</span>BE: Backend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	C: ClientForGrandpa&lt;Block, BE&gt; + <span class="lifetime">&#39;static</span>,
 	N: NetworkT&lt;Block&gt;,
+	S: SyncingT&lt;Block&gt;,
 	NumberFor&lt;Block&gt;: BlockNumberOps,
 {
 	<span class="kw">let </span>is_voter = local_authority_id(voters, keystore).is_some();
@@ -1856,7 +1867,7 @@
 }
 
 <span class="doccomment">/// Parameters used to run Grandpa.
-</span><span class="kw">pub struct </span>GrandpaParams&lt;Block: BlockT, C, N, SC, VR&gt; {
+</span><span class="kw">pub struct </span>GrandpaParams&lt;Block: BlockT, C, N, S, SC, VR&gt; {
 	<span class="doccomment">/// Configuration for the GRANDPA service.
 	</span><span class="kw">pub </span>config: Config,
 	<span class="doccomment">/// A link to the block import worker.
@@ -1867,6 +1878,8 @@
 	/// `sc_network` crate, it is assumed that the Grandpa notifications protocol has been passed
 	/// to the configuration of the networking. See [`grandpa_peers_set_config`].
 	</span><span class="kw">pub </span>network: N,
+	<span class="doccomment">/// Event stream for syncing-related events.
+	</span><span class="kw">pub </span>sync: S,
 	<span class="doccomment">/// A voting rule used to potentially restrict target votes.
 	</span><span class="kw">pub </span>voting_rule: VR,
 	<span class="doccomment">/// The prometheus metrics registry.
@@ -1901,13 +1914,14 @@
 
 <span class="doccomment">/// Run a GRANDPA voter as a task. Provide configuration and a link to a
 /// block import worker that has already been instantiated with `block_import`.
-</span><span class="kw">pub fn </span>run_grandpa_voter&lt;Block: BlockT, BE: <span class="lifetime">&#39;static</span>, C, N, SC, VR&gt;(
-	grandpa_params: GrandpaParams&lt;Block, C, N, SC, VR&gt;,
+</span><span class="kw">pub fn </span>run_grandpa_voter&lt;Block: BlockT, BE: <span class="lifetime">&#39;static</span>, C, N, S, SC, VR&gt;(
+	grandpa_params: GrandpaParams&lt;Block, C, N, S, SC, VR&gt;,
 ) -&gt; sp_blockchain::Result&lt;<span class="kw">impl </span>Future&lt;Output = ()&gt; + Send&gt;
 <span class="kw">where
 	</span>Block::Hash: Ord,
 	BE: Backend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	N: NetworkT&lt;Block&gt; + Sync + <span class="lifetime">&#39;static</span>,
+	S: SyncingT&lt;Block&gt; + Sync + <span class="lifetime">&#39;static</span>,
 	SC: SelectChain&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	VR: VotingRule&lt;Block, C&gt; + Clone + <span class="lifetime">&#39;static</span>,
 	NumberFor&lt;Block&gt;: BlockNumberOps,
@@ -1918,6 +1932,7 @@
 		<span class="kw-2">mut </span>config,
 		link,
 		network,
+		sync,
 		voting_rule,
 		prometheus_registry,
 		shared_voter_state,
@@ -1942,6 +1957,7 @@
 
 	<span class="kw">let </span>network = NetworkBridge::new(
 		network,
+		sync,
 		config.clone(),
 		persistent_data.set_state.clone(),
 		prometheus_registry.as_ref(),
@@ -2027,26 +2043,27 @@
 
 <span class="doccomment">/// Future that powers the voter.
 </span><span class="attr">#[must_use]
-</span><span class="kw">struct </span>VoterWork&lt;B, Block: BlockT, C, N: NetworkT&lt;Block&gt;, SC, VR&gt; {
+</span><span class="kw">struct </span>VoterWork&lt;B, Block: BlockT, C, N: NetworkT&lt;Block&gt;, S: SyncingT&lt;Block&gt;, SC, VR&gt; {
 	voter: Pin&lt;
 		Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), CommandOrError&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;&gt;&gt; + Send&gt;,
 	&gt;,
 	shared_voter_state: SharedVoterState,
-	env: Arc&lt;Environment&lt;B, Block, C, N, SC, VR&gt;&gt;,
+	env: Arc&lt;Environment&lt;B, Block, C, N, S, SC, VR&gt;&gt;,
 	voter_commands_rx: TracingUnboundedReceiver&lt;VoterCommand&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;&gt;,
-	network: NetworkBridge&lt;Block, N&gt;,
+	network: NetworkBridge&lt;Block, N, S&gt;,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
 	<span class="doccomment">/// Prometheus metrics.
 	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 }
 
-<span class="kw">impl</span>&lt;B, Block, C, N, SC, VR&gt; VoterWork&lt;B, Block, C, N, SC, VR&gt;
+<span class="kw">impl</span>&lt;B, Block, C, N, S, SC, VR&gt; VoterWork&lt;B, Block, C, N, S, SC, VR&gt;
 <span class="kw">where
 	</span>Block: BlockT,
 	B: Backend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	C: ClientForGrandpa&lt;Block, B&gt; + <span class="lifetime">&#39;static</span>,
 	C::Api: GrandpaApi&lt;Block&gt;,
 	N: NetworkT&lt;Block&gt; + Sync,
+	S: SyncingT&lt;Block&gt; + Sync,
 	NumberFor&lt;Block&gt;: BlockNumberOps,
 	SC: SelectChain&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	VR: VotingRule&lt;Block, C&gt; + Clone + <span class="lifetime">&#39;static</span>,
@@ -2054,7 +2071,7 @@
 	<span class="kw">fn </span>new(
 		client: Arc&lt;C&gt;,
 		config: Config,
-		network: NetworkBridge&lt;Block, N&gt;,
+		network: NetworkBridge&lt;Block, N, S&gt;,
 		select_chain: SC,
 		voting_rule: VR,
 		persistent_data: PersistentData&lt;Block&gt;,
@@ -2263,11 +2280,12 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;B, Block, C, N, SC, VR&gt; Future <span class="kw">for </span>VoterWork&lt;B, Block, C, N, SC, VR&gt;
+<span class="kw">impl</span>&lt;B, Block, C, N, S, SC, VR&gt; Future <span class="kw">for </span>VoterWork&lt;B, Block, C, N, S, SC, VR&gt;
 <span class="kw">where
 	</span>Block: BlockT,
 	B: Backend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	N: NetworkT&lt;Block&gt; + Sync,
+	S: SyncingT&lt;Block&gt; + Sync,
 	NumberFor&lt;Block&gt;: BlockNumberOps,
 	SC: SelectChain&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	C: ClientForGrandpa&lt;Block, B&gt; + <span class="lifetime">&#39;static</span>,

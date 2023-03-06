@@ -763,6 +763,81 @@
 <a href="#763" id="763">763</a>
 <a href="#764" id="764">764</a>
 <a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -783,10 +858,13 @@
 
 </span><span class="kw">use crate</span>::{
 	state_machine::{ConsensusGossip, TopicNotification, PERIODIC_MAINTENANCE_INTERVAL},
-	Network, Validator,
+	Network, Syncing, Validator,
 };
 
-<span class="kw">use </span>sc_network_common::protocol::{event::Event, ProtocolName};
+<span class="kw">use </span>sc_network_common::{
+	protocol::{event::Event, ProtocolName},
+	sync::SyncEvent,
+};
 <span class="kw">use </span>sc_peerset::ReputationChange;
 
 <span class="kw">use </span>futures::{
@@ -809,11 +887,14 @@
 </span><span class="kw">pub struct </span>GossipEngine&lt;B: BlockT&gt; {
 	state_machine: ConsensusGossip&lt;B&gt;,
 	network: Box&lt;<span class="kw">dyn </span>Network&lt;B&gt; + Send&gt;,
+	sync: Box&lt;<span class="kw">dyn </span>Syncing&lt;B&gt;&gt;,
 	periodic_maintenance_interval: futures_timer::Delay,
 	protocol: ProtocolName,
 
 	<span class="doccomment">/// Incoming events from the network.
 	</span>network_event_stream: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = Event&gt; + Send&gt;&gt;,
+	<span class="doccomment">/// Incoming events from the syncing service.
+	</span>sync_event_stream: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = SyncEvent&gt; + Send&gt;&gt;,
 	<span class="doccomment">/// Outgoing events to the consumer.
 	</span>message_sinks: HashMap&lt;B::Hash, Vec&lt;Sender&lt;TopicNotification&gt;&gt;&gt;,
 	<span class="doccomment">/// Buffered messages (see [`ForwardingState`]).
@@ -840,25 +921,31 @@
 
 <span class="kw">impl</span>&lt;B: BlockT&gt; GossipEngine&lt;B&gt; {
 	<span class="doccomment">/// Create a new instance.
-	</span><span class="kw">pub fn </span>new&lt;N: Network&lt;B&gt; + Send + Clone + <span class="lifetime">&#39;static</span>&gt;(
+	</span><span class="kw">pub fn </span>new&lt;N, S&gt;(
 		network: N,
+		sync: S,
 		protocol: <span class="kw">impl </span>Into&lt;ProtocolName&gt;,
 		validator: Arc&lt;<span class="kw">dyn </span>Validator&lt;B&gt;&gt;,
 		metrics_registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Registry&gt;,
 	) -&gt; <span class="self">Self
 	</span><span class="kw">where
 		</span>B: <span class="lifetime">&#39;static</span>,
+		N: Network&lt;B&gt; + Send + Clone + <span class="lifetime">&#39;static</span>,
+		S: Syncing&lt;B&gt; + Send + Clone + <span class="lifetime">&#39;static</span>,
 	{
 		<span class="kw">let </span>protocol = protocol.into();
 		<span class="kw">let </span>network_event_stream = network.event_stream(<span class="string">&quot;network-gossip&quot;</span>);
+		<span class="kw">let </span>sync_event_stream = sync.event_stream(<span class="string">&quot;network-gossip&quot;</span>);
 
 		GossipEngine {
 			state_machine: ConsensusGossip::new(validator, protocol.clone(), metrics_registry),
 			network: Box::new(network),
+			sync: Box::new(sync),
 			periodic_maintenance_interval: futures_timer::Delay::new(PERIODIC_MAINTENANCE_INTERVAL),
 			protocol,
 
 			network_event_stream,
+			sync_event_stream,
 			message_sinks: HashMap::new(),
 			forwarding_state: ForwardingState::Idle,
 
@@ -927,7 +1014,7 @@
 	/// Note: this method isn&#39;t strictly related to gossiping and should eventually be moved
 	/// somewhere else.
 	</span><span class="kw">pub fn </span>announce(<span class="kw-2">&amp;</span><span class="self">self</span>, block: B::Hash, associated_data: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;) {
-		<span class="self">self</span>.network.announce_block(block, associated_data);
+		<span class="self">self</span>.sync.announce_block(block, associated_data);
 	}
 }
 
@@ -940,28 +1027,24 @@
 		<span class="lifetime">&#39;outer</span>: <span class="kw">loop </span>{
 			<span class="kw">match </span><span class="kw-2">&amp;mut </span>this.forwarding_state {
 				ForwardingState::Idle =&gt; {
-					<span class="kw">match </span>this.network_event_stream.poll_next_unpin(cx) {
+					<span class="kw">let </span>net_event_stream = this.network_event_stream.poll_next_unpin(cx);
+					<span class="kw">let </span>sync_event_stream = this.sync_event_stream.poll_next_unpin(cx);
+
+					<span class="kw">if </span>net_event_stream.is_pending() &amp;&amp; sync_event_stream.is_pending() {
+						<span class="kw">break
+					</span>}
+
+					<span class="kw">match </span>net_event_stream {
 						Poll::Ready(<span class="prelude-val">Some</span>(event)) =&gt; <span class="kw">match </span>event {
-							Event::SyncConnected { remote } =&gt; {
-								this.network.add_set_reserved(remote, this.protocol.clone());
-							},
-							Event::SyncDisconnected { remote } =&gt; {
-								this.network.remove_peers_from_reserved_set(
-									this.protocol.clone(),
-									<span class="macro">vec!</span>[remote],
-								);
-							},
-							Event::NotificationStreamOpened { remote, protocol, role, .. } =&gt; {
-								<span class="kw">if </span>protocol != this.protocol {
-									<span class="kw">continue
-								</span>}
-								this.state_machine.new_peer(<span class="kw-2">&amp;mut *</span>this.network, remote, role);
-							},
+							Event::NotificationStreamOpened { remote, protocol, role, .. } =&gt;
+								<span class="kw">if </span>protocol == this.protocol {
+									this.state_machine.new_peer(<span class="kw-2">&amp;mut *</span>this.network, remote, role);
+								},
 							Event::NotificationStreamClosed { remote, protocol } =&gt; {
-								<span class="kw">if </span>protocol != this.protocol {
-									<span class="kw">continue
-								</span>}
-								this.state_machine.peer_disconnected(<span class="kw-2">&amp;mut *</span>this.network, remote);
+								<span class="kw">if </span>protocol == this.protocol {
+									this.state_machine
+										.peer_disconnected(<span class="kw-2">&amp;mut *</span>this.network, remote);
+								}
 							},
 							Event::NotificationsReceived { remote, messages } =&gt; {
 								<span class="kw">let </span>messages = messages
@@ -990,7 +1073,25 @@
 							<span class="self">self</span>.is_terminated = <span class="bool-val">true</span>;
 							<span class="kw">return </span>Poll::Ready(())
 						},
-						Poll::Pending =&gt; <span class="kw">break</span>,
+						Poll::Pending =&gt; {},
+					}
+
+					<span class="kw">match </span>sync_event_stream {
+						Poll::Ready(<span class="prelude-val">Some</span>(event)) =&gt; <span class="kw">match </span>event {
+							SyncEvent::PeerConnected(remote) =&gt;
+								this.network.add_set_reserved(remote, this.protocol.clone()),
+							SyncEvent::PeerDisconnected(remote) =&gt;
+								this.network.remove_peers_from_reserved_set(
+									this.protocol.clone(),
+									<span class="macro">vec!</span>[remote],
+								),
+						},
+						<span class="comment">// The sync event stream closed. Do the same for [`GossipValidator`].
+						</span>Poll::Ready(<span class="prelude-val">None</span>) =&gt; {
+							<span class="self">self</span>.is_terminated = <span class="bool-val">true</span>;
+							<span class="kw">return </span>Poll::Ready(())
+						},
+						Poll::Pending =&gt; {},
 					}
 				},
 				ForwardingState::Busy(to_forward) =&gt; {
@@ -1086,6 +1187,7 @@
 			NetworkBlock, NetworkEventStream, NetworkNotification, NetworkPeers,
 			NotificationSender, NotificationSenderError,
 		},
+		sync::SyncEventStream,
 	};
 	<span class="kw">use </span>sp_runtime::{
 		testing::H256,
@@ -1198,9 +1300,49 @@
 		) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>NotificationSender&gt;, NotificationSenderError&gt; {
 			<span class="macro">unimplemented!</span>();
 		}
+
+		<span class="kw">fn </span>set_notification_handshake(<span class="kw-2">&amp;</span><span class="self">self</span>, _protocol: ProtocolName, _handshake: Vec&lt;u8&gt;) {
+			<span class="macro">unimplemented!</span>();
+		}
 	}
 
 	<span class="kw">impl </span>NetworkBlock&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash, NumberFor&lt;Block&gt;&gt; <span class="kw">for </span>TestNetwork {
+		<span class="kw">fn </span>announce_block(<span class="kw-2">&amp;</span><span class="self">self</span>, _hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash, _data: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;) {
+			<span class="macro">unimplemented!</span>();
+		}
+
+		<span class="kw">fn </span>new_best_block_imported(
+			<span class="kw-2">&amp;</span><span class="self">self</span>,
+			_hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
+			_number: NumberFor&lt;Block&gt;,
+		) {
+			<span class="macro">unimplemented!</span>();
+		}
+	}
+
+	<span class="attr">#[derive(Clone, Default)]
+	</span><span class="kw">struct </span>TestSync {
+		inner: Arc&lt;Mutex&lt;TestSyncInner&gt;&gt;,
+	}
+
+	<span class="attr">#[derive(Clone, Default)]
+	</span><span class="kw">struct </span>TestSyncInner {
+		event_senders: Vec&lt;UnboundedSender&lt;SyncEvent&gt;&gt;,
+	}
+
+	<span class="kw">impl </span>SyncEventStream <span class="kw">for </span>TestSync {
+		<span class="kw">fn </span>event_stream(
+			<span class="kw-2">&amp;</span><span class="self">self</span>,
+			_name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+		) -&gt; Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = SyncEvent&gt; + Send&gt;&gt; {
+			<span class="kw">let </span>(tx, rx) = unbounded();
+			<span class="self">self</span>.inner.lock().unwrap().event_senders.push(tx);
+
+			Box::pin(rx)
+		}
+	}
+
+	<span class="kw">impl </span>NetworkBlock&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash, NumberFor&lt;Block&gt;&gt; <span class="kw">for </span>TestSync {
 		<span class="kw">fn </span>announce_block(<span class="kw-2">&amp;</span><span class="self">self</span>, _hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash, _data: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;) {
 			<span class="macro">unimplemented!</span>();
 		}
@@ -1233,8 +1375,10 @@
 	</span><span class="attr">#[test]
 	</span><span class="kw">fn </span>returns_when_network_event_stream_closes() {
 		<span class="kw">let </span>network = TestNetwork::default();
+		<span class="kw">let </span>sync = Arc::new(TestSync::default());
 		<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = GossipEngine::&lt;Block&gt;::new(
 			network.clone(),
+			sync,
 			<span class="string">&quot;/my_protocol&quot;</span>,
 			Arc::new(AllowAll {}),
 			<span class="prelude-val">None</span>,
@@ -1260,9 +1404,11 @@
 		<span class="kw">let </span>protocol = ProtocolName::from(<span class="string">&quot;/my_protocol&quot;</span>);
 		<span class="kw">let </span>remote_peer = PeerId::random();
 		<span class="kw">let </span>network = TestNetwork::default();
+		<span class="kw">let </span>sync = Arc::new(TestSync::default());
 
 		<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = GossipEngine::&lt;Block&gt;::new(
 			network.clone(),
+			sync.clone(),
 			protocol.clone(),
 			Arc::new(AllowAll {}),
 			<span class="prelude-val">None</span>,
@@ -1277,6 +1423,7 @@
 				protocol: protocol.clone(),
 				negotiated_fallback: <span class="prelude-val">None</span>,
 				role: ObservedRole::Authority,
+				received_handshake: <span class="macro">vec!</span>[],
 			})
 			.expect(<span class="string">&quot;Event stream is unbounded; qed.&quot;</span>);
 
@@ -1379,6 +1526,7 @@
 			<span class="kw">let </span>protocol = ProtocolName::from(<span class="string">&quot;/my_protocol&quot;</span>);
 			<span class="kw">let </span>remote_peer = PeerId::random();
 			<span class="kw">let </span>network = TestNetwork::default();
+			<span class="kw">let </span>sync = Arc::new(TestSync::default());
 
 			<span class="kw">let </span>num_channels_per_topic = channels.iter().fold(
 				HashMap::new(),
@@ -1405,6 +1553,7 @@
 
 			<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = GossipEngine::&lt;Block&gt;::new(
 				network.clone(),
+				sync.clone(),
 				protocol.clone(),
 				Arc::new(TestValidator {}),
 				<span class="prelude-val">None</span>,
@@ -1439,6 +1588,7 @@
 					protocol: protocol.clone(),
 					negotiated_fallback: <span class="prelude-val">None</span>,
 					role: ObservedRole::Authority,
+					received_handshake: <span class="macro">vec!</span>[],
 				})
 				.expect(<span class="string">&quot;Event stream is unbounded; qed.&quot;</span>);
 

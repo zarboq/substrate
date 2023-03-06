@@ -232,6 +232,11 @@
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -258,7 +263,7 @@
 	service::NetworkStatus,
 	sync::{
 		warp::{WarpSyncPhase, WarpSyncProgress},
-		SyncState,
+		SyncState, SyncStatus,
 	},
 };
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, CheckedDiv, NumberFor, Saturating, Zero};
@@ -303,7 +308,12 @@
 	}
 
 	<span class="doccomment">/// Displays the informant by calling `info!`.
-	</span><span class="kw">pub fn </span>display(<span class="kw-2">&amp;mut </span><span class="self">self</span>, info: <span class="kw-2">&amp;</span>ClientInfo&lt;B&gt;, net_status: NetworkStatus&lt;B&gt;) {
+	</span><span class="kw">pub fn </span>display(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		info: <span class="kw-2">&amp;</span>ClientInfo&lt;B&gt;,
+		net_status: NetworkStatus,
+		sync_status: SyncStatus&lt;B&gt;,
+	) {
 		<span class="kw">let </span>best_number = info.chain.best_number;
 		<span class="kw">let </span>best_hash = info.chain.best_hash;
 		<span class="kw">let </span>finalized_number = info.chain.finalized_number;
@@ -328,7 +338,7 @@
 		};
 
 		<span class="kw">let </span>(level, status, target) =
-			<span class="kw">match </span>(net_status.sync_state, net_status.state_sync, net_status.warp_sync) {
+			<span class="kw">match </span>(sync_status.state, sync_status.state_sync, sync_status.warp_sync) {
 				(
 					<span class="kw">_</span>,
 					<span class="kw">_</span>,

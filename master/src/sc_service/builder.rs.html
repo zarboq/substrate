@@ -1042,6 +1042,16 @@
 <a href="#1042" id="1042">1042</a>
 <a href="#1043" id="1043">1043</a>
 <a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1082,18 +1092,19 @@
 <span class="kw">use </span>sc_consensus::import_queue::ImportQueue;
 <span class="kw">use </span>sc_executor::RuntimeVersionOf;
 <span class="kw">use </span>sc_keystore::LocalKeystore;
-<span class="kw">use </span>sc_network::{config::SyncMode, NetworkService};
+<span class="kw">use </span>sc_network::NetworkService;
 <span class="kw">use </span>sc_network_bitswap::BitswapRequestHandler;
 <span class="kw">use </span>sc_network_common::{
+	config::SyncMode,
 	protocol::role::Roles,
-	service::{NetworkStateInfo, NetworkStatusProvider},
+	service::{NetworkEventStream, NetworkStateInfo, NetworkStatusProvider},
 	sync::warp::WarpSyncParams,
 };
 <span class="kw">use </span>sc_network_light::light_client_requests::handler::LightClientRequestHandler;
 <span class="kw">use </span>sc_network_sync::{
-	block_request_handler::BlockRequestHandler, service::network::NetworkServiceProvider,
-	state_request_handler::StateRequestHandler,
-	warp_request_handler::RequestHandler <span class="kw">as </span>WarpSyncRequestHandler, ChainSync,
+	block_request_handler::BlockRequestHandler, engine::SyncingEngine,
+	service::network::NetworkServiceProvider, state_request_handler::StateRequestHandler,
+	warp_request_handler::RequestHandler <span class="kw">as </span>WarpSyncRequestHandler, SyncingService,
 };
 <span class="kw">use </span>sc_rpc::{
 	author::AuthorApiServer,
@@ -1393,12 +1404,7 @@
 
 <span class="doccomment">/// Shared network instance implementing a set of mandatory traits.
 </span><span class="kw">pub trait </span>SpawnTaskNetwork&lt;Block: BlockT&gt;:
-	sc_offchain::NetworkProvider
-	+ NetworkStateInfo
-	+ NetworkStatusProvider&lt;Block&gt;
-	+ Send
-	+ Sync
-	+ <span class="lifetime">&#39;static
+	sc_offchain::NetworkProvider + NetworkStateInfo + NetworkStatusProvider + Send + Sync + <span class="lifetime">&#39;static
 </span>{
 }
 
@@ -1407,7 +1413,7 @@
 	</span>Block: BlockT,
 	T: sc_offchain::NetworkProvider
 		+ NetworkStateInfo
-		+ NetworkStatusProvider&lt;Block&gt;
+		+ NetworkStatusProvider
 		+ Send
 		+ Sync
 		+ <span class="lifetime">&#39;static</span>,
@@ -1438,6 +1444,8 @@
 	<span class="doccomment">/// Controller for transactions handlers
 	</span><span class="kw">pub </span>tx_handler_controller:
 		sc_network_transactions::TransactionsHandlerController&lt;&lt;TBl <span class="kw">as </span>BlockT&gt;::Hash&gt;,
+	<span class="doccomment">/// Syncing service.
+	</span><span class="kw">pub </span>sync_service: Arc&lt;SyncingService&lt;TBl&gt;&gt;,
 	<span class="doccomment">/// Telemetry instance for this node.
 	</span><span class="kw">pub </span>telemetry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>Telemetry&gt;,
 }
@@ -1515,6 +1523,7 @@
 		network,
 		system_rpc_tx,
 		tx_handler_controller,
+		sync_service,
 		telemetry,
 	} = params;
 
@@ -1577,7 +1586,12 @@
 	</span>spawn_handle.spawn(
 		<span class="string">&quot;telemetry-periodic-send&quot;</span>,
 		<span class="prelude-val">None</span>,
-		metrics_service.run(client.clone(), transaction_pool.clone(), network.clone()),
+		metrics_service.run(
+			client.clone(),
+			transaction_pool.clone(),
+			network.clone(),
+			sync_service.clone(),
+		),
 	);
 
 	<span class="kw">let </span>rpc_id_provider = config.rpc_id_provider.take();
@@ -1604,7 +1618,12 @@
 	</span>spawn_handle.spawn(
 		<span class="string">&quot;informant&quot;</span>,
 		<span class="prelude-val">None</span>,
-		sc_informant::build(client.clone(), network, config.informant_output_format),
+		sc_informant::build(
+			client.clone(),
+			network,
+			sync_service.clone(),
+			config.informant_output_format,
+		),
 	);
 
 	task_manager.keep_alive((config.base_path, rpc));
@@ -1815,6 +1834,7 @@
 		TracingUnboundedSender&lt;sc_rpc::system::Request&lt;TBl&gt;&gt;,
 		sc_network_transactions::TransactionsHandlerController&lt;&lt;TBl <span class="kw">as </span>BlockT&gt;::Hash&gt;,
 		NetworkStarter,
+		Arc&lt;SyncingService&lt;TBl&gt;&gt;,
 	),
 	Error,
 &gt;
@@ -1920,27 +1940,23 @@
 	};
 
 	<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) = NetworkServiceProvider::new();
-	<span class="kw">let </span>(chain_sync, chain_sync_service, block_announce_config) = ChainSync::new(
-		<span class="kw">match </span>config.network.sync_mode {
-			SyncMode::Full =&gt; sc_network_common::sync::SyncMode::Full,
-			SyncMode::Fast { skip_proofs, storage_chain_mode } =&gt;
-				sc_network_common::sync::SyncMode::LightState { skip_proofs, storage_chain_mode },
-			SyncMode::Warp =&gt; sc_network_common::sync::SyncMode::Warp,
-		},
+	<span class="kw">let </span>(engine, sync_service, block_announce_config) = SyncingEngine::new(
+		Roles::from(<span class="kw-2">&amp;</span>config.role),
 		client.clone(),
+		config.prometheus_config.as_ref().map(|config| config.registry.clone()).as_ref(),
+		<span class="kw-2">&amp;</span>config.network,
 		protocol_id.clone(),
 		<span class="kw-2">&amp;</span>config.chain_spec.fork_id().map(ToOwned::to_owned),
-		Roles::from(<span class="kw-2">&amp;</span>config.role),
 		block_announce_validator,
-		config.network.max_parallel_downloads,
 		warp_sync_params,
-		config.prometheus_config.as_ref().map(|config| config.registry.clone()).as_ref(),
 		chain_sync_network_handle,
 		import_queue.service(),
 		block_request_protocol_config.name.clone(),
 		state_request_protocol_config.name.clone(),
 		warp_sync_protocol_config.as_ref().map(|config| config.name.clone()),
 	)<span class="question-mark">?</span>;
+	<span class="kw">let </span>sync_service_import_queue = sync_service.clone();
+	<span class="kw">let </span>sync_service = Arc::new(sync_service);
 
 	request_response_protocol_configs.push(config.network.ipfs_server.then(|| {
 		<span class="kw">let </span>(handler, protocol_config) = BitswapRequestHandler::new(client.clone());
@@ -1960,8 +1976,6 @@
 		chain: client.clone(),
 		protocol_id: protocol_id.clone(),
 		fork_id: config.chain_spec.fork_id().map(ToOwned::to_owned),
-		chain_sync: Box::new(chain_sync),
-		chain_sync_service: Box::new(chain_sync_service.clone()),
 		metrics_registry: config.prometheus_config.as_ref().map(|config| config.registry.clone()),
 		block_announce_config,
 		request_response_protocol_configs: request_response_protocol_configs
@@ -1997,6 +2011,7 @@
 
 	<span class="kw">let </span>(tx_handler, tx_handler_controller) = transactions_handler_proto.build(
 		network.clone(),
+		sync_service.clone(),
 		Arc::new(TransactionPoolAdapter { pool: transaction_pool, client: client.clone() }),
 		config.prometheus_config.as_ref().map(|config| <span class="kw-2">&amp;</span>config.registry),
 	)<span class="question-mark">?</span>;
@@ -2007,11 +2022,10 @@
 		<span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>),
 		chain_sync_network_provider.run(network.clone()),
 	);
-	spawn_handle.spawn(
-		<span class="string">&quot;import-queue&quot;</span>,
-		<span class="prelude-val">None</span>,
-		import_queue.run(Box::new(chain_sync_service.clone())),
-	);
+	spawn_handle.spawn(<span class="string">&quot;import-queue&quot;</span>, <span class="prelude-val">None</span>, import_queue.run(Box::new(sync_service_import_queue)));
+
+	<span class="kw">let </span>event_stream = network.event_stream(<span class="string">&quot;syncing&quot;</span>);
+	spawn_handle.spawn(<span class="string">&quot;syncing&quot;</span>, <span class="prelude-val">None</span>, engine.run(event_stream));
 
 	<span class="kw">let </span>(system_rpc_tx, system_rpc_rx) = tracing_unbounded(<span class="string">&quot;mpsc_system_rpc&quot;</span>, <span class="number">10_000</span>);
 	spawn_handle.spawn(
@@ -2020,7 +2034,7 @@
 		build_system_rpc_future(
 			config.role.clone(),
 			network_mut.service().clone(),
-			chain_sync_service.clone(),
+			sync_service.clone(),
 			client.clone(),
 			system_rpc_rx,
 			has_bootnodes,
@@ -2028,7 +2042,7 @@
 	);
 
 	<span class="kw">let </span>future =
-		build_network_future(network_mut, client, chain_sync_service, config.announce_block);
+		build_network_future(network_mut, client, sync_service.clone(), config.announce_block);
 
 	<span class="comment">// TODO: Normally, one is supposed to pass a list of notifications protocols supported by the
 	// node through the `NetworkConfiguration` struct. But because this function doesn&#39;t know in
@@ -2066,7 +2080,13 @@
 		future.<span class="kw">await
 	</span>});
 
-	<span class="prelude-val">Ok</span>((network, system_rpc_tx, tx_handler_controller, NetworkStarter(network_start_tx)))
+	<span class="prelude-val">Ok</span>((
+		network,
+		system_rpc_tx,
+		tx_handler_controller,
+		NetworkStarter(network_start_tx),
+		sync_service.clone(),
+	))
 }
 
 <span class="doccomment">/// Object used to start the network.

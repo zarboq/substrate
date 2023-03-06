@@ -1684,6 +1684,11 @@
 <a href="#1684" id="1684">1684</a>
 <a href="#1685" id="1685">1685</a>
 <a href="#1686" id="1686">1686</a>
+<a href="#1687" id="1687">1687</a>
+<a href="#1688" id="1688">1688</a>
+<a href="#1689" id="1689">1689</a>
+<a href="#1690" id="1690">1690</a>
+<a href="#1691" id="1691">1691</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1719,7 +1724,6 @@
 <span class="kw">use </span>futures::{stream::Fuse, FutureExt, StreamExt};
 <span class="kw">use </span>log::{debug, error, info, log_enabled, trace, warn};
 <span class="kw">use </span>sc_client_api::{Backend, FinalityNotification, FinalityNotifications, HeaderBackend};
-<span class="kw">use </span>sc_network_common::service::{NetworkEventStream, NetworkRequest};
 <span class="kw">use </span>sc_network_gossip::GossipEngine;
 <span class="kw">use </span>sc_utils::notification::NotificationReceiver;
 <span class="kw">use </span>sp_api::{BlockId, ProvideRuntimeApi};
@@ -1930,11 +1934,11 @@
 	}
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>WorkerParams&lt;B: Block, BE, P, R, N&gt; {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>WorkerParams&lt;B: Block, BE, P, R, S&gt; {
 	<span class="kw">pub </span>backend: Arc&lt;BE&gt;,
 	<span class="kw">pub </span>payload_provider: P,
 	<span class="kw">pub </span>runtime: Arc&lt;R&gt;,
-	<span class="kw">pub </span>network: N,
+	<span class="kw">pub </span>sync: Arc&lt;S&gt;,
 	<span class="kw">pub </span>key_store: BeefyKeystore,
 	<span class="kw">pub </span>gossip_engine: GossipEngine&lt;B&gt;,
 	<span class="kw">pub </span>gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
@@ -1982,12 +1986,12 @@
 }
 
 <span class="doccomment">/// A BEEFY worker plays the BEEFY protocol
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BeefyWorker&lt;B: Block, BE, P, RuntimeApi, N&gt; {
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BeefyWorker&lt;B: Block, BE, P, RuntimeApi, S&gt; {
 	<span class="comment">// utilities
 	</span>backend: Arc&lt;BE&gt;,
 	payload_provider: P,
 	runtime: Arc&lt;RuntimeApi&gt;,
-	network: N,
+	sync: Arc&lt;S&gt;,
 	key_store: BeefyKeystore,
 
 	<span class="comment">// communication
@@ -2016,14 +2020,14 @@
 	</span>persisted_state: PersistedState&lt;B&gt;,
 }
 
-<span class="kw">impl</span>&lt;B, BE, P, R, N&gt; BeefyWorker&lt;B, BE, P, R, N&gt;
+<span class="kw">impl</span>&lt;B, BE, P, R, S&gt; BeefyWorker&lt;B, BE, P, R, S&gt;
 <span class="kw">where
 	</span>B: Block + Codec,
 	BE: Backend&lt;B&gt;,
 	P: PayloadProvider&lt;B&gt;,
+	S: SyncOracle,
 	R: ProvideRuntimeApi&lt;B&gt;,
 	R::Api: BeefyApi&lt;B&gt;,
-	N: NetworkEventStream + NetworkRequest + SyncOracle + Send + Sync + Clone + <span class="lifetime">&#39;static</span>,
 {
 	<span class="doccomment">/// Return a new BEEFY worker instance.
 	///
@@ -2031,13 +2035,13 @@
 	/// BEEFY pallet has been deployed on-chain.
 	///
 	/// The BEEFY pallet is needed in order to keep track of the BEEFY authority set.
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(worker_params: WorkerParams&lt;B, BE, P, R, N&gt;) -&gt; <span class="self">Self </span>{
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(worker_params: WorkerParams&lt;B, BE, P, R, S&gt;) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>WorkerParams {
 			backend,
 			payload_provider,
 			runtime,
 			key_store,
-			network,
+			sync,
 			gossip_engine,
 			gossip_validator,
 			on_demand_justifications,
@@ -2050,7 +2054,7 @@
 			backend,
 			payload_provider,
 			runtime,
-			network,
+			sync,
 			key_store,
 			gossip_engine,
 			gossip_validator,
@@ -2522,7 +2526,7 @@
 		}
 
 		<span class="comment">// Don&#39;t bother voting or requesting justifications during major sync.
-		</span><span class="kw">if </span>!<span class="self">self</span>.network.is_major_syncing() {
+		</span><span class="kw">if </span>!<span class="self">self</span>.sync.is_major_syncing() {
 			<span class="comment">// There were external events, &#39;state&#39; is changed, author a vote if needed/possible.
 			</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_to_vote() {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
@@ -2751,7 +2755,7 @@
 	<span class="kw">use </span>futures::{future::poll_fn, task::Poll};
 	<span class="kw">use </span>parking_lot::Mutex;
 	<span class="kw">use </span>sc_client_api::{Backend <span class="kw">as </span>BackendT, HeaderBackend};
-	<span class="kw">use </span>sc_network::NetworkService;
+	<span class="kw">use </span>sc_network_sync::SyncingService;
 	<span class="kw">use </span>sc_network_test::TestNetFactory;
 	<span class="kw">use </span>sp_api::HeaderT;
 	<span class="kw">use </span>sp_blockchain::Backend <span class="kw">as </span>BlockchainBackendT;
@@ -2761,7 +2765,7 @@
 	};
 	<span class="kw">use </span>sp_runtime::traits::One;
 	<span class="kw">use </span>substrate_test_runtime_client::{
-		runtime::{Block, Digest, DigestItem, Header, H256},
+		runtime::{Block, Digest, DigestItem, Header},
 		Backend,
 	};
 
@@ -2799,7 +2803,7 @@
 		Backend,
 		MmrRootProvider&lt;Block, TestApi&gt;,
 		TestApi,
-		Arc&lt;NetworkService&lt;Block, H256&gt;&gt;,
+		Arc&lt;SyncingService&lt;Block&gt;&gt;,
 	&gt; {
 		<span class="kw">let </span>keystore = create_beefy_keystore(<span class="kw-2">*</span>key);
 
@@ -2823,10 +2827,16 @@
 		<span class="kw">let </span>backend = peer.client().as_backend();
 		<span class="kw">let </span>api = Arc::new(TestApi::with_validator_set(<span class="kw-2">&amp;</span>genesis_validator_set));
 		<span class="kw">let </span>network = peer.network_service().clone();
+		<span class="kw">let </span>sync = peer.sync_service().clone();
 		<span class="kw">let </span>known_peers = Arc::new(Mutex::new(KnownPeers::new()));
 		<span class="kw">let </span>gossip_validator = Arc::new(GossipValidator::new(known_peers.clone()));
-		<span class="kw">let </span>gossip_engine =
-			GossipEngine::new(network.clone(), <span class="string">&quot;/beefy/1&quot;</span>, gossip_validator.clone(), <span class="prelude-val">None</span>);
+		<span class="kw">let </span>gossip_engine = GossipEngine::new(
+			network.clone(),
+			sync.clone(),
+			<span class="string">&quot;/beefy/1&quot;</span>,
+			gossip_validator.clone(),
+			<span class="prelude-val">None</span>,
+		);
 		<span class="kw">let </span>metrics = <span class="prelude-val">None</span>;
 		<span class="kw">let </span>on_demand_justifications = OnDemandJustificationsEngine::new(
 			network.clone(),
@@ -2855,7 +2865,7 @@
 			gossip_engine,
 			gossip_validator,
 			metrics,
-			network,
+			sync: Arc::new(sync),
 			on_demand_justifications,
 			persisted_state,
 		};

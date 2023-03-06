@@ -288,6 +288,17 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -313,7 +324,10 @@
 <span class="kw">use </span>prometheus_endpoint::{register, Gauge, GaugeVec, Opts, PrometheusError, Registry, U64};
 <span class="kw">use </span>sc_client_api::{ClientInfo, UsageProvider};
 <span class="kw">use </span>sc_network::config::Role;
-<span class="kw">use </span>sc_network_common::service::{NetworkStatus, NetworkStatusProvider};
+<span class="kw">use </span>sc_network_common::{
+	service::{NetworkStatus, NetworkStatusProvider},
+	sync::{SyncStatus, SyncStatusProvider},
+};
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, SUBSTRATE_INFO};
 <span class="kw">use </span>sc_transaction_pool_api::{MaintainedTransactionPool, PoolStatus};
 <span class="kw">use </span>sc_utils::metrics::register_globals;
@@ -465,16 +479,18 @@
 	<span class="doccomment">/// Returns a never-ending `Future` that performs the
 	/// metric and telemetry updates with information from
 	/// the given sources.
-	</span><span class="kw">pub async fn </span>run&lt;TBl, TExPool, TCl, TNet&gt;(
+	</span><span class="kw">pub async fn </span>run&lt;TBl, TExPool, TCl, TNet, TSync&gt;(
 		<span class="kw-2">mut </span><span class="self">self</span>,
 		client: Arc&lt;TCl&gt;,
 		transactions: Arc&lt;TExPool&gt;,
 		network: TNet,
+		syncing: TSync,
 	) <span class="kw">where
 		</span>TBl: Block,
 		TCl: ProvideRuntimeApi&lt;TBl&gt; + UsageProvider&lt;TBl&gt;,
 		TExPool: MaintainedTransactionPool&lt;Block = TBl, Hash = &lt;TBl <span class="kw">as </span>Block&gt;::Hash&gt;,
-		TNet: NetworkStatusProvider&lt;TBl&gt;,
+		TNet: NetworkStatusProvider,
+		TSync: SyncStatusProvider&lt;TBl&gt;,
 	{
 		<span class="kw">let </span><span class="kw-2">mut </span>timer = Delay::new(Duration::from_secs(<span class="number">0</span>));
 		<span class="kw">let </span>timer_interval = Duration::from_secs(<span class="number">5</span>);
@@ -486,8 +502,11 @@
 			<span class="comment">// Try to get the latest network information.
 			</span><span class="kw">let </span>net_status = network.status().<span class="kw">await</span>.ok();
 
+			<span class="comment">// Try to get the latest syncing information.
+			</span><span class="kw">let </span>sync_status = syncing.status().<span class="kw">await</span>.ok();
+
 			<span class="comment">// Update / Send the metrics.
-			</span><span class="self">self</span>.update(<span class="kw-2">&amp;</span>client.usage_info(), <span class="kw-2">&amp;</span>transactions.status(), net_status);
+			</span><span class="self">self</span>.update(<span class="kw-2">&amp;</span>client.usage_info(), <span class="kw-2">&amp;</span>transactions.status(), net_status, sync_status);
 
 			<span class="comment">// Schedule next tick.
 			</span>timer.reset(timer_interval);
@@ -498,7 +517,8 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		info: <span class="kw-2">&amp;</span>ClientInfo&lt;T&gt;,
 		txpool_status: <span class="kw-2">&amp;</span>PoolStatus,
-		net_status: <span class="prelude-ty">Option</span>&lt;NetworkStatus&lt;T&gt;&gt;,
+		net_status: <span class="prelude-ty">Option</span>&lt;NetworkStatus&gt;,
+		sync_status: <span class="prelude-ty">Option</span>&lt;SyncStatus&lt;T&gt;&gt;,
 	) {
 		<span class="kw">let </span>now = Instant::now();
 		<span class="kw">let </span>elapsed = (now - <span class="self">self</span>.last_update).as_secs();
@@ -563,10 +583,12 @@
 				<span class="string">&quot;bandwidth_download&quot; </span>=&gt; avg_bytes_per_sec_inbound,
 				<span class="string">&quot;bandwidth_upload&quot; </span>=&gt; avg_bytes_per_sec_outbound,
 			);
+		}
 
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(sync_status) = sync_status {
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
 				<span class="kw">let </span>best_seen_block: <span class="prelude-ty">Option</span>&lt;u64&gt; =
-					net_status.best_seen_block.map(|num: NumberFor&lt;T&gt;| {
+					sync_status.best_seen_block.map(|num: NumberFor&lt;T&gt;| {
 						UniqueSaturatedInto::&lt;u64&gt;::unique_saturated_into(num)
 					});
 

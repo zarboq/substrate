@@ -468,6 +468,11 @@
 <a href="#468" id="468">468</a>
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -509,7 +514,7 @@
 <span class="kw">use crate</span>::{
 	authorities::SharedAuthoritySet,
 	aux_schema::PersistentData,
-	communication::{Network <span class="kw">as </span>NetworkT, NetworkBridge},
+	communication::{Network <span class="kw">as </span>NetworkT, NetworkBridge, Syncing <span class="kw">as </span>SyncingT},
 	environment, global_communication,
 	notification::GrandpaJustificationSender,
 	ClientForGrandpa, CommandOrError, CommunicationIn, Config, Error, LinkHalf, VoterCommand,
@@ -633,14 +638,16 @@
 /// already been instantiated with `block_import`.
 /// NOTE: this is currently not part of the crate&#39;s public API since we don&#39;t consider
 /// it stable enough to use on a live network.
-</span><span class="kw">pub fn </span>run_grandpa_observer&lt;BE, Block: BlockT, Client, N, SC&gt;(
+</span><span class="kw">pub fn </span>run_grandpa_observer&lt;BE, Block: BlockT, Client, N, S, SC&gt;(
 	config: Config,
 	link: LinkHalf&lt;Block, Client, SC&gt;,
 	network: N,
+	sync: S,
 ) -&gt; sp_blockchain::Result&lt;<span class="kw">impl </span>Future&lt;Output = ()&gt; + Send&gt;
 <span class="kw">where
 	</span>BE: Backend&lt;Block&gt; + Unpin + <span class="lifetime">&#39;static</span>,
 	N: NetworkT&lt;Block&gt;,
+	S: SyncingT&lt;Block&gt;,
 	SC: SelectChain&lt;Block&gt;,
 	NumberFor&lt;Block&gt;: BlockNumberOps,
 	Client: ClientForGrandpa&lt;Block, BE&gt; + <span class="lifetime">&#39;static</span>,
@@ -656,6 +663,7 @@
 
 	<span class="kw">let </span>network = NetworkBridge::new(
 		network,
+		sync,
 		config.clone(),
 		persistent_data.set_state.clone(),
 		<span class="prelude-val">None</span>,
@@ -681,11 +689,11 @@
 
 <span class="doccomment">/// Future that powers the observer.
 </span><span class="attr">#[must_use]
-</span><span class="kw">struct </span>ObserverWork&lt;B: BlockT, BE, Client, N: NetworkT&lt;B&gt;&gt; {
+</span><span class="kw">struct </span>ObserverWork&lt;B: BlockT, BE, Client, N: NetworkT&lt;B&gt;, S: SyncingT&lt;B&gt;&gt; {
 	observer:
 		Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), CommandOrError&lt;B::Hash, NumberFor&lt;B&gt;&gt;&gt;&gt; + Send&gt;&gt;,
 	client: Arc&lt;Client&gt;,
-	network: NetworkBridge&lt;B, N&gt;,
+	network: NetworkBridge&lt;B, N, S&gt;,
 	persistent_data: PersistentData&lt;B&gt;,
 	keystore: <span class="prelude-ty">Option</span>&lt;SyncCryptoStorePtr&gt;,
 	voter_commands_rx: TracingUnboundedReceiver&lt;VoterCommand&lt;B::Hash, NumberFor&lt;B&gt;&gt;&gt;,
@@ -694,17 +702,18 @@
 	_phantom: PhantomData&lt;BE&gt;,
 }
 
-<span class="kw">impl</span>&lt;B, BE, Client, Network&gt; ObserverWork&lt;B, BE, Client, Network&gt;
+<span class="kw">impl</span>&lt;B, BE, Client, Network, Syncing&gt; ObserverWork&lt;B, BE, Client, Network, Syncing&gt;
 <span class="kw">where
 	</span>B: BlockT,
 	BE: Backend&lt;B&gt; + <span class="lifetime">&#39;static</span>,
 	Client: ClientForGrandpa&lt;B, BE&gt; + <span class="lifetime">&#39;static</span>,
 	Network: NetworkT&lt;B&gt;,
+	Syncing: SyncingT&lt;B&gt;,
 	NumberFor&lt;B&gt;: BlockNumberOps,
 {
 	<span class="kw">fn </span>new(
 		client: Arc&lt;Client&gt;,
-		network: NetworkBridge&lt;B, Network&gt;,
+		network: NetworkBridge&lt;B, Network, Syncing&gt;,
 		persistent_data: PersistentData&lt;B&gt;,
 		keystore: <span class="prelude-ty">Option</span>&lt;SyncCryptoStorePtr&gt;,
 		voter_commands_rx: TracingUnboundedReceiver&lt;VoterCommand&lt;B::Hash, NumberFor&lt;B&gt;&gt;&gt;,
@@ -817,12 +826,13 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;B, BE, C, N&gt; Future <span class="kw">for </span>ObserverWork&lt;B, BE, C, N&gt;
+<span class="kw">impl</span>&lt;B, BE, C, N, S&gt; Future <span class="kw">for </span>ObserverWork&lt;B, BE, C, N, S&gt;
 <span class="kw">where
 	</span>B: BlockT,
 	BE: Backend&lt;B&gt; + Unpin + <span class="lifetime">&#39;static</span>,
 	C: ClientForGrandpa&lt;B, BE&gt; + <span class="lifetime">&#39;static</span>,
 	N: NetworkT&lt;B&gt;,
+	S: SyncingT&lt;B&gt;,
 	NumberFor&lt;B&gt;: BlockNumberOps,
 {
 	<span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;(), Error&gt;;

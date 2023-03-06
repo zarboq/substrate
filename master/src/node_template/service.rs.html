@@ -338,6 +338,8 @@
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 </span><span class="kw">use </span>node_template_runtime::{<span class="self">self</span>, opaque::Block, RuntimeApi};
@@ -532,7 +534,7 @@
 		Vec::default(),
 	));
 
-	<span class="kw">let </span>(network, system_rpc_tx, tx_handler_controller, network_starter) =
+	<span class="kw">let </span>(network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: <span class="kw-2">&amp;</span>config,
 			client: client.clone(),
@@ -580,6 +582,7 @@
 		backend,
 		system_rpc_tx,
 		tx_handler_controller,
+		sync_service: sync_service.clone(),
 		config,
 		telemetry: telemetry.as_mut(),
 	})<span class="question-mark">?</span>;
@@ -616,8 +619,8 @@
 				force_authoring,
 				backoff_authoring_blocks,
 				keystore: keystore_container.sync_keystore(),
-				sync_oracle: network.clone(),
-				justification_sync_link: network.clone(),
+				sync_oracle: sync_service.clone(),
+				justification_sync_link: sync_service.clone(),
 				block_proposal_slot_portion: SlotProportion::new(<span class="number">2f32 </span>/ <span class="number">3f32</span>),
 				max_block_proposal_slot_portion: <span class="prelude-val">None</span>,
 				telemetry: telemetry.as_ref().map(|x| x.handle()),
@@ -660,6 +663,7 @@
 			config: grandpa_config,
 			link: grandpa_link,
 			network,
+			sync: Arc::new(sync_service),
 			voting_rule: sc_consensus_grandpa::VotingRulesBuilder::default().build(),
 			prometheus_registry,
 			shared_voter_state: SharedVoterState::empty(),

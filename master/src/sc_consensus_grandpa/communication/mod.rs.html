@@ -1088,6 +1088,25 @@
 <a href="#1088" id="1088">1088</a>
 <a href="#1089" id="1089">1089</a>
 <a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1149,7 +1168,10 @@
 <span class="kw">use </span>gossip::{
 	FullCatchUpMessage, FullCommitMessage, GossipMessage, GossipValidator, PeerReport, VoteMessage,
 };
-<span class="kw">use </span>sc_network_common::service::{NetworkBlock, NetworkSyncForkRequest};
+<span class="kw">use </span>sc_network_common::{
+	service::{NetworkBlock, NetworkSyncForkRequest},
+	sync::SyncEventStream,
+};
 <span class="kw">use </span>sc_utils::mpsc::TracingUnboundedReceiver;
 <span class="kw">use </span>sp_consensus_grandpa::{AuthorityId, AuthoritySignature, RoundNumber, SetId <span class="kw">as </span>SetIdNumber};
 
@@ -1253,24 +1275,35 @@
 
 <span class="doccomment">/// A handle to the network.
 ///
-/// Something that provides both the capabilities needed for the `gossip_network::Network` trait as
-/// well as the ability to set a fork sync request for a particular block.
-</span><span class="kw">pub trait </span>Network&lt;Block: BlockT&gt;:
+/// Something that provides the capabilities needed for the `gossip_network::Network` trait.
+</span><span class="kw">pub trait </span>Network&lt;Block: BlockT&gt;: GossipNetwork&lt;Block&gt; + Clone + Send + <span class="lifetime">&#39;static </span>{}
+
+<span class="kw">impl</span>&lt;Block, T&gt; Network&lt;Block&gt; <span class="kw">for </span>T
+<span class="kw">where
+	</span>Block: BlockT,
+	T: GossipNetwork&lt;Block&gt; + Clone + Send + <span class="lifetime">&#39;static</span>,
+{
+}
+
+<span class="doccomment">/// A handle to syncing-related services.
+///
+/// Something that provides the ability to set a fork sync request for a particular block.
+</span><span class="kw">pub trait </span>Syncing&lt;Block: BlockT&gt;:
 	NetworkSyncForkRequest&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;
 	+ NetworkBlock&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;
-	+ GossipNetwork&lt;Block&gt;
+	+ SyncEventStream
 	+ Clone
 	+ Send
 	+ <span class="lifetime">&#39;static
 </span>{
 }
 
-<span class="kw">impl</span>&lt;Block, T&gt; Network&lt;Block&gt; <span class="kw">for </span>T
+<span class="kw">impl</span>&lt;Block, T&gt; Syncing&lt;Block&gt; <span class="kw">for </span>T
 <span class="kw">where
 	</span>Block: BlockT,
 	T: NetworkSyncForkRequest&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;
 		+ NetworkBlock&lt;Block::Hash, NumberFor&lt;Block&gt;&gt;
-		+ GossipNetwork&lt;Block&gt;
+		+ SyncEventStream
 		+ Clone
 		+ Send
 		+ <span class="lifetime">&#39;static</span>,
@@ -1288,8 +1321,9 @@
 }
 
 <span class="doccomment">/// Bridge between the underlying network service, gossiping consensus messages and Grandpa
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>NetworkBridge&lt;B: BlockT, N: Network&lt;B&gt;&gt; {
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>NetworkBridge&lt;B: BlockT, N: Network&lt;B&gt;, S: Syncing&lt;B&gt;&gt; {
 	service: N,
+	sync: S,
 	gossip_engine: Arc&lt;Mutex&lt;GossipEngine&lt;B&gt;&gt;&gt;,
 	validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
 
@@ -1315,15 +1349,16 @@
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
 }
 
-<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;&gt; Unpin <span class="kw">for </span>NetworkBridge&lt;B, N&gt; {}
+<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;, S: Syncing&lt;B&gt;&gt; Unpin <span class="kw">for </span>NetworkBridge&lt;B, N, S&gt; {}
 
-<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;&gt; NetworkBridge&lt;B, N&gt; {
+<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;, S: Syncing&lt;B&gt;&gt; NetworkBridge&lt;B, N, S&gt; {
 	<span class="doccomment">/// Create a new NetworkBridge to the given NetworkService. Returns the service
 	/// handle.
 	/// On creation it will register previous rounds&#39; votes with the gossip
 	/// service taken from the VoterSetState.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
 		service: N,
+		sync: S,
 		config: <span class="kw">crate</span>::Config,
 		set_state: <span class="kw">crate</span>::environment::SharedVoterSetState&lt;B&gt;,
 		prometheus_registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Registry&gt;,
@@ -1336,6 +1371,7 @@
 		<span class="kw">let </span>validator = Arc::new(validator);
 		<span class="kw">let </span>gossip_engine = Arc::new(Mutex::new(GossipEngine::new(
 			service.clone(),
+			sync.clone(),
 			protocol,
 			validator.clone(),
 			prometheus_registry,
@@ -1380,6 +1416,7 @@
 
 		NetworkBridge {
 			service,
+			sync,
 			gossip_engine,
 			validator,
 			neighbor_sender: neighbor_packet_sender,
@@ -1565,11 +1602,11 @@
 		hash: B::Hash,
 		number: NumberFor&lt;B&gt;,
 	) {
-		<span class="self">self</span>.service.set_sync_fork_request(peers, hash, number)
+		<span class="self">self</span>.sync.set_sync_fork_request(peers, hash, number)
 	}
 }
 
-<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;&gt; Future <span class="kw">for </span>NetworkBridge&lt;B, N&gt; {
+<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;, S: Syncing&lt;B&gt;&gt; Future <span class="kw">for </span>NetworkBridge&lt;B, N, S&gt; {
 	<span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
 	<span class="kw">fn </span>poll(<span class="self">self</span>: Pin&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt;, cx: <span class="kw-2">&amp;mut </span>Context) -&gt; Poll&lt;<span class="self">Self</span>::Output&gt; {
@@ -1751,10 +1788,11 @@
 		})
 }
 
-<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;&gt; Clone <span class="kw">for </span>NetworkBridge&lt;B, N&gt; {
+<span class="kw">impl</span>&lt;B: BlockT, N: Network&lt;B&gt;, S: Syncing&lt;B&gt;&gt; Clone <span class="kw">for </span>NetworkBridge&lt;B, N, S&gt; {
 	<span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
 		NetworkBridge {
 			service: <span class="self">self</span>.service.clone(),
+			sync: <span class="self">self</span>.sync.clone(),
 			gossip_engine: <span class="self">self</span>.gossip_engine.clone(),
 			validator: Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.validator),
 			neighbor_sender: <span class="self">self</span>.neighbor_sender.clone(),

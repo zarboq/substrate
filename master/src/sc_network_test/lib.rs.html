@@ -1207,6 +1207,33 @@
 <a href="#1207" id="1207">1207</a>
 <a href="#1208" id="1208">1208</a>
 <a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
+<a href="#1213" id="1213">1213</a>
+<a href="#1214" id="1214">1214</a>
+<a href="#1215" id="1215">1215</a>
+<a href="#1216" id="1216">1216</a>
+<a href="#1217" id="1217">1217</a>
+<a href="#1218" id="1218">1218</a>
+<a href="#1219" id="1219">1219</a>
+<a href="#1220" id="1220">1220</a>
+<a href="#1221" id="1221">1221</a>
+<a href="#1222" id="1222">1222</a>
+<a href="#1223" id="1223">1223</a>
+<a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
+<a href="#1232" id="1232">1232</a>
+<a href="#1233" id="1233">1233</a>
+<a href="#1234" id="1234">1234</a>
+<a href="#1235" id="1235">1235</a>
+<a href="#1236" id="1236">1236</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1255,24 +1282,24 @@
 	ForkChoiceStrategy, ImportQueue, ImportResult, JustificationImport, JustificationSyncLink,
 	LongestChain, Verifier,
 };
-<span class="kw">use </span>sc_network::{
-	config::{NetworkConfiguration, RequestResponseConfig, Role, SyncMode},
-	Multiaddr, NetworkService, NetworkWorker,
-};
+<span class="kw">use </span>sc_network::{Multiaddr, NetworkService, NetworkWorker};
 <span class="kw">use </span>sc_network_common::{
 	config::{
-		MultiaddrWithPeerId, NonDefaultSetConfig, NonReservedPeerMode, ProtocolId, TransportConfig,
+		MultiaddrWithPeerId, NetworkConfiguration, NonDefaultSetConfig, NonReservedPeerMode,
+		ProtocolId, RequestResponseConfig, Role, SyncMode, TransportConfig,
 	},
 	protocol::{role::Roles, ProtocolName},
-	service::{NetworkBlock, NetworkStateInfo, NetworkSyncForkRequest},
+	service::{NetworkBlock, NetworkEventStream, NetworkStateInfo, NetworkSyncForkRequest},
 	sync::warp::{
 		AuthorityList, EncodedProof, SetId, VerificationResult, WarpSyncParams, WarpSyncProvider,
 	},
 };
 <span class="kw">use </span>sc_network_light::light_client_requests::handler::LightClientRequestHandler;
 <span class="kw">use </span>sc_network_sync::{
-	block_request_handler::BlockRequestHandler, service::network::NetworkServiceProvider,
-	state_request_handler::StateRequestHandler, warp_request_handler, ChainSync,
+	block_request_handler::BlockRequestHandler,
+	service::{chain_sync::SyncingService, network::NetworkServiceProvider},
+	state_request_handler::StateRequestHandler,
+	warp_request_handler,
 };
 <span class="kw">use </span>sc_service::client::Client;
 <span class="kw">use </span>sp_blockchain::{
@@ -1450,7 +1477,8 @@
 	</span>block_import: BlockImportAdapter&lt;BlockImport&gt;,
 	select_chain: <span class="prelude-ty">Option</span>&lt;LongestChain&lt;substrate_test_runtime_client::Backend, Block&gt;&gt;,
 	backend: <span class="prelude-ty">Option</span>&lt;Arc&lt;substrate_test_runtime_client::Backend&gt;&gt;,
-	network: NetworkWorker&lt;Block, &lt;Block <span class="kw">as </span>BlockT&gt;::Hash, PeersFullClient&gt;,
+	network: NetworkWorker&lt;Block, &lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt;,
+	sync_service: Arc&lt;SyncingService&lt;Block&gt;&gt;,
 	imported_blocks_stream: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = BlockImportNotification&lt;Block&gt;&gt; + Send&gt;&gt;,
 	finality_notification_stream: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = FinalityNotification&lt;Block&gt;&gt; + Send&gt;&gt;,
 	listen_addr: Multiaddr,
@@ -1468,7 +1496,7 @@
 
 	<span class="doccomment">/// Returns true if we&#39;re major syncing.
 	</span><span class="kw">pub fn </span>is_major_syncing(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-		<span class="self">self</span>.network.service().is_major_syncing()
+		<span class="self">self</span>.sync_service.is_major_syncing()
 	}
 
 	<span class="comment">// Returns a clone of the local SelectChain, only available on full nodes
@@ -1484,23 +1512,23 @@
 	}
 
 	<span class="doccomment">/// Returns the number of downloaded blocks.
-	</span><span class="kw">pub fn </span>num_downloaded_blocks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-		<span class="self">self</span>.network.num_downloaded_blocks()
+	</span><span class="kw">pub async fn </span>num_downloaded_blocks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+		<span class="self">self</span>.sync_service.num_downloaded_blocks().<span class="kw">await</span>.unwrap()
 	}
 
 	<span class="doccomment">/// Returns true if we have no peer.
 	</span><span class="kw">pub fn </span>is_offline(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-		<span class="self">self</span>.num_peers() == <span class="number">0
-	</span>}
+		<span class="self">self</span>.sync_service.is_offline()
+	}
 
 	<span class="doccomment">/// Request a justification for the given block.
 	</span><span class="kw">pub fn </span>request_justification(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: <span class="kw-2">&amp;</span>&lt;Block <span class="kw">as </span>BlockT&gt;::Hash, number: NumberFor&lt;Block&gt;) {
-		<span class="self">self</span>.network.service().request_justification(hash, number);
+		<span class="self">self</span>.sync_service.request_justification(hash, number);
 	}
 
 	<span class="doccomment">/// Announces an important block on the network.
 	</span><span class="kw">pub fn </span>announce_block(<span class="kw-2">&amp;</span><span class="self">self</span>, hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash, data: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;) {
-		<span class="self">self</span>.network.service().announce_block(hash, data);
+		<span class="self">self</span>.sync_service.announce_block(hash, data);
 	}
 
 	<span class="doccomment">/// Request explicit fork sync.
@@ -1510,7 +1538,7 @@
 		hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
 		number: NumberFor&lt;Block&gt;,
 	) {
-		<span class="self">self</span>.network.service().set_sync_fork_request(peers, hash, number);
+		<span class="self">self</span>.sync_service.set_sync_fork_request(peers, hash, number);
 	}
 
 	<span class="doccomment">/// Add blocks to the peer -- edit the block before adding
@@ -1611,14 +1639,14 @@
 			futures::executor::block_on(<span class="self">self</span>.block_import.import_block(import_block, cache))
 				.expect(<span class="string">&quot;block_import failed&quot;</span>);
 			<span class="kw">if </span>announce_block {
-				<span class="self">self</span>.network.service().announce_block(hash, <span class="prelude-val">None</span>);
+				<span class="self">self</span>.sync_service.announce_block(hash, <span class="prelude-val">None</span>);
 			}
 			hashes.push(hash);
 			at = hash;
 		}
 
 		<span class="kw">if </span>inform_sync_about_new_best_block {
-			<span class="self">self</span>.network.new_best_block_imported(
+			<span class="self">self</span>.sync_service.new_best_block_imported(
 				at,
 				<span class="kw-2">*</span>full_client.header(at).ok().flatten().unwrap().number(),
 			);
@@ -1734,8 +1762,12 @@
 		<span class="self">self</span>.network.service()
 	}
 
+	<span class="kw">pub fn </span>sync_service(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Arc&lt;SyncingService&lt;Block&gt;&gt; {
+		<span class="kw-2">&amp;</span><span class="self">self</span>.sync_service
+	}
+
 	<span class="doccomment">/// Get a reference to the network worker.
-	</span><span class="kw">pub fn </span>network(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>NetworkWorker&lt;Block, &lt;Block <span class="kw">as </span>BlockT&gt;::Hash, PeersFullClient&gt; {
+	</span><span class="kw">pub fn </span>network(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>NetworkWorker&lt;Block, &lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt; {
 		<span class="kw-2">&amp;</span><span class="self">self</span>.network
 	}
 
@@ -1937,13 +1969,13 @@
 }
 
 <span class="attr">#[async_trait::async_trait]
-</span><span class="kw">pub trait </span>TestNetFactory: Default + Sized
+</span><span class="kw">pub trait </span>TestNetFactory: Default + Sized + Send
 <span class="kw">where
 	</span>&lt;<span class="self">Self</span>::BlockImport <span class="kw">as </span>BlockImport&lt;Block&gt;&gt;::Transaction: Send,
 {
 	<span class="kw">type </span>Verifier: <span class="lifetime">&#39;static </span>+ Verifier&lt;Block&gt;;
 	<span class="kw">type </span>BlockImport: BlockImport&lt;Block, Error = ConsensusError&gt; + Clone + Send + Sync + <span class="lifetime">&#39;static</span>;
-	<span class="kw">type </span>PeerData: Default;
+	<span class="kw">type </span>PeerData: Default + Send;
 
 	<span class="doccomment">/// This one needs to be implemented!
 	</span><span class="kw">fn </span>make_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, client: PeersClient, peer_data: <span class="kw-2">&amp;</span><span class="self">Self</span>::PeerData) -&gt; <span class="self">Self</span>::Verifier;
@@ -1951,6 +1983,7 @@
 	<span class="doccomment">/// Get reference to peer.
 	</span><span class="kw">fn </span>peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, i: usize) -&gt; <span class="kw-2">&amp;mut </span>Peer&lt;<span class="self">Self</span>::PeerData, <span class="self">Self</span>::BlockImport&gt;;
 	<span class="kw">fn </span>peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;Peer&lt;<span class="self">Self</span>::PeerData, <span class="self">Self</span>::BlockImport&gt;&gt;;
+	<span class="kw">fn </span>peers_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Vec&lt;Peer&lt;<span class="self">Self</span>::PeerData, <span class="self">Self</span>::BlockImport&gt;&gt;;
 	<span class="kw">fn </span>mut_peers&lt;F: FnOnce(<span class="kw-2">&amp;mut </span>Vec&lt;Peer&lt;<span class="self">Self</span>::PeerData, <span class="self">Self</span>::BlockImport&gt;&gt;)&gt;(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		closure: F,
@@ -2109,31 +2142,25 @@
 		<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) =
 			NetworkServiceProvider::new();
 
-		<span class="kw">let </span>(chain_sync, chain_sync_service, block_announce_config) = ChainSync::new(
-			<span class="kw">match </span>network_config.sync_mode {
-				SyncMode::Full =&gt; sc_network_common::sync::SyncMode::Full,
-				SyncMode::Fast { skip_proofs, storage_chain_mode } =&gt;
-					sc_network_common::sync::SyncMode::LightState {
-						skip_proofs,
-						storage_chain_mode,
-					},
-				SyncMode::Warp =&gt; sc_network_common::sync::SyncMode::Warp,
-			},
-			client.clone(),
-			protocol_id.clone(),
-			<span class="kw-2">&amp;</span>fork_id,
-			Roles::from(<span class="kw">if </span>config.is_authority { <span class="kw-2">&amp;</span>Role::Authority } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>Role::Full }),
-			block_announce_validator,
-			network_config.max_parallel_downloads,
-			<span class="prelude-val">Some</span>(warp_sync_params),
-			<span class="prelude-val">None</span>,
-			chain_sync_network_handle,
-			import_queue.service(),
-			block_request_protocol_config.name.clone(),
-			state_request_protocol_config.name.clone(),
-			<span class="prelude-val">Some</span>(warp_protocol_config.name.clone()),
-		)
-		.unwrap();
+		<span class="kw">let </span>(engine, sync_service, block_announce_config) =
+			sc_network_sync::engine::SyncingEngine::new(
+				Roles::from(<span class="kw">if </span>config.is_authority { <span class="kw-2">&amp;</span>Role::Authority } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>Role::Full }),
+				client.clone(),
+				<span class="prelude-val">None</span>,
+				<span class="kw-2">&amp;</span>network_config,
+				protocol_id.clone(),
+				<span class="kw-2">&amp;</span>fork_id,
+				block_announce_validator,
+				<span class="prelude-val">Some</span>(warp_sync_params),
+				chain_sync_network_handle,
+				import_queue.service(),
+				block_request_protocol_config.name.clone(),
+				state_request_protocol_config.name.clone(),
+				<span class="prelude-val">Some</span>(warp_protocol_config.name.clone()),
+			)
+			.unwrap();
+		<span class="kw">let </span>sync_service_import_queue = Box::new(sync_service.clone());
+		<span class="kw">let </span>sync_service = Arc::new(sync_service.clone());
 
 		<span class="kw">let </span>network = NetworkWorker::new(sc_network::config::Params {
 			role: <span class="kw">if </span>config.is_authority { Role::Authority } <span class="kw">else </span>{ Role::Full },
@@ -2144,8 +2171,6 @@
 			chain: client.clone(),
 			protocol_id,
 			fork_id,
-			chain_sync: Box::new(chain_sync),
-			chain_sync_service: Box::new(chain_sync_service.clone()),
 			metrics_registry: <span class="prelude-val">None</span>,
 			block_announce_config,
 			request_response_protocol_configs: [
@@ -2164,8 +2189,14 @@
 		tokio::spawn(<span class="kw">async move </span>{
 			chain_sync_network_provider.run(service).<span class="kw">await</span>;
 		});
+
 		tokio::spawn(<span class="kw">async move </span>{
-			import_queue.run(Box::new(chain_sync_service)).<span class="kw">await</span>;
+			import_queue.run(sync_service_import_queue).<span class="kw">await</span>;
+		});
+
+		<span class="kw">let </span>service = network.service().clone();
+		tokio::spawn(<span class="kw">async move </span>{
+			engine.run(service.event_stream(<span class="string">&quot;syncing&quot;</span>)).<span class="kw">await</span>;
 		});
 
 		<span class="self">self</span>.mut_peers(<span class="kw">move </span>|peers| {
@@ -2188,6 +2219,7 @@
 				block_import,
 				verifier,
 				network,
+				sync_service,
 				listen_addr,
 			});
 		});
@@ -2196,48 +2228,6 @@
 	<span class="doccomment">/// Used to spawn background tasks, e.g. the block request protocol handler.
 	</span><span class="kw">fn </span>spawn_task(<span class="kw-2">&amp;</span><span class="self">self</span>, f: BoxFuture&lt;<span class="lifetime">&#39;static</span>, ()&gt;) {
 		tokio::spawn(f);
-	}
-
-	<span class="doccomment">/// Polls the testnet until all nodes are in sync.
-	///
-	/// Must be executed in a task context.
-	</span><span class="kw">fn </span>poll_until_sync(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>FutureContext) -&gt; Poll&lt;()&gt; {
-		<span class="self">self</span>.poll(cx);
-
-		<span class="comment">// Return `NotReady` if there&#39;s a mismatch in the highest block number.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>highest = <span class="prelude-val">None</span>;
-		<span class="kw">for </span>peer <span class="kw">in </span><span class="self">self</span>.peers().iter() {
-			<span class="kw">if </span>peer.is_major_syncing() || peer.network.num_queued_blocks() != <span class="number">0 </span>{
-				<span class="kw">return </span>Poll::Pending
-			}
-			<span class="kw">if </span>peer.network.num_sync_requests() != <span class="number">0 </span>{
-				<span class="kw">return </span>Poll::Pending
-			}
-			<span class="kw">match </span>(highest, peer.client.info().best_hash) {
-				(<span class="prelude-val">None</span>, b) =&gt; highest = <span class="prelude-val">Some</span>(b),
-				(<span class="prelude-val">Some</span>(<span class="kw-2">ref </span>a), <span class="kw-2">ref </span>b) <span class="kw">if </span>a == b =&gt; {},
-				(<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="kw">return </span>Poll::Pending,
-			}
-		}
-		Poll::Ready(())
-	}
-
-	<span class="doccomment">/// Polls the testnet until theres&#39; no activiy of any kind.
-	///
-	/// Must be executed in a task context.
-	</span><span class="kw">fn </span>poll_until_idle(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>FutureContext) -&gt; Poll&lt;()&gt; {
-		<span class="self">self</span>.poll(cx);
-
-		<span class="kw">for </span>peer <span class="kw">in </span><span class="self">self</span>.peers().iter() {
-			<span class="kw">if </span>peer.is_major_syncing() || peer.network.num_queued_blocks() != <span class="number">0 </span>{
-				<span class="kw">return </span>Poll::Pending
-			}
-			<span class="kw">if </span>peer.network.num_sync_requests() != <span class="number">0 </span>{
-				<span class="kw">return </span>Poll::Pending
-			}
-		}
-
-		Poll::Ready(())
 	}
 
 	<span class="doccomment">/// Polls the testnet until all peers are connected to each other.
@@ -2254,15 +2244,61 @@
 		Poll::Pending
 	}
 
-	<span class="doccomment">/// Run the network until we are sync&#39;ed.
+	<span class="kw">async fn </span>is_in_sync(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+		<span class="kw">let </span><span class="kw-2">mut </span>highest = <span class="prelude-val">None</span>;
+		<span class="kw">let </span>peers = <span class="self">self</span>.peers_mut();
+
+		<span class="kw">for </span>peer <span class="kw">in </span>peers {
+			<span class="kw">if </span>peer.sync_service.is_major_syncing() ||
+				peer.sync_service.num_queued_blocks().<span class="kw">await</span>.unwrap() != <span class="number">0
+			</span>{
+				<span class="kw">return </span><span class="bool-val">false
+			</span>}
+			<span class="kw">if </span>peer.sync_service.num_sync_requests().<span class="kw">await</span>.unwrap() != <span class="number">0 </span>{
+				<span class="kw">return </span><span class="bool-val">false
+			</span>}
+			<span class="kw">match </span>(highest, peer.client.info().best_hash) {
+				(<span class="prelude-val">None</span>, b) =&gt; highest = <span class="prelude-val">Some</span>(b),
+				(<span class="prelude-val">Some</span>(<span class="kw-2">ref </span>a), <span class="kw-2">ref </span>b) <span class="kw">if </span>a == b =&gt; {},
+				(<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="bool-val">false</span>,
+			}
+		}
+
+		<span class="bool-val">true
+	</span>}
+
+	<span class="kw">async fn </span>is_idle(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+		<span class="kw">let </span>peers = <span class="self">self</span>.peers_mut();
+		<span class="kw">for </span>peer <span class="kw">in </span>peers {
+			<span class="kw">if </span>peer.sync_service.num_queued_blocks().<span class="kw">await</span>.unwrap() != <span class="number">0 </span>{
+				<span class="kw">return </span><span class="bool-val">false
+			</span>}
+			<span class="kw">if </span>peer.sync_service.num_sync_requests().<span class="kw">await</span>.unwrap() != <span class="number">0 </span>{
+				<span class="kw">return </span><span class="bool-val">false
+			</span>}
+		}
+
+		<span class="bool-val">true
+	</span>}
+
+	<span class="doccomment">/// Blocks the current thread until we are sync&#39;ed.
+	/// Wait until we are sync&#39;ed.
 	///
-	/// Calls `poll_until_sync` repeatedly.
 	/// (If we&#39;ve not synced within 10 mins then panic rather than hang.)
 	</span><span class="kw">async fn </span>run_until_sync(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-		timeout(
-			Duration::from_secs(<span class="number">10 </span>* <span class="number">60</span>),
-			futures::future::poll_fn::&lt;(), <span class="kw">_</span>&gt;(|cx| <span class="self">self</span>.poll_until_sync(cx)),
-		)
+		timeout(Duration::from_secs(<span class="number">10 </span>* <span class="number">60</span>), <span class="kw">async </span>{
+			<span class="kw">loop </span>{
+				futures::future::poll_fn::&lt;(), <span class="kw">_</span>&gt;(|cx| {
+					<span class="self">self</span>.poll(cx);
+					Poll::Ready(())
+				})
+				.<span class="kw">await</span>;
+
+				<span class="kw">if </span><span class="self">self</span>.is_in_sync().<span class="kw">await </span>{
+					<span class="kw">break
+				</span>}
+			}
+		})
 		.<span class="kw">await
 		</span>.expect(<span class="string">&quot;sync didn&#39;t happen within 10 mins&quot;</span>);
 	}
@@ -2271,7 +2307,17 @@
 	///
 	/// Calls `poll_until_idle` repeatedly with the runtime passed as parameter.
 	</span><span class="kw">async fn </span>run_until_idle(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-		futures::future::poll_fn::&lt;(), <span class="kw">_</span>&gt;(|cx| <span class="self">self</span>.poll_until_idle(cx)).<span class="kw">await</span>;
+		<span class="kw">loop </span>{
+			futures::future::poll_fn::&lt;(), <span class="kw">_</span>&gt;(|cx| {
+				<span class="self">self</span>.poll(cx);
+				Poll::Ready(())
+			})
+			.<span class="kw">await</span>;
+
+			<span class="kw">if </span><span class="self">self</span>.is_idle().<span class="kw">await </span>{
+				<span class="kw">break
+			</span>}
+		}
 	}
 
 	<span class="doccomment">/// Run the network until all peers are connected to each other.
@@ -2304,14 +2350,14 @@
 				</span><span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(notification)) =
 					peer.imported_blocks_stream.as_mut().poll_next(cx)
 				{
-					peer.network.service().announce_block(notification.hash, <span class="prelude-val">None</span>);
+					peer.sync_service.announce_block(notification.hash, <span class="prelude-val">None</span>);
 				}
 
 				<span class="comment">// We poll `finality_notification_stream`.
 				</span><span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(notification)) =
 					peer.finality_notification_stream.as_mut().poll_next(cx)
 				{
-					peer.network.on_block_finalized(notification.hash, notification.header);
+					peer.sync_service.on_block_finalized(notification.hash, notification.header);
 				}
 			}
 		});
@@ -2349,6 +2395,10 @@
 
 	<span class="kw">fn </span>peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;Peer&lt;(), <span class="self">Self</span>::BlockImport&gt;&gt; {
 		<span class="kw-2">&amp;</span><span class="self">self</span>.peers
+	}
+
+	<span class="kw">fn </span>peers_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Vec&lt;Peer&lt;(), <span class="self">Self</span>::BlockImport&gt;&gt; {
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>.peers
 	}
 
 	<span class="kw">fn </span>mut_peers&lt;F: FnOnce(<span class="kw-2">&amp;mut </span>Vec&lt;Peer&lt;(), <span class="self">Self</span>::BlockImport&gt;&gt;)&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, closure: F) {
@@ -2396,6 +2446,10 @@
 
 	<span class="kw">fn </span>peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;Peer&lt;<span class="self">Self</span>::PeerData, <span class="self">Self</span>::BlockImport&gt;&gt; {
 		<span class="self">self</span>.<span class="number">0</span>.peers()
+	}
+
+	<span class="kw">fn </span>peers_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Vec&lt;Peer&lt;<span class="self">Self</span>::PeerData, <span class="self">Self</span>::BlockImport&gt;&gt; {
+		<span class="self">self</span>.<span class="number">0</span>.peers_mut()
 	}
 
 	<span class="kw">fn </span>mut_peers&lt;F: FnOnce(<span class="kw-2">&amp;mut </span>Vec&lt;Peer&lt;<span class="self">Self</span>::PeerData, <span class="self">Self</span>::BlockImport&gt;&gt;)&gt;(

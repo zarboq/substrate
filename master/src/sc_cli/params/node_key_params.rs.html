@@ -230,7 +230,7 @@
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
 </span><span class="kw">use </span>clap::Args;
-<span class="kw">use </span>sc_network::config::{identity::ed25519, NodeKeyConfig};
+<span class="kw">use </span>sc_network_common::config::{identity::ed25519, NodeKeyConfig};
 <span class="kw">use </span>sp_core::H256;
 <span class="kw">use </span>std::{path::PathBuf, str::FromStr};
 
@@ -305,7 +305,7 @@
 				<span class="kw">let </span>secret = <span class="kw">if let </span><span class="prelude-val">Some</span>(node_key) = <span class="self">self</span>.node_key.as_ref() {
 					parse_ed25519_secret(node_key)<span class="question-mark">?
 				</span>} <span class="kw">else </span>{
-					sc_network::config::Secret::File(
+					sc_network_common::config::Secret::File(
 						<span class="self">self</span>.node_key_file
 							.clone()
 							.unwrap_or_else(|| net_config_dir.join(NODE_KEY_ED25519_FILE)),
@@ -324,10 +324,10 @@
 }
 
 <span class="doccomment">/// Parse a Ed25519 secret key from a hex string into a `sc_network::Secret`.
-</span><span class="kw">fn </span>parse_ed25519_secret(hex: <span class="kw-2">&amp;</span>str) -&gt; error::Result&lt;sc_network::config::Ed25519Secret&gt; {
+</span><span class="kw">fn </span>parse_ed25519_secret(hex: <span class="kw-2">&amp;</span>str) -&gt; error::Result&lt;sc_network_common::config::Ed25519Secret&gt; {
 	H256::from_str(hex).map_err(invalid_node_key).and_then(|bytes| {
 		ed25519::SecretKey::from_bytes(bytes)
-			.map(sc_network::config::Secret::Input)
+			.map(sc_network_common::config::Secret::Input)
 			.map_err(invalid_node_key)
 	})
 }
@@ -336,7 +336,7 @@
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>clap::ValueEnum;
-	<span class="kw">use </span>sc_network::config::identity::{ed25519, Keypair};
+	<span class="kw">use </span>sc_network_common::config::identity::{ed25519, Keypair};
 	<span class="kw">use </span>std::fs;
 
 	<span class="attr">#[test]
@@ -353,7 +353,7 @@
 					node_key_file: <span class="prelude-val">None</span>,
 				};
 				params.node_key(net_config_dir).and_then(|c| <span class="kw">match </span>c {
-					NodeKeyConfig::Ed25519(sc_network::config::Secret::Input(<span class="kw-2">ref </span>ski))
+					NodeKeyConfig::Ed25519(sc_network_common::config::Secret::Input(<span class="kw-2">ref </span>ski))
 						<span class="kw">if </span>node_key_type == NodeKeyType::Ed25519 &amp;&amp; <span class="kw-2">&amp;</span>sk[..] == ski.as_ref() =&gt;
 						<span class="prelude-val">Ok</span>(()),
 					<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(error::Error::Input(<span class="string">&quot;Unexpected node key config&quot;</span>.into())),
@@ -413,7 +413,7 @@
 				<span class="kw">let </span>dir = PathBuf::from(net_config_dir.clone());
 				<span class="kw">let </span>typ = params.node_key_type;
 				params.node_key(net_config_dir).and_then(<span class="kw">move </span>|c| <span class="kw">match </span>c {
-					NodeKeyConfig::Ed25519(sc_network::config::Secret::File(<span class="kw-2">ref </span>f))
+					NodeKeyConfig::Ed25519(sc_network_common::config::Secret::File(<span class="kw-2">ref </span>f))
 						<span class="kw">if </span>typ == NodeKeyType::Ed25519 &amp;&amp; f == <span class="kw-2">&amp;</span>dir.join(NODE_KEY_ED25519_FILE) =&gt;
 						<span class="prelude-val">Ok</span>(()),
 					<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(error::Error::Input(<span class="string">&quot;Unexpected node key config&quot;</span>.into())),

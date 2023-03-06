@@ -491,6 +491,16 @@
 <a href="#491" id="491">491</a>
 <a href="#492" id="492">492</a>
 <a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -533,7 +543,7 @@
 <span class="kw">use </span>sc_consensus::BlockImport;
 <span class="kw">use </span>sc_network::ProtocolName;
 <span class="kw">use </span>sc_network_common::service::NetworkRequest;
-<span class="kw">use </span>sc_network_gossip::{GossipEngine, Network <span class="kw">as </span>GossipNetwork};
+<span class="kw">use </span>sc_network_gossip::{GossipEngine, Network <span class="kw">as </span>GossipNetwork, Syncing <span class="kw">as </span>GossipSyncing};
 <span class="kw">use </span>sp_api::{HeaderT, NumberFor, ProvideRuntimeApi};
 <span class="kw">use </span>sp_blockchain::{
 	Backend <span class="kw">as </span>BlockchainBackend, Error <span class="kw">as </span>ClientError, HeaderBackend, <span class="prelude-ty">Result </span><span class="kw">as </span>ClientResult,
@@ -665,9 +675,11 @@
 }
 
 <span class="doccomment">/// BEEFY gadget network parameters.
-</span><span class="kw">pub struct </span>BeefyNetworkParams&lt;B: Block, N&gt; {
+</span><span class="kw">pub struct </span>BeefyNetworkParams&lt;B: Block, N, S&gt; {
 	<span class="doccomment">/// Network implementing gossip, requests and sync-oracle.
 	</span><span class="kw">pub </span>network: Arc&lt;N&gt;,
+	<span class="doccomment">/// Syncing service implementing a sync oracle and an event stream for peers.
+	</span><span class="kw">pub </span>sync: Arc&lt;S&gt;,
 	<span class="doccomment">/// Chain specific BEEFY gossip protocol name. See
 	/// [`communication::beefy_protocol_name::gossip_protocol_name`].
 	</span><span class="kw">pub </span>gossip_protocol_name: ProtocolName,
@@ -679,7 +691,7 @@
 }
 
 <span class="doccomment">/// BEEFY gadget initialization parameters.
-</span><span class="kw">pub struct </span>BeefyParams&lt;B: Block, BE, C, N, P, R&gt; {
+</span><span class="kw">pub struct </span>BeefyParams&lt;B: Block, BE, C, N, P, R, S&gt; {
 	<span class="doccomment">/// BEEFY client
 	</span><span class="kw">pub </span>client: Arc&lt;C&gt;,
 	<span class="doccomment">/// Client Backend
@@ -691,7 +703,7 @@
 	<span class="doccomment">/// Local key store
 	</span><span class="kw">pub </span>key_store: <span class="prelude-ty">Option</span>&lt;SyncCryptoStorePtr&gt;,
 	<span class="doccomment">/// BEEFY voter network params
-	</span><span class="kw">pub </span>network_params: BeefyNetworkParams&lt;B, N&gt;,
+	</span><span class="kw">pub </span>network_params: BeefyNetworkParams&lt;B, N, S&gt;,
 	<span class="doccomment">/// Minimal delta between blocks, BEEFY should vote for
 	</span><span class="kw">pub </span>min_block_delta: u32,
 	<span class="doccomment">/// Prometheus metric registry
@@ -705,15 +717,17 @@
 <span class="doccomment">/// Start the BEEFY gadget.
 ///
 /// This is a thin shim around running and awaiting a BEEFY worker.
-</span><span class="kw">pub async fn </span>start_beefy_gadget&lt;B, BE, C, N, P, R&gt;(beefy_params: BeefyParams&lt;B, BE, C, N, P, R&gt;)
-<span class="kw">where
+</span><span class="kw">pub async fn </span>start_beefy_gadget&lt;B, BE, C, N, P, R, S&gt;(
+	beefy_params: BeefyParams&lt;B, BE, C, N, P, R, S&gt;,
+) <span class="kw">where
 	</span>B: Block,
 	BE: Backend&lt;B&gt;,
 	C: Client&lt;B, BE&gt; + BlockBackend&lt;B&gt;,
 	P: PayloadProvider&lt;B&gt;,
 	R: ProvideRuntimeApi&lt;B&gt;,
 	R::Api: BeefyApi&lt;B&gt; + MmrApi&lt;B, MmrRootHash, NumberFor&lt;B&gt;&gt;,
-	N: GossipNetwork&lt;B&gt; + NetworkRequest + SyncOracle + Send + Sync + <span class="lifetime">&#39;static</span>,
+	N: GossipNetwork&lt;B&gt; + NetworkRequest + Send + Sync + <span class="lifetime">&#39;static</span>,
+	S: GossipSyncing&lt;B&gt; + SyncOracle + <span class="lifetime">&#39;static</span>,
 {
 	<span class="kw">let </span>BeefyParams {
 		client,
@@ -728,14 +742,20 @@
 		on_demand_justifications_handler,
 	} = beefy_params;
 
-	<span class="kw">let </span>BeefyNetworkParams { network, gossip_protocol_name, justifications_protocol_name, .. } =
-		network_params;
+	<span class="kw">let </span>BeefyNetworkParams {
+		network,
+		sync,
+		gossip_protocol_name,
+		justifications_protocol_name,
+		..
+	} = network_params;
 
 	<span class="kw">let </span>known_peers = Arc::new(Mutex::new(KnownPeers::new()));
 	<span class="kw">let </span>gossip_validator =
 		Arc::new(communication::gossip::GossipValidator::new(known_peers.clone()));
 	<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = sc_network_gossip::GossipEngine::new(
 		network.clone(),
+		sync.clone(),
 		gossip_protocol_name,
 		gossip_validator.clone(),
 		<span class="prelude-val">None</span>,
@@ -773,7 +793,7 @@
 		backend,
 		payload_provider,
 		runtime,
-		network,
+		sync,
 		key_store: key_store.into(),
 		gossip_engine,
 		gossip_validator,
