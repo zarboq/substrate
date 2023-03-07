@@ -357,8 +357,6 @@
 <a href="#357" id="357">357</a>
 <a href="#358" id="358">358</a>
 <a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -388,9 +386,9 @@
 //! instantiated. The `BasicQueue` and `BasicVerifier` traits allow serial
 //! queues to be instantiated simply.
 
-</span><span class="kw">use </span>std::{collections::HashMap, iter::FromIterator};
+</span><span class="kw">use </span>log::{debug, trace};
 
-<span class="kw">use </span>log::{debug, trace};
+<span class="kw">use </span>sp_consensus::{error::Error <span class="kw">as </span>ConsensusError, BlockOrigin};
 <span class="kw">use </span>sp_runtime::{
 	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as _</span>, NumberFor},
 	Justifications,
@@ -403,8 +401,8 @@
 	},
 	metrics::Metrics,
 };
+
 <span class="kw">pub use </span>basic_queue::BasicQueue;
-<span class="kw">use </span>sp_consensus::{error::Error <span class="kw">as </span>ConsensusError, BlockOrigin, CacheKeyId};
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;sync::import-queue&quot;</span>;
 
@@ -457,13 +455,12 @@
 <span class="doccomment">/// Verify a justification of a block
 </span><span class="attr">#[async_trait::async_trait]
 </span><span class="kw">pub trait </span>Verifier&lt;B: BlockT&gt;: Send + Sync {
-	<span class="doccomment">/// Verify the given data and return the BlockImportParams and an optional
-	/// new set of validators to import. If not, err with an Error-Message
-	/// presented to the User in the logs.
+	<span class="doccomment">/// Verify the given block data and return the `BlockImportParams` to
+	/// continue the block import process.
 	</span><span class="kw">async fn </span>verify(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		block: BlockImportParams&lt;B, ()&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(BlockImportParams&lt;B, ()&gt;, <span class="prelude-ty">Option</span>&lt;Vec&lt;(CacheKeyId, Vec&lt;u8&gt;)&gt;&gt;), String&gt;;
+	) -&gt; <span class="prelude-ty">Result</span>&lt;BlockImportParams&lt;B, ()&gt;, String&gt;;
 }
 
 <span class="doccomment">/// Blocks import queue API.
@@ -689,7 +686,7 @@
 		import_block.state_action = StateAction::ExecuteIfPossible;
 	}
 
-	<span class="kw">let </span>(import_block, maybe_keys) = verifier.verify(import_block).<span class="kw">await</span>.map_err(|msg| {
+	<span class="kw">let </span>import_block = verifier.verify(import_block).<span class="kw">await</span>.map_err(|msg| {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>peer) = peer {
 			<span class="macro">trace!</span>(
 				target: LOG_TARGET,
@@ -712,9 +709,8 @@
 		metrics.report_verification(<span class="bool-val">true</span>, started.elapsed());
 	}
 
-	<span class="kw">let </span>cache = HashMap::from_iter(maybe_keys.unwrap_or_default());
 	<span class="kw">let </span>import_block = import_block.clear_storage_changes_and_mutate();
-	<span class="kw">let </span>imported = import_handle.import_block(import_block, cache).<span class="kw">await</span>;
+	<span class="kw">let </span>imported = import_handle.import_block(import_block).<span class="kw">await</span>;
 	<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = metrics.as_ref() {
 		metrics.report_verification_and_import(started.elapsed());
 	}

@@ -461,7 +461,7 @@
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_DEBUG, CONSENSUS_TRACE};
 <span class="kw">use </span>sp_api::{ApiExt, ProvideRuntimeApi};
 <span class="kw">use </span>sp_block_builder::BlockBuilder <span class="kw">as </span>BlockBuilderApi;
-<span class="kw">use </span>sp_blockchain::{well_known_cache_keys::Id <span class="kw">as </span>CacheKeyId, HeaderBackend};
+<span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_consensus::Error <span class="kw">as </span>ConsensusError;
 <span class="kw">use </span>sp_consensus_aura::{digests::CompatibleDigestItem, inherents::AuraInherentData, AuraApi};
 <span class="kw">use </span>sp_consensus_slots::Slot;
@@ -611,7 +611,7 @@
 	<span class="kw">async fn </span>verify(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		<span class="kw-2">mut </span>block: BlockImportParams&lt;B, ()&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(BlockImportParams&lt;B, ()&gt;, <span class="prelude-ty">Option</span>&lt;Vec&lt;(CacheKeyId, Vec&lt;u8&gt;)&gt;&gt;), String&gt; {
+	) -&gt; <span class="prelude-ty">Result</span>&lt;BlockImportParams&lt;B, ()&gt;, String&gt; {
 		<span class="comment">// Skip checks that include execution, if being told so or when importing only state.
 		//
 		// This is done for example when gap syncing and it is expected that the block after the gap
@@ -621,7 +621,7 @@
 			<span class="comment">// When we are importing only the state of a block, it will be the best block.
 			</span>block.fork_choice = <span class="prelude-val">Some</span>(ForkChoiceStrategy::Custom(block.with_state()));
 
-			<span class="kw">return </span><span class="prelude-val">Ok</span>((block, Default::default()))
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(block)
 		}
 
 		<span class="kw">let </span>hash = block.header.hash();
@@ -705,7 +705,7 @@
 				block.fork_choice = <span class="prelude-val">Some</span>(ForkChoiceStrategy::LongestChain);
 				block.post_hash = <span class="prelude-val">Some</span>(hash);
 
-				<span class="prelude-val">Ok</span>((block, <span class="prelude-val">None</span>))
+				<span class="prelude-val">Ok</span>(block)
 			},
 			CheckedHeader::Deferred(a, b) =&gt; {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Checking {:?} failed; {:?}, {:?}.&quot;</span>, hash, a, b);

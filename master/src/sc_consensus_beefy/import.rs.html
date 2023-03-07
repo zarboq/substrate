@@ -186,7 +186,6 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -205,13 +204,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>log::debug;
-<span class="kw">use </span>sp_consensus_beefy::{BeefyApi, BEEFY_ENGINE_ID};
-<span class="kw">use </span>std::{collections::HashMap, sync::Arc};
+</span><span class="kw">use </span>std::sync::Arc;
+
+<span class="kw">use </span>log::debug;
 
 <span class="kw">use </span>sp_api::{ProvideRuntimeApi, TransactionFor};
-<span class="kw">use </span>sp_blockchain::well_known_cache_keys;
 <span class="kw">use </span>sp_consensus::Error <span class="kw">as </span>ConsensusError;
+<span class="kw">use </span>sp_consensus_beefy::{BeefyApi, BEEFY_ENGINE_ID};
 <span class="kw">use </span>sp_runtime::{
 	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor},
 	EncodedJustification,
@@ -321,7 +320,6 @@
 	<span class="kw">async fn </span>import_block(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		<span class="kw-2">mut </span>block: BlockImportParams&lt;Block, <span class="self">Self</span>::Transaction&gt;,
-		new_cache: HashMap&lt;well_known_cache_keys::Id, Vec&lt;u8&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ImportResult, <span class="self">Self</span>::Error&gt; {
 		<span class="kw">let </span>hash = block.post_hash();
 		<span class="kw">let </span>number = <span class="kw-2">*</span>block.header.number();
@@ -335,7 +333,7 @@
 		});
 
 		<span class="comment">// Run inner block import.
-		</span><span class="kw">let </span>inner_import_result = <span class="self">self</span>.inner.import_block(block, new_cache).<span class="kw">await</span><span class="question-mark">?</span>;
+		</span><span class="kw">let </span>inner_import_result = <span class="self">self</span>.inner.import_block(block).<span class="kw">await</span><span class="question-mark">?</span>;
 
 		<span class="kw">match </span>(beefy_encoded, <span class="kw-2">&amp;</span>inner_import_result) {
 			(<span class="prelude-val">Some</span>(encoded), ImportResult::Imported(<span class="kw">_</span>)) =&gt; {
