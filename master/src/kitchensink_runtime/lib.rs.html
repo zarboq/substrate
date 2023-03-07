@@ -2470,27 +2470,6 @@
 <a href="#2470" id="2470">2470</a>
 <a href="#2471" id="2471">2471</a>
 <a href="#2472" id="2472">2472</a>
-<a href="#2473" id="2473">2473</a>
-<a href="#2474" id="2474">2474</a>
-<a href="#2475" id="2475">2475</a>
-<a href="#2476" id="2476">2476</a>
-<a href="#2477" id="2477">2477</a>
-<a href="#2478" id="2478">2478</a>
-<a href="#2479" id="2479">2479</a>
-<a href="#2480" id="2480">2480</a>
-<a href="#2481" id="2481">2481</a>
-<a href="#2482" id="2482">2482</a>
-<a href="#2483" id="2483">2483</a>
-<a href="#2484" id="2484">2484</a>
-<a href="#2485" id="2485">2485</a>
-<a href="#2486" id="2486">2486</a>
-<a href="#2487" id="2487">2487</a>
-<a href="#2488" id="2488">2488</a>
-<a href="#2489" id="2489">2489</a>
-<a href="#2490" id="2490">2490</a>
-<a href="#2491" id="2491">2491</a>
-<a href="#2492" id="2492">2492</a>
-<a href="#2493" id="2493">2493</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2605,6 +2584,11 @@
 <span class="comment">// Make the WASM binary available.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/wasm_binary.rs&quot;</span>));
+
+<span class="doccomment">/// Max size for serialized extrinsic params for this testing runtime.
+/// This is a quite arbitrary but empirically battle tested value.
+</span><span class="attr">#[cfg(test)]
+</span><span class="kw">pub const </span>CALL_PARAMS_MAX_SIZE: usize = <span class="number">208</span>;
 
 <span class="doccomment">/// Wasm binary unwrapped. If built with `SKIP_WASM_BUILD`, the function panics.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
@@ -2892,24 +2876,12 @@
 	<span class="kw">type </span>ExpectedBlockTime = ExpectedBlockTime;
 	<span class="kw">type </span>EpochChangeTrigger = pallet_babe::ExternalTrigger;
 	<span class="kw">type </span>DisabledValidators = Session;
-
-	<span class="kw">type </span>KeyOwnerProofSystem = Historical;
-
-	<span class="kw">type </span>KeyOwnerProof = &lt;<span class="self">Self</span>::KeyOwnerProofSystem <span class="kw">as </span>KeyOwnerProofSystem&lt;(
-		KeyTypeId,
-		pallet_babe::AuthorityId,
-	)&gt;&gt;::Proof;
-
-	<span class="kw">type </span>KeyOwnerIdentification = &lt;<span class="self">Self</span>::KeyOwnerProofSystem <span class="kw">as </span>KeyOwnerProofSystem&lt;(
-		KeyTypeId,
-		pallet_babe::AuthorityId,
-	)&gt;&gt;::IdentificationTuple;
-
-	<span class="kw">type </span>HandleEquivocation =
-		pallet_babe::EquivocationHandler&lt;<span class="self">Self</span>::KeyOwnerIdentification, Offences, ReportLongevity&gt;;
-
 	<span class="kw">type </span>WeightInfo = ();
 	<span class="kw">type </span>MaxAuthorities = MaxAuthorities;
+	<span class="kw">type </span>KeyOwnerProof =
+		&lt;Historical <span class="kw">as </span>KeyOwnerProofSystem&lt;(KeyTypeId, pallet_babe::AuthorityId)&gt;&gt;::Proof;
+	<span class="kw">type </span>EquivocationReportSystem =
+		pallet_babe::EquivocationReportSystem&lt;<span class="self">Self</span>, Offences, Historical, ReportLongevity&gt;;
 }
 
 <span class="macro">parameter_types! </span>{
@@ -3821,26 +3793,12 @@
 
 <span class="kw">impl </span>pallet_grandpa::Config <span class="kw">for </span>Runtime {
 	<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
-
-	<span class="kw">type </span>KeyOwnerProofSystem = Historical;
-
-	<span class="kw">type </span>KeyOwnerProof =
-		&lt;<span class="self">Self</span>::KeyOwnerProofSystem <span class="kw">as </span>KeyOwnerProofSystem&lt;(KeyTypeId, GrandpaId)&gt;&gt;::Proof;
-
-	<span class="kw">type </span>KeyOwnerIdentification = &lt;<span class="self">Self</span>::KeyOwnerProofSystem <span class="kw">as </span>KeyOwnerProofSystem&lt;(
-		KeyTypeId,
-		GrandpaId,
-	)&gt;&gt;::IdentificationTuple;
-
-	<span class="kw">type </span>HandleEquivocation = pallet_grandpa::EquivocationHandler&lt;
-		<span class="self">Self</span>::KeyOwnerIdentification,
-		Offences,
-		ReportLongevity,
-	&gt;;
-
 	<span class="kw">type </span>WeightInfo = ();
 	<span class="kw">type </span>MaxAuthorities = MaxAuthorities;
 	<span class="kw">type </span>MaxSetIdSessionEntries = MaxSetIdSessionEntries;
+	<span class="kw">type </span>KeyOwnerProof = &lt;Historical <span class="kw">as </span>KeyOwnerProofSystem&lt;(KeyTypeId, GrandpaId)&gt;&gt;::Proof;
+	<span class="kw">type </span>EquivocationReportSystem =
+		pallet_grandpa::EquivocationReportSystem&lt;<span class="self">Self</span>, Offences, Historical, ReportLongevity&gt;;
 }
 
 <span class="macro">parameter_types! </span>{
@@ -4976,10 +4934,10 @@
 	</span><span class="kw">fn </span>call_size() {
 		<span class="kw">let </span>size = core::mem::size_of::&lt;RuntimeCall&gt;();
 		<span class="macro">assert!</span>(
-			size &lt;= <span class="number">208</span>,
-			<span class="string">&quot;size of RuntimeCall {} is more than 208 bytes: some calls have too big arguments, use Box to reduce the
-			size of RuntimeCall.
-			If the limit is too strong, maybe consider increase the limit to 300.&quot;</span>,
+			size &lt;= CALL_PARAMS_MAX_SIZE,
+			<span class="string">&quot;size of RuntimeCall {} is more than {CALL_PARAMS_MAX_SIZE} bytes.
+			 Some calls have too big arguments, use Box to reduce the size of RuntimeCall.
+			 If the limit is too strong, maybe consider increase the limit.&quot;</span>,
 			size,
 		);
 	}

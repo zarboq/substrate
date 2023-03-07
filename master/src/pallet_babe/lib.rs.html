@@ -1053,65 +1053,6 @@
 <a href="#1053" id="1053">1053</a>
 <a href="#1054" id="1054">1054</a>
 <a href="#1055" id="1055">1055</a>
-<a href="#1056" id="1056">1056</a>
-<a href="#1057" id="1057">1057</a>
-<a href="#1058" id="1058">1058</a>
-<a href="#1059" id="1059">1059</a>
-<a href="#1060" id="1060">1060</a>
-<a href="#1061" id="1061">1061</a>
-<a href="#1062" id="1062">1062</a>
-<a href="#1063" id="1063">1063</a>
-<a href="#1064" id="1064">1064</a>
-<a href="#1065" id="1065">1065</a>
-<a href="#1066" id="1066">1066</a>
-<a href="#1067" id="1067">1067</a>
-<a href="#1068" id="1068">1068</a>
-<a href="#1069" id="1069">1069</a>
-<a href="#1070" id="1070">1070</a>
-<a href="#1071" id="1071">1071</a>
-<a href="#1072" id="1072">1072</a>
-<a href="#1073" id="1073">1073</a>
-<a href="#1074" id="1074">1074</a>
-<a href="#1075" id="1075">1075</a>
-<a href="#1076" id="1076">1076</a>
-<a href="#1077" id="1077">1077</a>
-<a href="#1078" id="1078">1078</a>
-<a href="#1079" id="1079">1079</a>
-<a href="#1080" id="1080">1080</a>
-<a href="#1081" id="1081">1081</a>
-<a href="#1082" id="1082">1082</a>
-<a href="#1083" id="1083">1083</a>
-<a href="#1084" id="1084">1084</a>
-<a href="#1085" id="1085">1085</a>
-<a href="#1086" id="1086">1086</a>
-<a href="#1087" id="1087">1087</a>
-<a href="#1088" id="1088">1088</a>
-<a href="#1089" id="1089">1089</a>
-<a href="#1090" id="1090">1090</a>
-<a href="#1091" id="1091">1091</a>
-<a href="#1092" id="1092">1092</a>
-<a href="#1093" id="1093">1093</a>
-<a href="#1094" id="1094">1094</a>
-<a href="#1095" id="1095">1095</a>
-<a href="#1096" id="1096">1096</a>
-<a href="#1097" id="1097">1097</a>
-<a href="#1098" id="1098">1098</a>
-<a href="#1099" id="1099">1099</a>
-<a href="#1100" id="1100">1100</a>
-<a href="#1101" id="1101">1101</a>
-<a href="#1102" id="1102">1102</a>
-<a href="#1103" id="1103">1103</a>
-<a href="#1104" id="1104">1104</a>
-<a href="#1105" id="1105">1105</a>
-<a href="#1106" id="1106">1106</a>
-<a href="#1107" id="1107">1107</a>
-<a href="#1108" id="1108">1108</a>
-<a href="#1109" id="1109">1109</a>
-<a href="#1110" id="1110">1110</a>
-<a href="#1111" id="1111">1111</a>
-<a href="#1112" id="1112">1112</a>
-<a href="#1113" id="1113">1113</a>
-<a href="#1114" id="1114">1114</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1139,29 +1080,25 @@
 <span class="kw">use </span>frame_support::{
 	dispatch::{DispatchResultWithPostInfo, Pays},
 	ensure,
-	traits::{
-		ConstU32, DisabledValidators, FindAuthor, Get, KeyOwnerProofSystem, OnTimestampSet,
-		OneSessionHandler,
-	},
+	traits::{ConstU32, DisabledValidators, FindAuthor, Get, OnTimestampSet, OneSessionHandler},
 	weights::Weight,
 	BoundedVec, WeakBoundedVec,
 };
 <span class="kw">use </span>sp_application_crypto::ByteArray;
-<span class="kw">use </span>sp_runtime::{
-	generic::DigestItem,
-	traits::{IsMember, One, SaturatedConversion, Saturating, Zero},
-	ConsensusEngineId, KeyTypeId, Permill,
-};
-<span class="kw">use </span>sp_session::{GetSessionNumber, GetValidatorCount};
-<span class="kw">use </span>sp_staking::SessionIndex;
-<span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
-
 <span class="kw">use </span>sp_consensus_babe::{
 	digests::{NextConfigDescriptor, NextEpochDescriptor, PreDigest},
 	AllowedSlots, BabeAuthorityWeight, BabeEpochConfiguration, ConsensusLog, Epoch,
 	EquivocationProof, Slot, BABE_ENGINE_ID,
 };
 <span class="kw">use </span>sp_consensus_vrf::schnorrkel;
+<span class="kw">use </span>sp_runtime::{
+	generic::DigestItem,
+	traits::{IsMember, One, SaturatedConversion, Saturating, Zero},
+	ConsensusEngineId, Permill,
+};
+<span class="kw">use </span>sp_session::{GetSessionNumber, GetValidatorCount};
+<span class="kw">use </span>sp_staking::{offence::OffenceReportSystem, SessionIndex};
+<span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">pub use </span>sp_consensus_babe::{AuthorityId, PUBLIC_KEY_LENGTH, RANDOMNESS_LENGTH, VRF_OUTPUT_LENGTH};
 
@@ -1178,7 +1115,7 @@
 <span class="attr">#[cfg(all(feature = <span class="string">&quot;std&quot;</span>, test))]
 </span><span class="kw">mod </span>tests;
 
-<span class="kw">pub use </span>equivocation::{BabeEquivocationOffence, EquivocationHandler, HandleEquivocation};
+<span class="kw">pub use </span>equivocation::{EquivocationOffence, EquivocationReportSystem};
 <span class="attr">#[allow(deprecated)]
 </span><span class="kw">pub use </span>randomness::CurrentBlockRandomness;
 <span class="kw">pub use </span>randomness::{
@@ -1264,35 +1201,25 @@
 		/// initialization.
 		</span><span class="kw">type </span>DisabledValidators: DisabledValidators;
 
+		<span class="doccomment">/// Helper for weights computations
+		</span><span class="kw">type </span>WeightInfo: WeightInfo;
+
+		<span class="doccomment">/// Max number of authorities allowed
+		</span><span class="attr">#[pallet::constant]
+		</span><span class="kw">type </span>MaxAuthorities: Get&lt;u32&gt;;
+
 		<span class="doccomment">/// The proof of key ownership, used for validating equivocation reports.
 		/// The proof must include the session index and validator count of the
 		/// session at which the equivocation occurred.
 		</span><span class="kw">type </span>KeyOwnerProof: Parameter + GetSessionNumber + GetValidatorCount;
 
-		<span class="doccomment">/// The identification of a key owner, used when reporting equivocations.
-		</span><span class="kw">type </span>KeyOwnerIdentification: Parameter;
-
-		<span class="doccomment">/// A system for proving ownership of keys, i.e. that a given key was part
-		/// of a validator set, needed for validating equivocation reports.
-		</span><span class="kw">type </span>KeyOwnerProofSystem: KeyOwnerProofSystem&lt;
-			(KeyTypeId, AuthorityId),
-			Proof = <span class="self">Self</span>::KeyOwnerProof,
-			IdentificationTuple = <span class="self">Self</span>::KeyOwnerIdentification,
+		<span class="doccomment">/// The equivocation handling subsystem, defines methods to check/report an
+		/// offence and for submitting a transaction to report an equivocation
+		/// (from an offchain context).
+		</span><span class="kw">type </span>EquivocationReportSystem: OffenceReportSystem&lt;
+			<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::AccountId&gt;,
+			(EquivocationProof&lt;<span class="self">Self</span>::Header&gt;, <span class="self">Self</span>::KeyOwnerProof),
 		&gt;;
-
-		<span class="doccomment">/// The equivocation handling subsystem, defines methods to report an
-		/// offence (after the equivocation has been validated) and for submitting a
-		/// transaction to report an equivocation (from an offchain context).
-		/// NOTE: when enabling equivocation handling (i.e. this type isn&#39;t set to
-		/// `()`) you must use this pallet&#39;s `ValidateUnsigned` in the runtime
-		/// definition.
-		</span><span class="kw">type </span>HandleEquivocation: HandleEquivocation&lt;<span class="self">Self</span>&gt;;
-
-		<span class="kw">type </span>WeightInfo: WeightInfo;
-
-		<span class="doccomment">/// Max number of authorities allowed
-		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>MaxAuthorities: Get&lt;u32&gt;;
 	}
 
 	<span class="attr">#[pallet::error]
@@ -1543,8 +1470,12 @@
 			key_owner_proof: T::KeyOwnerProof,
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="kw">let </span>reporter = ensure_signed(origin)<span class="question-mark">?</span>;
-
-			<span class="self">Self</span>::do_report_equivocation(<span class="prelude-val">Some</span>(reporter), <span class="kw-2">*</span>equivocation_proof, key_owner_proof)
+			T::EquivocationReportSystem::process_evidence(
+				<span class="prelude-val">Some</span>(reporter),
+				(<span class="kw-2">*</span>equivocation_proof, key_owner_proof),
+			)<span class="question-mark">?</span>;
+			<span class="comment">// Waive the fee since the report is valid and beneficial
+			</span><span class="prelude-val">Ok</span>(Pays::No.into())
 		}
 
 		<span class="doccomment">/// Report authority equivocation/misbehavior. This method will verify
@@ -1565,12 +1496,11 @@
 			key_owner_proof: T::KeyOwnerProof,
 		) -&gt; DispatchResultWithPostInfo {
 			ensure_none(origin)<span class="question-mark">?</span>;
-
-			<span class="self">Self</span>::do_report_equivocation(
-				T::HandleEquivocation::block_author(),
-				<span class="kw-2">*</span>equivocation_proof,
-				key_owner_proof,
-			)
+			T::EquivocationReportSystem::process_evidence(
+				<span class="prelude-val">None</span>,
+				(<span class="kw-2">*</span>equivocation_proof, key_owner_proof),
+			)<span class="question-mark">?</span>;
+			<span class="prelude-val">Ok</span>(Pays::No.into())
 		}
 
 		<span class="doccomment">/// Plan an epoch config change. The epoch config change is recorded and will be enacted on
@@ -1980,7 +1910,7 @@
 	/// This function is only well defined for epochs that actually existed,
 	/// e.g. if we skipped from epoch 10 to 20 then a call for epoch 15 (which
 	/// didn&#39;t exist) will return an incorrect session index.
-	</span><span class="kw">fn </span>session_index_for_epoch(epoch_index: u64) -&gt; SessionIndex {
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>session_index_for_epoch(epoch_index: u64) -&gt; SessionIndex {
 		<span class="kw">let </span>skipped_epochs = SkippedEpochs::&lt;T&gt;::get();
 		<span class="kw">match </span>skipped_epochs.binary_search_by_key(<span class="kw-2">&amp;</span>epoch_index, |(epoch_index, <span class="kw">_</span>)| <span class="kw-2">*</span>epoch_index) {
 			<span class="comment">// we have an exact match so we just return the given session index
@@ -2004,50 +1934,6 @@
 		}
 	}
 
-	<span class="kw">fn </span>do_report_equivocation(
-		reporter: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
-		equivocation_proof: EquivocationProof&lt;T::Header&gt;,
-		key_owner_proof: T::KeyOwnerProof,
-	) -&gt; DispatchResultWithPostInfo {
-		<span class="kw">let </span>offender = equivocation_proof.offender.clone();
-		<span class="kw">let </span>slot = equivocation_proof.slot;
-
-		<span class="comment">// validate the equivocation proof
-		</span><span class="kw">if </span>!sp_consensus_babe::check_equivocation_proof(equivocation_proof) {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::InvalidEquivocationProof.into())
-		}
-
-		<span class="kw">let </span>validator_set_count = key_owner_proof.validator_count();
-		<span class="kw">let </span>session_index = key_owner_proof.session();
-
-		<span class="kw">let </span>epoch_index = <span class="kw-2">*</span>slot.saturating_sub(GenesisSlot::&lt;T&gt;::get()) / T::EpochDuration::get();
-
-		<span class="comment">// check that the slot number is consistent with the session index
-		// in the key ownership proof (i.e. slot is for that epoch)
-		</span><span class="kw">if </span><span class="self">Self</span>::session_index_for_epoch(epoch_index) != session_index {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::InvalidKeyOwnershipProof.into())
-		}
-
-		<span class="comment">// check the membership proof and extract the offender&#39;s id
-		</span><span class="kw">let </span>key = (sp_consensus_babe::KEY_TYPE, offender);
-		<span class="kw">let </span>offender = T::KeyOwnerProofSystem::check_proof(key, key_owner_proof)
-			.ok_or(Error::&lt;T&gt;::InvalidKeyOwnershipProof)<span class="question-mark">?</span>;
-
-		<span class="kw">let </span>offence =
-			BabeEquivocationOffence { slot, validator_set_count, offender, session_index };
-
-		<span class="kw">let </span>reporters = <span class="kw">match </span>reporter {
-			<span class="prelude-val">Some</span>(id) =&gt; <span class="macro">vec!</span>[id],
-			<span class="prelude-val">None </span>=&gt; <span class="macro">vec!</span>[],
-		};
-
-		T::HandleEquivocation::report_offence(reporters, offence)
-			.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::DuplicateOffenceReport)<span class="question-mark">?</span>;
-
-		<span class="comment">// waive the fee since the report is valid and beneficial
-		</span><span class="prelude-val">Ok</span>(Pays::No.into())
-	}
-
 	<span class="doccomment">/// Submits an extrinsic to report an equivocation. This method will create
 	/// an unsigned extrinsic with a call to `report_equivocation_unsigned` and
 	/// will push the transaction to the pool. Only useful in an offchain
@@ -2056,11 +1942,7 @@
 		equivocation_proof: EquivocationProof&lt;T::Header&gt;,
 		key_owner_proof: T::KeyOwnerProof,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
-		T::HandleEquivocation::submit_unsigned_equivocation_report(
-			equivocation_proof,
-			key_owner_proof,
-		)
-		.ok()
+		T::EquivocationReportSystem::publish_evidence((equivocation_proof, key_owner_proof)).ok()
 	}
 }
 
