@@ -114,6 +114,13 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -139,34 +146,41 @@
 </span><span class="kw">use </span>core::hash::Hasher;
 
 <span class="kw">use </span>byteorder::{ByteOrder, LittleEndian};
-<span class="kw">use </span>digest::{
-	consts::{U16, U32, U8},
-	Digest,
-};
+<span class="kw">use </span>digest::Digest;
+
+<span class="attr">#[inline(always)]
+</span><span class="kw">fn </span>blake2&lt;<span class="kw">const </span>N: usize&gt;(data: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; N] {
+	blake2b_simd::Params::new()
+		.hash_length(N)
+		.hash(data)
+		.as_bytes()
+		.try_into()
+		.expect(<span class="string">&quot;slice is always the necessary length&quot;</span>)
+}
 
 <span class="doccomment">/// Do a Blake2 512-bit hash and place result in `dest`.
 </span><span class="kw">pub fn </span>blake2_512_into(data: <span class="kw-2">&amp;</span>[u8], dest: <span class="kw-2">&amp;mut </span>[u8; <span class="number">64</span>]) {
-	dest.copy_from_slice(blake2::Blake2b512::digest(data).as_slice());
+	<span class="kw-2">*</span>dest = blake2(data);
 }
 
 <span class="doccomment">/// Do a Blake2 512-bit hash and return result.
 </span><span class="kw">pub fn </span>blake2_512(data: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">64</span>] {
-	blake2::Blake2b512::digest(data).into()
+	blake2(data)
 }
 
 <span class="doccomment">/// Do a Blake2 256-bit hash and return result.
 </span><span class="kw">pub fn </span>blake2_256(data: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
-	blake2::Blake2b::&lt;U32&gt;::digest(data).into()
+	blake2(data)
 }
 
 <span class="doccomment">/// Do a Blake2 128-bit hash and return result.
 </span><span class="kw">pub fn </span>blake2_128(data: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">16</span>] {
-	blake2::Blake2b::&lt;U16&gt;::digest(data).into()
+	blake2(data)
 }
 
 <span class="doccomment">/// Do a Blake2 64-bit hash and return result.
 </span><span class="kw">pub fn </span>blake2_64(data: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">8</span>] {
-	blake2::Blake2b::&lt;U8&gt;::digest(data).into()
+	blake2(data)
 }
 
 <span class="doccomment">/// Do a XX 64-bit hash and place result in `dest`.
