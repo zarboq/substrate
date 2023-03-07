@@ -689,6 +689,8 @@
 <a href="#689" id="689">689</a>
 <a href="#690" id="690">690</a>
 <a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -809,8 +811,8 @@
 	}
 
 	<span class="kw">pub fn </span>close(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-		<span class="self">self</span>.justification_sender.close_channel();
-		<span class="self">self</span>.block_import_sender.close_channel();
+		<span class="self">self</span>.justification_sender.close();
+		<span class="self">self</span>.block_import_sender.close();
 	}
 }
 
@@ -1288,11 +1290,11 @@
 	</span><span class="kw">fn </span>prioritizes_finality_work_over_block_import() {
 		<span class="kw">let </span>(result_sender, <span class="kw-2">mut </span>result_port) = buffered_link::buffered_link(<span class="number">100_000</span>);
 
-		<span class="kw">let </span>(worker, <span class="kw-2">mut </span>finality_sender, <span class="kw-2">mut </span>block_import_sender) =
+		<span class="kw">let </span>(worker, finality_sender, block_import_sender) =
 			BlockImportWorker::new(result_sender, (), Box::new(()), <span class="prelude-val">Some</span>(Box::new(())), <span class="prelude-val">None</span>);
 		<span class="macro">futures::pin_mut!</span>(worker);
 
-		<span class="kw">let </span><span class="kw-2">mut </span>import_block = |n| {
+		<span class="kw">let </span>import_block = |n| {
 			<span class="kw">let </span>header = Header {
 				parent_hash: Hash::random(),
 				number: n,
@@ -1303,35 +1305,37 @@
 
 			<span class="kw">let </span>hash = header.hash();
 
-			block_on(block_import_sender.send(worker_messages::ImportBlocks(
-				BlockOrigin::Own,
-				<span class="macro">vec!</span>[IncomingBlock {
-					hash,
-					header: <span class="prelude-val">Some</span>(header),
-					body: <span class="prelude-val">None</span>,
-					indexed_body: <span class="prelude-val">None</span>,
-					justifications: <span class="prelude-val">None</span>,
-					origin: <span class="prelude-val">None</span>,
-					allow_missing_state: <span class="bool-val">false</span>,
-					import_existing: <span class="bool-val">false</span>,
-					state: <span class="prelude-val">None</span>,
-					skip_execution: <span class="bool-val">false</span>,
-				}],
-			)))
-			.unwrap();
+			block_import_sender
+				.unbounded_send(worker_messages::ImportBlocks(
+					BlockOrigin::Own,
+					<span class="macro">vec!</span>[IncomingBlock {
+						hash,
+						header: <span class="prelude-val">Some</span>(header),
+						body: <span class="prelude-val">None</span>,
+						indexed_body: <span class="prelude-val">None</span>,
+						justifications: <span class="prelude-val">None</span>,
+						origin: <span class="prelude-val">None</span>,
+						allow_missing_state: <span class="bool-val">false</span>,
+						import_existing: <span class="bool-val">false</span>,
+						state: <span class="prelude-val">None</span>,
+						skip_execution: <span class="bool-val">false</span>,
+					}],
+				))
+				.unwrap();
 
 			hash
 		};
 
-		<span class="kw">let </span><span class="kw-2">mut </span>import_justification = || {
+		<span class="kw">let </span>import_justification = || {
 			<span class="kw">let </span>hash = Hash::random();
-			block_on(finality_sender.send(worker_messages::ImportJustification(
-				libp2p::PeerId::random(),
-				hash,
-				<span class="number">1</span>,
-				(<span class="kw-2">*</span><span class="string">b&quot;TEST&quot;</span>, Vec::new()),
-			)))
-			.unwrap();
+			finality_sender
+				.unbounded_send(worker_messages::ImportJustification(
+					libp2p::PeerId::random(),
+					hash,
+					<span class="number">1</span>,
+					(<span class="kw-2">*</span><span class="string">b&quot;TEST&quot;</span>, Vec::new()),
+				))
+				.unwrap();
 
 			hash
 		};

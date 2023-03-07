@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"sc_utils":[["impl&lt;T&gt; Sink&lt;T&gt; for <a class=\"struct\" href=\"sc_utils/mpsc/struct.TracingUnboundedSender.html\" title=\"struct sc_utils::mpsc::TracingUnboundedSender\">TracingUnboundedSender</a>&lt;T&gt;"],["impl&lt;T&gt; Sink&lt;T&gt; for &amp;<a class=\"struct\" href=\"sc_utils/mpsc/struct.TracingUnboundedSender.html\" title=\"struct sc_utils::mpsc::TracingUnboundedSender\">TracingUnboundedSender</a>&lt;T&gt;"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
