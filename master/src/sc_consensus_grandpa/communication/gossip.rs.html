@@ -2613,6 +2613,49 @@
 <a href="#2613" id="2613">2613</a>
 <a href="#2614" id="2614">2614</a>
 <a href="#2615" id="2615">2615</a>
+<a href="#2616" id="2616">2616</a>
+<a href="#2617" id="2617">2617</a>
+<a href="#2618" id="2618">2618</a>
+<a href="#2619" id="2619">2619</a>
+<a href="#2620" id="2620">2620</a>
+<a href="#2621" id="2621">2621</a>
+<a href="#2622" id="2622">2622</a>
+<a href="#2623" id="2623">2623</a>
+<a href="#2624" id="2624">2624</a>
+<a href="#2625" id="2625">2625</a>
+<a href="#2626" id="2626">2626</a>
+<a href="#2627" id="2627">2627</a>
+<a href="#2628" id="2628">2628</a>
+<a href="#2629" id="2629">2629</a>
+<a href="#2630" id="2630">2630</a>
+<a href="#2631" id="2631">2631</a>
+<a href="#2632" id="2632">2632</a>
+<a href="#2633" id="2633">2633</a>
+<a href="#2634" id="2634">2634</a>
+<a href="#2635" id="2635">2635</a>
+<a href="#2636" id="2636">2636</a>
+<a href="#2637" id="2637">2637</a>
+<a href="#2638" id="2638">2638</a>
+<a href="#2639" id="2639">2639</a>
+<a href="#2640" id="2640">2640</a>
+<a href="#2641" id="2641">2641</a>
+<a href="#2642" id="2642">2642</a>
+<a href="#2643" id="2643">2643</a>
+<a href="#2644" id="2644">2644</a>
+<a href="#2645" id="2645">2645</a>
+<a href="#2646" id="2646">2646</a>
+<a href="#2647" id="2647">2647</a>
+<a href="#2648" id="2648">2648</a>
+<a href="#2649" id="2649">2649</a>
+<a href="#2650" id="2650">2650</a>
+<a href="#2651" id="2651">2651</a>
+<a href="#2652" id="2652">2652</a>
+<a href="#2653" id="2653">2653</a>
+<a href="#2654" id="2654">2654</a>
+<a href="#2655" id="2655">2655</a>
+<a href="#2656" id="2656">2656</a>
+<a href="#2657" id="2657">2657</a>
+<a href="#2658" id="2658">2658</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3406,68 +3449,67 @@
 	<span class="doccomment">/// Note a round in the current set has started. Does nothing if the last
 	/// call to the function was with the same `round`.
 	</span><span class="kw">fn </span>note_round(<span class="kw-2">&amp;mut </span><span class="self">self</span>, round: Round) -&gt; MaybeMessage&lt;Block&gt; {
-		{
-			<span class="kw">let </span>local_view = <span class="kw">match </span><span class="self">self</span>.local_view {
-				<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
-				<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>v) =&gt;
-					<span class="kw">if </span>v.round == round {
-						<span class="comment">// Do not send neighbor packets out if `round` has not changed ---
-						// such behavior is punishable.
-						</span><span class="kw">return </span><span class="prelude-val">None
-					</span>} <span class="kw">else </span>{
-						v
-					},
-			};
+		<span class="kw">let </span>local_view = <span class="self">self</span>.local_view.as_mut()<span class="question-mark">?</span>;
+		<span class="kw">if </span>local_view.round == round {
+			<span class="comment">// Do not send neighbor packets out if `round` has not changed ---
+			// such behavior is punishable.
+			</span><span class="kw">return </span><span class="prelude-val">None
+		</span>}
 
-			<span class="kw">let </span>set_id = local_view.set_id;
+		<span class="kw">let </span>set_id = local_view.set_id;
 
-			<span class="macro">debug!</span>(
-				target: LOG_TARGET,
-				<span class="string">&quot;Voter {} noting beginning of round {:?} to network.&quot;</span>,
-				<span class="self">self</span>.config.name(),
-				(round, set_id)
-			);
+		<span class="macro">debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Voter {} noting beginning of round {:?} to network.&quot;</span>,
+			<span class="self">self</span>.config.name(),
+			(round, set_id)
+		);
 
-			local_view.update_round(round);
+		local_view.update_round(round);
 
-			<span class="self">self</span>.live_topics.push(round, set_id);
-			<span class="self">self</span>.peers.reshuffle();
-		}
-		<span class="self">self</span>.multicast_neighbor_packet()
+		<span class="self">self</span>.live_topics.push(round, set_id);
+		<span class="self">self</span>.peers.reshuffle();
+
+		<span class="self">self</span>.multicast_neighbor_packet(<span class="bool-val">false</span>)
 	}
 
 	<span class="doccomment">/// Note that a voter set with given ID has started. Does nothing if the last
 	/// call to the function was with the same `set_id`.
 	</span><span class="kw">fn </span>note_set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, set_id: SetId, authorities: Vec&lt;AuthorityId&gt;) -&gt; MaybeMessage&lt;Block&gt; {
-		{
-			<span class="kw">let </span>local_view = <span class="kw">match </span><span class="self">self</span>.local_view {
-				<span class="kw-2">ref mut </span>x @ <span class="prelude-val">None </span>=&gt; x.get_or_insert(LocalView::new(set_id, Round(<span class="number">1</span>))),
-				<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>v) =&gt;
-					<span class="kw">if </span>v.set_id == set_id {
-						<span class="kw">let </span>diff_authorities = <span class="self">self</span>.authorities.iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;() !=
-							authorities.iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
+		<span class="kw">let </span>local_view = <span class="kw">match </span><span class="self">self</span>.local_view {
+			<span class="kw-2">ref mut </span>x @ <span class="prelude-val">None </span>=&gt; x.get_or_insert(LocalView::new(set_id, Round(<span class="number">1</span>))),
+			<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>v) =&gt;
+				<span class="kw">if </span>v.set_id == set_id {
+					<span class="kw">let </span>diff_authorities = <span class="self">self</span>.authorities.iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;() !=
+						authorities.iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
 
-						<span class="kw">if </span>diff_authorities {
-							<span class="macro">debug!</span>(target: LOG_TARGET,
-								<span class="string">&quot;Gossip validator noted set {:?} twice with different authorities. \
-								Was the authority set hard forked?&quot;</span>,
-								set_id,
-							);
-							<span class="self">self</span>.authorities = authorities;
-						}
-						<span class="comment">// Do not send neighbor packets out if the `set_id` has not changed ---
-						// such behavior is punishable.
-						</span><span class="kw">return </span><span class="prelude-val">None
-					</span>} <span class="kw">else </span>{
-						v
-					},
-			};
+					<span class="kw">if </span>diff_authorities {
+						<span class="macro">debug!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;Gossip validator noted set {:?} twice with different authorities. \
+							Was the authority set hard forked?&quot;</span>,
+							set_id,
+						);
 
-			local_view.update_set(set_id);
-			<span class="self">self</span>.live_topics.push(Round(<span class="number">1</span>), set_id);
-			<span class="self">self</span>.authorities = authorities;
-		}
-		<span class="self">self</span>.multicast_neighbor_packet()
+						<span class="self">self</span>.authorities = authorities;
+					}
+
+					<span class="comment">// Do not send neighbor packets out if the `set_id` has not changed ---
+					// such behavior is punishable.
+					</span><span class="kw">return </span><span class="prelude-val">None
+				</span>} <span class="kw">else </span>{
+					v
+				},
+		};
+
+		local_view.update_set(set_id);
+		<span class="self">self</span>.live_topics.push(Round(<span class="number">1</span>), set_id);
+		<span class="self">self</span>.authorities = authorities;
+
+		<span class="comment">// when transitioning to a new set we also want to send neighbor packets to light clients,
+		// this is so that they know who to ask justifications from in order to finalize the last
+		// block in the previous set.
+		</span><span class="self">self</span>.multicast_neighbor_packet(<span class="bool-val">true</span>)
 	}
 
 	<span class="doccomment">/// Note that we&#39;ve imported a commit finalizing a given block. Does nothing if the last
@@ -3479,19 +3521,14 @@
 		set_id: SetId,
 		finalized: NumberFor&lt;Block&gt;,
 	) -&gt; MaybeMessage&lt;Block&gt; {
-		{
-			<span class="kw">match </span><span class="self">self</span>.local_view {
-				<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
-				<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>v) =&gt;
-					<span class="kw">if </span>v.last_commit_height() &lt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>finalized) {
-						v.last_commit = <span class="prelude-val">Some</span>((finalized, round, set_id));
-					} <span class="kw">else </span>{
-						<span class="kw">return </span><span class="prelude-val">None
-					</span>},
-			};
-		}
+		<span class="kw">let </span>local_view = <span class="self">self</span>.local_view.as_mut()<span class="question-mark">?</span>;
+		<span class="kw">if </span>local_view.last_commit_height() &lt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>finalized) {
+			local_view.last_commit = <span class="prelude-val">Some</span>((finalized, round, set_id));
+		} <span class="kw">else </span>{
+			<span class="kw">return </span><span class="prelude-val">None
+		</span>}
 
-		<span class="self">self</span>.multicast_neighbor_packet()
+		<span class="self">self</span>.multicast_neighbor_packet(<span class="bool-val">false</span>)
 	}
 
 	<span class="kw">fn </span>consider_vote(<span class="kw-2">&amp;</span><span class="self">self</span>, round: Round, set_id: SetId) -&gt; Consider {
@@ -3808,7 +3845,7 @@
 		(neighbor_topics, action, catch_up, report)
 	}
 
-	<span class="kw">fn </span>multicast_neighbor_packet(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MaybeMessage&lt;Block&gt; {
+	<span class="kw">fn </span>multicast_neighbor_packet(<span class="kw-2">&amp;</span><span class="self">self</span>, force_light: bool) -&gt; MaybeMessage&lt;Block&gt; {
 		<span class="self">self</span>.local_view.as_ref().map(|local_view| {
 			<span class="kw">let </span>packet = NeighborPacket {
 				round: local_view.round,
@@ -3822,8 +3859,9 @@
 				.iter()
 				.filter_map(|(id, info)| {
 					<span class="comment">// light clients don&#39;t participate in the full GRANDPA voter protocol
-					// and therefore don&#39;t need to be informed about view updates
-					</span><span class="kw">if </span>info.roles.is_light() {
+					// and therefore don&#39;t need to be informed about all view updates unless
+					// we explicitly require it (e.g. when transitioning to a new set)
+					</span><span class="kw">if </span>info.roles.is_light() &amp;&amp; !force_light {
 						<span class="prelude-val">None
 					</span>} <span class="kw">else </span>{
 						<span class="prelude-val">Some</span>(id)
@@ -5226,6 +5264,54 @@
 		val.note_set(SetId(<span class="number">1</span>), a2.clone(), |<span class="kw">_</span>, <span class="kw">_</span>| {});
 
 		<span class="macro">assert_eq!</span>(val.inner().read().authorities, a2);
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>sends_neighbor_packets_to_non_light_peers_when_starting_a_new_round() {
+		<span class="kw">let </span>(val, <span class="kw">_</span>) = GossipValidator::&lt;Block&gt;::new(config(), voter_set_state(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+
+		<span class="comment">// initialize the validator to a stable set id
+		</span>val.note_set(SetId(<span class="number">1</span>), Vec::new(), |<span class="kw">_</span>, <span class="kw">_</span>| {});
+
+		<span class="kw">let </span>authority_peer = PeerId::random();
+		<span class="kw">let </span>full_peer = PeerId::random();
+		<span class="kw">let </span>light_peer = PeerId::random();
+
+		val.inner.write().peers.new_peer(authority_peer, ObservedRole::Authority);
+		val.inner.write().peers.new_peer(full_peer, ObservedRole::Full);
+		val.inner.write().peers.new_peer(light_peer, ObservedRole::Light);
+
+		val.note_round(Round(<span class="number">2</span>), |peers, message| {
+			<span class="macro">assert_eq!</span>(peers.len(), <span class="number">2</span>);
+			<span class="macro">assert!</span>(peers.contains(<span class="kw-2">&amp;</span>authority_peer));
+			<span class="macro">assert!</span>(peers.contains(<span class="kw-2">&amp;</span>full_peer));
+			<span class="macro">assert!</span>(!peers.contains(<span class="kw-2">&amp;</span>light_peer));
+			<span class="macro">assert!</span>(<span class="macro">matches!</span>(message, NeighborPacket { set_id: SetId(<span class="number">1</span>), round: Round(<span class="number">2</span>), .. }));
+		});
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>sends_neighbor_packets_to_all_peers_when_starting_a_new_set() {
+		<span class="kw">let </span>(val, <span class="kw">_</span>) = GossipValidator::&lt;Block&gt;::new(config(), voter_set_state(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+
+		<span class="comment">// initialize the validator to a stable set id
+		</span>val.note_set(SetId(<span class="number">1</span>), Vec::new(), |<span class="kw">_</span>, <span class="kw">_</span>| {});
+
+		<span class="kw">let </span>authority_peer = PeerId::random();
+		<span class="kw">let </span>full_peer = PeerId::random();
+		<span class="kw">let </span>light_peer = PeerId::random();
+
+		val.inner.write().peers.new_peer(authority_peer, ObservedRole::Authority);
+		val.inner.write().peers.new_peer(full_peer, ObservedRole::Full);
+		val.inner.write().peers.new_peer(light_peer, ObservedRole::Light);
+
+		val.note_set(SetId(<span class="number">2</span>), Vec::new(), |peers, message| {
+			<span class="macro">assert_eq!</span>(peers.len(), <span class="number">3</span>);
+			<span class="macro">assert!</span>(peers.contains(<span class="kw-2">&amp;</span>authority_peer));
+			<span class="macro">assert!</span>(peers.contains(<span class="kw-2">&amp;</span>full_peer));
+			<span class="macro">assert!</span>(peers.contains(<span class="kw-2">&amp;</span>light_peer));
+			<span class="macro">assert!</span>(<span class="macro">matches!</span>(message, NeighborPacket { set_id: SetId(<span class="number">2</span>), round: Round(<span class="number">1</span>), .. }));
+		});
 	}
 }
 </code></pre></div>
