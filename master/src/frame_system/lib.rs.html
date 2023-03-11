@@ -1742,9 +1742,6 @@
 <a href="#1742" id="1742">1742</a>
 <a href="#1743" id="1743">1743</a>
 <a href="#1744" id="1744">1744</a>
-<a href="#1745" id="1745">1745</a>
-<a href="#1746" id="1746">1746</a>
-<a href="#1747" id="1747">1747</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2625,12 +2622,9 @@
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">fn </span>try_successful_origin() -&gt; <span class="prelude-ty">Result</span>&lt;O, ()&gt; {
-		<span class="kw">let </span>zero_account_id =
-			AccountId::decode(<span class="kw-2">&amp;mut </span>TrailingZeroInput::zeroes()).map_err(|<span class="kw">_</span>| ())<span class="question-mark">?</span>;
-		<span class="kw">let </span>members = Who::sorted_members();
-		<span class="kw">let </span>first_member = <span class="kw">match </span>members.get(<span class="number">0</span>) {
+		<span class="kw">let </span>first_member = <span class="kw">match </span>Who::sorted_members().first() {
 			<span class="prelude-val">Some</span>(account) =&gt; account.clone(),
-			<span class="prelude-val">None </span>=&gt; zero_account_id,
+			<span class="prelude-val">None </span>=&gt; AccountId::decode(<span class="kw-2">&amp;mut </span>TrailingZeroInput::zeroes()).map_err(|<span class="kw">_</span>| ())<span class="question-mark">?</span>,
 		};
 		<span class="prelude-val">Ok</span>(O::from(RawOrigin::Signed(first_member)))
 	}
