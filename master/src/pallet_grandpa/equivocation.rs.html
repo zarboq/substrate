@@ -287,7 +287,6 @@
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -347,7 +346,7 @@
 
 <span class="doccomment">/// A round number and set id which point on the time of an offence.
 </span><span class="attr">#[derive(Copy, Clone, PartialOrd, Ord, Eq, PartialEq, Encode, Decode)]
-</span><span class="kw">pub struct </span>GrandpaTimeSlot {
+</span><span class="kw">pub struct </span>TimeSlot {
 	<span class="comment">// The order of these matters for `derive(Ord)`.
 	</span><span class="doccomment">/// Grandpa Set ID.
 	</span><span class="kw">pub </span>set_id: SetId,
@@ -355,10 +354,10 @@
 	</span><span class="kw">pub </span>round: RoundNumber,
 }
 
-<span class="doccomment">/// A GRANDPA equivocation offence report.
+<span class="doccomment">/// GRANDPA equivocation offence report.
 </span><span class="kw">pub struct </span>EquivocationOffence&lt;Offender&gt; {
 	<span class="doccomment">/// Time slot at which this incident happened.
-	</span><span class="kw">pub </span>time_slot: GrandpaTimeSlot,
+	</span><span class="kw">pub </span>time_slot: TimeSlot,
 	<span class="doccomment">/// The session index in which the incident happened.
 	</span><span class="kw">pub </span>session_index: SessionIndex,
 	<span class="doccomment">/// The size of the validator set at the time of the offence.
@@ -369,7 +368,7 @@
 
 <span class="kw">impl</span>&lt;Offender: Clone&gt; Offence&lt;Offender&gt; <span class="kw">for </span>EquivocationOffence&lt;Offender&gt; {
 	<span class="kw">const </span>ID: Kind = <span class="kw-2">*</span><span class="string">b&quot;grandpa:equivoca&quot;</span>;
-	<span class="kw">type </span>TimeSlot = GrandpaTimeSlot;
+	<span class="kw">type </span>TimeSlot = TimeSlot;
 
 	<span class="kw">fn </span>offenders(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Offender&gt; {
 		<span class="macro">vec!</span>[<span class="self">self</span>.offender.clone()]
@@ -395,16 +394,17 @@
 	}
 }
 
-<span class="doccomment">/// Generic equivocation handler. This type implements `HandleEquivocation`
-/// using existing subsystems that are part of frame (type bounds described
-/// below) and will dispatch to them directly, it&#39;s only purpose is to wire all
-/// subsystems together.
+<span class="doccomment">/// GRANDPA equivocation offence report system.
+///
+/// This type implements `OffenceReportSystem` such that:
+/// - Equivocation reports are published on-chain as unsigned extrinsic via
+///   `offchain::SendTransactioinsTypes`.
+/// - On-chain validity checks and processing are mostly delegated to the user provided generic
+///   types implementing `KeyOwnerProofSystem` and `ReportOffence` traits.
+/// - Offence reporter for unsigned transactions is fetched via the the authorship pallet.
 </span><span class="kw">pub struct </span>EquivocationReportSystem&lt;T, R, P, L&gt;(sp_std::marker::PhantomData&lt;(T, R, P, L)&gt;);
 
-<span class="comment">// We use the authorship pallet to fetch the current block author and use
-// `offchain::SendTransactionTypes` for unsigned extrinsic creation and
-// submission.
-</span><span class="kw">impl</span>&lt;T, R, P, L&gt;
+<span class="kw">impl</span>&lt;T, R, P, L&gt;
 	OffenceReportSystem&lt;
 		<span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		(EquivocationProof&lt;T::Hash, T::BlockNumber&gt;, T::KeyOwnerProof),
@@ -434,7 +434,7 @@
 		};
 		<span class="kw">let </span>res = SubmitTransaction::&lt;T, Call&lt;T&gt;&gt;::submit_unsigned_transaction(call.into());
 		<span class="kw">match </span>res {
-			<span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;Submitted equivocation report.&quot;</span>),
+			<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;Submitted equivocation report&quot;</span>),
 			<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;Error submitting equivocation report: {:?}&quot;</span>, e),
 		}
 		res
@@ -450,10 +450,8 @@
 		<span class="kw">let </span>offender = P::check_proof(key, key_owner_proof).ok_or(InvalidTransaction::BadProof)<span class="question-mark">?</span>;
 
 		<span class="comment">// Check if the offence has already been reported, and if so then we can discard the report.
-		</span><span class="kw">let </span>time_slot = GrandpaTimeSlot {
-			set_id: equivocation_proof.set_id(),
-			round: equivocation_proof.round(),
-		};
+		</span><span class="kw">let </span>time_slot =
+			TimeSlot { set_id: equivocation_proof.set_id(), round: equivocation_proof.round() };
 		<span class="kw">if </span>R::is_known_offence(<span class="kw-2">&amp;</span>[offender], <span class="kw-2">&amp;</span>time_slot) {
 			<span class="prelude-val">Err</span>(InvalidTransaction::Stale.into())
 		} <span class="kw">else </span>{
@@ -511,7 +509,7 @@
 		}
 
 		<span class="kw">let </span>offence = EquivocationOffence {
-			time_slot: GrandpaTimeSlot { set_id, round },
+			time_slot: TimeSlot { set_id, round },
 			session_index,
 			offender,
 			validator_set_count,
