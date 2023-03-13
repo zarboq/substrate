@@ -1245,6 +1245,14 @@
 <a href="#1245" id="1245">1245</a>
 <a href="#1246" id="1246">1246</a>
 <a href="#1247" id="1247">1247</a>
+<a href="#1248" id="1248">1248</a>
+<a href="#1249" id="1249">1249</a>
+<a href="#1250" id="1250">1250</a>
+<a href="#1251" id="1251">1251</a>
+<a href="#1252" id="1252">1252</a>
+<a href="#1253" id="1253">1253</a>
+<a href="#1254" id="1254">1254</a>
+<a href="#1255" id="1255">1255</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1437,7 +1445,7 @@
 		proposer: <span class="self">Self</span>::Proposer,
 		claim: <span class="kw-2">&amp;</span><span class="self">Self</span>::Claim,
 		slot_info: SlotInfo&lt;B&gt;,
-		proposing_remaining: Delay,
+		end_proposing_at: Instant,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;
 		Proposal&lt;
 			B,
@@ -1449,9 +1457,11 @@
 		<span class="kw">let </span>telemetry = <span class="self">self</span>.telemetry();
 		<span class="kw">let </span>log_target = <span class="self">self</span>.logging_target();
 
-		<span class="kw">let </span>inherent_data = <span class="self">Self</span>::create_inherent_data(<span class="kw-2">&amp;</span>slot_info, <span class="kw-2">&amp;</span>log_target).<span class="kw">await</span><span class="question-mark">?</span>;
+		<span class="kw">let </span>inherent_data =
+			<span class="self">Self</span>::create_inherent_data(<span class="kw-2">&amp;</span>slot_info, <span class="kw-2">&amp;</span>log_target, end_proposing_at).<span class="kw">await</span><span class="question-mark">?</span>;
 
-		<span class="kw">let </span>proposing_remaining_duration = <span class="self">self</span>.proposing_remaining_duration(<span class="kw-2">&amp;</span>slot_info);
+		<span class="kw">let </span>proposing_remaining_duration =
+			end_proposing_at.saturating_duration_since(Instant::now());
 		<span class="kw">let </span>logs = <span class="self">self</span>.pre_digest_data(slot, claim);
 
 		<span class="comment">// deadline our production to 98% of the total time left for proposing. As we deadline
@@ -1466,7 +1476,12 @@
 			)
 			.map_err(|e| sp_consensus::Error::ClientImport(e.to_string()));
 
-		<span class="kw">let </span>proposal = <span class="kw">match </span>futures::future::select(proposing, proposing_remaining).<span class="kw">await </span>{
+		<span class="kw">let </span>proposal = <span class="kw">match </span>futures::future::select(
+			proposing,
+			Delay::new(proposing_remaining_duration),
+		)
+		.<span class="kw">await
+		</span>{
 			Either::Left((<span class="prelude-val">Ok</span>(p), <span class="kw">_</span>)) =&gt; p,
 			Either::Left((<span class="prelude-val">Err</span>(err), <span class="kw">_</span>)) =&gt; {
 				<span class="macro">warn!</span>(target: log_target, <span class="string">&quot;Proposing failed: {}&quot;</span>, err);
@@ -1502,8 +1517,9 @@
 	</span><span class="kw">async fn </span>create_inherent_data(
 		slot_info: <span class="kw-2">&amp;</span>SlotInfo&lt;B&gt;,
 		logging_target: <span class="kw-2">&amp;</span>str,
+		end_proposing_at: Instant,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;sp_inherents::InherentData&gt; {
-		<span class="kw">let </span>remaining_duration = slot_info.ends_at.saturating_duration_since(Instant::now());
+		<span class="kw">let </span>remaining_duration = end_proposing_at.saturating_duration_since(Instant::now());
 		<span class="kw">let </span>delay = Delay::new(remaining_duration);
 		<span class="kw">let </span>cid = slot_info.create_inherent_data.create_inherent_data();
 		<span class="kw">let </span>inherent_data = <span class="kw">match </span>futures::future::select(delay, cid).<span class="kw">await </span>{
@@ -1547,7 +1563,7 @@
 
 		<span class="kw">let </span>proposing_remaining_duration = <span class="self">self</span>.proposing_remaining_duration(<span class="kw-2">&amp;</span>slot_info);
 
-		<span class="kw">let </span>proposing_remaining = <span class="kw">if </span>proposing_remaining_duration == Duration::default() {
+		<span class="kw">let </span>end_proposing_at = <span class="kw">if </span>proposing_remaining_duration == Duration::default() {
 			<span class="macro">debug!</span>(
 				target: logging_target,
 				<span class="string">&quot;Skipping proposal slot {} since there&#39;s no time left to propose&quot;</span>, slot,
@@ -1555,7 +1571,7 @@
 
 			<span class="kw">return </span><span class="prelude-val">None
 		</span>} <span class="kw">else </span>{
-			Delay::new(proposing_remaining_duration)
+			Instant::now() + proposing_remaining_duration
 		};
 
 		<span class="kw">let </span>aux_data = <span class="kw">match </span><span class="self">self</span>.aux_data(<span class="kw-2">&amp;</span>slot_info.chain_head, slot) {
@@ -1626,7 +1642,7 @@
 			</span>},
 		};
 
-		<span class="kw">let </span>proposal = <span class="self">self</span>.propose(proposer, <span class="kw-2">&amp;</span>claim, slot_info, proposing_remaining).<span class="kw">await</span><span class="question-mark">?</span>;
+		<span class="kw">let </span>proposal = <span class="self">self</span>.propose(proposer, <span class="kw-2">&amp;</span>claim, slot_info, end_proposing_at).<span class="kw">await</span><span class="question-mark">?</span>;
 
 		<span class="kw">let </span>(block, storage_proof) = (proposal.block, proposal.proof);
 		<span class="kw">let </span>(header, body) = block.deconstruct();
