@@ -110,6 +110,10 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -130,6 +134,7 @@
 </span><span class="kw">mod </span>call;
 <span class="kw">mod </span>config;
 <span class="kw">mod </span>constants;
+<span class="kw">mod </span>documentation;
 <span class="kw">mod </span>error;
 <span class="kw">mod </span>event;
 <span class="kw">mod </span>genesis_build;
@@ -164,6 +169,8 @@
 /// * create some new types,
 /// * impl stuff on them.
 </span><span class="kw">pub fn </span>expand(<span class="kw-2">mut </span>def: Def) -&gt; proc_macro2::TokenStream {
+	<span class="comment">// Remove the `pallet_doc` attribute first.
+	</span><span class="kw">let </span>metadata_docs = documentation::expand_documentation(<span class="kw-2">&amp;mut </span>def);
 	<span class="kw">let </span>constants = constants::expand_constants(<span class="kw-2">&amp;mut </span>def);
 	<span class="kw">let </span>pallet_struct = pallet_struct::expand_pallet_struct(<span class="kw-2">&amp;mut </span>def);
 	<span class="kw">let </span>config = config::expand_config(<span class="kw-2">&amp;mut </span>def);
@@ -194,6 +201,7 @@
 	}
 
 	<span class="kw">let </span>new_items = <span class="macro">quote::quote!</span>(
+		#metadata_docs
 		#constants
 		#pallet_struct
 		#config
