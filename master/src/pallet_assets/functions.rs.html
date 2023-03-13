@@ -1595,8 +1595,8 @@
 				status: AssetStatus::Live,
 			},
 		);
+		<span class="macro">ensure!</span>(T::CallbackHandle::created(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>owner).is_ok(), Error::&lt;T, I&gt;::CallbackFailed);
 		<span class="self">Self</span>::deposit_event(Event::ForceCreated { asset_id: id, owner: owner.clone() });
-		T::CallbackHandle::created(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>owner);
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -1686,7 +1686,6 @@
 					approvals_destroyed: removed_approvals <span class="kw">as </span>u32,
 					approvals_remaining: details.approvals <span class="kw">as </span>u32,
 				});
-				T::CallbackHandle::destroyed(<span class="kw-2">&amp;</span>id);
 				<span class="prelude-val">Ok</span>(())
 			})<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(removed_approvals)
@@ -1701,6 +1700,7 @@
 			<span class="macro">ensure!</span>(details.status == AssetStatus::Destroying, Error::&lt;T, I&gt;::IncorrectStatus);
 			<span class="macro">ensure!</span>(details.accounts == <span class="number">0</span>, Error::&lt;T, I&gt;::InUse);
 			<span class="macro">ensure!</span>(details.approvals == <span class="number">0</span>, Error::&lt;T, I&gt;::InUse);
+			<span class="macro">ensure!</span>(T::CallbackHandle::destroyed(<span class="kw-2">&amp;</span>id).is_ok(), Error::&lt;T, I&gt;::CallbackFailed);
 
 			<span class="kw">let </span>metadata = Metadata::&lt;T, I&gt;::take(<span class="kw-2">&amp;</span>id);
 			T::Currency::unreserve(
