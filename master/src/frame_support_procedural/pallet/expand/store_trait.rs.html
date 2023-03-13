@@ -54,6 +54,17 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -78,7 +89,7 @@
 /// * generate Store trait with all storages,
 /// * implement Store trait for Pallet.
 </span><span class="kw">pub fn </span>expand_store_trait(def: <span class="kw-2">&amp;mut </span>Def) -&gt; proc_macro2::TokenStream {
-	<span class="kw">let </span>(trait_vis, trait_store) =
+	<span class="kw">let </span>(trait_vis, trait_store, attribute_span) =
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(store) = <span class="kw-2">&amp;</span>def.pallet_struct.store { store } <span class="kw">else </span>{ <span class="kw">return </span>Default::default() };
 
 	<span class="kw">let </span>type_impl_gen = <span class="kw-2">&amp;</span>def.type_impl_generics(trait_store.span());
@@ -92,8 +103,19 @@
 	<span class="kw">let </span>storage_names = <span class="kw-2">&amp;</span>def.storages.iter().map(|storage| <span class="kw-2">&amp;</span>storage.ident).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 	<span class="kw">let </span>storage_cfg_attrs =
 		<span class="kw-2">&amp;</span>def.storages.iter().map(|storage| <span class="kw-2">&amp;</span>storage.cfg_attrs).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+	<span class="kw">let </span>warnig_struct_name = syn::Ident::new(<span class="string">&quot;Store&quot;</span>, <span class="kw-2">*</span>attribute_span);
+	<span class="kw">let </span>warning: syn::ItemStruct = <span class="macro">syn::parse_quote!</span>(
+		<span class="attr">#[deprecated(note = <span class="string">r&quot;
+		Use of `#[pallet::generate_store(pub(super) trait Store)]` will be removed soon.
+		Check https://github.com/paritytech/substrate/pull/13535 for more details.&quot;</span>)]
+		</span><span class="kw">struct </span>#warnig_struct_name;
+	);
 
 	<span class="macro">quote::quote_spanned!</span>(trait_store.span() =&gt;
+		<span class="kw">const _</span>:() = {
+			#warning
+			<span class="kw">const _</span>: <span class="prelude-ty">Option</span>&lt;#warnig_struct_name&gt; = <span class="prelude-val">None</span>;
+		};
 		#trait_vis <span class="kw">trait </span>#trait_store {
 			#(
 				#(#storage_cfg_attrs)*

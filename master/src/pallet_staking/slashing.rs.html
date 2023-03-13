@@ -858,7 +858,6 @@
 <a href="#858" id="858">858</a>
 <a href="#859" id="859">859</a>
 <a href="#860" id="860">860</a>
-<a href="#861" id="861">861</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -911,8 +910,9 @@
 //! Based on research at &lt;https://research.web3.foundation/en/latest/polkadot/slashing/npos.html&gt;
 
 </span><span class="kw">use crate</span>::{
-	BalanceOf, Config, Error, Exposure, NegativeImbalanceOf, Pallet, Perbill, SessionInterface,
-	Store, UnappliedSlash,
+	BalanceOf, Config, Error, Exposure, NegativeImbalanceOf, NominatorSlashInEra,
+	OffendingValidators, Pallet, Perbill, SessionInterface, SpanSlash, UnappliedSlash,
+	ValidatorSlashInEra,
 };
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>frame_support::{
@@ -1100,14 +1100,13 @@
 		<span class="kw">return </span><span class="prelude-val">None
 	</span>}
 
-	<span class="kw">let </span>prior_slash_p =
-		&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::ValidatorSlashInEra::get(<span class="kw-2">&amp;</span>params.slash_era, params.stash)
-			.map_or(Zero::zero(), |(prior_slash_proportion, <span class="kw">_</span>)| prior_slash_proportion);
+	<span class="kw">let </span>prior_slash_p = ValidatorSlashInEra::&lt;T&gt;::get(<span class="kw-2">&amp;</span>params.slash_era, params.stash)
+		.map_or(Zero::zero(), |(prior_slash_proportion, <span class="kw">_</span>)| prior_slash_proportion);
 
 	<span class="comment">// compare slash proportions rather than slash values to avoid issues due to rounding
 	// error.
 	</span><span class="kw">if </span>params.slash.deconstruct() &gt; prior_slash_p.deconstruct() {
-		&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::ValidatorSlashInEra::insert(
+		ValidatorSlashInEra::&lt;T&gt;::insert(
 			<span class="kw-2">&amp;</span>params.slash_era,
 			params.stash,
 			<span class="kw-2">&amp;</span>(params.slash, own_slash),
@@ -1188,7 +1187,7 @@
 /// If after adding the validator `OffendingValidatorsThreshold` is reached
 /// a new era will be forced.
 </span><span class="kw">fn </span>add_offending_validator&lt;T: Config&gt;(stash: <span class="kw-2">&amp;</span>T::AccountId, disable: bool) {
-	&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::OffendingValidators::mutate(|offending| {
+	OffendingValidators::&lt;T&gt;::mutate(|offending| {
 		<span class="kw">let </span>validators = T::SessionInterface::validators();
 		<span class="kw">let </span>validator_index = <span class="kw">match </span>validators.iter().position(|i| i == stash) {
 			<span class="prelude-val">Some</span>(index) =&gt; index,
@@ -1249,10 +1248,9 @@
 			<span class="kw">let </span>own_slash_difference = own_slash_by_validator.saturating_sub(own_slash_prior);
 
 			<span class="kw">let </span><span class="kw-2">mut </span>era_slash =
-				&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::NominatorSlashInEra::get(<span class="kw-2">&amp;</span>params.slash_era, stash)
-					.unwrap_or_else(Zero::zero);
+				NominatorSlashInEra::&lt;T&gt;::get(<span class="kw-2">&amp;</span>params.slash_era, stash).unwrap_or_else(Zero::zero);
 			era_slash += own_slash_difference;
-			&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::NominatorSlashInEra::insert(<span class="kw-2">&amp;</span>params.slash_era, stash, <span class="kw-2">&amp;</span>era_slash);
+			NominatorSlashInEra::&lt;T&gt;::insert(<span class="kw-2">&amp;</span>params.slash_era, stash, <span class="kw-2">&amp;</span>era_slash);
 
 			era_slash
 		};
@@ -1306,9 +1304,9 @@
 	slash_of: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>BalanceOf&lt;T&gt;,
 	reward_proportion: Perbill,
 ) -&gt; InspectingSpans&lt;<span class="lifetime">&#39;a</span>, T&gt; {
-	<span class="kw">let </span>spans = &lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SlashingSpans::get(stash).unwrap_or_else(|| {
+	<span class="kw">let </span>spans = <span class="kw">crate</span>::SlashingSpans::&lt;T&gt;::get(stash).unwrap_or_else(|| {
 		<span class="kw">let </span>spans = SlashingSpans::new(window_start);
-		&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SlashingSpans::insert(stash, <span class="kw-2">&amp;</span>spans);
+		<span class="kw">crate</span>::SlashingSpans::&lt;T&gt;::insert(stash, <span class="kw-2">&amp;</span>spans);
 		spans
 	});
 
@@ -1357,7 +1355,7 @@
 	) -&gt; <span class="prelude-ty">Option</span>&lt;SpanIndex&gt; {
 		<span class="kw">let </span>target_span = <span class="self">self</span>.era_span(slash_era)<span class="question-mark">?</span>;
 		<span class="kw">let </span>span_slash_key = (<span class="self">self</span>.stash.clone(), target_span.index);
-		<span class="kw">let </span><span class="kw-2">mut </span>span_record = &lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SpanSlash::get(<span class="kw-2">&amp;</span>span_slash_key);
+		<span class="kw">let </span><span class="kw-2">mut </span>span_record = SpanSlash::&lt;T&gt;::get(<span class="kw-2">&amp;</span>span_slash_key);
 		<span class="kw">let </span><span class="kw-2">mut </span>changed = <span class="bool-val">false</span>;
 
 		<span class="kw">let </span>reward = <span class="kw">if </span>span_record.slashed &lt; slash {
@@ -1388,7 +1386,7 @@
 
 		<span class="kw">if </span>changed {
 			<span class="self">self</span>.dirty = <span class="bool-val">true</span>;
-			&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SpanSlash::insert(<span class="kw-2">&amp;</span>span_slash_key, <span class="kw-2">&amp;</span>span_record);
+			SpanSlash::&lt;T&gt;::insert(<span class="kw-2">&amp;</span>span_slash_key, <span class="kw-2">&amp;</span>span_record);
 		}
 
 		<span class="prelude-val">Some</span>(target_span.index)
@@ -1404,20 +1402,20 @@
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>((start, end)) = <span class="self">self</span>.spans.prune(<span class="self">self</span>.window_start) {
 			<span class="kw">for </span>span_index <span class="kw">in </span>start..end {
-				&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SpanSlash::remove(<span class="kw-2">&amp;</span>(<span class="self">self</span>.stash.clone(), span_index));
+				SpanSlash::&lt;T&gt;::remove(<span class="kw-2">&amp;</span>(<span class="self">self</span>.stash.clone(), span_index));
 			}
 		}
 
-		&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SlashingSpans::insert(<span class="self">self</span>.stash, <span class="kw-2">&amp;</span><span class="self">self</span>.spans);
+		<span class="kw">crate</span>::SlashingSpans::&lt;T&gt;::insert(<span class="self">self</span>.stash, <span class="kw-2">&amp;</span><span class="self">self</span>.spans);
 	}
 }
 
 <span class="doccomment">/// Clear slashing metadata for an obsolete era.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>clear_era_metadata&lt;T: Config&gt;(obsolete_era: EraIndex) {
 	<span class="attr">#[allow(deprecated)]
-	</span>&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::ValidatorSlashInEra::remove_prefix(<span class="kw-2">&amp;</span>obsolete_era, <span class="prelude-val">None</span>);
+	</span>ValidatorSlashInEra::&lt;T&gt;::remove_prefix(<span class="kw-2">&amp;</span>obsolete_era, <span class="prelude-val">None</span>);
 	<span class="attr">#[allow(deprecated)]
-	</span>&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::NominatorSlashInEra::remove_prefix(<span class="kw-2">&amp;</span>obsolete_era, <span class="prelude-val">None</span>);
+	</span>NominatorSlashInEra::&lt;T&gt;::remove_prefix(<span class="kw-2">&amp;</span>obsolete_era, <span class="prelude-val">None</span>);
 }
 
 <span class="doccomment">/// Clear slashing metadata for a dead account.
@@ -1425,7 +1423,7 @@
 	stash: <span class="kw-2">&amp;</span>T::AccountId,
 	num_slashing_spans: u32,
 ) -&gt; DispatchResult {
-	<span class="kw">let </span>spans = <span class="kw">match </span>&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SlashingSpans::get(stash) {
+	<span class="kw">let </span>spans = <span class="kw">match </span><span class="kw">crate</span>::SlashingSpans::&lt;T&gt;::get(stash) {
 		<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),
 		<span class="prelude-val">Some</span>(s) =&gt; s,
 	};
@@ -1435,7 +1433,7 @@
 		Error::&lt;T&gt;::IncorrectSlashingSpans
 	);
 
-	&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SlashingSpans::remove(stash);
+	<span class="kw">crate</span>::SlashingSpans::&lt;T&gt;::remove(stash);
 
 	<span class="comment">// kill slashing-span metadata for account.
 	//
@@ -1443,7 +1441,7 @@
 	// in that case, they may re-bond, but it would count again as span 0. Further ancient
 	// slashes would slash into this new bond, since metadata has now been cleared.
 	</span><span class="kw">for </span>span <span class="kw">in </span>spans.iter() {
-		&lt;Pallet&lt;T&gt; <span class="kw">as </span>Store&gt;::SpanSlash::remove(<span class="kw-2">&amp;</span>(stash.clone(), span.index));
+		SpanSlash::&lt;T&gt;::remove(<span class="kw-2">&amp;</span>(stash.clone(), span.index));
 	}
 
 	<span class="prelude-val">Ok</span>(())

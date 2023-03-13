@@ -495,7 +495,6 @@
 <a href="#495" id="495">495</a>
 <a href="#496" id="496">496</a>
 <a href="#497" id="497">497</a>
-<a href="#498" id="498">498</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -560,7 +559,6 @@
 	</span><span class="kw">const </span>STORAGE_VERSION: StorageVersion = StorageVersion::new(<span class="number">1</span>);
 
 	<span class="attr">#[pallet::pallet]
-	#[pallet::generate_store(<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">trait </span>Store)]
 	#[pallet::storage_version(STORAGE_VERSION)]
 	</span><span class="kw">pub struct </span>Pallet&lt;T&gt;(<span class="kw">_</span>);
 
@@ -595,7 +593,7 @@
 	<span class="doccomment">/// Prune historical stored session roots up to (but not including)
 	/// `up_to`.
 	</span><span class="kw">pub fn </span>prune_up_to(up_to: SessionIndex) {
-		&lt;<span class="self">Self </span><span class="kw">as </span>Store&gt;::StoredRange::mutate(|range| {
+		StoredRange::&lt;T&gt;::mutate(|range| {
 			<span class="kw">let </span>(start, end) = <span class="kw">match </span><span class="kw-2">*</span>range {
 				<span class="prelude-val">Some</span>(range) =&gt; range,
 				<span class="prelude-val">None </span>=&gt; <span class="kw">return</span>, <span class="comment">// nothing to prune.
@@ -607,7 +605,7 @@
 				<span class="kw">return </span><span class="comment">// out of bounds. harmless.
 			</span>}
 
-			(start..up_to).for_each(&lt;<span class="self">Self </span><span class="kw">as </span>Store&gt;::HistoricalSessions::remove);
+			(start..up_to).for_each(HistoricalSessions::&lt;T&gt;::remove);
 
 			<span class="kw">let </span>new_start = up_to;
 			<span class="kw-2">*</span>range = <span class="kw">if </span>new_start == end {

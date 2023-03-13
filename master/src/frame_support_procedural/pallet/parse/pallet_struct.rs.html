@@ -209,7 +209,7 @@
 	<span class="doccomment">/// The keyword Pallet used (contains span).
 	</span><span class="kw">pub </span>pallet: keyword::Pallet,
 	<span class="doccomment">/// Whether the trait `Store` must be generated.
-	</span><span class="kw">pub </span>store: <span class="prelude-ty">Option</span>&lt;(syn::Visibility, keyword::Store)&gt;,
+	</span><span class="kw">pub </span>store: <span class="prelude-ty">Option</span>&lt;(syn::Visibility, keyword::Store, proc_macro2::Span)&gt;,
 	<span class="doccomment">/// The span of the pallet::pallet attribute.
 	</span><span class="kw">pub </span>attr_span: proc_macro2::Span,
 	<span class="doccomment">/// Whether to specify the storages max encoded len when implementing `StorageInfoTrait`.
@@ -249,13 +249,13 @@
 
 		<span class="kw">let </span>lookahead = content.lookahead1();
 		<span class="kw">if </span>lookahead.peek(keyword::generate_store) {
-			<span class="kw">let </span>span = content.parse::&lt;keyword::generate_store&gt;()<span class="question-mark">?</span>.span();
-
+			content.parse::&lt;keyword::generate_store&gt;()<span class="question-mark">?</span>;
 			<span class="kw">let </span>generate_content;
 			<span class="macro">syn::parenthesized!</span>(generate_content <span class="kw">in </span>content);
 			<span class="kw">let </span>vis = generate_content.parse::&lt;syn::Visibility&gt;()<span class="question-mark">?</span>;
 			generate_content.parse::&lt;<span class="macro">syn::Token!</span>[<span class="kw">trait</span>]&gt;()<span class="question-mark">?</span>;
 			<span class="kw">let </span>keyword = generate_content.parse::&lt;keyword::Store&gt;()<span class="question-mark">?</span>;
+			<span class="kw">let </span>span = content.span();
 			<span class="prelude-val">Ok</span>(<span class="self">Self</span>::GenerateStore { vis, keyword, span })
 		} <span class="kw">else if </span>lookahead.peek(keyword::without_storage_info) {
 			<span class="kw">let </span>span = content.parse::&lt;keyword::without_storage_info&gt;()<span class="question-mark">?</span>.span();
@@ -294,8 +294,8 @@
 		<span class="kw">let </span>struct_attrs: Vec&lt;PalletStructAttr&gt; = helper::take_item_pallet_attrs(<span class="kw-2">&amp;mut </span>item.attrs)<span class="question-mark">?</span>;
 		<span class="kw">for </span>attr <span class="kw">in </span>struct_attrs {
 			<span class="kw">match </span>attr {
-				PalletStructAttr::GenerateStore { vis, keyword, .. } <span class="kw">if </span>store.is_none() =&gt; {
-					store = <span class="prelude-val">Some</span>((vis, keyword));
+				PalletStructAttr::GenerateStore { vis, keyword, span } <span class="kw">if </span>store.is_none() =&gt; {
+					store = <span class="prelude-val">Some</span>((vis, keyword, span));
 				},
 				PalletStructAttr::WithoutStorageInfoTrait(span)
 					<span class="kw">if </span>without_storage_info.is_none() =&gt;
