@@ -97,6 +97,21 @@
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -179,6 +194,21 @@
 	) -&gt; bool {
 		CollectionRoleOf::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection_id, <span class="kw-2">&amp;</span>account_id)
 			.map_or(<span class="bool-val">false</span>, |roles| roles.has_role(role))
+	}
+
+	<span class="doccomment">/// Finds the account by a provided role within a collection.
+	///
+	/// - `collection_id`: A collection to check the role in.
+	/// - `role`: A role to find the account for.
+	///
+	/// Returns `Some(T::AccountId)` if the record was found, `None` otherwise.
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>find_account_by_role(
+		collection_id: <span class="kw-2">&amp;</span>T::CollectionId,
+		role: CollectionRole,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;T::AccountId&gt; {
+		CollectionRoleOf::&lt;T, I&gt;::iter_prefix(<span class="kw-2">&amp;</span>collection_id).into_iter().find_map(
+			|(account, roles)| <span class="kw">if </span>roles.has_role(role) { <span class="prelude-val">Some</span>(account.clone()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>},
+		)
 	}
 
 	<span class="doccomment">/// Groups provided roles by account, given one account could have multiple roles.

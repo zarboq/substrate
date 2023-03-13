@@ -108,6 +108,7 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -167,7 +168,7 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_update_mint_settings(
-		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		maybe_check_origin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 		mint_settings: MintSettings&lt;
 			BalanceOf&lt;T, I&gt;,
@@ -175,10 +176,11 @@
 			T::CollectionId,
 		&gt;,
 	) -&gt; DispatchResult {
-		<span class="kw">let </span>details =
-			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
-			<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>details.owner, Error::&lt;T, I&gt;::NoPermission);
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = <span class="kw-2">&amp;</span>maybe_check_origin {
+			<span class="macro">ensure!</span>(
+				<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>check_origin, CollectionRole::Issuer),
+				Error::&lt;T, I&gt;::NoPermission
+			);
 		}
 
 		CollectionConfigOf::&lt;T, I&gt;::try_mutate(collection, |maybe_config| {

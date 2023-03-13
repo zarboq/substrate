@@ -115,8 +115,6 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -157,6 +155,7 @@
 				owner_deposit: deposit,
 				items: <span class="number">0</span>,
 				item_metadatas: <span class="number">0</span>,
+				item_configs: <span class="number">0</span>,
 				attributes: <span class="number">0</span>,
 			},
 		);
@@ -190,24 +189,23 @@
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = maybe_check_owner {
 				<span class="macro">ensure!</span>(collection_details.owner == check_owner, Error::&lt;T, I&gt;::NoPermission);
 			}
-			<span class="macro">ensure!</span>(collection_details.items == witness.items, Error::&lt;T, I&gt;::BadWitness);
+			<span class="macro">ensure!</span>(collection_details.items == <span class="number">0</span>, Error::&lt;T, I&gt;::CollectionNotEmpty);
+			<span class="macro">ensure!</span>(collection_details.attributes == witness.attributes, Error::&lt;T, I&gt;::BadWitness);
 			<span class="macro">ensure!</span>(
 				collection_details.item_metadatas == witness.item_metadatas,
 				Error::&lt;T, I&gt;::BadWitness
 			);
-			<span class="macro">ensure!</span>(collection_details.attributes == witness.attributes, Error::&lt;T, I&gt;::BadWitness);
+			<span class="macro">ensure!</span>(
+				collection_details.item_configs == witness.item_configs,
+				Error::&lt;T, I&gt;::BadWitness
+			);
 
-			<span class="kw">for </span>(item, details) <span class="kw">in </span>Item::&lt;T, I&gt;::drain_prefix(<span class="kw-2">&amp;</span>collection) {
-				Account::&lt;T, I&gt;::remove((<span class="kw-2">&amp;</span>details.owner, <span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item));
-				T::Currency::unreserve(<span class="kw-2">&amp;</span>details.deposit.account, details.deposit.amount);
-			}
 			<span class="kw">for </span>(<span class="kw">_</span>, metadata) <span class="kw">in </span>ItemMetadataOf::&lt;T, I&gt;::drain_prefix(<span class="kw-2">&amp;</span>collection) {
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(depositor) = metadata.deposit.account {
 					T::Currency::unreserve(<span class="kw-2">&amp;</span>depositor, metadata.deposit.amount);
 				}
 			}
-			<span class="kw">let _ </span>= ItemPriceOf::&lt;T, I&gt;::clear_prefix(<span class="kw-2">&amp;</span>collection, witness.items, <span class="prelude-val">None</span>);
-			<span class="kw">let _ </span>= PendingSwapOf::&lt;T, I&gt;::clear_prefix(<span class="kw-2">&amp;</span>collection, witness.items, <span class="prelude-val">None</span>);
+
 			CollectionMetadataOf::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>collection);
 			<span class="self">Self</span>::clear_roles(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
 
@@ -222,15 +220,13 @@
 			CollectionAccount::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>collection_details.owner, <span class="kw-2">&amp;</span>collection);
 			T::Currency::unreserve(<span class="kw-2">&amp;</span>collection_details.owner, collection_details.owner_deposit);
 			CollectionConfigOf::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>collection);
-			<span class="kw">let _ </span>= ItemConfigOf::&lt;T, I&gt;::clear_prefix(<span class="kw-2">&amp;</span>collection, witness.items, <span class="prelude-val">None</span>);
-			<span class="kw">let _ </span>=
-				ItemAttributesApprovalsOf::&lt;T, I&gt;::clear_prefix(<span class="kw-2">&amp;</span>collection, witness.items, <span class="prelude-val">None</span>);
+			<span class="kw">let _ </span>= ItemConfigOf::&lt;T, I&gt;::clear_prefix(<span class="kw-2">&amp;</span>collection, witness.item_configs, <span class="prelude-val">None</span>);
 
 			<span class="self">Self</span>::deposit_event(Event::Destroyed { collection });
 
 			<span class="prelude-val">Ok</span>(DestroyWitness {
-				items: collection_details.items,
 				item_metadatas: collection_details.item_metadatas,
+				item_configs: collection_details.item_configs,
 				attributes: collection_details.attributes,
 			})
 		})

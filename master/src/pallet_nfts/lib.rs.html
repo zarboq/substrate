@@ -1874,8 +1874,6 @@
 <a href="#1874" id="1874">1874</a>
 <a href="#1875" id="1875">1875</a>
 <a href="#1876" id="1876">1876</a>
-<a href="#1877" id="1877">1877</a>
-<a href="#1878" id="1878">1878</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1908,6 +1906,7 @@
 
 #[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 </span><span class="kw">mod </span>benchmarking;
+<span class="kw">pub mod </span>migration;
 <span class="attr">#[cfg(test)]
 </span><span class="kw">pub mod </span>mock;
 <span class="attr">#[cfg(test)]
@@ -1936,6 +1935,9 @@
 <span class="kw">pub use </span>types::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>weights::WeightInfo;
 
+<span class="doccomment">/// The log target of this pallet.
+</span><span class="kw">pub const </span>LOG_TARGET: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;runtime::nfts&quot;</span>;
+
 <span class="kw">type </span>AccountIdLookupOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::Lookup <span class="kw">as </span>StaticLookup&gt;::Source;
 
 <span class="attr">#[frame_support::pallet]
@@ -1945,9 +1947,13 @@
 	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
 	<span class="kw">use </span>sp_runtime::traits::{IdentifyAccount, Verify};
 
+	<span class="doccomment">/// The current storage version.
+	</span><span class="kw">const </span>STORAGE_VERSION: StorageVersion = StorageVersion::new(<span class="number">1</span>);
+
 	<span class="attr">#[pallet::pallet]
 	#[pallet::generate_store(<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">trait </span>Store)]
-	</span><span class="kw">pub struct </span>Pallet&lt;T, I = ()&gt;(<span class="kw">_</span>);
+	#[pallet::storage_version(STORAGE_VERSION)]
+	</span><span class="kw">pub struct </span>Pallet&lt;T, I = ()&gt;(PhantomData&lt;(T, I)&gt;);
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">pub trait </span>BenchmarkHelper&lt;CollectionId, ItemId&gt; {
@@ -2506,6 +2512,8 @@
 		</span>MaxAttributesLimitReached,
 		<span class="doccomment">/// The provided namespace isn&#39;t supported in this call.
 		</span>WrongNamespace,
+		<span class="doccomment">/// Can&#39;t delete non-empty collections.
+		</span>CollectionNotEmpty,
 	}
 
 	<span class="attr">#[pallet::call]
@@ -2597,20 +2605,22 @@
 		/// The origin must conform to `ForceOrigin` or must be `Signed` and the sender must be the
 		/// owner of the `collection`.
 		///
+		/// NOTE: The collection must have 0 items to be destroyed.
+		///
 		/// - `collection`: The identifier of the collection to be destroyed.
 		/// - `witness`: Information on the items minted in the collection. This must be
 		/// correct.
 		///
 		/// Emits `Destroyed` event when successful.
 		///
-		/// Weight: `O(n + m)` where:
-		/// - `n = witness.items`
+		/// Weight: `O(m + c + a)` where:
 		/// - `m = witness.item_metadatas`
+		/// - `c = witness.item_configs`
 		/// - `a = witness.attributes`
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
 		#[pallet::weight(T::WeightInfo::destroy(
-			witness.items,
- 			witness.item_metadatas,
+			witness.item_metadatas,
+			witness.item_configs,
 			witness.attributes,
  		))]
 		</span><span class="kw">pub fn </span>destroy(
@@ -2624,8 +2634,8 @@
 			<span class="kw">let </span>details = <span class="self">Self</span>::do_destroy_collection(collection, witness, maybe_check_owner)<span class="question-mark">?</span>;
 
 			<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(T::WeightInfo::destroy(
-				details.items,
 				details.item_metadatas,
+				details.item_configs,
 				details.attributes,
 			))
 			.into())
@@ -2633,7 +2643,7 @@
 
 		<span class="doccomment">/// Mint an item of a particular collection.
 		///
-		/// The origin must be Signed and the sender must be the Issuer of the `collection`.
+		/// The origin must be Signed and the sender must comply with the `mint_settings` rules.
 		///
 		/// - `collection`: The collection of the item to be minted.
 		/// - `item`: An identifier of the new item.
@@ -2667,11 +2677,6 @@
 				mint_to.clone(),
 				item_config,
 				|collection_details, collection_config| {
-					<span class="comment">// Issuer can mint regardless of mint settings
-					</span><span class="kw">if </span><span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>caller, CollectionRole::Issuer) {
-						<span class="kw">return </span><span class="prelude-val">Ok</span>(())
-					}
-
 					<span class="kw">let </span>mint_settings = collection_config.mint_settings;
 					<span class="kw">let </span>now = frame_system::Pallet::&lt;T&gt;::block_number();
 
@@ -2683,7 +2688,12 @@
 					}
 
 					<span class="kw">match </span>mint_settings.mint_type {
-						MintType::Issuer =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T, I&gt;::NoPermission.into()),
+						MintType::Issuer =&gt; {
+							<span class="macro">ensure!</span>(
+								<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>caller, CollectionRole::Issuer),
+								Error::&lt;T, I&gt;::NoPermission
+							);
+						},
 						MintType::HolderOf(collection_id) =&gt; {
 							<span class="kw">let </span>MintWitness { owned_item } =
 								witness_data.ok_or(Error::&lt;T, I&gt;::BadWitness)<span class="question-mark">?</span>;
@@ -2777,38 +2787,30 @@
 
 		<span class="doccomment">/// Destroy a single item.
 		///
-		/// Origin must be Signed and the signing account must be either:
-		/// - the Admin of the `collection`;
-		/// - the Owner of the `item`;
+		/// The origin must conform to `ForceOrigin` or must be Signed and the signing account must
+		/// be the owner of the `item`.
 		///
 		/// - `collection`: The collection of the item to be burned.
 		/// - `item`: The item to be burned.
-		/// - `check_owner`: If `Some` then the operation will fail with `WrongOwner` unless the
-		///   item is owned by this value.
 		///
-		/// Emits `Burned` with the actual amount burned.
+		/// Emits `Burned`.
 		///
 		/// Weight: `O(1)`
-		/// Modes: `check_owner.is_some()`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
 		#[pallet::weight(T::WeightInfo::burn())]
 		</span><span class="kw">pub fn </span>burn(
 			origin: OriginFor&lt;T&gt;,
 			collection: T::CollectionId,
 			item: T::ItemId,
-			check_owner: <span class="prelude-ty">Option</span>&lt;AccountIdLookupOf&lt;T&gt;&gt;,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
-			<span class="kw">let </span>check_owner = check_owner.map(T::Lookup::lookup).transpose()<span class="question-mark">?</span>;
+			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
+				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
+				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
 
 			<span class="self">Self</span>::do_burn(collection, item, |details| {
-				<span class="kw">let </span>is_admin = <span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>origin, CollectionRole::Admin);
-				<span class="kw">let </span>is_permitted = is_admin || details.owner == origin;
-				<span class="macro">ensure!</span>(is_permitted, Error::&lt;T, I&gt;::NoPermission);
-				<span class="macro">ensure!</span>(
-					check_owner.map_or(<span class="bool-val">true</span>, |o| o == details.owner),
-					Error::&lt;T, I&gt;::WrongOwner
-				);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = maybe_check_origin {
+					<span class="macro">ensure!</span>(details.owner == check_origin, Error::&lt;T, I&gt;::NoPermission);
+				}
 				<span class="prelude-val">Ok</span>(())
 			})
 		}
@@ -2816,7 +2818,6 @@
 		<span class="doccomment">/// Move an item from the sender account to another.
 		///
 		/// Origin must be Signed and the signing account must be either:
-		/// - the Admin of the `collection`;
 		/// - the Owner of the `item`;
 		/// - the approved delegate for the `item` (in this case, the approval is reset).
 		///
@@ -2840,8 +2841,7 @@
 			<span class="kw">let </span>dest = T::Lookup::lookup(dest)<span class="question-mark">?</span>;
 
 			<span class="self">Self</span>::do_transfer(collection, item, dest, |<span class="kw">_</span>, details| {
-				<span class="kw">let </span>is_admin = <span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>origin, CollectionRole::Admin);
-				<span class="kw">if </span>details.owner != origin &amp;&amp; !is_admin {
+				<span class="kw">if </span>details.owner != origin {
 					<span class="kw">let </span>deadline =
 						details.approvals.get(<span class="kw-2">&amp;</span>origin).ok_or(Error::&lt;T, I&gt;::NoPermission)<span class="question-mark">?</span>;
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(d) = deadline {
@@ -2964,12 +2964,13 @@
 
 		<span class="doccomment">/// Disallows specified settings for the whole collection.
 		///
-		/// Origin must be Signed and the sender should be the Freezer of the `collection`.
+		/// Origin must be Signed and the sender should be the Owner of the `collection`.
 		///
 		/// - `collection`: The collection to be locked.
 		/// - `lock_settings`: The settings to be locked.
 		///
 		/// Note: it&#39;s possible to only lock(set) the setting, but not to unset it.
+		///
 		/// Emits `CollectionLocked`.
 		///
 		/// Weight: `O(1)`
@@ -3121,7 +3122,6 @@
 		///
 		/// Origin must be either:
 		/// - the `Force` origin;
-		/// - `Signed` with the signer being the Admin of the `collection`;
 		/// - `Signed` with the signer being the Owner of the `item`;
 		///
 		/// Arguments:
@@ -3151,7 +3151,6 @@
 		///
 		/// Origin must be either:
 		/// - the `Force` origin;
-		/// - `Signed` with the signer being the Admin of the `collection`;
 		/// - `Signed` with the signer being the Owner of the `item`;
 		///
 		/// Arguments:
@@ -3176,8 +3175,8 @@
 
 		<span class="doccomment">/// Disallows changing the metadata or attributes of the item.
 		///
-		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Owner of the
-		/// `collection`.
+		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Admin
+		/// of the `collection`.
 		///
 		/// - `collection`: The collection if the `item`.
 		/// - `item`: An item to be locked.
@@ -3185,8 +3184,8 @@
 		/// - `lock_attributes`: Specifies whether the attributes in the `CollectionOwner` namespace
 		///   should be locked.
 		///
-		/// Note: `lock_attributes` affects the attributes in the `CollectionOwner` namespace
-		/// only. When the metadata or attributes are locked, it won&#39;t be possible the unlock them.
+		/// Note: `lock_attributes` affects the attributes in the `CollectionOwner` namespace only.
+		/// When the metadata or attributes are locked, it won&#39;t be possible the unlock them.
 		///
 		/// Emits `ItemPropertiesLocked`.
 		///
@@ -3200,11 +3199,11 @@
 			lock_metadata: bool,
 			lock_attributes: bool,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
+			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_lock_item_properties(
-				maybe_check_owner,
+				maybe_check_origin,
 				collection,
 				item,
 				lock_metadata,
@@ -3215,7 +3214,7 @@
 		<span class="doccomment">/// Set an attribute for a collection or item.
 		///
 		/// Origin must be Signed and must conform to the namespace ruleset:
-		/// - `CollectionOwner` namespace could be modified by the `collection` owner only;
+		/// - `CollectionOwner` namespace could be modified by the `collection` Admin only;
 		/// - `ItemOwner` namespace could be modified by the `maybe_item` owner only. `maybe_item`
 		///   should be set in that case;
 		/// - `Account(AccountId)` namespace could be modified only when the `origin` was given a
@@ -3245,15 +3244,12 @@
 			value: BoundedVec&lt;u8, T::ValueLimit&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_set_attribute(
-				origin.clone(),
-				collection,
-				maybe_item,
-				namespace,
-				key,
-				value,
-				origin,
-			)
+			<span class="kw">let </span>depositor = <span class="kw">match </span>namespace {
+				AttributeNamespace::CollectionOwner =&gt;
+					<span class="self">Self</span>::collection_owner(collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>,
+				<span class="kw">_ </span>=&gt; origin.clone(),
+			};
+			<span class="self">Self</span>::do_set_attribute(origin, collection, maybe_item, namespace, key, value, depositor)
 		}
 
 		<span class="doccomment">/// Force-set an attribute for a collection or item.
@@ -3368,7 +3364,7 @@
 
 		<span class="doccomment">/// Set the metadata for an item.
 		///
-		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Owner of the
+		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Admin of the
 		/// `collection`.
 		///
 		/// If the origin is Signed, then funds of signer are reserved according to the formula:
@@ -3390,15 +3386,15 @@
 			item: T::ItemId,
 			data: BoundedVec&lt;u8, T::StringLimit&gt;,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
+			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_set_item_metadata(maybe_check_owner, collection, item, data, <span class="prelude-val">None</span>)
+			<span class="self">Self</span>::do_set_item_metadata(maybe_check_origin, collection, item, data, <span class="prelude-val">None</span>)
 		}
 
 		<span class="doccomment">/// Clear the metadata for an item.
 		///
-		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Owner of the
+		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Admin of the
 		/// `collection`.
 		///
 		/// Any deposit is freed for the collection&#39;s owner.
@@ -3416,15 +3412,15 @@
 			collection: T::CollectionId,
 			item: T::ItemId,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
+			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_clear_item_metadata(maybe_check_owner, collection, item)
+			<span class="self">Self</span>::do_clear_item_metadata(maybe_check_origin, collection, item)
 		}
 
 		<span class="doccomment">/// Set the metadata for a collection.
 		///
-		/// Origin must be either `ForceOrigin` or `Signed` and the sender should be the Owner of
+		/// Origin must be either `ForceOrigin` or `Signed` and the sender should be the Admin of
 		/// the `collection`.
 		///
 		/// If the origin is `Signed`, then funds of signer are reserved according to the formula:
@@ -3444,15 +3440,15 @@
 			collection: T::CollectionId,
 			data: BoundedVec&lt;u8, T::StringLimit&gt;,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
+			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_set_collection_metadata(maybe_check_owner, collection, data)
+			<span class="self">Self</span>::do_set_collection_metadata(maybe_check_origin, collection, data)
 		}
 
 		<span class="doccomment">/// Clear the metadata for a collection.
 		///
-		/// Origin must be either `ForceOrigin` or `Signed` and the sender should be the Owner of
+		/// Origin must be either `ForceOrigin` or `Signed` and the sender should be the Admin of
 		/// the `collection`.
 		///
 		/// Any deposit is freed for the collection&#39;s owner.
@@ -3468,10 +3464,10 @@
 			origin: OriginFor&lt;T&gt;,
 			collection: T::CollectionId,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
+			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_clear_collection_metadata(maybe_check_owner, collection)
+			<span class="self">Self</span>::do_clear_collection_metadata(maybe_check_origin, collection)
 		}
 
 		<span class="doccomment">/// Set (or reset) the acceptance of ownership for a particular account.
@@ -3518,8 +3514,8 @@
 
 		<span class="doccomment">/// Update mint settings.
 		///
-		/// Origin must be either `ForceOrigin` or `Signed` and the sender should be the Owner of
-		/// the `collection`.
+		/// Origin must be either `ForceOrigin` or `Signed` and the sender should be the Issuer
+		/// of the `collection`.
 		///
 		/// - `collection`: The identifier of the collection to change.
 		/// - `mint_settings`: The new mint settings.
@@ -3536,15 +3532,15 @@
 				T::CollectionId,
 			&gt;,
 		) -&gt; DispatchResult {
-			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
+			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_update_mint_settings(maybe_check_owner, collection, mint_settings)
+			<span class="self">Self</span>::do_update_mint_settings(maybe_check_origin, collection, mint_settings)
 		}
 
 		<span class="doccomment">/// Set (or reset) the price for an item.
 		///
-		/// Origin must be Signed and must be the owner of the asset `item`.
+		/// Origin must be Signed and must be the owner of the `item`.
 		///
 		/// - `collection`: The collection of the item.
 		/// - `item`: The item to set the price for.
@@ -3705,7 +3701,7 @@
 		///   its metadata, attributes, who can mint it (`None` for anyone) and until what block
 		///   number.
 		/// - `signature`: The signature of the `data` object.
-		/// - `signer`: The `data` object&#39;s signer. Should be an owner of the collection.
+		/// - `signer`: The `data` object&#39;s signer. Should be an Issuer of the collection.
 		///
 		/// Emits `Issued` on success.
 		/// Emits `AttributeSet` if the attributes were provided.
@@ -3731,7 +3727,7 @@
 		/// - `data`: The pre-signed approval that consists of the information about the item,
 		///   attributes to update and until what block number.
 		/// - `signature`: The signature of the `data` object.
-		/// - `signer`: The `data` object&#39;s signer. Should be an owner of the collection for the
+		/// - `signer`: The `data` object&#39;s signer. Should be an Admin of the collection for the
 		///   `CollectionOwner` namespace.
 		///
 		/// Emits `AttributeSet` for each provided attribute.

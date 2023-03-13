@@ -115,9 +115,6 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -144,10 +141,7 @@
 		collection: T::CollectionId,
 		lock_settings: CollectionSettings,
 	) -&gt; DispatchResult {
-		<span class="macro">ensure!</span>(
-			<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>origin, CollectionRole::Freezer),
-			Error::&lt;T, I&gt;::NoPermission
-		);
+		<span class="macro">ensure!</span>(<span class="self">Self</span>::collection_owner(collection) == <span class="prelude-val">Some</span>(origin), Error::&lt;T, I&gt;::NoPermission);
 		<span class="macro">ensure!</span>(
 			!lock_settings.is_disabled(CollectionSetting::DepositRequired),
 			Error::&lt;T, I&gt;::WrongSetting
@@ -205,17 +199,17 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_lock_item_properties(
-		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		maybe_check_origin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 		item: T::ItemId,
 		lock_metadata: bool,
 		lock_attributes: bool,
 	) -&gt; DispatchResult {
-		<span class="kw">let </span>collection_details =
-			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
-			<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = <span class="kw-2">&amp;</span>maybe_check_origin {
+			<span class="macro">ensure!</span>(
+				<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>check_origin, CollectionRole::Admin),
+				Error::&lt;T, I&gt;::NoPermission
+			);
 		}
 
 		ItemConfigOf::&lt;T, I&gt;::try_mutate(collection, item, |maybe_config| {

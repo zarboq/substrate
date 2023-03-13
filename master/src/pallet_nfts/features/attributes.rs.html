@@ -395,19 +395,6 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -443,17 +430,8 @@
 			Error::&lt;T, I&gt;::MethodDisabled
 		);
 
-		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
-			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
-
 		<span class="macro">ensure!</span>(
-			<span class="self">Self</span>::is_valid_namespace(
-				<span class="kw-2">&amp;</span>origin,
-				<span class="kw-2">&amp;</span>namespace,
-				<span class="kw-2">&amp;</span>collection,
-				<span class="kw-2">&amp;</span>collection_details.owner,
-				<span class="kw-2">&amp;</span>maybe_item,
-			)<span class="question-mark">?</span>,
+			<span class="self">Self</span>::is_valid_namespace(<span class="kw-2">&amp;</span>origin, <span class="kw-2">&amp;</span>namespace, <span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>maybe_item)<span class="question-mark">?</span>,
 			Error::&lt;T, I&gt;::NoPermission
 		);
 
@@ -475,6 +453,9 @@
 			},
 			<span class="kw">_ </span>=&gt; (),
 		}
+
+		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
+			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>attribute = Attribute::&lt;T, I&gt;::get((collection, maybe_item, <span class="kw-2">&amp;</span>namespace, <span class="kw-2">&amp;</span>key));
 		<span class="kw">let </span>attribute_exists = attribute.is_some();
@@ -629,7 +610,7 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_clear_attribute(
-		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		maybe_check_origin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 		maybe_item: <span class="prelude-ty">Option</span>&lt;T::ItemId&gt;,
 		namespace: AttributeNamespace&lt;T::AccountId&gt;,
@@ -637,21 +618,13 @@
 	) -&gt; DispatchResult {
 		<span class="kw">let </span>(<span class="kw">_</span>, deposit) = Attribute::&lt;T, I&gt;::take((collection, maybe_item, <span class="kw-2">&amp;</span>namespace, <span class="kw-2">&amp;</span>key))
 			.ok_or(Error::&lt;T, I&gt;::AttributeNotFound)<span class="question-mark">?</span>;
-		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
-			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = <span class="kw-2">&amp;</span>maybe_check_origin {
 			<span class="comment">// validate the provided namespace when it&#39;s not a root call and the caller is not
 			// the same as the `deposit.account` (e.g. the deposit was paid by different account)
-			</span><span class="kw">if </span>deposit.account != maybe_check_owner {
+			</span><span class="kw">if </span>deposit.account != maybe_check_origin {
 				<span class="macro">ensure!</span>(
-					<span class="self">Self</span>::is_valid_namespace(
-						<span class="kw-2">&amp;</span>check_owner,
-						<span class="kw-2">&amp;</span>namespace,
-						<span class="kw-2">&amp;</span>collection,
-						<span class="kw-2">&amp;</span>collection_details.owner,
-						<span class="kw-2">&amp;</span>maybe_item,
-					)<span class="question-mark">?</span>,
+					<span class="self">Self</span>::is_valid_namespace(<span class="kw-2">&amp;</span>check_origin, <span class="kw-2">&amp;</span>namespace, <span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>maybe_item)<span class="question-mark">?</span>,
 					Error::&lt;T, I&gt;::NoPermission
 				);
 			}
@@ -674,23 +647,24 @@
 							.map_or(<span class="prelude-val">None</span>, |c| {
 								<span class="prelude-val">Some</span>(c.has_disabled_setting(ItemSetting::UnlockedAttributes))
 							});
-						<span class="kw">match </span>maybe_is_locked {
-							<span class="prelude-val">Some</span>(is_locked) =&gt; {
-								<span class="comment">// when item exists, then only the collection&#39;s owner can clear that
-								// attribute
-								</span><span class="macro">ensure!</span>(
-									check_owner == <span class="kw-2">&amp;</span>collection_details.owner,
-									Error::&lt;T, I&gt;::NoPermission
-								);
-								<span class="macro">ensure!</span>(!is_locked, Error::&lt;T, I&gt;::LockedItemAttributes);
-							},
-							<span class="prelude-val">None </span>=&gt; (),
+						<span class="kw">if let </span><span class="prelude-val">Some</span>(is_locked) = maybe_is_locked {
+							<span class="macro">ensure!</span>(!is_locked, Error::&lt;T, I&gt;::LockedItemAttributes);
+							<span class="comment">// Only the collection&#39;s admin can clear attributes in that namespace.
+							// e.g. in off-chain mints, the attribute&#39;s depositor will be the item&#39;s
+							// owner, that&#39;s why we need to do this extra check.
+							</span><span class="macro">ensure!</span>(
+								<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>check_origin, CollectionRole::Admin),
+								Error::&lt;T, I&gt;::NoPermission
+							);
 						}
 					},
 				},
 				<span class="kw">_ </span>=&gt; (),
 			};
 		}
+
+		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
+			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 
 		collection_details.attributes.saturating_dec();
 
@@ -782,12 +756,12 @@
 		origin: <span class="kw-2">&amp;</span>T::AccountId,
 		namespace: <span class="kw-2">&amp;</span>AttributeNamespace&lt;T::AccountId&gt;,
 		collection: <span class="kw-2">&amp;</span>T::CollectionId,
-		collection_owner: <span class="kw-2">&amp;</span>T::AccountId,
 		maybe_item: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;T::ItemId&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;bool, DispatchError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>result = <span class="bool-val">false</span>;
 		<span class="kw">match </span>namespace {
-			AttributeNamespace::CollectionOwner =&gt; result = origin == collection_owner,
+			AttributeNamespace::CollectionOwner =&gt;
+				result = <span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>origin, CollectionRole::Admin),
 			AttributeNamespace::ItemOwner =&gt;
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(item) = maybe_item {
 					<span class="kw">let </span>item_details =

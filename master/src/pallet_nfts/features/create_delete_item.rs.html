@@ -198,6 +198,18 @@
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -266,6 +278,7 @@
 					<span class="macro">ensure!</span>(existing_config == item_config, Error::&lt;T, I&gt;::InconsistentItemConfig);
 				} <span class="kw">else </span>{
 					ItemConfigOf::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item, item_config);
+					collection_details.item_configs.saturating_inc();
 				}
 
 				T::Currency::reserve(<span class="kw-2">&amp;</span>deposit_account, deposit_amount)<span class="question-mark">?</span>;
@@ -307,7 +320,11 @@
 
 		<span class="kw">let </span>collection_details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
-		<span class="macro">ensure!</span>(collection_details.owner == signer, Error::&lt;T, I&gt;::NoPermission);
+
+		<span class="macro">ensure!</span>(
+			<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>signer, CollectionRole::Issuer),
+			Error::&lt;T, I&gt;::NoPermission
+		);
 
 		<span class="kw">let </span>item_config = ItemConfig { settings: <span class="self">Self</span>::get_default_item_settings(<span class="kw-2">&amp;</span>collection)<span class="question-mark">? </span>};
 		<span class="self">Self</span>::do_mint(
@@ -318,9 +335,11 @@
 			item_config,
 			|<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(()),
 		)<span class="question-mark">?</span>;
+		<span class="kw">let </span>origin = <span class="self">Self</span>::find_account_by_role(<span class="kw-2">&amp;</span>collection, CollectionRole::Admin)
+			.unwrap_or(collection_details.owner.clone());
 		<span class="kw">for </span>(key, value) <span class="kw">in </span>attributes {
 			<span class="self">Self</span>::do_set_attribute(
-				collection_details.owner.clone(),
+				origin.clone(),
 				collection,
 				<span class="prelude-val">Some</span>(item),
 				AttributeNamespace::CollectionOwner,
@@ -331,7 +350,7 @@
 		}
 		<span class="kw">if </span>!metadata.len().is_zero() {
 			<span class="self">Self</span>::do_set_item_metadata(
-				<span class="prelude-val">Some</span>(collection_details.owner.clone()),
+				<span class="prelude-val">Some</span>(origin.clone()),
 				collection,
 				item,
 				metadata,
@@ -348,6 +367,9 @@
 	) -&gt; DispatchResult {
 		<span class="macro">ensure!</span>(!T::Locker::is_locked(collection, item), Error::&lt;T, I&gt;::ItemLocked);
 		<span class="kw">let </span>item_config = <span class="self">Self</span>::get_item_config(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item)<span class="question-mark">?</span>;
+		<span class="comment">// NOTE: if item&#39;s settings are not empty (e.g. item&#39;s metadata is locked)
+		// then we keep the config record and don&#39;t remove it
+		</span><span class="kw">let </span>remove_config = !item_config.has_disabled_settings();
 		<span class="kw">let </span>owner = Collection::&lt;T, I&gt;::try_mutate(
 			<span class="kw-2">&amp;</span>collection,
 			|maybe_collection_details| -&gt; <span class="prelude-ty">Result</span>&lt;T::AccountId, DispatchError&gt; {
@@ -360,6 +382,10 @@
 				<span class="comment">// Return the deposit.
 				</span>T::Currency::unreserve(<span class="kw-2">&amp;</span>details.deposit.account, details.deposit.amount);
 				collection_details.items.saturating_dec();
+
+				<span class="kw">if </span>remove_config {
+					collection_details.item_configs.saturating_dec();
+				}
 
 				<span class="comment">// Clear the metadata if it&#39;s not locked.
 				</span><span class="kw">if </span>item_config.is_setting_enabled(ItemSetting::UnlockedMetadata) {
@@ -388,9 +414,7 @@
 		PendingSwapOf::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item);
 		ItemAttributesApprovalsOf::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item);
 
-		<span class="comment">// NOTE: if item&#39;s settings are not empty (e.g. item&#39;s metadata is locked)
-		// then we keep the record and don&#39;t remove it
-		</span><span class="kw">if </span>!item_config.has_disabled_settings() {
+		<span class="kw">if </span>remove_config {
 			ItemConfigOf::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item);
 		}
 

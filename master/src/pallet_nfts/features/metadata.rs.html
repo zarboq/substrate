@@ -201,6 +201,20 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -224,13 +238,20 @@
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
 	<span class="doccomment">/// Note: if `maybe_depositor` is None, that means the depositor will be a collection&#39;s owner
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_set_item_metadata(
-		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		maybe_check_origin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 		item: T::ItemId,
 		data: BoundedVec&lt;u8, T::StringLimit&gt;,
 		maybe_depositor: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 	) -&gt; DispatchResult {
-		<span class="kw">let </span>is_root = maybe_check_owner.is_none();
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = <span class="kw-2">&amp;</span>maybe_check_origin {
+			<span class="macro">ensure!</span>(
+				<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>check_origin, CollectionRole::Admin),
+				Error::&lt;T, I&gt;::NoPermission
+			);
+		}
+
+		<span class="kw">let </span>is_root = maybe_check_origin.is_none();
 		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 
@@ -239,10 +260,6 @@
 			is_root || item_config.is_setting_enabled(ItemSetting::UnlockedMetadata),
 			Error::&lt;T, I&gt;::LockedItemMetadata
 		);
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
-			<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
-		}
 
 		<span class="kw">let </span>collection_config = <span class="self">Self</span>::get_collection_config(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
 
@@ -292,21 +309,25 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_clear_item_metadata(
-		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		maybe_check_origin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 		item: T::ItemId,
 	) -&gt; DispatchResult {
-		<span class="kw">let </span>is_root = maybe_check_owner.is_none();
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = <span class="kw-2">&amp;</span>maybe_check_origin {
+			<span class="macro">ensure!</span>(
+				<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>check_origin, CollectionRole::Admin),
+				Error::&lt;T, I&gt;::NoPermission
+			);
+		}
+
+		<span class="kw">let </span>is_root = maybe_check_origin.is_none();
 		<span class="kw">let </span>metadata = ItemMetadataOf::&lt;T, I&gt;::take(collection, item)
 			.ok_or(Error::&lt;T, I&gt;::MetadataNotFound)<span class="question-mark">?</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>collection_details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
+
 		<span class="kw">let </span>depositor_account =
 			metadata.deposit.account.unwrap_or(collection_details.owner.clone());
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
-			<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
-		}
 
 		<span class="comment">// NOTE: if the item was previously burned, the ItemConfigOf record might not exist
 		</span><span class="kw">let </span>is_locked = <span class="self">Self</span>::get_item_config(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item)
@@ -328,29 +349,32 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_set_collection_metadata(
-		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		maybe_check_origin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 		data: BoundedVec&lt;u8, T::StringLimit&gt;,
 	) -&gt; DispatchResult {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = <span class="kw-2">&amp;</span>maybe_check_origin {
+			<span class="macro">ensure!</span>(
+				<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>check_origin, CollectionRole::Admin),
+				Error::&lt;T, I&gt;::NoPermission
+			);
+		}
+
+		<span class="kw">let </span>is_root = maybe_check_origin.is_none();
 		<span class="kw">let </span>collection_config = <span class="self">Self</span>::get_collection_config(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
 		<span class="macro">ensure!</span>(
-			maybe_check_owner.is_none() ||
-				collection_config.is_setting_enabled(CollectionSetting::UnlockedMetadata),
+			is_root || collection_config.is_setting_enabled(CollectionSetting::UnlockedMetadata),
 			Error::&lt;T, I&gt;::LockedCollectionMetadata
 		);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
-			<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>details.owner, Error::&lt;T, I&gt;::NoPermission);
-		}
 
 		CollectionMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection, |metadata| {
 			<span class="kw">let </span>old_deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
 			details.owner_deposit.saturating_reduce(old_deposit);
 			<span class="kw">let </span><span class="kw-2">mut </span>deposit = Zero::zero();
-			<span class="kw">if </span>maybe_check_owner.is_some() &amp;&amp;
-				collection_config.is_setting_enabled(CollectionSetting::DepositRequired)
+			<span class="kw">if </span>!is_root &amp;&amp; collection_config.is_setting_enabled(CollectionSetting::DepositRequired)
 			{
 				deposit = T::DepositPerByte::get()
 					.saturating_mul(((data.len()) <span class="kw">as </span>u32).into())
@@ -373,18 +397,22 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_clear_collection_metadata(
-		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		maybe_check_origin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
 	) -&gt; DispatchResult {
-		<span class="kw">let </span>details =
-			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = <span class="kw-2">&amp;</span>maybe_check_owner {
-			<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>details.owner, Error::&lt;T, I&gt;::NoPermission);
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = <span class="kw-2">&amp;</span>maybe_check_origin {
+			<span class="macro">ensure!</span>(
+				<span class="self">Self</span>::has_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>check_origin, CollectionRole::Admin),
+				Error::&lt;T, I&gt;::NoPermission
+			);
 		}
 
+		<span class="kw">let </span>details =
+			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 		<span class="kw">let </span>collection_config = <span class="self">Self</span>::get_collection_config(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
+
 		<span class="macro">ensure!</span>(
-			maybe_check_owner.is_none() ||
+			maybe_check_origin.is_none() ||
 				collection_config.is_setting_enabled(CollectionSetting::UnlockedMetadata),
 			Error::&lt;T, I&gt;::LockedCollectionMetadata
 		);
