@@ -112,6 +112,28 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -137,25 +159,47 @@
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_set_team(
 		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		collection: T::CollectionId,
-		issuer: T::AccountId,
-		admin: T::AccountId,
-		freezer: T::AccountId,
+		issuer: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		admin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+		freezer: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 	) -&gt; DispatchResult {
 		Collection::&lt;T, I&gt;::try_mutate(collection, |maybe_details| {
 			<span class="kw">let </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
+			<span class="kw">let </span>is_root = maybe_check_owner.is_none();
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(check_origin) = maybe_check_owner {
 				<span class="macro">ensure!</span>(check_origin == details.owner, Error::&lt;T, I&gt;::NoPermission);
 			}
 
-			<span class="comment">// delete previous values
-			</span><span class="self">Self</span>::clear_roles(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
-
-			<span class="kw">let </span>account_to_role = <span class="self">Self</span>::group_roles_by_account(<span class="macro">vec!</span>[
+			<span class="kw">let </span>roles_map = [
 				(issuer.clone(), CollectionRole::Issuer),
 				(admin.clone(), CollectionRole::Admin),
 				(freezer.clone(), CollectionRole::Freezer),
-			]);
-			<span class="kw">for </span>(account, roles) <span class="kw">in </span>account_to_role {
+			];
+
+			<span class="comment">// only root can change the role from `None` to `Some(account)`
+			</span><span class="kw">if </span>!is_root {
+				<span class="kw">for </span>(account, role) <span class="kw">in </span>roles_map.iter() {
+					<span class="kw">if </span>account.is_some() {
+						<span class="macro">ensure!</span>(
+							<span class="self">Self</span>::find_account_by_role(<span class="kw-2">&amp;</span>collection, <span class="kw-2">*</span>role).is_some(),
+							Error::&lt;T, I&gt;::NoPermission
+						);
+					}
+				}
+			}
+
+			<span class="kw">let </span>roles = roles_map
+				.into_iter()
+				.filter_map(|(account, role)| account.map(|account| (account, role)))
+				.collect();
+
+			<span class="kw">let </span>account_to_role = <span class="self">Self</span>::group_roles_by_account(roles);
+
+			<span class="comment">// delete the previous records
+			</span><span class="self">Self</span>::clear_roles(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
+
+			<span class="comment">// insert new records
+			</span><span class="kw">for </span>(account, roles) <span class="kw">in </span>account_to_role {
 				CollectionRoleOf::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>account, roles);
 			}
 

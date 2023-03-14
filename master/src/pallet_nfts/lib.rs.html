@@ -1873,6 +1873,9 @@
 <a href="#1873" id="1873">1873</a>
 <a href="#1874" id="1874">1874</a>
 <a href="#1875" id="1875">1875</a>
+<a href="#1876" id="1876">1876</a>
+<a href="#1877" id="1877">1877</a>
+<a href="#1878" id="1878">1878</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2278,9 +2281,9 @@
 		<span class="doccomment">/// The management team changed.
 		</span>TeamChanged {
 			collection: T::CollectionId,
-			issuer: T::AccountId,
-			admin: T::AccountId,
-			freezer: T::AccountId,
+			issuer: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+			admin: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
+			freezer: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 		},
 		<span class="doccomment">/// An `item` of a `collection` has been approved by the `owner` for transfer by
 		/// a `delegate`.
@@ -3011,6 +3014,9 @@
 		/// Origin must be either `ForceOrigin` or Signed and the sender should be the Owner of the
 		/// `collection`.
 		///
+		/// Note: by setting the role to `None` only the `ForceOrigin` will be able to change it
+		/// after to `Some(account)`.
+		///
 		/// - `collection`: The collection whose team should be changed.
 		/// - `issuer`: The new Issuer of this collection.
 		/// - `admin`: The new Admin of this collection.
@@ -3024,16 +3030,16 @@
 		</span><span class="kw">pub fn </span>set_team(
 			origin: OriginFor&lt;T&gt;,
 			collection: T::CollectionId,
-			issuer: AccountIdLookupOf&lt;T&gt;,
-			admin: AccountIdLookupOf&lt;T&gt;,
-			freezer: AccountIdLookupOf&lt;T&gt;,
+			issuer: <span class="prelude-ty">Option</span>&lt;AccountIdLookupOf&lt;T&gt;&gt;,
+			admin: <span class="prelude-ty">Option</span>&lt;AccountIdLookupOf&lt;T&gt;&gt;,
+			freezer: <span class="prelude-ty">Option</span>&lt;AccountIdLookupOf&lt;T&gt;&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>maybe_check_owner = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
 				.or_else(|origin| ensure_signed(origin).map(<span class="prelude-val">Some</span>).map_err(DispatchError::from))<span class="question-mark">?</span>;
-			<span class="kw">let </span>issuer = T::Lookup::lookup(issuer)<span class="question-mark">?</span>;
-			<span class="kw">let </span>admin = T::Lookup::lookup(admin)<span class="question-mark">?</span>;
-			<span class="kw">let </span>freezer = T::Lookup::lookup(freezer)<span class="question-mark">?</span>;
+			<span class="kw">let </span>issuer = issuer.map(T::Lookup::lookup).transpose()<span class="question-mark">?</span>;
+			<span class="kw">let </span>admin = admin.map(T::Lookup::lookup).transpose()<span class="question-mark">?</span>;
+			<span class="kw">let </span>freezer = freezer.map(T::Lookup::lookup).transpose()<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_set_team(maybe_check_owner, collection, issuer, admin, freezer)
 		}
 
