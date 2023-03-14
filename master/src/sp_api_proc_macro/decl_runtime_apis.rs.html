@@ -789,6 +789,11 @@
 <a href="#789" id="789">789</a>
 <a href="#790" id="790">790</a>
 <a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -808,14 +813,14 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::utils::{
 	extract_parameter_names_types_and_borrows, fold_fn_decl_for_client_side, generate_crate_access,
-	generate_hidden_includes, generate_runtime_mod_name_for_trait, parse_runtime_api_version,
-	prefix_function_with_trait, replace_wild_card_parameter_names, return_type_extract_type,
-	versioned_trait_name, AllowSelfRefInParameters,
+	generate_runtime_mod_name_for_trait, parse_runtime_api_version, prefix_function_with_trait,
+	replace_wild_card_parameter_names, return_type_extract_type, versioned_trait_name,
+	AllowSelfRefInParameters,
 };
 
 <span class="kw">use </span><span class="kw">crate</span>::common::{
 	API_VERSION_ATTRIBUTE, BLOCK_GENERIC_IDENT, CHANGED_IN_ATTRIBUTE, CORE_TRAIT_ATTRIBUTE,
-	HIDDEN_INCLUDES_ID, RENAMED_ATTRIBUTE, SUPPORTED_ATTRIBUTE_NAMES,
+	RENAMED_ATTRIBUTE, SUPPORTED_ATTRIBUTE_NAMES,
 };
 
 <span class="kw">use </span>proc_macro2::{Span, TokenStream};
@@ -853,7 +858,7 @@
 
 <span class="doccomment">/// Extend the given generics with `Block: BlockT` as first generic parameter.
 </span><span class="kw">fn </span>extend_generics_with_block(generics: <span class="kw-2">&amp;mut </span>Generics) {
-	<span class="kw">let </span>c = generate_crate_access(HIDDEN_INCLUDES_ID);
+	<span class="kw">let </span>c = generate_crate_access();
 
 	generics.lt_token = <span class="prelude-val">Some</span>(Default::default());
 	generics.params.insert(<span class="number">0</span>, <span class="macro">parse_quote!</span>( Block: #c::BlockT ));
@@ -1089,7 +1094,7 @@
 			#[allow(dead_code)]
 			#[allow(deprecated)]
 			</span><span class="kw">pub mod </span>#mod_name {
-				<span class="kw">use super</span>::<span class="kw-2">*</span>;
+				<span class="kw">pub use super</span>::<span class="kw-2">*</span>;
 
 				#( #versioned_api_traits )*
 
@@ -1286,10 +1291,10 @@
 					__runtime_api_at_param__,
 					#context,
 					__runtime_api_impl_params_encoded__,
-					<span class="kw-2">&amp;</span>|version| {
+					<span class="kw-2">&amp;</span>|_version| {
 						#(
 							<span class="comment">// Check if we need to call the function by an old name.
-							</span><span class="kw">if </span>version.apis.iter().any(|(s, v)| {
+							</span><span class="kw">if </span>_version.apis.iter().any(|(s, v)| {
 								s == <span class="kw-2">&amp;</span>#runtime_mod::ID &amp;&amp; <span class="kw-2">*</span>v &lt; #versions
 							}) {
 								<span class="kw">return </span>#old_names
@@ -1360,7 +1365,7 @@
 <span class="doccomment">/// Generates the implementation of `RuntimeApiInfo` for the given trait.
 </span><span class="kw">fn </span>generate_runtime_info_impl(trait_: <span class="kw-2">&amp;</span>ItemTrait, version: u64) -&gt; TokenStream {
 	<span class="kw">let </span>trait_name = <span class="kw-2">&amp;</span>trait_.ident;
-	<span class="kw">let </span>crate_ = generate_crate_access(HIDDEN_INCLUDES_ID);
+	<span class="kw">let </span>crate_ = generate_crate_access();
 	<span class="kw">let </span>id = generate_runtime_api_id(<span class="kw-2">&amp;</span>trait_name.to_string());
 	<span class="kw">let </span>version = generate_runtime_api_version(version <span class="kw">as </span>u32);
 
@@ -1411,7 +1416,7 @@
 	<span class="kw">for </span>decl <span class="kw">in </span>decls {
 		<span class="kw">let </span>decl = decl.clone();
 
-		<span class="kw">let </span>crate_ = generate_crate_access(HIDDEN_INCLUDES_ID);
+		<span class="kw">let </span>crate_ = generate_crate_access();
 		<span class="kw">let </span>block_hash = <span class="macro">quote!</span>( &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash );
 		<span class="kw">let </span><span class="kw-2">mut </span>found_attributes = HashMap::new();
 		<span class="kw">let </span><span class="kw-2">mut </span>errors = Vec::new();
@@ -1568,17 +1573,22 @@
 <span class="kw">fn </span>decl_runtime_apis_impl_inner(api_decls: <span class="kw-2">&amp;</span>[ItemTrait]) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream&gt; {
 	check_trait_decls(api_decls)<span class="question-mark">?</span>;
 
-	<span class="kw">let </span>hidden_includes = generate_hidden_includes(HIDDEN_INCLUDES_ID);
 	<span class="kw">let </span>runtime_decls = generate_runtime_decls(api_decls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>client_side_decls = generate_client_side_decls(api_decls)<span class="question-mark">?</span>;
 
-	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>(
-		#hidden_includes
-
+	<span class="kw">let </span>decl = <span class="macro">quote! </span>{
 		#runtime_decls
 
 		#client_side_decls
-	))
+	};
+
+	<span class="kw">let </span>decl = expander::Expander::new(<span class="string">&quot;decl_runtime_apis&quot;</span>)
+		.dry(std::env::var(<span class="string">&quot;SP_API_EXPAND&quot;</span>).is_err())
+		.verbose(<span class="bool-val">true</span>)
+		.write_to_out_dir(decl)
+		.expect(<span class="string">&quot;Does not fail because of IO in OUT_DIR; qed&quot;</span>);
+
+	<span class="prelude-val">Ok</span>(decl)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sp_api_proc_macro" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

@@ -710,6 +710,27 @@
 <a href="#710" id="710">710</a>
 <a href="#711" id="711">711</a>
 <a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -729,7 +750,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::utils::{
 	extract_all_signature_types, extract_block_type_from_trait_path, extract_impl_trait,
-	extract_parameter_names_types_and_borrows, generate_crate_access, generate_hidden_includes,
+	extract_parameter_names_types_and_borrows, generate_crate_access,
 	generate_runtime_mod_name_for_trait, parse_runtime_api_version, prefix_function_with_trait,
 	versioned_trait_name, AllowSelfRefInParameters, RequireQualifiedTraitPath,
 };
@@ -749,9 +770,6 @@
 };
 
 <span class="kw">use </span>std::collections::HashSet;
-
-<span class="doccomment">/// Unique identifier used to make the hidden includes unique for this macro.
-</span><span class="kw">const </span>HIDDEN_INCLUDES_ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;IMPL_RUNTIME_APIS&quot;</span>;
 
 <span class="doccomment">/// The structure used for parsing the runtime api implementations.
 </span><span class="kw">struct </span>RuntimeApiImpls {
@@ -785,7 +803,7 @@
 	<span class="kw">let </span>params =
 		extract_parameter_names_types_and_borrows(signature, AllowSelfRefInParameters::No)<span class="question-mark">?</span>;
 
-	<span class="kw">let </span>c = generate_crate_access(HIDDEN_INCLUDES_ID);
+	<span class="kw">let </span>c = generate_crate_access();
 	<span class="kw">let </span>fn_name = <span class="kw-2">&amp;</span>signature.ident;
 	<span class="kw">let </span>fn_name_str = fn_name.to_string();
 	<span class="kw">let </span>pnames = params.iter().map(|v| <span class="kw-2">&amp;</span>v.<span class="number">0</span>);
@@ -793,15 +811,33 @@
 	<span class="kw">let </span>ptypes = params.iter().map(|v| <span class="kw-2">&amp;</span>v.<span class="number">1</span>);
 	<span class="kw">let </span>pborrow = params.iter().map(|v| <span class="kw-2">&amp;</span>v.<span class="number">2</span>);
 
+	<span class="kw">let </span>decode_params = <span class="kw">if </span>params.is_empty() {
+		<span class="macro">quote!</span>()
+	} <span class="kw">else </span>{
+		<span class="kw">let </span>let_binding = <span class="kw">if </span>params.len() == <span class="number">1 </span>{
+			<span class="macro">quote! </span>{
+				<span class="kw">let </span>#( #pnames )* : #( #ptypes )*
+			}
+		} <span class="kw">else </span>{
+			<span class="macro">quote! </span>{
+				<span class="kw">let </span>( #( #pnames ),* ) : ( #( #ptypes ),* )
+			}
+		};
+
+		<span class="macro">quote!</span>(
+			#let_binding =
+				<span class="kw">match </span>#c::DecodeLimit::decode_all_with_depth_limit(
+					#c::MAX_EXTRINSIC_DEPTH,
+					<span class="kw-2">&amp;mut </span>#input,
+				) {
+					<span class="prelude-val">Ok</span>(res) =&gt; res,
+					<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Bad input data provided to {}: {}&quot;</span>, #fn_name_str, e),
+				};
+		)
+	};
+
 	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>(
-		<span class="kw">let </span>(#( #pnames ),<span class="kw-2">*</span>) : ( #( #ptypes ),* ) =
-			<span class="kw">match </span>#c::DecodeLimit::decode_all_with_depth_limit(
-				#c::MAX_EXTRINSIC_DEPTH,
-				<span class="kw-2">&amp;mut </span>#input,
-			) {
-				<span class="prelude-val">Ok</span>(res) =&gt; res,
-				<span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Bad input data provided to {}: {}&quot;</span>, #fn_name_str, e),
-			};
+		#decode_params
 
 		<span class="attr">#[allow(deprecated)]
 		</span>&lt;#runtime <span class="kw">as </span>#impl_trait&gt;::#fn_name(#( #pborrow #pnames2 ),<span class="kw-2">*</span>)
@@ -846,8 +882,8 @@
 
 <span class="doccomment">/// Generate the dispatch function that is used in native to call into the runtime.
 </span><span class="kw">fn </span>generate_dispatch_function(impls: <span class="kw-2">&amp;</span>[ItemImpl]) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream&gt; {
-	<span class="kw">let </span>data = Ident::new(<span class="string">&quot;__sp_api__input_data&quot;</span>, Span::call_site());
-	<span class="kw">let </span>c = generate_crate_access(HIDDEN_INCLUDES_ID);
+	<span class="kw">let </span>data = Ident::new(<span class="string">&quot;_sp_api_input_data_&quot;</span>, Span::call_site());
+	<span class="kw">let </span>c = generate_crate_access();
 	<span class="kw">let </span>impl_calls =
 		generate_impl_calls(impls, <span class="kw-2">&amp;</span>data)<span class="question-mark">?
 			</span>.into_iter()
@@ -873,7 +909,7 @@
 <span class="doccomment">/// Generate the interface functions that are used to call into the runtime in wasm.
 </span><span class="kw">fn </span>generate_wasm_interface(impls: <span class="kw-2">&amp;</span>[ItemImpl]) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream&gt; {
 	<span class="kw">let </span>input = Ident::new(<span class="string">&quot;input&quot;</span>, Span::call_site());
-	<span class="kw">let </span>c = generate_crate_access(HIDDEN_INCLUDES_ID);
+	<span class="kw">let </span>c = generate_crate_access();
 
 	<span class="kw">let </span>impl_calls =
 		generate_impl_calls(impls, <span class="kw-2">&amp;</span>input)<span class="question-mark">?
@@ -907,7 +943,7 @@
 }
 
 <span class="kw">fn </span>generate_runtime_api_base_structures() -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream&gt; {
-	<span class="kw">let </span>crate_ = generate_crate_access(HIDDEN_INCLUDES_ID);
+	<span class="kw">let </span>crate_ = generate_crate_access();
 
 	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>(
 		<span class="kw">pub struct </span>RuntimeApi {}
@@ -1126,7 +1162,7 @@
 	</span><span class="kw">fn </span>process(<span class="kw-2">mut </span><span class="self">self</span>, input: ItemImpl) -&gt; ItemImpl {
 		<span class="kw">let </span><span class="kw-2">mut </span>input = <span class="self">self</span>.fold_item_impl(input);
 
-		<span class="kw">let </span>crate_ = generate_crate_access(HIDDEN_INCLUDES_ID);
+		<span class="kw">let </span>crate_ = generate_crate_access();
 
 		<span class="comment">// Delete all functions, because all of them are default implemented by
 		// `decl_runtime_apis!`. We only need to implement the `__runtime_api_internal_call_api_at`
@@ -1135,7 +1171,7 @@
 		input.items.push(<span class="macro">parse_quote! </span>{
 			<span class="kw">fn </span>__runtime_api_internal_call_api_at(
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: &lt;__SR_API_BLOCK__ <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
+				at: &lt;__SrApiBlock__ <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
 				context: #crate_::ExecutionContext,
 				params: std::vec::Vec&lt;u8&gt;,
 				fn_name: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(#crate_::RuntimeVersion) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
@@ -1147,7 +1183,7 @@
 				}
 
 				<span class="kw">let </span>res = (|| {
-					<span class="kw">let </span>version = #crate_::CallApiAt::&lt;__SR_API_BLOCK__&gt;::runtime_version_at(
+					<span class="kw">let </span>version = #crate_::CallApiAt::&lt;__SrApiBlock__&gt;::runtime_version_at(
 						<span class="self">self</span>.call,
 						at,
 					)<span class="question-mark">?</span>;
@@ -1162,7 +1198,7 @@
 						recorder: <span class="kw-2">&amp;</span><span class="self">self</span>.recorder,
 					};
 
-					#crate_::CallApiAt::&lt;__SR_API_BLOCK__&gt;::call_api_at(
+					#crate_::CallApiAt::&lt;__SrApiBlock__&gt;::call_api_at(
 						<span class="self">self</span>.call,
 						params,
 					)
@@ -1181,7 +1217,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Fold <span class="kw">for </span>ApiRuntimeImplToApiRuntimeApiImpl&lt;<span class="lifetime">&#39;a</span>&gt; {
 	<span class="kw">fn </span>fold_type_path(<span class="kw-2">&amp;mut </span><span class="self">self</span>, input: TypePath) -&gt; TypePath {
 		<span class="kw">let </span>new_ty_path =
-			<span class="kw">if </span>input == <span class="kw-2">*</span><span class="self">self</span>.runtime_block { <span class="macro">parse_quote!</span>(__SR_API_BLOCK__) } <span class="kw">else </span>{ input };
+			<span class="kw">if </span>input == <span class="kw-2">*</span><span class="self">self</span>.runtime_block { <span class="macro">parse_quote!</span>(__SrApiBlock__) } <span class="kw">else </span>{ input };
 
 		fold::fold_type_path(<span class="self">self</span>, new_ty_path)
 	}
@@ -1192,25 +1228,26 @@
 		// Before we directly had the final block type and rust could determine that it is unwind
 		// safe, but now we just have a generic parameter `Block`.
 
-		</span><span class="kw">let </span>crate_ = generate_crate_access(HIDDEN_INCLUDES_ID);
+		</span><span class="kw">let </span>crate_ = generate_crate_access();
 
 		<span class="comment">// Implement the trait for the `RuntimeApiImpl`
 		</span>input.self_ty =
-			Box::new(<span class="macro">parse_quote!</span>( RuntimeApiImpl&lt;__SR_API_BLOCK__, RuntimeApiImplCall&gt; ));
+			Box::new(<span class="macro">parse_quote!</span>( RuntimeApiImpl&lt;__SrApiBlock__, RuntimeApiImplCall&gt; ));
 
 		input.generics.params.push(<span class="macro">parse_quote!</span>(
-			__SR_API_BLOCK__: #crate_::BlockT + std::panic::UnwindSafe +
+			__SrApiBlock__: #crate_::BlockT + std::panic::UnwindSafe +
 				std::panic::RefUnwindSafe
 		));
-		input.generics.params.push(
-			<span class="macro">parse_quote!</span>( RuntimeApiImplCall: #crate_::CallApiAt&lt;__SR_API_BLOCK__&gt; + <span class="lifetime">&#39;static </span>),
-		);
+		input
+			.generics
+			.params
+			.push(<span class="macro">parse_quote!</span>( RuntimeApiImplCall: #crate_::CallApiAt&lt;__SrApiBlock__&gt; + <span class="lifetime">&#39;static </span>));
 
 		<span class="kw">let </span>where_clause = input.generics.make_where_clause();
 
 		where_clause.predicates.push(<span class="macro">parse_quote! </span>{
 			RuntimeApiImplCall::StateBackend:
-				#crate_::StateBackend&lt;#crate_::HashFor&lt;__SR_API_BLOCK__&gt;&gt;
+				#crate_::StateBackend&lt;#crate_::HashFor&lt;__SrApiBlock__&gt;&gt;
 		});
 
 		where_clause.predicates.push(<span class="macro">parse_quote! </span>{ <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>RuntimeApiImplCall: Send });
@@ -1223,7 +1260,7 @@
 		});
 
 		where_clause.predicates.push(<span class="macro">parse_quote! </span>{
-			__SR_API_BLOCK__::Header: std::panic::UnwindSafe + std::panic::RefUnwindSafe
+			__SrApiBlock__::Header: std::panic::UnwindSafe + std::panic::RefUnwindSafe
 		});
 
 		input.attrs = filter_cfg_attrs(<span class="kw-2">&amp;</span>input.attrs);
@@ -1286,7 +1323,7 @@
 	<span class="kw">let </span><span class="kw-2">mut </span>sections = Vec::&lt;TokenStream&gt;::with_capacity(impls.len());
 	<span class="kw">let </span><span class="kw-2">mut </span>processed_traits = HashSet::new();
 
-	<span class="kw">let </span>c = generate_crate_access(HIDDEN_INCLUDES_ID);
+	<span class="kw">let </span>c = generate_crate_access();
 
 	<span class="kw">for </span>impl_ <span class="kw">in </span>impls {
 		<span class="kw">let </span>api_ver = extract_api_version(<span class="kw-2">&amp;</span>impl_.attrs, impl_.span())<span class="question-mark">?</span>.map(|a| a <span class="kw">as </span>u32);
@@ -1341,14 +1378,11 @@
 	<span class="kw">let </span>dispatch_impl = generate_dispatch_function(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>api_impls_for_runtime = generate_api_impl_for_runtime(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>base_runtime_api = generate_runtime_api_base_structures()<span class="question-mark">?</span>;
-	<span class="kw">let </span>hidden_includes = generate_hidden_includes(HIDDEN_INCLUDES_ID);
 	<span class="kw">let </span>runtime_api_versions = generate_runtime_api_versions(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>wasm_interface = generate_wasm_interface(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>api_impls_for_runtime_api = generate_api_impl_for_runtime_api(api_impls)<span class="question-mark">?</span>;
 
-	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>(
-		#hidden_includes
-
+	<span class="kw">let </span>impl_ = <span class="macro">quote!</span>(
 		#base_runtime_api
 
 		#api_impls_for_runtime
@@ -1364,7 +1398,15 @@
 
 			#wasm_interface
 		}
-	))
+	);
+
+	<span class="kw">let </span>impl_ = expander::Expander::new(<span class="string">&quot;impl_runtime_apis&quot;</span>)
+		.dry(std::env::var(<span class="string">&quot;SP_API_EXPAND&quot;</span>).is_err())
+		.verbose(<span class="bool-val">true</span>)
+		.write_to_out_dir(impl_)
+		.expect(<span class="string">&quot;Does not fail because of IO in OUT_DIR; qed&quot;</span>);
+
+	<span class="prelude-val">Ok</span>(impl_)
 }
 
 <span class="comment">// Filters all attributes except the cfg ones.
