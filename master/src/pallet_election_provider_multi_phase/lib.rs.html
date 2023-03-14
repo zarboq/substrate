@@ -2560,65 +2560,6 @@
 <a href="#2560" id="2560">2560</a>
 <a href="#2561" id="2561">2561</a>
 <a href="#2562" id="2562">2562</a>
-<a href="#2563" id="2563">2563</a>
-<a href="#2564" id="2564">2564</a>
-<a href="#2565" id="2565">2565</a>
-<a href="#2566" id="2566">2566</a>
-<a href="#2567" id="2567">2567</a>
-<a href="#2568" id="2568">2568</a>
-<a href="#2569" id="2569">2569</a>
-<a href="#2570" id="2570">2570</a>
-<a href="#2571" id="2571">2571</a>
-<a href="#2572" id="2572">2572</a>
-<a href="#2573" id="2573">2573</a>
-<a href="#2574" id="2574">2574</a>
-<a href="#2575" id="2575">2575</a>
-<a href="#2576" id="2576">2576</a>
-<a href="#2577" id="2577">2577</a>
-<a href="#2578" id="2578">2578</a>
-<a href="#2579" id="2579">2579</a>
-<a href="#2580" id="2580">2580</a>
-<a href="#2581" id="2581">2581</a>
-<a href="#2582" id="2582">2582</a>
-<a href="#2583" id="2583">2583</a>
-<a href="#2584" id="2584">2584</a>
-<a href="#2585" id="2585">2585</a>
-<a href="#2586" id="2586">2586</a>
-<a href="#2587" id="2587">2587</a>
-<a href="#2588" id="2588">2588</a>
-<a href="#2589" id="2589">2589</a>
-<a href="#2590" id="2590">2590</a>
-<a href="#2591" id="2591">2591</a>
-<a href="#2592" id="2592">2592</a>
-<a href="#2593" id="2593">2593</a>
-<a href="#2594" id="2594">2594</a>
-<a href="#2595" id="2595">2595</a>
-<a href="#2596" id="2596">2596</a>
-<a href="#2597" id="2597">2597</a>
-<a href="#2598" id="2598">2598</a>
-<a href="#2599" id="2599">2599</a>
-<a href="#2600" id="2600">2600</a>
-<a href="#2601" id="2601">2601</a>
-<a href="#2602" id="2602">2602</a>
-<a href="#2603" id="2603">2603</a>
-<a href="#2604" id="2604">2604</a>
-<a href="#2605" id="2605">2605</a>
-<a href="#2606" id="2606">2606</a>
-<a href="#2607" id="2607">2607</a>
-<a href="#2608" id="2608">2608</a>
-<a href="#2609" id="2609">2609</a>
-<a href="#2610" id="2610">2610</a>
-<a href="#2611" id="2611">2611</a>
-<a href="#2612" id="2612">2612</a>
-<a href="#2613" id="2613">2613</a>
-<a href="#2614" id="2614">2614</a>
-<a href="#2615" id="2615">2615</a>
-<a href="#2616" id="2616">2616</a>
-<a href="#2617" id="2617">2617</a>
-<a href="#2618" id="2618">2618</a>
-<a href="#2619" id="2619">2619</a>
-<a href="#2620" id="2620">2620</a>
-<a href="#2621" id="2621">2621</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2868,10 +2809,7 @@
 	traits::{CheckedAdd, Zero},
 	UpperOf,
 };
-<span class="kw">use </span>sp_npos_elections::{
-	assignment_ratio_to_staked_normalized, BoundedSupports, ElectionScore, EvaluateSupport,
-	Supports, VoteWeight,
-};
+<span class="kw">use </span>sp_npos_elections::{BoundedSupports, ElectionScore, IdentifierT, Supports, VoteWeight};
 <span class="kw">use </span>sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
@@ -3051,13 +2989,17 @@
 	DefaultNoBound,
 	scale_info::TypeInfo,
 )]
-#[scale_info(skip_type_params(T))]
-</span><span class="kw">pub struct </span>ReadySolution&lt;T: Config&gt; {
+#[scale_info(skip_type_params(AccountId, MaxWinners))]
+</span><span class="kw">pub struct </span>ReadySolution&lt;AccountId, MaxWinners&gt;
+<span class="kw">where
+	</span>AccountId: IdentifierT,
+	MaxWinners: Get&lt;u32&gt;,
+{
 	<span class="doccomment">/// The final supports of the solution.
 	///
 	/// This is target-major vector, storing each winners, total backing, and each individual
 	/// backer.
-	</span><span class="kw">pub </span>supports: BoundedSupports&lt;T::AccountId, T::MaxWinners&gt;,
+	</span><span class="kw">pub </span>supports: BoundedSupports&lt;AccountId, MaxWinners&gt;,
 	<span class="doccomment">/// The score of the solution.
 	///
 	/// This is needed to potentially challenge the solution.
@@ -3072,11 +3014,11 @@
 /// These are stored together because they are often accessed together.
 </span><span class="attr">#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default, TypeInfo)]
 #[scale_info(skip_type_params(T))]
-</span><span class="kw">pub struct </span>RoundSnapshot&lt;T: Config&gt; {
+</span><span class="kw">pub struct </span>RoundSnapshot&lt;AccountId, DataProvider&gt; {
 	<span class="doccomment">/// All of the voters.
-	</span><span class="kw">pub </span>voters: Vec&lt;VoterOf&lt;T&gt;&gt;,
+	</span><span class="kw">pub </span>voters: Vec&lt;DataProvider&gt;,
 	<span class="doccomment">/// All of the targets.
-	</span><span class="kw">pub </span>targets: Vec&lt;T::AccountId&gt;,
+	</span><span class="kw">pub </span>targets: Vec&lt;AccountId&gt;,
 }
 
 <span class="doccomment">/// Encodes the length of a solution or a snapshot.
@@ -3235,6 +3177,7 @@
 		</span><span class="kw">type </span>MinerConfig: <span class="kw">crate</span>::unsigned::MinerConfig&lt;
 			AccountId = <span class="self">Self</span>::AccountId,
 			MaxVotesPerVoter = &lt;<span class="self">Self</span>::DataProvider <span class="kw">as </span>ElectionDataProvider&gt;::MaxVotesPerVoter,
+			MaxWinners = <span class="self">Self</span>::MaxWinners,
 		&gt;;
 
 		<span class="doccomment">/// Maximum number of signed submissions that can be queued.
@@ -3353,6 +3296,11 @@
 		<span class="attr">#[pallet::constant_name(MinerMaxVotesPerVoter)]
 		</span><span class="kw">fn </span>max_votes_per_voter() -&gt; u32 {
 			&lt;T::MinerConfig <span class="kw">as </span>MinerConfig&gt;::MaxVotesPerVoter::get()
+		}
+
+		<span class="attr">#[pallet::constant_name(MinerMaxWinners)]
+		</span><span class="kw">fn </span>max_winners() -&gt; u32 {
+			&lt;T::MinerConfig <span class="kw">as </span>MinerConfig&gt;::MaxWinners::get()
 		}
 	}
 
@@ -3868,14 +3816,15 @@
 	<span class="doccomment">/// Current best solution, signed or unsigned, queued to be returned upon `elect`.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>queued_solution)]
-	</span><span class="kw">pub type </span>QueuedSolution&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, ReadySolution&lt;T&gt;&gt;;
+	</span><span class="kw">pub type </span>QueuedSolution&lt;T: Config&gt; =
+		StorageValue&lt;<span class="kw">_</span>, ReadySolution&lt;T::AccountId, T::MaxWinners&gt;&gt;;
 
 	<span class="doccomment">/// Snapshot data of the round.
 	///
 	/// This is created at the beginning of the signed phase and cleared upon calling `elect`.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>snapshot)]
-	</span><span class="kw">pub type </span>Snapshot&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, RoundSnapshot&lt;T&gt;&gt;;
+	</span><span class="kw">pub type </span>Snapshot&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, RoundSnapshot&lt;T::AccountId, VoterOf&lt;T&gt;&gt;&gt;;
 
 	<span class="doccomment">/// Desired number of targets to elect for this round.
 	///
@@ -4006,7 +3955,7 @@
 		<span class="comment">// instead of using storage APIs, we do a manual encoding into a fixed-size buffer.
 		// `encoded_size` encodes it without storing it anywhere, this should not cause any
 		// allocation.
-		</span><span class="kw">let </span>snapshot = RoundSnapshot::&lt;T&gt; { voters, targets };
+		</span><span class="kw">let </span>snapshot = RoundSnapshot::&lt;T::AccountId, VoterOf&lt;T&gt;&gt; { voters, targets };
 		<span class="kw">let </span>size = snapshot.encoded_size();
 		<span class="macro">log!</span>(debug, <span class="string">&quot;snapshot pre-calculated size {:?}&quot;</span>, size);
 		<span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::with_capacity(size);
@@ -4100,89 +4049,22 @@
 	</span><span class="kw">pub fn </span>feasibility_check(
 		raw_solution: RawSolution&lt;SolutionOf&lt;T::MinerConfig&gt;&gt;,
 		compute: ElectionCompute,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;ReadySolution&lt;T&gt;, FeasibilityError&gt; {
-		<span class="kw">let </span>RawSolution { solution, score, round } = raw_solution;
-
-		<span class="comment">// First, check round.
-		</span><span class="macro">ensure!</span>(<span class="self">Self</span>::round() == round, FeasibilityError::InvalidRound);
-
-		<span class="comment">// Winners are not directly encoded in the solution.
-		</span><span class="kw">let </span>winners = solution.unique_targets();
-
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ReadySolution&lt;T::AccountId, T::MaxWinners&gt;, FeasibilityError&gt; {
 		<span class="kw">let </span>desired_targets =
 			<span class="self">Self</span>::desired_targets().ok_or(FeasibilityError::SnapshotUnavailable)<span class="question-mark">?</span>;
 
-		<span class="macro">ensure!</span>(winners.len() <span class="kw">as </span>u32 == desired_targets, FeasibilityError::WrongWinnerCount);
-		<span class="comment">// Fail early if targets requested by data provider exceed maximum winners supported.
-		</span><span class="macro">ensure!</span>(
-			desired_targets &lt;= &lt;T <span class="kw">as </span>pallet::Config&gt;::MaxWinners::get(),
-			FeasibilityError::TooManyDesiredTargets
-		);
+		<span class="kw">let </span>snapshot = <span class="self">Self</span>::snapshot().ok_or(FeasibilityError::SnapshotUnavailable)<span class="question-mark">?</span>;
+		<span class="kw">let </span>round = <span class="self">Self</span>::round();
+		<span class="kw">let </span>minimum_untrusted_score = <span class="self">Self</span>::minimum_untrusted_score();
 
-		<span class="comment">// Ensure that the solution&#39;s score can pass absolute min-score.
-		</span><span class="kw">let </span>submitted_score = raw_solution.score;
-		<span class="macro">ensure!</span>(
-			<span class="self">Self</span>::minimum_untrusted_score().map_or(<span class="bool-val">true</span>, |min_score| {
-				submitted_score.strict_threshold_better(min_score, Perbill::zero())
-			}),
-			FeasibilityError::UntrustedScoreTooLow
-		);
-
-		<span class="comment">// Read the entire snapshot.
-		</span><span class="kw">let </span>RoundSnapshot { voters: snapshot_voters, targets: snapshot_targets } =
-			<span class="self">Self</span>::snapshot().ok_or(FeasibilityError::SnapshotUnavailable)<span class="question-mark">?</span>;
-
-		<span class="comment">// ----- Start building. First, we need some closures.
-		</span><span class="kw">let </span>cache = helpers::generate_voter_cache::&lt;T::MinerConfig&gt;(<span class="kw-2">&amp;</span>snapshot_voters);
-		<span class="kw">let </span>voter_at = helpers::voter_at_fn::&lt;T::MinerConfig&gt;(<span class="kw-2">&amp;</span>snapshot_voters);
-		<span class="kw">let </span>target_at = helpers::target_at_fn::&lt;T::MinerConfig&gt;(<span class="kw-2">&amp;</span>snapshot_targets);
-		<span class="kw">let </span>voter_index = helpers::voter_index_fn_usize::&lt;T::MinerConfig&gt;(<span class="kw-2">&amp;</span>cache);
-
-		<span class="comment">// Then convert solution -&gt; assignment. This will fail if any of the indices are gibberish,
-		// namely any of the voters or targets.
-		</span><span class="kw">let </span>assignments = solution
-			.into_assignment(voter_at, target_at)
-			.map_err::&lt;FeasibilityError, <span class="kw">_</span>&gt;(Into::into)<span class="question-mark">?</span>;
-
-		<span class="comment">// Ensure that assignments is correct.
-		</span><span class="kw">let _ </span>= assignments.iter().try_for_each(|assignment| {
-			<span class="comment">// Check that assignment.who is actually a voter (defensive-only).
-			// NOTE: while using the index map from `voter_index` is better than a blind linear
-			// search, this *still* has room for optimization. Note that we had the index when
-			// we did `solution -&gt; assignment` and we lost it. Ideal is to keep the index
-			// around.
-
-			// Defensive-only: must exist in the snapshot.
-			</span><span class="kw">let </span>snapshot_index =
-				voter_index(<span class="kw-2">&amp;</span>assignment.who).ok_or(FeasibilityError::InvalidVoter)<span class="question-mark">?</span>;
-			<span class="comment">// Defensive-only: index comes from the snapshot, must exist.
-			</span><span class="kw">let </span>(_voter, _stake, targets) =
-				snapshot_voters.get(snapshot_index).ok_or(FeasibilityError::InvalidVoter)<span class="question-mark">?</span>;
-
-			<span class="comment">// Check that all of the targets are valid based on the snapshot.
-			</span><span class="kw">if </span>assignment.distribution.iter().any(|(d, <span class="kw">_</span>)| !targets.contains(d)) {
-				<span class="kw">return </span><span class="prelude-val">Err</span>(FeasibilityError::InvalidVote)
-			}
-			<span class="prelude-val">Ok</span>(())
-		})<span class="question-mark">?</span>;
-
-		<span class="comment">// ----- Start building support. First, we need one more closure.
-		</span><span class="kw">let </span>stake_of = helpers::stake_of_fn::&lt;T::MinerConfig&gt;(<span class="kw-2">&amp;</span>snapshot_voters, <span class="kw-2">&amp;</span>cache);
-
-		<span class="comment">// This might fail if the normalization fails. Very unlikely. See `integrity_test`.
-		</span><span class="kw">let </span>staked_assignments = assignment_ratio_to_staked_normalized(assignments, stake_of)
-			.map_err::&lt;FeasibilityError, <span class="kw">_</span>&gt;(Into::into)<span class="question-mark">?</span>;
-		<span class="kw">let </span>supports = sp_npos_elections::to_supports(<span class="kw-2">&amp;</span>staked_assignments);
-
-		<span class="comment">// Finally, check that the claimed score was indeed correct.
-		</span><span class="kw">let </span>known_score = supports.evaluate();
-		<span class="macro">ensure!</span>(known_score == score, FeasibilityError::InvalidScore);
-
-		<span class="comment">// Size of winners in miner solution is equal to `desired_targets` &lt;= `MaxWinners`.
-		</span><span class="kw">let </span>supports = supports
-			.try_into()
-			.defensive_map_err(|<span class="kw">_</span>| FeasibilityError::BoundedConversionFailed)<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(ReadySolution { supports, compute, score })
+		Miner::&lt;T::MinerConfig&gt;::feasibility_check(
+			raw_solution,
+			compute,
+			desired_targets,
+			snapshot,
+			round,
+			minimum_untrusted_score,
+		)
 	}
 
 	<span class="doccomment">/// Perform the tasks to be done after a new `elect` has been triggered:
