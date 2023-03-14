@@ -1641,6 +1641,9 @@
 <a href="#1641" id="1641">1641</a>
 <a href="#1642" id="1642">1642</a>
 <a href="#1643" id="1643">1643</a>
+<a href="#1644" id="1644">1644</a>
+<a href="#1645" id="1645">1645</a>
+<a href="#1646" id="1646">1646</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1700,9 +1703,12 @@
 //! It is illegal to send a [`NotifsHandlerIn::Open`] before a previously-emitted
 //! [`NotifsHandlerIn::Open`] has gotten an answer.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::protocol::notifications::upgrade::{
-	NotificationsIn, NotificationsInSubstream, NotificationsOut, NotificationsOutSubstream,
-	UpgradeCollec,
+</span><span class="kw">use crate</span>::{
+	protocol::notifications::upgrade::{
+		NotificationsIn, NotificationsInSubstream, NotificationsOut, NotificationsOutSubstream,
+		UpgradeCollec,
+	},
+	types::ProtocolName,
 };
 
 <span class="kw">use </span>bytes::BytesMut;
@@ -1720,7 +1726,6 @@
 };
 <span class="kw">use </span>log::error;
 <span class="kw">use </span>parking_lot::{Mutex, RwLock};
-<span class="kw">use </span>sc_network_common::protocol::ProtocolName;
 <span class="kw">use </span>std::{
 	collections::VecDeque,
 	mem,
@@ -2588,8 +2593,9 @@
 				Poll::Ready(<span class="prelude-val">Some</span>(NotificationsSinkMessage::Notification { message })) =&gt;
 					Poll::Ready(<span class="prelude-val">Some</span>(message)),
 				Poll::Pending =&gt; Poll::Ready(<span class="prelude-val">None</span>),
-				Poll::Ready(<span class="prelude-val">Some</span>(NotificationsSinkMessage::ForceClose)) | Poll::Ready(<span class="prelude-val">None</span>) =&gt;
-					<span class="macro">panic!</span>(<span class="string">&quot;sink closed&quot;</span>),
+				Poll::Ready(<span class="prelude-val">Some</span>(NotificationsSinkMessage::ForceClose)) | Poll::Ready(<span class="prelude-val">None</span>) =&gt; {
+					<span class="macro">panic!</span>(<span class="string">&quot;sink closed&quot;</span>)
+				},
 			})
 			.<span class="kw">await
 		</span>}

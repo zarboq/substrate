@@ -155,9 +155,9 @@ var sourcesIndex = JSON.parse('{\
 "sc_executor_wasmtime":["",[],["host.rs","imports.rs","instance_wrapper.rs","lib.rs","runtime.rs","util.rs"]],\
 "sc_informant":["",[],["display.rs","lib.rs"]],\
 "sc_keystore":["",[],["lib.rs","local.rs"]],\
-"sc_network":["",[["protocol",[["notifications",[["upgrade",[],["collec.rs","notifications.rs"]]],["behaviour.rs","handler.rs","upgrade.rs"]]],["message.rs","notifications.rs"]],["service",[],["metrics.rs","out_events.rs"]]],["behaviour.rs","config.rs","discovery.rs","lib.rs","network_state.rs","peer_info.rs","protocol.rs","request_responses.rs","service.rs","transport.rs"]],\
+"sc_network":["",[["protocol",[["notifications",[["upgrade",[],["collec.rs","notifications.rs"]]],["behaviour.rs","handler.rs","upgrade.rs"]]],["message.rs","notifications.rs"]],["service",[],["metrics.rs","out_events.rs","signature.rs","traits.rs"]]],["behaviour.rs","config.rs","discovery.rs","error.rs","event.rs","lib.rs","network_state.rs","peer_info.rs","protocol.rs","request_responses.rs","service.rs","transport.rs","types.rs","utils.rs"]],\
 "sc_network_bitswap":["",[],["lib.rs","schema.rs"]],\
-"sc_network_common":["",[["protocol",[],["event.rs","role.rs"]],["service",[],["signature.rs"]],["sync",[],["message.rs","metrics.rs","warp.rs"]]],["config.rs","error.rs","lib.rs","message.rs","protocol.rs","request_responses.rs","service.rs","sync.rs","utils.rs"]],\
+"sc_network_common":["",[["sync",[],["message.rs","metrics.rs","warp.rs"]]],["lib.rs","message.rs","role.rs","sync.rs"]],\
 "sc_network_gossip":["",[],["bridge.rs","lib.rs","state_machine.rs","validator.rs"]],\
 "sc_network_light":["",[["light_client_requests",[],["handler.rs"]]],["lib.rs","light_client_requests.rs","schema.rs"]],\
 "sc_network_sync":["",[["service",[],["chain_sync.rs","mock.rs","mod.rs","network.rs"]]],["block_request_handler.rs","blocks.rs","engine.rs","extra_requests.rs","lib.rs","mock.rs","schema.rs","state.rs","state_request_handler.rs","warp.rs","warp_request_handler.rs"]],\

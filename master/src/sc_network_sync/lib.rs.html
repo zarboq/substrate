@@ -4086,6 +4086,12 @@
 <a href="#4086" id="4086">4086</a>
 <a href="#4087" id="4087">4087</a>
 <a href="#4088" id="4088">4088</a>
+<a href="#4089" id="4089">4089</a>
+<a href="#4090" id="4090">4090</a>
+<a href="#4091" id="4091">4091</a>
+<a href="#4092" id="4092">4092</a>
+<a href="#4093" id="4093">4093</a>
+<a href="#4094" id="4094">4094</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4116,23 +4122,13 @@
 //! the network, or whenever a block has been successfully verified, call the appropriate method in
 //! order to update it.
 
-</span><span class="kw">pub mod </span>block_request_handler;
-<span class="kw">pub mod </span>blocks;
-<span class="kw">pub mod </span>engine;
-<span class="kw">pub mod </span>mock;
-<span class="kw">mod </span>schema;
-<span class="kw">pub mod </span>service;
-<span class="kw">pub mod </span>state;
-<span class="kw">pub mod </span>state_request_handler;
-<span class="kw">pub mod </span>warp;
-<span class="kw">pub mod </span>warp_request_handler;
-
-<span class="kw">use crate</span>::{
+</span><span class="kw">use crate</span>::{
 	blocks::BlockCollection,
 	schema::v1::{StateRequest, StateResponse},
 	state::StateSync,
 	warp::{WarpProofImportResult, WarpSync},
 };
+
 <span class="kw">use </span>codec::{Decode, DecodeAll, Encode};
 <span class="kw">use </span>extra_requests::ExtraRequests;
 <span class="kw">use </span>futures::{
@@ -4140,18 +4136,22 @@
 };
 <span class="kw">use </span>libp2p::{request_response::OutboundFailure, PeerId};
 <span class="kw">use </span>log::{debug, error, info, trace, warn};
-<span class="kw">use </span>prometheus_endpoint::{register, Counter, PrometheusError, Registry, U64};
 <span class="kw">use </span>prost::Message;
+
+<span class="kw">use </span>prometheus_endpoint::{register, Counter, PrometheusError, Registry, U64};
 <span class="kw">use </span>sc_client_api::{BlockBackend, ProofProvider};
 <span class="kw">use </span>sc_consensus::{
 	import_queue::ImportQueueService, BlockImportError, BlockImportStatus, IncomingBlock,
 };
-<span class="kw">use </span>sc_network_common::{
+<span class="kw">use </span>sc_network::{
 	config::{
 		NonDefaultSetConfig, NonReservedPeerMode, NotificationHandshake, ProtocolId, SetConfig,
 	},
-	protocol::{role::Roles, ProtocolName},
 	request_responses::{IfDisconnected, RequestFailure},
+	types::ProtocolName,
+};
+<span class="kw">use </span>sc_network_common::{
+	role::Roles,
 	sync::{
 		message::{
 			BlockAnnounce, BlockAnnouncesHandshake, BlockAttributes, BlockData, BlockRequest,
@@ -4164,7 +4164,6 @@
 		SyncState, SyncStatus,
 	},
 };
-<span class="kw">pub use </span>service::chain_sync::SyncingService;
 <span class="kw">use </span>sp_arithmetic::traits::Saturating;
 <span class="kw">use </span>sp_blockchain::{Error <span class="kw">as </span>ClientError, HeaderBackend, HeaderMetadata};
 <span class="kw">use </span>sp_consensus::{
@@ -4178,6 +4177,7 @@
 	},
 	EncodedJustification, Justifications,
 };
+
 <span class="kw">use </span>std::{
 	collections::{hash_map::Entry, HashMap, HashSet},
 	iter,
@@ -4185,9 +4185,21 @@
 	pin::Pin,
 	sync::Arc,
 };
-<span class="kw">use </span>warp::TargetBlockImportResult;
+
+<span class="kw">pub use </span>service::chain_sync::SyncingService;
 
 <span class="kw">mod </span>extra_requests;
+<span class="kw">mod </span>schema;
+
+<span class="kw">pub mod </span>block_request_handler;
+<span class="kw">pub mod </span>blocks;
+<span class="kw">pub mod </span>engine;
+<span class="kw">pub mod </span>mock;
+<span class="kw">pub mod </span>service;
+<span class="kw">pub mod </span>state;
+<span class="kw">pub mod </span>state_request_handler;
+<span class="kw">pub mod </span>warp;
+<span class="kw">pub mod </span>warp_request_handler;
 
 <span class="doccomment">/// Maximum blocks to request in a single packet.
 </span><span class="kw">const </span>MAX_BLOCKS_TO_REQUEST: usize = <span class="number">64</span>;
@@ -5015,9 +5027,9 @@
 								<span class="kw">match </span>warp_sync.import_target_block(
 									blocks.pop().expect(<span class="string">&quot;`blocks` len checked above.&quot;</span>),
 								) {
-									TargetBlockImportResult::Success =&gt;
+									warp::TargetBlockImportResult::Success =&gt;
 										<span class="kw">return </span><span class="prelude-val">Ok</span>(OnBlockData::Continue),
-									TargetBlockImportResult::BadResponse =&gt;
+									warp::TargetBlockImportResult::BadResponse =&gt;
 										<span class="kw">return </span><span class="prelude-val">Err</span>(BadPeer(<span class="kw-2">*</span>who, rep::VERIFICATION_FAIL)),
 								}
 							} <span class="kw">else if </span>blocks.is_empty() {
@@ -7248,7 +7260,7 @@
 	<span class="kw">use </span>futures::{executor::block_on, future::poll_fn};
 	<span class="kw">use </span>sc_block_builder::BlockBuilderProvider;
 	<span class="kw">use </span>sc_network_common::{
-		protocol::role::Role,
+		role::Role,
 		sync::message::{BlockData, BlockState, FromBlock},
 	};
 	<span class="kw">use </span>sp_blockchain::HeaderBackend;

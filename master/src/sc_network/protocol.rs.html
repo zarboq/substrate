@@ -581,6 +581,8 @@
 <a href="#581" id="581">581</a>
 <a href="#582" id="582">582</a>
 <a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -599,7 +601,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::config;
+</span><span class="kw">use crate</span>::{
+	config::{<span class="self">self</span>, NonReservedPeerMode},
+	error,
+	types::ProtocolName,
+};
 
 <span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>codec::{DecodeAll, Encode};
@@ -612,26 +618,24 @@
 	Multiaddr, PeerId,
 };
 <span class="kw">use </span>log::{debug, error, warn};
-<span class="kw">use </span>message::{generic::Message <span class="kw">as </span>GenericMessage, Message};
-<span class="kw">use </span>notifications::{Notifications, NotificationsOut};
-<span class="kw">use </span>sc_network_common::{
-	config::NonReservedPeerMode,
-	error,
-	protocol::{role::Roles, ProtocolName},
-	sync::message::BlockAnnouncesHandshake,
-};
+
+<span class="kw">use </span>sc_network_common::{role::Roles, sync::message::BlockAnnouncesHandshake};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
+
 <span class="kw">use </span>std::{
 	collections::{HashMap, HashSet, VecDeque},
 	iter,
 	task::Poll,
 };
 
+<span class="kw">use </span>message::{generic::Message <span class="kw">as </span>GenericMessage, Message};
+<span class="kw">use </span>notifications::{Notifications, NotificationsOut};
+
+<span class="kw">pub use </span>notifications::{NotificationsSink, NotifsHandlerError, Ready};
+
 <span class="kw">mod </span>notifications;
 
 <span class="kw">pub mod </span>message;
-
-<span class="kw">pub use </span>notifications::{NotificationsSink, NotifsHandlerError, Ready};
 
 <span class="doccomment">/// Maximum size used for notifications in the block announce and transaction protocols.
 </span><span class="comment">// Must be equal to `max(MAX_BLOCK_ANNOUNCE_SIZE, MAX_TRANSACTIONS_SIZE)`.
@@ -676,7 +680,7 @@
 	</span><span class="kw">pub fn </span>new(
 		roles: Roles,
 		network_config: <span class="kw-2">&amp;</span>config::NetworkConfiguration,
-		block_announces_protocol: sc_network_common::config::NonDefaultSetConfig,
+		block_announces_protocol: config::NonDefaultSetConfig,
 	) -&gt; error::Result&lt;(<span class="self">Self</span>, sc_peerset::PeersetHandle, Vec&lt;(PeerId, Multiaddr)&gt;)&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>known_addresses = Vec::new();
 

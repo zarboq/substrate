@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["DecodingError","An error during decoding of key material."],["SigningError","An error during signing of a message."]]};

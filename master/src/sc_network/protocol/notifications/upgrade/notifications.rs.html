@@ -692,6 +692,8 @@
 <a href="#692" id="692">692</a>
 <a href="#693" id="693">693</a>
 <a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -710,8 +712,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>asynchronous_codec::Framed;
-<span class="doccomment">/// Notifications protocol.
+</span><span class="doccomment">/// Notifications protocol.
 ///
 /// The Substrate notifications protocol consists in the following:
 ///
@@ -729,11 +730,15 @@
 ///
 /// Notification substreams are unidirectional. If A opens a substream with B, then B is
 /// encouraged but not required to open a substream to A as well.
-</span><span class="kw">use </span>bytes::BytesMut;
+</span><span class="kw">use </span><span class="kw">crate</span>::types::ProtocolName;
+
+<span class="kw">use </span>asynchronous_codec::Framed;
+<span class="kw">use </span>bytes::BytesMut;
 <span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>libp2p::core::{upgrade, InboundUpgrade, OutboundUpgrade, UpgradeInfo};
 <span class="kw">use </span>log::{error, warn};
-<span class="kw">use </span>sc_network_common::protocol::ProtocolName;
+<span class="kw">use </span>unsigned_varint::codec::UviBytes;
+
 <span class="kw">use </span>std::{
 	convert::Infallible,
 	io, mem,
@@ -741,7 +746,6 @@
 	task::{Context, Poll},
 	vec,
 };
-<span class="kw">use </span>unsigned_varint::codec::UviBytes;
 
 <span class="doccomment">/// Maximum allowed size of the two handshake messages, in bytes.
 </span><span class="kw">const </span>MAX_HANDSHAKE_SIZE: usize = <span class="number">1024</span>;

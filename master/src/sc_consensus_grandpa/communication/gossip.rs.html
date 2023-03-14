@@ -2656,6 +2656,7 @@
 <a href="#2656" id="2656">2656</a>
 <a href="#2657" id="2657">2657</a>
 <a href="#2658" id="2658">2658</a>
+<a href="#2659" id="2659">2659</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2749,7 +2750,7 @@
 <span class="kw">use </span>prometheus_endpoint::{register, CounterVec, Opts, PrometheusError, Registry, U64};
 <span class="kw">use </span>rand::seq::SliceRandom;
 <span class="kw">use </span>sc_network::{PeerId, ReputationChange};
-<span class="kw">use </span>sc_network_common::protocol::role::ObservedRole;
+<span class="kw">use </span>sc_network_common::role::ObservedRole;
 <span class="kw">use </span>sc_network_gossip::{MessageIntent, ValidatorContext};
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_DEBUG};
 <span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
@@ -3478,7 +3479,7 @@
 	</span><span class="kw">fn </span>note_set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, set_id: SetId, authorities: Vec&lt;AuthorityId&gt;) -&gt; MaybeMessage&lt;Block&gt; {
 		<span class="kw">let </span>local_view = <span class="kw">match </span><span class="self">self</span>.local_view {
 			<span class="kw-2">ref mut </span>x @ <span class="prelude-val">None </span>=&gt; x.get_or_insert(LocalView::new(set_id, Round(<span class="number">1</span>))),
-			<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>v) =&gt;
+			<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>v) =&gt; {
 				<span class="kw">if </span>v.set_id == set_id {
 					<span class="kw">let </span>diff_authorities = <span class="self">self</span>.authorities.iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;() !=
 						authorities.iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
@@ -3499,7 +3500,8 @@
 					</span><span class="kw">return </span><span class="prelude-val">None
 				</span>} <span class="kw">else </span>{
 					v
-				},
+				}
+			},
 		};
 
 		local_view.update_set(set_id);
