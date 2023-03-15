@@ -239,7 +239,7 @@
 
 </span><span class="doccomment">//! Hash utilities.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::metadata;
+</span><span class="kw">use </span><span class="kw">crate</span>::metadata_ir;
 <span class="kw">use </span>codec::{Codec, MaxEncodedLen};
 <span class="kw">use </span>sp_io::hashing::{blake2_128, blake2_256, twox_128, twox_256, twox_64};
 <span class="kw">use </span>sp_std::prelude::Vec;
@@ -281,7 +281,7 @@
 
 <span class="doccomment">/// Hasher to use to hash keys to insert to storage.
 </span><span class="kw">pub trait </span>StorageHasher: <span class="lifetime">&#39;static </span>{
-	<span class="kw">const </span>METADATA: metadata::StorageHasher;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR;
 	<span class="kw">type </span>Output: AsRef&lt;[u8]&gt;;
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self</span>::Output;
 
@@ -302,7 +302,7 @@
 <span class="doccomment">/// Store the key directly.
 </span><span class="kw">pub struct </span>Identity;
 <span class="kw">impl </span>StorageHasher <span class="kw">for </span>Identity {
-	<span class="kw">const </span>METADATA: metadata::StorageHasher = metadata::StorageHasher::Identity;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR = metadata_ir::StorageHasherIR::Identity;
 	<span class="kw">type </span>Output = Vec&lt;u8&gt;;
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
 		x.to_vec()
@@ -320,7 +320,7 @@
 <span class="doccomment">/// Hash storage keys with `concat(twox64(key), key)`
 </span><span class="kw">pub struct </span>Twox64Concat;
 <span class="kw">impl </span>StorageHasher <span class="kw">for </span>Twox64Concat {
-	<span class="kw">const </span>METADATA: metadata::StorageHasher = metadata::StorageHasher::Twox64Concat;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR = metadata_ir::StorageHasherIR::Twox64Concat;
 	<span class="kw">type </span>Output = Vec&lt;u8&gt;;
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
 		twox_64(x).iter().chain(x.iter()).cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
@@ -342,7 +342,7 @@
 <span class="doccomment">/// Hash storage keys with `concat(blake2_128(key), key)`
 </span><span class="kw">pub struct </span>Blake2_128Concat;
 <span class="kw">impl </span>StorageHasher <span class="kw">for </span>Blake2_128Concat {
-	<span class="kw">const </span>METADATA: metadata::StorageHasher = metadata::StorageHasher::Blake2_128Concat;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR = metadata_ir::StorageHasherIR::Blake2_128Concat;
 	<span class="kw">type </span>Output = Vec&lt;u8&gt;;
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
 		blake2_128(x).iter().chain(x.iter()).cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
@@ -364,7 +364,7 @@
 <span class="doccomment">/// Hash storage keys with blake2 128
 </span><span class="kw">pub struct </span>Blake2_128;
 <span class="kw">impl </span>StorageHasher <span class="kw">for </span>Blake2_128 {
-	<span class="kw">const </span>METADATA: metadata::StorageHasher = metadata::StorageHasher::Blake2_128;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR = metadata_ir::StorageHasherIR::Blake2_128;
 	<span class="kw">type </span>Output = [u8; <span class="number">16</span>];
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">16</span>] {
 		blake2_128(x)
@@ -377,7 +377,7 @@
 <span class="doccomment">/// Hash storage keys with blake2 256
 </span><span class="kw">pub struct </span>Blake2_256;
 <span class="kw">impl </span>StorageHasher <span class="kw">for </span>Blake2_256 {
-	<span class="kw">const </span>METADATA: metadata::StorageHasher = metadata::StorageHasher::Blake2_256;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR = metadata_ir::StorageHasherIR::Blake2_256;
 	<span class="kw">type </span>Output = [u8; <span class="number">32</span>];
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
 		blake2_256(x)
@@ -390,7 +390,7 @@
 <span class="doccomment">/// Hash storage keys with twox 128
 </span><span class="kw">pub struct </span>Twox128;
 <span class="kw">impl </span>StorageHasher <span class="kw">for </span>Twox128 {
-	<span class="kw">const </span>METADATA: metadata::StorageHasher = metadata::StorageHasher::Twox128;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR = metadata_ir::StorageHasherIR::Twox128;
 	<span class="kw">type </span>Output = [u8; <span class="number">16</span>];
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">16</span>] {
 		twox_128(x)
@@ -403,7 +403,7 @@
 <span class="doccomment">/// Hash storage keys with twox 256
 </span><span class="kw">pub struct </span>Twox256;
 <span class="kw">impl </span>StorageHasher <span class="kw">for </span>Twox256 {
-	<span class="kw">const </span>METADATA: metadata::StorageHasher = metadata::StorageHasher::Twox256;
+	<span class="kw">const </span>METADATA: metadata_ir::StorageHasherIR = metadata_ir::StorageHasherIR::Twox256;
 	<span class="kw">type </span>Output = [u8; <span class="number">32</span>];
 	<span class="kw">fn </span>hash(x: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
 		twox_256(x)

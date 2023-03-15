@@ -1302,7 +1302,7 @@
 //! StoragePrefixedDoubleMap traits and their methods directly.
 
 </span><span class="kw">use crate</span>::{
-	metadata::{StorageEntryMetadata, StorageEntryType},
+	metadata_ir::{StorageEntryMetadataIR, StorageEntryTypeIR},
 	storage::{
 		types::{
 			EncodeLikeTuple, HasKeyPrefix, HasReversibleKeyPrefix, OptionQuery, QueryKindTrait,
@@ -1833,13 +1833,13 @@
 	OnEmpty: Get&lt;QueryKind::Query&gt; + <span class="lifetime">&#39;static</span>,
 	MaxValues: Get&lt;<span class="prelude-ty">Option</span>&lt;u32&gt;&gt;,
 {
-	<span class="kw">fn </span>build_metadata(docs: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;, entries: <span class="kw-2">&amp;mut </span>Vec&lt;StorageEntryMetadata&gt;) {
+	<span class="kw">fn </span>build_metadata(docs: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;, entries: <span class="kw-2">&amp;mut </span>Vec&lt;StorageEntryMetadataIR&gt;) {
 		<span class="kw">let </span>docs = <span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;no-metadata-docs&quot;</span>) { <span class="macro">vec!</span>[] } <span class="kw">else </span>{ docs };
 
-		<span class="kw">let </span>entry = StorageEntryMetadata {
+		<span class="kw">let </span>entry = StorageEntryMetadataIR {
 			name: Prefix::STORAGE_PREFIX,
 			modifier: QueryKind::METADATA,
-			ty: StorageEntryType::Map {
+			ty: StorageEntryTypeIR::Map {
 				key: scale_info::meta_type::&lt;Key::Key&gt;(),
 				hashers: Key::HASHER_METADATA.to_vec(),
 				value: scale_info::meta_type::&lt;Value&gt;(),
@@ -1903,7 +1903,7 @@
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use crate</span>::{
 		hash::{StorageHasher <span class="kw">as _</span>, <span class="kw-2">*</span>},
-		metadata::{StorageEntryModifier, StorageHasher},
+		metadata_ir::{StorageEntryModifierIR, StorageHasherIR},
 		storage::types::{Key <span class="kw">as </span>NMapKey, ValueQuery},
 	};
 	<span class="kw">use </span>sp_io::{hashing::twox_128, TestExternalities};
@@ -2074,22 +2074,22 @@
 			<span class="macro">assert_eq!</span>(
 				entries,
 				<span class="macro">vec!</span>[
-					StorageEntryMetadata {
+					StorageEntryMetadataIR {
 						name: <span class="string">&quot;Foo&quot;</span>,
-						modifier: StorageEntryModifier::Optional,
-						ty: StorageEntryType::Map {
-							hashers: <span class="macro">vec!</span>[StorageHasher::Blake2_128Concat],
+						modifier: StorageEntryModifierIR::Optional,
+						ty: StorageEntryTypeIR::Map {
+							hashers: <span class="macro">vec!</span>[StorageHasherIR::Blake2_128Concat],
 							key: scale_info::meta_type::&lt;u16&gt;(),
 							value: scale_info::meta_type::&lt;u32&gt;(),
 						},
 						default: <span class="prelude-ty">Option</span>::&lt;u32&gt;::None.encode(),
 						docs: <span class="macro">vec!</span>[],
 					},
-					StorageEntryMetadata {
+					StorageEntryMetadataIR {
 						name: <span class="string">&quot;Foo&quot;</span>,
-						modifier: StorageEntryModifier::Default,
-						ty: StorageEntryType::Map {
-							hashers: <span class="macro">vec!</span>[StorageHasher::Blake2_128Concat],
+						modifier: StorageEntryModifierIR::Default,
+						ty: StorageEntryTypeIR::Map {
+							hashers: <span class="macro">vec!</span>[StorageHasherIR::Blake2_128Concat],
 							key: scale_info::meta_type::&lt;u16&gt;(),
 							value: scale_info::meta_type::&lt;u32&gt;(),
 						},
@@ -2274,13 +2274,13 @@
 			<span class="macro">assert_eq!</span>(
 				entries,
 				<span class="macro">vec!</span>[
-					StorageEntryMetadata {
+					StorageEntryMetadataIR {
 						name: <span class="string">&quot;Foo&quot;</span>,
-						modifier: StorageEntryModifier::Optional,
-						ty: StorageEntryType::Map {
+						modifier: StorageEntryModifierIR::Optional,
+						ty: StorageEntryTypeIR::Map {
 							hashers: <span class="macro">vec!</span>[
-								StorageHasher::Blake2_128Concat,
-								StorageHasher::Twox64Concat
+								StorageHasherIR::Blake2_128Concat,
+								StorageHasherIR::Twox64Concat
 							],
 							key: scale_info::meta_type::&lt;(u16, u8)&gt;(),
 							value: scale_info::meta_type::&lt;u32&gt;(),
@@ -2288,13 +2288,13 @@
 						default: <span class="prelude-ty">Option</span>::&lt;u32&gt;::None.encode(),
 						docs: <span class="macro">vec!</span>[],
 					},
-					StorageEntryMetadata {
+					StorageEntryMetadataIR {
 						name: <span class="string">&quot;Foo&quot;</span>,
-						modifier: StorageEntryModifier::Default,
-						ty: StorageEntryType::Map {
+						modifier: StorageEntryModifierIR::Default,
+						ty: StorageEntryTypeIR::Map {
 							hashers: <span class="macro">vec!</span>[
-								StorageHasher::Blake2_128Concat,
-								StorageHasher::Twox64Concat
+								StorageHasherIR::Blake2_128Concat,
+								StorageHasherIR::Twox64Concat
 							],
 							key: scale_info::meta_type::&lt;(u16, u8)&gt;(),
 							value: scale_info::meta_type::&lt;u32&gt;(),
@@ -2515,14 +2515,14 @@
 			<span class="macro">assert_eq!</span>(
 				entries,
 				<span class="macro">vec!</span>[
-					StorageEntryMetadata {
+					StorageEntryMetadataIR {
 						name: <span class="string">&quot;Foo&quot;</span>,
-						modifier: StorageEntryModifier::Optional,
-						ty: StorageEntryType::Map {
+						modifier: StorageEntryModifierIR::Optional,
+						ty: StorageEntryTypeIR::Map {
 							hashers: <span class="macro">vec!</span>[
-								StorageHasher::Blake2_128Concat,
-								StorageHasher::Blake2_128Concat,
-								StorageHasher::Twox64Concat
+								StorageHasherIR::Blake2_128Concat,
+								StorageHasherIR::Blake2_128Concat,
+								StorageHasherIR::Twox64Concat
 							],
 							key: scale_info::meta_type::&lt;(u16, u16, u16)&gt;(),
 							value: scale_info::meta_type::&lt;u32&gt;(),
@@ -2530,14 +2530,14 @@
 						default: <span class="prelude-ty">Option</span>::&lt;u32&gt;::None.encode(),
 						docs: <span class="macro">vec!</span>[],
 					},
-					StorageEntryMetadata {
+					StorageEntryMetadataIR {
 						name: <span class="string">&quot;Foo&quot;</span>,
-						modifier: StorageEntryModifier::Default,
-						ty: StorageEntryType::Map {
+						modifier: StorageEntryModifierIR::Default,
+						ty: StorageEntryTypeIR::Map {
 							hashers: <span class="macro">vec!</span>[
-								StorageHasher::Blake2_128Concat,
-								StorageHasher::Blake2_128Concat,
-								StorageHasher::Twox64Concat
+								StorageHasherIR::Blake2_128Concat,
+								StorageHasherIR::Blake2_128Concat,
+								StorageHasherIR::Twox64Concat
 							],
 							key: scale_info::meta_type::&lt;(u16, u16, u16)&gt;(),
 							value: scale_info::meta_type::&lt;u32&gt;(),

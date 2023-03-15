@@ -184,6 +184,31 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -234,6 +259,7 @@
 			<span class="kw">let </span>event = expand_pallet_metadata_events(<span class="kw-2">&amp;</span>filtered_names, runtime, scrate, decl);
 			<span class="kw">let </span>constants = expand_pallet_metadata_constants(runtime, decl);
 			<span class="kw">let </span>errors = expand_pallet_metadata_errors(runtime, decl);
+			<span class="kw">let </span>docs = expand_pallet_metadata_docs(runtime, decl);
 			<span class="kw">let </span>attr = decl.cfg_pattern.iter().fold(TokenStream::new(), |acc, pattern| {
 				<span class="kw">let </span>attr = TokenStream::from_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;#[cfg({})]&quot;</span>, pattern.original()))
 					.expect(<span class="string">&quot;was successfully parsed before; qed&quot;</span>);
@@ -245,7 +271,7 @@
 
 			<span class="macro">quote! </span>{
 				#attr
-				#scrate::metadata::PalletMetadata {
+				#scrate::metadata_ir::PalletMetadataIR {
 					name: <span class="macro">stringify!</span>(#name),
 					index: #index,
 					storage: #storage,
@@ -253,6 +279,7 @@
 					event: #event,
 					constants: #constants,
 					error: #errors,
+					docs: #docs,
 				}
 			}
 		})
@@ -260,10 +287,10 @@
 
 	<span class="macro">quote! </span>{
 		<span class="kw">impl </span>#runtime {
-			<span class="kw">pub fn </span>metadata() -&gt; #scrate::metadata::RuntimeMetadataPrefixed {
-				#scrate::metadata::RuntimeMetadataLastVersion::new(
-					#<span class="macro">scrate::sp_std::vec!</span>[ #(#pallets),* ],
-					#scrate::metadata::ExtrinsicMetadata {
+			<span class="kw">fn </span>metadata_ir() -&gt; #scrate::metadata_ir::MetadataIR {
+				#scrate::metadata_ir::MetadataIR {
+					pallets: #<span class="macro">scrate::sp_std::vec!</span>[ #(#pallets),* ],
+					extrinsic: #scrate::metadata_ir::ExtrinsicMetadataIR {
 						ty: #scrate::scale_info::meta_type::&lt;#extrinsic&gt;(),
 						version: &lt;#extrinsic <span class="kw">as </span>#scrate::sp_runtime::traits::ExtrinsicMetadata&gt;::VERSION,
 						signed_extensions: &lt;
@@ -272,15 +299,29 @@
 								&gt;::SignedExtensions <span class="kw">as </span>#scrate::sp_runtime::traits::SignedExtension
 							&gt;::metadata()
 								.into_iter()
-								.map(|meta| #scrate::metadata::SignedExtensionMetadata {
+								.map(|meta| #scrate::metadata_ir::SignedExtensionMetadataIR {
 									identifier: meta.identifier,
 									ty: meta.ty,
 									additional_signed: meta.additional_signed,
 								})
 								.collect(),
 					},
-					#scrate::scale_info::meta_type::&lt;#runtime&gt;()
-				).into()
+					ty: #scrate::scale_info::meta_type::&lt;#runtime&gt;()
+				}
+			}
+
+			<span class="kw">pub fn </span>metadata() -&gt; #scrate::metadata::RuntimeMetadataPrefixed {
+				#scrate::metadata_ir::into_latest(#runtime::metadata_ir())
+			}
+
+			<span class="kw">pub fn </span>metadata_at_version(version: u32) -&gt; <span class="prelude-ty">Option</span>&lt;#scrate::OpaqueMetadata&gt; {
+				#scrate::metadata_ir::into_version(#runtime::metadata_ir(), version).map(|prefixed| {
+					#scrate::OpaqueMetadata::new(prefixed.into())
+				})
+			}
+
+			<span class="kw">pub fn </span>metadata_versions() -&gt; #scrate::sp_std::vec::Vec&lt;u32&gt; {
+				#scrate::metadata_ir::supported_versions()
 			}
 		}
 	}
@@ -343,7 +384,7 @@
 
 		<span class="macro">quote! </span>{
 			<span class="prelude-val">Some</span>(
-				#scrate::metadata::PalletEventMetadata {
+				#scrate::metadata_ir::PalletEventMetadataIR {
 					ty: #scrate::scale_info::meta_type::&lt;#pallet_event&gt;()
 				}
 			)
@@ -368,6 +409,15 @@
 
 	<span class="macro">quote! </span>{
 		#path::Pallet::&lt;#runtime #(, #path::#instance)<span class="kw-2">*</span>&gt;::error_metadata()
+	}
+}
+
+<span class="kw">fn </span>expand_pallet_metadata_docs(runtime: <span class="kw-2">&amp;</span>Ident, decl: <span class="kw-2">&amp;</span>Pallet) -&gt; TokenStream {
+	<span class="kw">let </span>path = <span class="kw-2">&amp;</span>decl.path;
+	<span class="kw">let </span>instance = decl.instance.as_ref().into_iter();
+
+	<span class="macro">quote! </span>{
+		#path::Pallet::&lt;#runtime #(, #path::#instance)<span class="kw-2">*</span>&gt;::pallet_documentation_metadata()
 	}
 }
 </code></pre></div>

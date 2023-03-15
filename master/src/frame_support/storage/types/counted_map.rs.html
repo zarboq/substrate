@@ -1193,7 +1193,7 @@
 </span><span class="doccomment">//! Storage counted map type.
 
 </span><span class="kw">use crate</span>::{
-	metadata::StorageEntryMetadata,
+	metadata_ir::StorageEntryMetadataIR,
 	storage::{
 		generator::StorageMap <span class="kw">as _</span>,
 		types::{
@@ -1634,7 +1634,7 @@
 	OnEmpty: Get&lt;QueryKind::Query&gt; + <span class="lifetime">&#39;static</span>,
 	MaxValues: Get&lt;<span class="prelude-ty">Option</span>&lt;u32&gt;&gt;,
 {
-	<span class="kw">fn </span>build_metadata(docs: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;, entries: <span class="kw-2">&amp;mut </span>Vec&lt;StorageEntryMetadata&gt;) {
+	<span class="kw">fn </span>build_metadata(docs: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;, entries: <span class="kw-2">&amp;mut </span>Vec&lt;StorageEntryMetadataIR&gt;) {
 		&lt;<span class="self">Self </span><span class="kw">as </span>MapWrapper&gt;::Map::build_metadata(docs, entries);
 		CounterFor::&lt;Prefix&gt;::build_metadata(
 			<span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;no-metadata-docs&quot;</span>) {
@@ -1687,7 +1687,7 @@
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use crate</span>::{
 		hash::<span class="kw-2">*</span>,
-		metadata::{StorageEntryModifier, StorageEntryType, StorageHasher},
+		metadata_ir::{StorageEntryModifierIR, StorageEntryTypeIR, StorageHasherIR},
 		storage::{bounded_vec::BoundedVec, types::ValueQuery},
 		traits::ConstU32,
 	};
@@ -2322,21 +2322,21 @@
 		<span class="macro">assert_eq!</span>(
 			entries,
 			<span class="macro">vec!</span>[
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;foo&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Twox64Concat],
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[StorageHasherIR::Twox64Concat],
 						key: scale_info::meta_type::&lt;u16&gt;(),
 						value: scale_info::meta_type::&lt;u32&gt;(),
 					},
 					default: <span class="number">97u32</span>.encode(),
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;counter_for_foo&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Plain(scale_info::meta_type::&lt;u32&gt;()),
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Plain(scale_info::meta_type::&lt;u32&gt;()),
 					default: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>],
 					docs: <span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;no-metadata-docs&quot;</span>) {
 						<span class="macro">vec!</span>[]

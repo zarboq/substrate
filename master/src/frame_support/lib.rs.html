@@ -2811,6 +2811,12 @@
 <a href="#2811" id="2811">2811</a>
 <a href="#2812" id="2812">2812</a>
 <a href="#2813" id="2813">2813</a>
+<a href="#2814" id="2814">2814</a>
+<a href="#2815" id="2815">2815</a>
+<a href="#2816" id="2816">2816</a>
+<a href="#2817" id="2817">2817</a>
+<a href="#2818" id="2818">2818</a>
+<a href="#2819" id="2819">2819</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2863,7 +2869,7 @@
 </span><span class="kw">pub use </span>scale_info;
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">pub use </span>serde;
-<span class="kw">pub use </span>sp_core::Void;
+<span class="kw">pub use </span>sp_core::{OpaqueMetadata, Void};
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub use </span>sp_core_hashing_proc_macro;
 <span class="attr">#[doc(hidden)]
@@ -2893,10 +2899,10 @@
 <span class="kw">pub mod </span>crypto;
 <span class="kw">pub mod </span>dispatch_context;
 <span class="kw">pub mod </span>instances;
+<span class="kw">pub mod </span>metadata_ir;
 <span class="kw">pub mod </span>migrations;
 <span class="kw">pub mod </span>traits;
 <span class="kw">pub mod </span>weights;
-
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub mod </span>unsigned {
 	<span class="attr">#[doc(hidden)]
@@ -3640,9 +3646,9 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">pub mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span><span class="kw">crate</span>::metadata::{
-		PalletStorageMetadata, StorageEntryMetadata, StorageEntryModifier, StorageEntryType,
-		StorageHasher,
+	<span class="kw">use </span><span class="kw">crate</span>::metadata_ir::{
+		PalletStorageMetadataIR, StorageEntryMetadataIR, StorageEntryModifierIR,
+		StorageEntryTypeIR, StorageHasherIR,
 	};
 	<span class="kw">use </span>codec::{Codec, EncodeLike};
 	<span class="kw">use </span>frame_support::traits::CrateVersion;
@@ -4123,101 +4129,107 @@
 		});
 	}
 
-	<span class="kw">fn </span>expected_metadata() -&gt; PalletStorageMetadata {
-		PalletStorageMetadata {
+	<span class="kw">fn </span>expected_metadata() -&gt; PalletStorageMetadataIR {
+		PalletStorageMetadataIR {
 			prefix: <span class="string">&quot;Test&quot;</span>,
 			entries: <span class="macro">vec!</span>[
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;Value&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Plain(scale_info::meta_type::&lt;u64&gt;()),
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Plain(scale_info::meta_type::&lt;u64&gt;()),
 					default: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;Data&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Twox64Concat],
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[StorageHasherIR::Twox64Concat],
 						key: scale_info::meta_type::&lt;u32&gt;(),
 						value: scale_info::meta_type::&lt;u64&gt;(),
 					},
 					default: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;OptionLinkedMap&quot;</span>,
-					modifier: StorageEntryModifier::Optional,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Blake2_128Concat],
+					modifier: StorageEntryModifierIR::Optional,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[StorageHasherIR::Blake2_128Concat],
 						key: scale_info::meta_type::&lt;u32&gt;(),
 						value: scale_info::meta_type::&lt;u32&gt;(),
 					},
 					default: <span class="macro">vec!</span>[<span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;GenericData&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Identity],
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[StorageHasherIR::Identity],
 						key: scale_info::meta_type::&lt;u32&gt;(),
 						value: scale_info::meta_type::&lt;u32&gt;(),
 					},
 					default: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;GenericData2&quot;</span>,
-					modifier: StorageEntryModifier::Optional,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Blake2_128Concat],
+					modifier: StorageEntryModifierIR::Optional,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[StorageHasherIR::Blake2_128Concat],
 						key: scale_info::meta_type::&lt;u32&gt;(),
 						value: scale_info::meta_type::&lt;u32&gt;(),
 					},
 					default: <span class="macro">vec!</span>[<span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;DataDM&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Twox64Concat, StorageHasher::Blake2_128Concat],
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[
+							StorageHasherIR::Twox64Concat,
+							StorageHasherIR::Blake2_128Concat,
+						],
 						key: scale_info::meta_type::&lt;(u32, u32)&gt;(),
 						value: scale_info::meta_type::&lt;u64&gt;(),
 					},
 					default: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;GenericDataDM&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Blake2_128Concat, StorageHasher::Identity],
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[StorageHasherIR::Blake2_128Concat, StorageHasherIR::Identity],
 						key: scale_info::meta_type::&lt;(u32, u32)&gt;(),
 						value: scale_info::meta_type::&lt;u32&gt;(),
 					},
 					default: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;GenericData2DM&quot;</span>,
-					modifier: StorageEntryModifier::Optional,
-					ty: StorageEntryType::Map {
-						hashers: <span class="macro">vec!</span>[StorageHasher::Blake2_128Concat, StorageHasher::Twox64Concat],
+					modifier: StorageEntryModifierIR::Optional,
+					ty: StorageEntryTypeIR::Map {
+						hashers: <span class="macro">vec!</span>[
+							StorageHasherIR::Blake2_128Concat,
+							StorageHasherIR::Twox64Concat,
+						],
 						key: scale_info::meta_type::&lt;(u32, u32)&gt;(),
 						value: scale_info::meta_type::&lt;u32&gt;(),
 					},
 					default: <span class="macro">vec!</span>[<span class="number">0</span>],
 					docs: <span class="macro">vec!</span>[],
 				},
-				StorageEntryMetadata {
+				StorageEntryMetadataIR {
 					name: <span class="string">&quot;AppendableDM&quot;</span>,
-					modifier: StorageEntryModifier::Default,
-					ty: StorageEntryType::Map {
+					modifier: StorageEntryModifierIR::Default,
+					ty: StorageEntryTypeIR::Map {
 						hashers: <span class="macro">vec!</span>[
-							StorageHasher::Blake2_128Concat,
-							StorageHasher::Blake2_128Concat,
+							StorageHasherIR::Blake2_128Concat,
+							StorageHasherIR::Blake2_128Concat,
 						],
 						key: scale_info::meta_type::&lt;(u32, u32)&gt;(),
 						value: scale_info::meta_type::&lt;Vec&lt;u32&gt;&gt;(),

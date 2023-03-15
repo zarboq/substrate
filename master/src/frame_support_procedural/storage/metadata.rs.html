@@ -244,7 +244,7 @@
 	<span class="kw">match </span><span class="kw-2">&amp;</span>line.storage_type {
 		StorageLineTypeDef::Simple(<span class="kw">_</span>) =&gt; {
 			<span class="macro">quote! </span>{
-				#scrate::metadata::StorageEntryType::Plain(
+				#scrate::metadata_ir::StorageEntryTypeIR::Plain(
 					#scrate::scale_info::meta_type::&lt;#value_type&gt;()
 				)
 			}
@@ -253,8 +253,8 @@
 			<span class="kw">let </span>hasher = map.hasher.into_metadata();
 			<span class="kw">let </span>key = <span class="kw-2">&amp;</span>map.key;
 			<span class="macro">quote! </span>{
-				#scrate::metadata::StorageEntryType::Map {
-					hashers: #<span class="macro">scrate::sp_std::vec! </span>[ #scrate::metadata::#hasher ],
+				#scrate::metadata_ir::StorageEntryTypeIR::Map {
+					hashers: #<span class="macro">scrate::sp_std::vec! </span>[ #scrate::metadata_ir::#hasher ],
 					key: #scrate::scale_info::meta_type::&lt;#key&gt;(),
 					value: #scrate::scale_info::meta_type::&lt;#value_type&gt;(),
 				}
@@ -266,10 +266,10 @@
 			<span class="kw">let </span>key1 = <span class="kw-2">&amp;</span>map.key1;
 			<span class="kw">let </span>key2 = <span class="kw-2">&amp;</span>map.key2;
 			<span class="macro">quote! </span>{
-				#scrate::metadata::StorageEntryType::Map {
+				#scrate::metadata_ir::StorageEntryTypeIR::Map {
 					hashers: #<span class="macro">scrate::sp_std::vec! </span>[
-						#scrate::metadata::#hasher1,
-						#scrate::metadata::#hasher2,
+						#scrate::metadata_ir::#hasher1,
+						#scrate::metadata_ir::#hasher2,
 					],
 					key: #scrate::scale_info::meta_type::&lt;(#key1, #key2)&gt;(),
 					value: #scrate::scale_info::meta_type::&lt;#value_type&gt;(),
@@ -284,9 +284,9 @@
 				.map(|hasher| hasher.to_storage_hasher_struct())
 				.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 			<span class="macro">quote! </span>{
-				#scrate::metadata::StorageEntryType::Map {
+				#scrate::metadata_ir::StorageEntryTypeIR::Map {
 					hashers: #<span class="macro">scrate::sp_std::vec! </span>[
-						#( #scrate::metadata::StorageHasher::#hashers, )*
+						#( #scrate::metadata_ir::StorageHasherIR::#hashers, )*
 					],
 					key: #scrate::scale_info::meta_type::&lt;#key_tuple&gt;(),
 					value: #scrate::scale_info::meta_type::&lt;#value_type&gt;(),
@@ -376,9 +376,9 @@
 		<span class="kw">let </span>str_name = line.name.to_string();
 
 		<span class="kw">let </span>modifier = <span class="kw">if </span>line.is_option {
-			<span class="macro">quote!</span>(#scrate::metadata::StorageEntryModifier::Optional)
+			<span class="macro">quote!</span>(#scrate::metadata_ir::StorageEntryModifierIR::Optional)
 		} <span class="kw">else </span>{
-			<span class="macro">quote!</span>(#scrate::metadata::StorageEntryModifier::Default)
+			<span class="macro">quote!</span>(#scrate::metadata_ir::StorageEntryModifierIR::Default)
 		};
 
 		<span class="kw">let </span>ty = storage_line_metadata_type(scrate, line);
@@ -389,7 +389,7 @@
 		<span class="kw">let </span>docs = get_doc_literals(<span class="kw-2">&amp;</span>line.attrs);
 
 		<span class="kw">let </span>entry = <span class="macro">quote! </span>{
-			#scrate::metadata::StorageEntryMetadata {
+			#scrate::metadata_ir::StorageEntryMetadataIR {
 				name: #str_name,
 				modifier: #modifier,
 				ty: #ty,
@@ -411,7 +411,7 @@
 	};
 
 	<span class="kw">let </span>store_metadata = <span class="macro">quote!</span>(
-		#scrate::metadata::PalletStorageMetadata {
+		#scrate::metadata_ir::PalletStorageMetadataIR {
 			prefix: #prefix,
 			entries: #<span class="macro">scrate::sp_std::vec!</span>[ #entries ],
 		}
@@ -426,7 +426,7 @@
 
 		<span class="kw">impl </span>#module_impl #module_struct #where_clause {
 			<span class="attr">#[doc(hidden)]
-			</span><span class="kw">pub fn </span>storage_metadata() -&gt; #scrate::metadata::PalletStorageMetadata {
+			</span><span class="kw">pub fn </span>storage_metadata() -&gt; #scrate::metadata_ir::PalletStorageMetadataIR {
 				#store_metadata
 			}
 		}
