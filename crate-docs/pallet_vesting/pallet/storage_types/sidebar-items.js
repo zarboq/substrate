@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["StorageVersion","Storage version of the pallet."],["Vesting","Information regarding the vesting of a given account."]]};

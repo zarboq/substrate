@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Bounties","Bounties that have been made."],["BountyApprovals","Bounty indices that have been approved but not yet funded."],["BountyCount","Number of bounty proposals that have been made."],["BountyDescriptions","The description of each bounty."]]};

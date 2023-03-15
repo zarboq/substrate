@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["AutoLimits","The limits that are imposed on automatic migrations."],["MigrationProcess","Migration progress."],["SignedMigrationMaxLimits","The maximum limits that the signed migration could use."]]};

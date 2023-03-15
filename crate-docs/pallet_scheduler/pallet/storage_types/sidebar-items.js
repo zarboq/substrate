@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Agenda","Items to be executed, indexed by the block number that they should be executed on."],["IncompleteSince",""],["Lookup","Lookup from a name to the block number and index of the task."]]};

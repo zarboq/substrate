@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["buy_ticket","Buy a ticket to enter the lottery."],["set_calls","Set calls in storage which can be used to purchase a lottery ticket."],["start_lottery","Start a lottery using the provided configuration."],["stop_repeat","If a lottery is repeating, you can use this to stop the repeat. The lottery will continue to run to completion."]]};

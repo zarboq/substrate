@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Key","The `AccountId` of the sudo key."]]};

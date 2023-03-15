@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["HistoricalSessions","Mapping from historical session indices to session-data root hash and validator count."],["StoredRange","The range of historical sessions we store. [first, last)"]]};

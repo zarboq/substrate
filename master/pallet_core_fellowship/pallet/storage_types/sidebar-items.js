@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Member","The status of a claimant."],["MemberEvidence","Some evidence together with the desired outcome for which it was presented."],["Params","The overall status of the system."]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Multisigs","The set of open multisig operations."]]};

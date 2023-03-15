@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["Keys","Keys of the current authority set."],["NextKeys","Keys of the next authority set."]]};

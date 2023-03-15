@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["change_member_count","Dispatchable call to change `MemberCount`."],["kick","Kick a member `who` from the set."],["score","Score a member `who` with `score`."],["submit_candidacy","Add `origin` to the pool of candidates."],["withdraw_candidacy","An entity withdraws candidacy and gets its deposit back."]]};

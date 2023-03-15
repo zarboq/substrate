@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["ListBags","A bag stored in storage."],["ListNodes","A single node, within some bag."]]};
