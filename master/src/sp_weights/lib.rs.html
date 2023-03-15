@@ -314,6 +314,55 @@
 <a href="#314" id="314">314</a>
 <a href="#315" id="315">315</a>
 <a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -346,7 +395,7 @@
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>smallvec::SmallVec;
 <span class="kw">use </span>sp_arithmetic::{
-	traits::{BaseArithmetic, SaturatedConversion, Saturating, Unsigned},
+	traits::{BaseArithmetic, SaturatedConversion, Unsigned},
 	Perbill,
 };
 <span class="kw">use </span>sp_core::Get;
@@ -434,8 +483,76 @@
 	</span><span class="kw">pub </span>degree: u8,
 }
 
-<span class="doccomment">/// A list of coefficients that represent one polynomial.
+<span class="kw">impl</span>&lt;Balance&gt; WeightToFeeCoefficient&lt;Balance&gt;
+<span class="kw">where
+	</span>Balance: BaseArithmetic + From&lt;u32&gt; + Copy + Unsigned,
+{
+	<span class="doccomment">/// Evaluate the term at `x` and saturatingly amalgamate into `result`.
+	///
+	/// The unsigned value for the term is calculated as:
+	/// ```ignore
+	/// (frac * x^(degree) + integer * x^(degree))
+	/// ```
+	/// Depending on the value of `negative`, it is added or subtracted from the `result`.
+	</span><span class="kw">pub fn </span>saturating_eval(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>result: Balance, x: Balance) -&gt; Balance {
+		<span class="kw">let </span>power = x.saturating_pow(<span class="self">self</span>.degree.into());
+
+		<span class="kw">let </span>frac = <span class="self">self</span>.coeff_frac * power; <span class="comment">// Overflow safe.
+		</span><span class="kw">let </span>integer = <span class="self">self</span>.coeff_integer.saturating_mul(power);
+		<span class="comment">// Do not add them together here to avoid an underflow.
+
+		</span><span class="kw">if </span><span class="self">self</span>.negative {
+			result = result.saturating_sub(frac);
+			result = result.saturating_sub(integer);
+		} <span class="kw">else </span>{
+			result = result.saturating_add(frac);
+			result = result.saturating_add(integer);
+		}
+
+		result
+	}
+}
+
+<span class="doccomment">/// A list of coefficients that represent a polynomial.
 </span><span class="kw">pub type </span>WeightToFeeCoefficients&lt;T&gt; = SmallVec&lt;[WeightToFeeCoefficient&lt;T&gt;; <span class="number">4</span>]&gt;;
+
+<span class="doccomment">/// A list of coefficients that represent a polynomial.
+///
+/// Can be [eval](Self::eval)uated at a specific `u64` to get the fee. The evaluations happens by
+/// summing up all term [results](`WeightToFeeCoefficient::saturating_eval`). The order of the
+/// coefficients matters since it uses saturating arithmetic. This struct does therefore not model a
+/// polynomial in the mathematical sense (polynomial ring).
+///
+/// For visualization purposes, the formulas of the unsigned terms look like:
+///
+/// ```ignore
+/// (c[0].frac * x^(c[0].degree) + c[0].integer * x^(c[0].degree))
+/// (c[1].frac * x^(c[1].degree) + c[1].integer * x^(c[1].degree))
+/// ...
+/// ```
+/// Depending on the value of `c[i].negative`, each term is added or subtracted from the result.
+/// The result is initialized as zero.
+</span><span class="kw">pub struct </span>FeePolynomial&lt;Balance&gt; {
+	coefficients: SmallVec&lt;[WeightToFeeCoefficient&lt;Balance&gt;; <span class="number">4</span>]&gt;,
+}
+
+<span class="kw">impl</span>&lt;Balance&gt; From&lt;WeightToFeeCoefficients&lt;Balance&gt;&gt; <span class="kw">for </span>FeePolynomial&lt;Balance&gt; {
+	<span class="kw">fn </span>from(coefficients: WeightToFeeCoefficients&lt;Balance&gt;) -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{ coefficients }
+	}
+}
+
+<span class="kw">impl</span>&lt;Balance&gt; FeePolynomial&lt;Balance&gt;
+<span class="kw">where
+	</span>Balance: BaseArithmetic + From&lt;u32&gt; + Copy + Unsigned,
+{
+	<span class="doccomment">/// Evaluate the polynomial at a specific `x`.
+	</span><span class="kw">pub fn </span>eval(<span class="kw-2">&amp;</span><span class="self">self</span>, x: u64) -&gt; Balance {
+		<span class="self">self</span>.coefficients.iter().fold(Balance::zero(), |acc, term| {
+			term.saturating_eval(acc, Balance::saturated_from(x))
+		})
+	}
+}
 
 <span class="doccomment">/// A trait that describes the weight to fee calculation.
 </span><span class="kw">pub trait </span>WeightToFee {
@@ -473,27 +590,8 @@
 	/// This should not be overridden in most circumstances. Calculation is done in the
 	/// `Balance` type and never overflows. All evaluation is saturating.
 	</span><span class="kw">fn </span>weight_to_fee(weight: <span class="kw-2">&amp;</span>Weight) -&gt; <span class="self">Self</span>::Balance {
-		<span class="self">Self</span>::polynomial()
-			.iter()
-			.fold(<span class="self">Self</span>::Balance::saturated_from(<span class="number">0u32</span>), |<span class="kw-2">mut </span>acc, args| {
-				<span class="kw">let </span>w = <span class="self">Self</span>::Balance::saturated_from(weight.ref_time())
-					.saturating_pow(args.degree.into());
-
-				<span class="comment">// The sum could get negative. Therefore we only sum with the accumulator.
-				// The Perbill Mul implementation is non overflowing.
-				</span><span class="kw">let </span>frac = args.coeff_frac * w;
-				<span class="kw">let </span>integer = args.coeff_integer.saturating_mul(w);
-
-				<span class="kw">if </span>args.negative {
-					acc = acc.saturating_sub(frac);
-					acc = acc.saturating_sub(integer);
-				} <span class="kw">else </span>{
-					acc = acc.saturating_add(frac);
-					acc = acc.saturating_add(integer);
-				}
-
-				acc
-			})
+		<span class="kw">let </span>poly: FeePolynomial&lt;<span class="self">Self</span>::Balance&gt; = <span class="self">Self</span>::polynomial().into();
+		poly.eval(weight.ref_time())
 	}
 }
 
