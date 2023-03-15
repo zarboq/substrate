@@ -407,6 +407,35 @@
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use crate</span>::{<span class="self">self </span><span class="kw">as </span>pools};
 <span class="kw">use </span>frame_support::{assert_ok, parameter_types, PalletId};
@@ -527,8 +556,8 @@
 
 	<span class="kw">fn </span>stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;Stake&lt;<span class="self">Self</span>&gt;, DispatchError&gt; {
 		<span class="kw">match </span>(
-			UnbondingBalanceMap::get().get(who).map(|v| <span class="kw-2">*</span>v),
-			BondedBalanceMap::get().get(who).map(|v| <span class="kw-2">*</span>v),
+			UnbondingBalanceMap::get().get(who).copied(),
+			BondedBalanceMap::get().get(who).copied(),
 		) {
 			(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Err</span>(DispatchError::Other(<span class="string">&quot;balance not found&quot;</span>)),
 			(<span class="prelude-val">Some</span>(v), <span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(Stake { total: v, active: <span class="number">0</span>, stash: <span class="kw-2">*</span>who }),
@@ -660,11 +689,17 @@
 	members: Vec&lt;(AccountId, Balance)&gt;,
 	max_members: <span class="prelude-ty">Option</span>&lt;u32&gt;,
 	max_members_per_pool: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+	global_max_commission: <span class="prelude-ty">Option</span>&lt;Perbill&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>ExtBuilder {
 	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{ members: Default::default(), max_members: <span class="prelude-val">Some</span>(<span class="number">4</span>), max_members_per_pool: <span class="prelude-val">Some</span>(<span class="number">3</span>) }
+		<span class="self">Self </span>{
+			members: Default::default(),
+			max_members: <span class="prelude-val">Some</span>(<span class="number">4</span>),
+			max_members_per_pool: <span class="prelude-val">Some</span>(<span class="number">3</span>),
+			global_max_commission: <span class="prelude-val">Some</span>(Perbill::from_percent(<span class="number">90</span>)),
+		}
 	}
 }
 
@@ -706,6 +741,11 @@
 		<span class="self">self
 	</span>}
 
+	<span class="kw">pub fn </span>global_max_commission(<span class="kw-2">mut </span><span class="self">self</span>, commission: <span class="prelude-ty">Option</span>&lt;Perbill&gt;) -&gt; <span class="self">Self </span>{
+		<span class="self">self</span>.global_max_commission = commission;
+		<span class="self">self
+	</span>}
+
 	<span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; sp_io::TestExternalities {
 		sp_tracing::try_init_simple();
 		<span class="kw">let </span><span class="kw-2">mut </span>storage =
@@ -717,6 +757,7 @@
 			max_pools: <span class="prelude-val">Some</span>(<span class="number">2</span>),
 			max_members_per_pool: <span class="self">self</span>.max_members_per_pool,
 			max_members: <span class="self">self</span>.max_members,
+			global_max_commission: <span class="self">self</span>.global_max_commission,
 		}
 		.assimilate_storage(<span class="kw-2">&amp;mut </span>storage);
 
@@ -741,7 +782,7 @@
 		ext
 	}
 
-	<span class="kw">pub fn </span>build_and_execute(<span class="self">self</span>, test: <span class="kw">impl </span>FnOnce() -&gt; ()) {
+	<span class="kw">pub fn </span>build_and_execute(<span class="self">self</span>, test: <span class="kw">impl </span>FnOnce()) {
 		<span class="self">self</span>.build().execute_with(|| {
 			test();
 			Pools::do_try_state(CheckLevel::get()).unwrap();
@@ -761,6 +802,23 @@
 <span class="macro">parameter_types! </span>{
 	storage PoolsEvents: u32 = <span class="number">0</span>;
 	storage BalancesEvents: u32 = <span class="number">0</span>;
+}
+
+<span class="doccomment">/// Helper to run a specified amount of blocks.
+</span><span class="kw">pub fn </span>run_blocks(n: u64) {
+	<span class="kw">let </span>current_block = System::block_number();
+	run_to_block(n + current_block);
+}
+
+<span class="doccomment">/// Helper to run to a specific block.
+</span><span class="kw">pub fn </span>run_to_block(n: u64) {
+	<span class="kw">let </span>current_block = System::block_number();
+	<span class="macro">assert!</span>(n &gt; current_block);
+	<span class="kw">while </span>System::block_number() &lt; n {
+		Pools::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + <span class="number">1</span>);
+		Pools::on_initialize(System::block_number());
+	}
 }
 
 <span class="doccomment">/// All events of this pallet.
@@ -789,7 +847,7 @@
 
 <span class="doccomment">/// Same as `fully_unbond`, in permissioned setting.
 </span><span class="kw">pub fn </span>fully_unbond_permissioned(member: AccountId) -&gt; DispatchResult {
-	<span class="kw">let </span>points = PoolMembers::&lt;Runtime&gt;::get(<span class="kw-2">&amp;</span>member)
+	<span class="kw">let </span>points = PoolMembers::&lt;Runtime&gt;::get(member)
 		.map(|d| d.active_points())
 		.unwrap_or_default();
 	Pools::unbond(RuntimeOrigin::signed(member), member, points)
