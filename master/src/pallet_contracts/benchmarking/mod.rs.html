@@ -3123,87 +3123,6 @@
 <a href="#3123" id="3123">3123</a>
 <a href="#3124" id="3124">3124</a>
 <a href="#3125" id="3125">3125</a>
-<a href="#3126" id="3126">3126</a>
-<a href="#3127" id="3127">3127</a>
-<a href="#3128" id="3128">3128</a>
-<a href="#3129" id="3129">3129</a>
-<a href="#3130" id="3130">3130</a>
-<a href="#3131" id="3131">3131</a>
-<a href="#3132" id="3132">3132</a>
-<a href="#3133" id="3133">3133</a>
-<a href="#3134" id="3134">3134</a>
-<a href="#3135" id="3135">3135</a>
-<a href="#3136" id="3136">3136</a>
-<a href="#3137" id="3137">3137</a>
-<a href="#3138" id="3138">3138</a>
-<a href="#3139" id="3139">3139</a>
-<a href="#3140" id="3140">3140</a>
-<a href="#3141" id="3141">3141</a>
-<a href="#3142" id="3142">3142</a>
-<a href="#3143" id="3143">3143</a>
-<a href="#3144" id="3144">3144</a>
-<a href="#3145" id="3145">3145</a>
-<a href="#3146" id="3146">3146</a>
-<a href="#3147" id="3147">3147</a>
-<a href="#3148" id="3148">3148</a>
-<a href="#3149" id="3149">3149</a>
-<a href="#3150" id="3150">3150</a>
-<a href="#3151" id="3151">3151</a>
-<a href="#3152" id="3152">3152</a>
-<a href="#3153" id="3153">3153</a>
-<a href="#3154" id="3154">3154</a>
-<a href="#3155" id="3155">3155</a>
-<a href="#3156" id="3156">3156</a>
-<a href="#3157" id="3157">3157</a>
-<a href="#3158" id="3158">3158</a>
-<a href="#3159" id="3159">3159</a>
-<a href="#3160" id="3160">3160</a>
-<a href="#3161" id="3161">3161</a>
-<a href="#3162" id="3162">3162</a>
-<a href="#3163" id="3163">3163</a>
-<a href="#3164" id="3164">3164</a>
-<a href="#3165" id="3165">3165</a>
-<a href="#3166" id="3166">3166</a>
-<a href="#3167" id="3167">3167</a>
-<a href="#3168" id="3168">3168</a>
-<a href="#3169" id="3169">3169</a>
-<a href="#3170" id="3170">3170</a>
-<a href="#3171" id="3171">3171</a>
-<a href="#3172" id="3172">3172</a>
-<a href="#3173" id="3173">3173</a>
-<a href="#3174" id="3174">3174</a>
-<a href="#3175" id="3175">3175</a>
-<a href="#3176" id="3176">3176</a>
-<a href="#3177" id="3177">3177</a>
-<a href="#3178" id="3178">3178</a>
-<a href="#3179" id="3179">3179</a>
-<a href="#3180" id="3180">3180</a>
-<a href="#3181" id="3181">3181</a>
-<a href="#3182" id="3182">3182</a>
-<a href="#3183" id="3183">3183</a>
-<a href="#3184" id="3184">3184</a>
-<a href="#3185" id="3185">3185</a>
-<a href="#3186" id="3186">3186</a>
-<a href="#3187" id="3187">3187</a>
-<a href="#3188" id="3188">3188</a>
-<a href="#3189" id="3189">3189</a>
-<a href="#3190" id="3190">3190</a>
-<a href="#3191" id="3191">3191</a>
-<a href="#3192" id="3192">3192</a>
-<a href="#3193" id="3193">3193</a>
-<a href="#3194" id="3194">3194</a>
-<a href="#3195" id="3195">3195</a>
-<a href="#3196" id="3196">3196</a>
-<a href="#3197" id="3197">3197</a>
-<a href="#3198" id="3198">3198</a>
-<a href="#3199" id="3199">3199</a>
-<a href="#3200" id="3200">3200</a>
-<a href="#3201" id="3201">3201</a>
-<a href="#3202" id="3202">3202</a>
-<a href="#3203" id="3203">3203</a>
-<a href="#3204" id="3204">3204</a>
-<a href="#3205" id="3205">3205</a>
-<a href="#3206" id="3206">3206</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3237,7 +3156,6 @@
 };
 <span class="kw">use crate</span>::{
 	exec::{AccountIdOf, FixSizedKey, VarSizedKey},
-	schedule::{API_BENCHMARK_BATCH_SIZE, INSTR_BENCHMARK_BATCH_SIZE},
 	wasm::CallFlags,
 	Pallet <span class="kw">as </span>Contracts, <span class="kw-2">*</span>,
 };
@@ -3253,10 +3171,17 @@
 <span class="kw">use </span>wasm_instrument::parity_wasm::elements::{BlockType, BrTableData, Instruction, ValueType};
 
 <span class="doccomment">/// How many batches we do per API benchmark.
-</span><span class="kw">const </span>API_BENCHMARK_BATCHES: u32 = <span class="number">20</span>;
+///
+/// This is picked more or less arbitrary. We experimented with different numbers until
+/// the results appeared to be stable. Reducing the number would speed up the benchmarks
+/// but might make the results less precise.
+</span><span class="kw">const </span>API_BENCHMARK_BATCHES: u32 = <span class="number">1600</span>;
 
-<span class="doccomment">/// How many batches we do per Instruction benchmark.
-</span><span class="kw">const </span>INSTR_BENCHMARK_BATCHES: u32 = <span class="number">50</span>;
+<span class="doccomment">/// How many batches we do per instruction benchmark.
+///
+/// Same rationale as for [`API_BENCHMARK_BATCHES`]. The number is bigger because instruction
+/// benchmarks are faster.
+</span><span class="kw">const </span>INSTR_BENCHMARK_BATCHES: u32 = <span class="number">5000</span>;
 
 <span class="doccomment">/// An instantiated and deployed contract.
 </span><span class="kw">struct </span>Contract&lt;T: Config&gt; {
@@ -3450,7 +3375,7 @@
 	// the sandbox. This does **not** include the actual execution for which the gas meter
 	// is responsible. This is achieved by generating all code to the `deploy` function
 	// which is in the wasm module but not executed on `call`.
-	// The results are supposed to be used as `call_with_code_kb(c) - call_with_code_kb(0)`.
+	// The results are supposed to be used as `call_with_code_per_byte(c) - call_with_code_per_byte(0)`.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>call_with_code_per_byte {
 		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. T::MaxCodeLen::get();
@@ -3469,9 +3394,9 @@
 	// we don&#39;t benchmark the actual execution of this code but merely what it takes to load
 	// a code of that size into the sandbox.
 	//
-	// `c`: Size of the code in kilobytes.
-	// `i`: Size of the input in kilobytes.
-	// `s`: Size of the salt in kilobytes.
+	// `c`: Size of the code in bytes.
+	// `i`: Size of the input in bytes.
+	// `s`: Size of the salt in bytes.
 	//
 	// # Note
 	//
@@ -3505,8 +3430,8 @@
 	}
 
 	<span class="comment">// Instantiate uses a dummy contract constructor to measure the overhead of the instantiate.
-	// `i`: Size of the input in kilobytes.
-	// `s`: Size of the salt in kilobytes.
+	// `i`: Size of the input in bytes.
+	// `s`: Size of the salt in bytes.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>instantiate {
 		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
@@ -3539,7 +3464,7 @@
 	// The dummy contract used here does not do this. The costs for the data copy is billed as
 	// part of `seal_input`. The costs for invoking a contract of a specific size are not part
 	// of this benchmark because we cannot know the size of the contract when issuing a call
-	// transaction. See `invoke_per_code_kb` for this.
+	// transaction. See `call_with_code_per_byte` for this.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>call {
 		<span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">42u8</span>; <span class="number">1024</span>];
@@ -3568,7 +3493,7 @@
 
 	<span class="comment">// This constructs a contract that is maximal expensive to instrument.
 	// It creates a maximum number of metering blocks per byte.
-	// `c`: Size of the code in kilobytes.
+	// `c`: Size of the code in bytes.
 	//
 	// # Note
 	//
@@ -3627,7 +3552,7 @@
 	</span>seal_caller {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_caller&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_caller&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3635,7 +3560,7 @@
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_is_contract {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
-		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r)
 			.map(|n| account::&lt;T::AccountId&gt;(<span class="string">&quot;account&quot;</span>, n, <span class="number">0</span>))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		<span class="kw">let </span>account_len = accounts.get(<span class="number">0</span>).map(|i| i.encode().len()).unwrap_or(<span class="number">0</span>);
@@ -3654,7 +3579,7 @@
 					value: accounts_bytes
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, account_len <span class="kw">as </span>u32), <span class="comment">// address_ptr
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
 				Regular(Instruction::Drop),
@@ -3673,7 +3598,7 @@
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_code_hash {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
-		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r)
 			.map(|n| account::&lt;T::AccountId&gt;(<span class="string">&quot;account&quot;</span>, n, <span class="number">0</span>))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		<span class="kw">let </span>account_len = accounts.get(<span class="number">0</span>).map(|i| i.encode().len()).unwrap_or(<span class="number">0</span>);
@@ -3698,7 +3623,7 @@
 					value: accounts_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">36</span>, account_len <span class="kw">as </span>u32), <span class="comment">// address_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">4</span>)), <span class="comment">// ptr to output data
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// ptr to output length
@@ -3720,7 +3645,7 @@
 	</span>seal_own_code_hash {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_own_code_hash&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_own_code_hash&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3736,7 +3661,7 @@
 				params: <span class="macro">vec!</span>[],
 				return_type: <span class="prelude-val">Some</span>(ValueType::I32),
 			}],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::Call(<span class="number">0</span>),
 				Instruction::Drop,
 			])),
@@ -3750,7 +3675,7 @@
 	</span>seal_address {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_address&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_address&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3759,7 +3684,7 @@
 	</span>seal_gas_left {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_gas_left&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_gas_left&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3768,7 +3693,7 @@
 	</span>seal_balance {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_balance&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_balance&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3777,7 +3702,7 @@
 	</span>seal_value_transferred {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_value_transferred&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_value_transferred&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3786,7 +3711,7 @@
 	</span>seal_minimum_balance {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_minimum_balance&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_minimum_balance&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3795,7 +3720,7 @@
 	</span>seal_block_number {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_block_number&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_block_number&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3804,7 +3729,7 @@
 	</span>seal_now {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_now&quot;</span>, r * API_BENCHMARK_BATCH_SIZE
+			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_now&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3825,7 +3750,7 @@
 				offset: <span class="number">0</span>,
 				value: (pages * <span class="number">64 </span>* <span class="number">1024 </span>- <span class="number">4</span>).to_le_bytes().to_vec(),
 			}],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I64Const(<span class="number">500_000</span>),
 				Instruction::I32Const(<span class="number">4</span>),
 				Instruction::I32Const(<span class="number">0</span>),
@@ -3847,7 +3772,7 @@
 				params: <span class="macro">vec!</span>[ValueType::I64],
 				return_type: <span class="prelude-val">None</span>,
 			}],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I64Const(<span class="number">42</span>),
 				Instruction::Call(<span class="number">0</span>),
 			])),
@@ -3875,7 +3800,7 @@
 					value: <span class="number">0u32</span>.to_le_bytes().to_vec(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I32Const(<span class="number">4</span>), <span class="comment">// ptr where to store output
 				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// ptr to length
 				</span>Instruction::Call(<span class="number">0</span>),
@@ -3887,10 +3812,9 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[pov_mode = Measured]
-	</span>seal_input_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
-		<span class="kw">let </span>pages = code::max_pages::&lt;T&gt;();
-		<span class="kw">let </span>buffer_size = pages * <span class="number">64 </span>* <span class="number">1024 </span>- <span class="number">4</span>;
+	</span>seal_input_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
+		<span class="kw">let </span>buffer_size = code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024 </span>- <span class="number">4</span>;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -3905,15 +3829,16 @@
 					value: buffer_size.to_le_bytes().to_vec(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
 				Instruction::I32Const(<span class="number">4</span>), <span class="comment">// ptr where to store output
 				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// ptr to length
 				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-		<span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">1024</span>).min(buffer_size) <span class="kw">as </span>usize];
+		<span class="kw">let </span>data = <span class="macro">vec!</span>[<span class="number">42u8</span>; n.min(buffer_size) <span class="kw">as </span>usize];
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, data)
 
@@ -3944,8 +3869,8 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[pov_mode = Measured]
-	</span>seal_return_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
+	</span>seal_return_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -3957,7 +3882,7 @@
 			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
 				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// flags
 				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// data_ptr
-				</span>Instruction::I32Const((n * <span class="number">1024</span>) <span class="kw">as </span>i32), <span class="comment">// data_len
+				</span>Instruction::I32Const(n <span class="kw">as </span>i32), <span class="comment">// data_len
 				</span>Instruction::Call(<span class="number">0</span>),
 				Instruction::End,
 			])),
@@ -4033,7 +3958,7 @@
 					value: (pages * <span class="number">64 </span>* <span class="number">1024 </span>- subject_len - <span class="number">4</span>).to_le_bytes().to_vec(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I32Const(<span class="number">4</span>), <span class="comment">// subject_ptr
 				</span>Instruction::I32Const(subject_len <span class="kw">as </span>i32), <span class="comment">// subject_len
 				</span>Instruction::I32Const((subject_len + <span class="number">4</span>) <span class="kw">as </span>i32), <span class="comment">// out_ptr
@@ -4059,7 +3984,7 @@
 				params: <span class="macro">vec!</span>[ValueType::I32, ValueType::I32, ValueType::I32, ValueType::I32],
 				return_type: <span class="prelude-val">None</span>,
 			}],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// topics_ptr
 				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// topics_len
 				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// data_ptr
@@ -4074,16 +3999,13 @@
 
 	<span class="comment">// Benchmark the overhead that topics generate.
 	// `t`: Number of topics
-	// `n`: Size of event payload in kb
+	// `n`: Size of event payload in bytes
 	</span><span class="attr">#[pov_mode = Measured]
-	</span>seal_deposit_event_per_topic_and_kb {
+	</span>seal_deposit_event_per_topic_and_byte {
 		<span class="kw">let </span>t <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.event_topics;
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">1024</span>;
-		<span class="kw">let </span><span class="kw-2">mut </span>topics = (<span class="number">0</span>..API_BENCHMARK_BATCH_SIZE)
-			.map(|n| (n * t..n * t + t).map(|i| T::Hashing::hash_of(<span class="kw-2">&amp;</span>i)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().encode())
-			.peekable();
-		<span class="kw">let </span>topics_len = topics.peek().map(|i| i.len()).unwrap_or(<span class="number">0</span>);
-		<span class="kw">let </span>topics = topics.flatten().collect();
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len;
+		<span class="kw">let </span>topics = (<span class="number">0</span>..t).map(|i| T::Hashing::hash_of(<span class="kw-2">&amp;</span>i)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().encode();
+		<span class="kw">let </span>topics_len = topics.len();
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4098,12 +4020,13 @@
 					value: topics,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, topics_len <span class="kw">as </span>u32), <span class="comment">// topics_ptr
-				</span>Regular(Instruction::I32Const(topics_len <span class="kw">as </span>i32)), <span class="comment">// topics_len
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// data_ptr
-				</span>Regular(Instruction::I32Const((n * <span class="number">1024</span>) <span class="kw">as </span>i32)), <span class="comment">// data_len
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// topics_ptr
+				</span>Instruction::I32Const(topics_len <span class="kw">as </span>i32), <span class="comment">// topics_len
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// data_ptr
+				</span>Instruction::I32Const(n <span class="kw">as </span>i32), <span class="comment">// data_len
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
@@ -4125,7 +4048,7 @@
 				params: <span class="macro">vec!</span>[ValueType::I32, ValueType::I32],
 				return_type: <span class="prelude-val">Some</span>(ValueType::I32),
 			}],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// value_ptr
 				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// value_len
 				</span>Instruction::Call(<span class="number">0</span>),
@@ -4148,10 +4071,10 @@
 		.result<span class="question-mark">?</span>;
 	}
 
-	seal_debug_message_per_kb {
-		<span class="comment">// Vary size of input in kilobytes up to maximum allowed contract memory
+	seal_debug_message_per_byte {
+		<span class="comment">// Vary size of input in bytes up to maximum allowed contract memory
 		// or maximum allowed debug buffer size, whichever is less.
-		</span><span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. (T::Schedule::get().limits.memory_pages * <span class="number">64</span>).min(T::MaxDebugBufferLen::get() / <span class="number">1024</span>);
+		</span><span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. (T::Schedule::get().limits.memory_pages * <span class="number">64 </span>* <span class="number">1024</span>).min(T::MaxDebugBufferLen::get());
 		<span class="comment">// We benchmark versus messages containing printable ASCII codes.
 		// About 1Kb goes to the instrumented contract code instructions,
 		// whereas all the space left we use for the initialization of the debug messages data.
@@ -4175,7 +4098,7 @@
 			],
 			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
 				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// value_ptr
-				</span>Instruction::I32Const((i * <span class="number">1024</span>) <span class="kw">as </span>i32), <span class="comment">// value_len increments by i Kb
+				</span>Instruction::I32Const(i <span class="kw">as </span>i32), <span class="comment">// value_len
 				</span>Instruction::Call(<span class="number">0</span>),
 				Instruction::Drop,
 				Instruction::End,
@@ -4200,15 +4123,20 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	// The contract is a bit more complex because it needs to use different keys in order
 	// to generate unique storage accesses. However, it is still dominated by the storage
-	// accesses. We store all the keys that we are about to write at beforehand
+	// accesses. We store something at all the keys that we are about to write to
 	// because re-writing at an existing key is always more expensive than writing
-	// it at a virgin key.
+	// to an key with no data behind it.
+	//
+	// # Note
+	//
+	// We need to use a smaller `r` because the keys are big and writing them all into the wasm
+	// might exceed the code size.
 	</span><span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
 	</span>seal_set_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
 						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -4227,7 +4155,7 @@
 					value: keys_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
 				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_ptr
@@ -4253,14 +4181,10 @@
 
 	<span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
-	</span>seal_set_storage_per_new_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
-		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. n * API_BENCHMARK_BATCH_SIZE)
-				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
-						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
-		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes = keys.iter().flatten().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+	</span>seal_set_storage_per_new_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len;
+		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
+		<span class="kw">let </span>key = <span class="macro">vec!</span>[<span class="number">0u8</span>; max_key_len <span class="kw">as </span>usize];
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4272,43 +4196,38 @@
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
 					offset: <span class="number">0</span>,
-					value: key_bytes,
+					value: key.clone(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
-				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_ptr
-				</span>Regular(Instruction::I32Const((n * <span class="number">2048</span>) <span class="kw">as </span>i32)), <span class="comment">// value_len increments by 2kb up to max payload_len
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::Drop),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// key_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// key_len
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// value_ptr
+				</span>Instruction::I32Const(n <span class="kw">as </span>i32), <span class="comment">// value_len
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
-		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
-				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
-				<span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)
-			.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
-		}
+		info.write(
+			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
+			<span class="prelude-val">None</span>,
+			<span class="bool-val">false</span>,
+		)
+		.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
-	</span>seal_set_storage_per_old_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
-		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. n * API_BENCHMARK_BATCH_SIZE)
-				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
-						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
-		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes = keys.iter().flatten().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+	</span>seal_set_storage_per_old_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len;
+		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
+		<span class="kw">let </span>key = <span class="macro">vec!</span>[<span class="number">0u8</span>; max_key_len <span class="kw">as </span>usize];
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4320,30 +4239,29 @@
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
 					offset: <span class="number">0</span>,
-					value: key_bytes,
+					value: key.clone(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
-				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_ptr
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_len is 0 as testing vs pre-existing value len
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::Drop),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// key_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// key_len
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// value_ptr
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// value_len is 0 as testing vs pre-existing value len
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
-		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
-				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
-				</span><span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)
-			.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
-		}
+		info.write(
+			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
+			<span class="prelude-val">None</span>,
+			<span class="bool-val">false</span>,
+		)
+		.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
@@ -4356,7 +4274,7 @@
 	</span>seal_clear_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
 						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -4375,7 +4293,7 @@
 					value: key_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
 				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
@@ -4400,14 +4318,10 @@
 
 	<span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
-	</span>seal_clear_storage_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
-		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. n * API_BENCHMARK_BATCH_SIZE)
-				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
-						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
-		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes = keys.iter().flatten().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+	</span>seal_clear_storage_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len;
+		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
+		<span class="kw">let </span>key = <span class="macro">vec!</span>[<span class="number">0u8</span>; max_key_len <span class="kw">as </span>usize];
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4419,28 +4333,27 @@
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
 					offset: <span class="number">0</span>,
-					value: key_bytes,
+					value: key.clone(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
-				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::Drop),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// key_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// key_len
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
-		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
-				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
-				</span><span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)
-			.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
-		}
+		info.write(
+			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
+			<span class="prelude-val">None</span>,
+			<span class="bool-val">false</span>,
+		)
+		.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
@@ -4450,7 +4363,7 @@
 	</span>seal_get_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
 						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -4474,8 +4387,8 @@
 					value: T::Schedule::get().limits.payload_len.to_le_bytes().into(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
+				Counter(<span class="number">0</span>, max_key_len), <span class="comment">// key_ptr
 				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
 				</span>Regular(Instruction::I32Const((key_bytes_len + <span class="number">4</span>) <span class="kw">as </span>i32)), <span class="comment">// out_ptr
 				</span>Regular(Instruction::I32Const(key_bytes_len <span class="kw">as </span>i32)), <span class="comment">// out_len_ptr
@@ -4501,15 +4414,10 @@
 
 	<span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
-	</span>seal_get_storage_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
-		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. n * API_BENCHMARK_BATCH_SIZE)
-				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
-						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
-		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes = keys.iter().flatten().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes_len = key_bytes.len();
+	</span>seal_get_storage_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len;
+		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
+		<span class="kw">let </span>key = <span class="macro">vec!</span>[<span class="number">0u8</span>; max_key_len <span class="kw">as </span>usize];
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4521,34 +4429,33 @@
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
 					offset: <span class="number">0</span>,
-					value: key_bytes,
+					value: key.clone(),
 				},
 				DataSegment {
-					offset: key_bytes_len <span class="kw">as </span>u32,
+					offset: max_key_len,
 					value: T::Schedule::get().limits.payload_len.to_le_bytes().into(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
-				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
-				</span>Regular(Instruction::I32Const((key_bytes_len + <span class="number">4</span>) <span class="kw">as </span>i32)), <span class="comment">// out_ptr
-				</span>Regular(Instruction::I32Const(key_bytes_len <span class="kw">as </span>i32)), <span class="comment">// out_len_ptr
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::Drop),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// key_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// key_len
+				</span>Instruction::I32Const((max_key_len + <span class="number">4</span>) <span class="kw">as </span>i32), <span class="comment">// out_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// out_len_ptr
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
-		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
-				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
-				</span><span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)
-			.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
-		}
+		info.write(
+			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
+			<span class="prelude-val">None</span>,
+			<span class="bool-val">false</span>,
+		)
+		.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
 		&lt;ContractInfoOf&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>instance.account_id, info);
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -4559,7 +4466,7 @@
 	</span>seal_contains_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
 						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -4579,7 +4486,7 @@
 					value: key_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
 				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
@@ -4604,14 +4511,10 @@
 
 	<span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
-	</span>seal_contains_storage_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
-		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. n * API_BENCHMARK_BATCH_SIZE)
-				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
-						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
-		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes = keys.iter().flatten().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+	</span>seal_contains_storage_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len;
+		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
+		<span class="kw">let </span>key = <span class="macro">vec!</span>[<span class="number">0u8</span>; max_key_len <span class="kw">as </span>usize];
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4623,28 +4526,27 @@
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
 					offset: <span class="number">0</span>,
-					value: key_bytes,
+					value: key.clone(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
-				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::Drop),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// key_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// key_len
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
-		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
-				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
-				</span><span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)
-			.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
-		}
+		info.write(
+			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
+			<span class="prelude-val">None</span>,
+			<span class="bool-val">false</span>,
+		)
+		.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
 		&lt;ContractInfoOf&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>instance.account_id, info);
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -4654,7 +4556,7 @@
 	</span>seal_take_storage {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
 						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -4678,7 +4580,7 @@
 					value: T::Schedule::get().limits.payload_len.to_le_bytes().into(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
 				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
 				</span>Regular(Instruction::I32Const((key_bytes_len + <span class="number">4</span>) <span class="kw">as </span>i32)), <span class="comment">// out_ptr
@@ -4705,15 +4607,10 @@
 
 	<span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
-	</span>seal_take_storage_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len / <span class="number">2048</span>; <span class="comment">// half of the max payload_len in kb
-		</span><span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
-		<span class="kw">let </span>keys = (<span class="number">0 </span>.. n * API_BENCHMARK_BATCH_SIZE)
-				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
-						h.resize(max_key_len.try_into().unwrap(), n.to_le_bytes()[<span class="number">0</span>]); h })
-		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes = keys.iter().flatten().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>key_bytes_len = key_bytes.len();
+	</span>seal_take_storage_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.payload_len;
+		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
+		<span class="kw">let </span>key = <span class="macro">vec!</span>[<span class="number">0u8</span>; max_key_len <span class="kw">as </span>usize];
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4725,34 +4622,33 @@
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
 					offset: <span class="number">0</span>,
-					value: key_bytes,
+					value: key.clone(),
 				},
 				DataSegment {
-					offset: key_bytes_len <span class="kw">as </span>u32,
+					offset: max_key_len,
 					value: T::Schedule::get().limits.payload_len.to_le_bytes().into(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Counter(<span class="number">0</span>, max_key_len <span class="kw">as </span>u32), <span class="comment">// key_ptr
-				</span>Regular(Instruction::I32Const(max_key_len <span class="kw">as </span>i32)), <span class="comment">// key_len
-				</span>Regular(Instruction::I32Const((key_bytes_len + <span class="number">4</span>) <span class="kw">as </span>i32)), <span class="comment">// out_ptr
-				</span>Regular(Instruction::I32Const(key_bytes_len <span class="kw">as </span>i32)), <span class="comment">// out_len_ptr
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::Drop),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0</span>), <span class="comment">// key_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// key_len
+				</span>Instruction::I32Const((max_key_len + <span class="number">4</span>) <span class="kw">as </span>i32), <span class="comment">// out_ptr
+				</span>Instruction::I32Const(max_key_len <span class="kw">as </span>i32), <span class="comment">// out_len_ptr
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
-		<span class="kw">for </span>key <span class="kw">in </span>keys {
-			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
-				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; (n * <span class="number">2048</span>) <span class="kw">as </span>usize]), <span class="comment">// value_len increments by 2kb up to max payload_len
-				</span><span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)
-			.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
-		}
+		info.write(
+			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
+			<span class="prelude-val">None</span>,
+			<span class="bool-val">false</span>,
+		)
+		.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write to storage during setup.&quot;</span>)<span class="question-mark">?</span>;
 		&lt;ContractInfoOf&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>instance.account_id, info);
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -4761,7 +4657,7 @@
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_transfer {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
-		<span class="kw">let </span>accounts = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>accounts = (<span class="number">0</span>..r)
 			.map(|i| account::&lt;T::AccountId&gt;(<span class="string">&quot;receiver&quot;</span>, i, <span class="number">0</span>))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		<span class="kw">let </span>account_len = accounts.get(<span class="number">0</span>).map(|i| i.encode().len()).unwrap_or(<span class="number">0</span>);
@@ -4788,7 +4684,7 @@
 					value: account_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(value_len <span class="kw">as </span>u32, account_len <span class="kw">as </span>u32), <span class="comment">// account_ptr
 				</span>Regular(Instruction::I32Const(account_len <span class="kw">as </span>i32)), <span class="comment">// account_len
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_ptr
@@ -4799,7 +4695,7 @@
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-		instance.set_balance(value * (r * API_BENCHMARK_BATCH_SIZE + <span class="number">1</span>).into());
+		instance.set_balance(value * (r + <span class="number">1</span>).into());
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 		<span class="kw">for </span>account <span class="kw">in </span><span class="kw-2">&amp;</span>accounts {
 			<span class="macro">assert_eq!</span>(T::Currency::total_balance(account), <span class="number">0u32</span>.into());
@@ -4816,7 +4712,7 @@
 	</span>seal_call {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>dummy_code = WasmModule::&lt;T&gt;::dummy_with_bytes(<span class="number">0</span>);
-		<span class="kw">let </span>callees = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>callees = (<span class="number">0</span>..r)
 			.map(|i| Contract::with_index(i + <span class="number">1</span>, dummy_code.clone(), <span class="macro">vec!</span>[]))
 			.collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 		<span class="kw">let </span>callee_len = callees.get(<span class="number">0</span>).map(|i| i.account_id.encode().len()).unwrap_or(<span class="number">0</span>);
@@ -4852,7 +4748,7 @@
 					value: callee_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(value_len <span class="kw">as </span>u32, callee_len <span class="kw">as </span>u32), <span class="comment">// callee_ptr
 				</span>Regular(Instruction::I32Const(callee_len <span class="kw">as </span>i32)), <span class="comment">// callee_len
 				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// gas
@@ -4874,7 +4770,7 @@
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_delegate_call {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
-		<span class="kw">let </span>hashes = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>hashes = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>code = WasmModule::&lt;T&gt;::dummy_with_bytes(i);
 				Contracts::&lt;T&gt;::store_code_raw(code.code, whitelisted_caller())<span class="question-mark">?</span>;
@@ -4907,7 +4803,7 @@
 					value: hashes_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// flags
 				</span>Counter(hashes_offset <span class="kw">as </span>u32, hash_len <span class="kw">as </span>u32), <span class="comment">// code_hash_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_ptr
@@ -4925,14 +4821,10 @@
 	}: call(origin, callee, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[pov_mode = Measured]
-	</span>seal_call_per_transfer_clone_kb {
+	</span>seal_call_per_transfer_clone_byte {
 		<span class="kw">let </span>t <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
-		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
-		<span class="kw">let </span>callees = (<span class="number">0</span>..API_BENCHMARK_BATCH_SIZE)
-			.map(|i| Contract::with_index(i + <span class="number">1</span>, &lt;WasmModule&lt;T&gt;&gt;::dummy(), <span class="macro">vec!</span>[]))
-			.collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
-		<span class="kw">let </span>callee_len = callees.get(<span class="number">0</span>).map(|i| i.account_id.encode().len()).unwrap_or(<span class="number">0</span>);
-		<span class="kw">let </span>callee_bytes = callees.iter().flat_map(|x| x.account_id.encode()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
+		<span class="kw">let </span>callee = Contract::with_index(<span class="number">5</span>, &lt;WasmModule&lt;T&gt;&gt;::dummy(), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>value: BalanceOf&lt;T&gt; = t.into();
 		<span class="kw">let </span>value_bytes = value.encode();
 		<span class="kw">let </span>value_len = value_bytes.len();
@@ -4960,33 +4852,34 @@
 				},
 				DataSegment {
 					offset: value_len <span class="kw">as </span>u32,
-					value: callee_bytes,
+					value: callee.account_id.encode(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Regular(Instruction::I32Const(CallFlags::CLONE_INPUT.bits() <span class="kw">as </span>i32)), <span class="comment">// flags
-				</span>Counter(value_len <span class="kw">as </span>u32, callee_len <span class="kw">as </span>u32), <span class="comment">// callee_ptr
-				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// gas
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_ptr
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_ptr
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_len
-				</span>Regular(Instruction::I32Const(SENTINEL <span class="kw">as </span>i32)), <span class="comment">// output_ptr
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// output_len_ptr
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::Drop),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(CallFlags::CLONE_INPUT.bits() <span class="kw">as </span>i32), <span class="comment">// flags
+				</span>Instruction::I32Const(value_len <span class="kw">as </span>i32), <span class="comment">// callee_ptr
+				</span>Instruction::I64Const(<span class="number">0</span>), <span class="comment">// gas
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// value_ptr
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// input_data_ptr
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// input_data_len
+				</span>Instruction::I32Const(SENTINEL <span class="kw">as </span>i32), <span class="comment">// output_ptr
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// output_len_ptr
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
-		<span class="kw">let </span>bytes = <span class="macro">vec!</span>[<span class="number">42</span>; (c * <span class="number">1024</span>) <span class="kw">as </span>usize];
+		<span class="kw">let </span>bytes = <span class="macro">vec!</span>[<span class="number">42</span>; c <span class="kw">as </span>usize];
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, bytes)
 
 	<span class="comment">// We assume that every instantiate sends at least the minimum balance.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_instantiate {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
-		<span class="kw">let </span>hashes = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>hashes = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 					memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
@@ -5054,7 +4947,7 @@
 					value: addr_len.to_le_bytes().into(),
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(hashes_offset <span class="kw">as </span>u32, hash_len <span class="kw">as </span>u32), <span class="comment">// code_hash_ptr
 				</span>Regular(Instruction::I32Const(hash_len <span class="kw">as </span>i32)), <span class="comment">// code_hash_len
 				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// gas
@@ -5074,7 +4967,7 @@
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-		instance.set_balance((value + Pallet::&lt;T&gt;::min_balance()) * (r * API_BENCHMARK_BATCH_SIZE + <span class="number">1</span>).into());
+		instance.set_balance((value + Pallet::&lt;T&gt;::min_balance()) * (r + <span class="number">1</span>).into());
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 		<span class="kw">let </span>callee = instance.addr.clone();
 		<span class="kw">let </span>addresses = hashes
@@ -5098,40 +4991,26 @@
 	}
 
 	<span class="attr">#[pov_mode = Measured]
-	</span>seal_instantiate_per_transfer_input_salt_kb {
+	</span>seal_instantiate_per_transfer_input_salt_byte {
 		<span class="kw">let </span>t <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
-		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. (code::max_pages::&lt;T&gt;() - <span class="number">1</span>) * <span class="number">64</span>;
-		<span class="kw">let </span>s <span class="kw">in </span><span class="number">0 </span>.. (code::max_pages::&lt;T&gt;() - <span class="number">1</span>) * <span class="number">64</span>;
+		<span class="kw">let </span>i <span class="kw">in </span><span class="number">0 </span>.. (code::max_pages::&lt;T&gt;() - <span class="number">1</span>) * <span class="number">64 </span>* <span class="number">1024</span>;
+		<span class="kw">let </span>s <span class="kw">in </span><span class="number">0 </span>.. (code::max_pages::&lt;T&gt;() - <span class="number">1</span>) * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>callee_code = WasmModule::&lt;T&gt;::dummy();
 		<span class="kw">let </span>hash = callee_code.hash;
 		<span class="kw">let </span>hash_bytes = callee_code.hash.encode();
 		<span class="kw">let </span>hash_len = hash_bytes.len();
 		Contracts::&lt;T&gt;::store_code_raw(callee_code.code, whitelisted_caller())<span class="question-mark">?</span>;
-		<span class="kw">let </span>salts = (<span class="number">0</span>..API_BENCHMARK_BATCH_SIZE).map(|x| x.encode()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>salt_len = salts.get(<span class="number">0</span>).map(|x| x.len()).unwrap_or(<span class="number">0</span>);
-		<span class="kw">let </span>salt_bytes = salts.iter().cloned().flatten().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>salts_len = salt_bytes.len();
-		<span class="kw">let </span>value: BalanceOf&lt;T&gt; = t.into();
+		<span class="kw">let </span>value: BalanceOf&lt;T&gt; =  t.into();
 		<span class="kw">let </span>value_bytes = value.encode();
-		<span class="kw">let </span>value_len = value_bytes.len();
-		<span class="kw">let </span>addr_len = T::AccountId::max_encoded_len();
-
-		<span class="comment">// offsets where to place static data in contract memory
-		</span><span class="kw">let </span>salt_offset = <span class="number">0</span>;
-		<span class="kw">let </span>value_offset = salts_len;
-		<span class="kw">let </span>hash_offset = value_offset + value_len;
-		<span class="kw">let </span>addr_len_offset = hash_offset + hash_len;
 
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
-				module: <span class="string">&quot;seal0&quot;</span>,
+				module: <span class="string">&quot;seal1&quot;</span>,
 				name: <span class="string">&quot;seal_instantiate&quot;</span>,
 				params: <span class="macro">vec!</span>[
 					ValueType::I32,
-					ValueType::I32,
 					ValueType::I64,
-					ValueType::I32,
 					ValueType::I32,
 					ValueType::I32,
 					ValueType::I32,
@@ -5146,67 +5025,58 @@
 			}],
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
-					offset: salt_offset <span class="kw">as </span>u32,
-					value: salt_bytes,
-				},
-				DataSegment {
-					offset: value_offset <span class="kw">as </span>u32,
-					value: value_bytes,
-				},
-				DataSegment {
-					offset: hash_offset <span class="kw">as </span>u32,
+					offset: <span class="number">0</span>,
 					value: hash_bytes,
 				},
 				DataSegment {
-					offset: addr_len_offset <span class="kw">as </span>u32,
-					value: (addr_len <span class="kw">as </span>u32).to_le_bytes().into(),
+					offset: hash_len <span class="kw">as </span>u32,
+					value: value_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Regular(Instruction::I32Const(hash_offset <span class="kw">as </span>i32)), <span class="comment">// code_hash_ptr
-				</span>Regular(Instruction::I32Const(hash_len <span class="kw">as </span>i32)), <span class="comment">// code_hash_len
-				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// gas
-				</span>Regular(Instruction::I32Const(value_offset <span class="kw">as </span>i32)), <span class="comment">// value_ptr
-				</span>Regular(Instruction::I32Const(value_len <span class="kw">as </span>i32)), <span class="comment">// value_len
-				</span>Counter(salt_offset <span class="kw">as </span>u32, salt_len <span class="kw">as </span>u32), <span class="comment">// input_data_ptr
-				</span>Regular(Instruction::I32Const((i * <span class="number">1024</span>) <span class="kw">as </span>i32)), <span class="comment">// input_data_len
-				</span>Regular(Instruction::I32Const((addr_len_offset + addr_len) <span class="kw">as </span>i32)), <span class="comment">// address_ptr
-				</span>Regular(Instruction::I32Const(addr_len_offset <span class="kw">as </span>i32)), <span class="comment">// address_len_ptr
-				</span>Regular(Instruction::I32Const(SENTINEL <span class="kw">as </span>i32)), <span class="comment">// output_ptr
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// output_len_ptr
-				</span>Counter(salt_offset <span class="kw">as </span>u32, salt_len <span class="kw">as </span>u32), <span class="comment">// salt_ptr
-				</span>Regular(Instruction::I32Const((s * <span class="number">1024</span>) <span class="kw">as </span>i32)), <span class="comment">// salt_len
-				</span>Regular(Instruction::Call(<span class="number">0</span>)),
-				Regular(Instruction::I32Eqz),
-				Regular(Instruction::If(BlockType::NoResult)),
-				Regular(Instruction::Nop),
-				Regular(Instruction::Else),
-				Regular(Instruction::Unreachable),
-				Regular(Instruction::End),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::I32Const(<span class="number">0 </span><span class="kw">as </span>i32), <span class="comment">// code_hash_ptr
+				</span>Instruction::I64Const(<span class="number">0</span>), <span class="comment">// gas
+				</span>Instruction::I32Const(hash_len <span class="kw">as </span>i32), <span class="comment">// value_ptr
+				</span>Instruction::I32Const(<span class="number">0 </span><span class="kw">as </span>i32), <span class="comment">// input_data_ptr
+				</span>Instruction::I32Const(i <span class="kw">as </span>i32), <span class="comment">// input_data_len
+				</span>Instruction::I32Const(SENTINEL <span class="kw">as </span>i32), <span class="comment">// address_ptr
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// address_len_ptr
+				</span>Instruction::I32Const(SENTINEL <span class="kw">as </span>i32), <span class="comment">// output_ptr
+				</span>Instruction::I32Const(<span class="number">0</span>), <span class="comment">// output_len_ptr
+				</span>Instruction::I32Const(<span class="number">0 </span><span class="kw">as </span>i32), <span class="comment">// salt_ptr
+				</span>Instruction::I32Const(s <span class="kw">as </span>i32), <span class="comment">// salt_len
+				</span>Instruction::Call(<span class="number">0</span>),
+				Instruction::I32Eqz,
+				Instruction::If(BlockType::NoResult),
+				Instruction::Nop,
+				Instruction::Else,
+				Instruction::Unreachable,
+				Instruction::End,
+				Instruction::End,
 			])),
 			.. Default::default()
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-		instance.set_balance((value + Pallet::&lt;T&gt;::min_balance()) * (API_BENCHMARK_BATCH_SIZE + <span class="number">1</span>).into());
+		instance.set_balance(value + (Pallet::&lt;T&gt;::min_balance() * <span class="number">2u32</span>.into()));
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_sha2_256 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_sha2_256&quot;</span>, r * API_BENCHMARK_BATCH_SIZE, <span class="number">0</span>,
+			<span class="string">&quot;seal_hash_sha2_256&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="comment">// `n`: Input to hash in kilobytes
+	<span class="comment">// `n`: Input to hash in bytes
 	</span><span class="attr">#[pov_mode = Measured]
-	</span>seal_hash_sha2_256_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
+	</span>seal_hash_sha2_256_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_sha2_256&quot;</span>, API_BENCHMARK_BATCH_SIZE, n * <span class="number">1024</span>,
+			<span class="string">&quot;seal_hash_sha2_256&quot;</span>, <span class="number">1</span>, n,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -5214,19 +5084,19 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_keccak_256 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_keccak_256&quot;</span>, r * API_BENCHMARK_BATCH_SIZE, <span class="number">0</span>,
+			<span class="string">&quot;seal_hash_keccak_256&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="comment">// `n`: Input to hash in kilobytes
+	<span class="comment">// `n`: Input to hash in bytes
 	</span><span class="attr">#[pov_mode = Measured]
-	</span>seal_hash_keccak_256_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
+	</span>seal_hash_keccak_256_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_keccak_256&quot;</span>, API_BENCHMARK_BATCH_SIZE, n * <span class="number">1024</span>,
+			<span class="string">&quot;seal_hash_keccak_256&quot;</span>, <span class="number">1</span>, n,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -5234,19 +5104,19 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_256 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_blake2_256&quot;</span>, r * API_BENCHMARK_BATCH_SIZE, <span class="number">0</span>,
+			<span class="string">&quot;seal_hash_blake2_256&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="comment">// `n`: Input to hash in kilobytes
+	<span class="comment">// `n`: Input to hash in bytes
 	</span><span class="attr">#[pov_mode = Measured]
-	</span>seal_hash_blake2_256_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
+	</span>seal_hash_blake2_256_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_blake2_256&quot;</span>, API_BENCHMARK_BATCH_SIZE, n * <span class="number">1024</span>,
+			<span class="string">&quot;seal_hash_blake2_256&quot;</span>, <span class="number">1</span>, n,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -5254,19 +5124,19 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_128 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_blake2_128&quot;</span>, r * API_BENCHMARK_BATCH_SIZE, <span class="number">0</span>,
+			<span class="string">&quot;seal_hash_blake2_128&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="comment">// `n`: Input to hash in kilobytes
+	<span class="comment">// `n`: Input to hash in bytes
 	</span><span class="attr">#[pov_mode = Measured]
-	</span>seal_hash_blake2_128_per_kb {
-		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64</span>;
+	</span>seal_hash_blake2_128_per_byte {
+		<span class="kw">let </span>n <span class="kw">in </span><span class="number">0 </span>.. code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
-			<span class="string">&quot;seal_hash_blake2_128&quot;</span>, API_BENCHMARK_BATCH_SIZE, n * <span class="number">1024</span>,
+			<span class="string">&quot;seal_hash_blake2_128&quot;</span>, <span class="number">1</span>, n,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -5275,11 +5145,11 @@
 	// It generates different private keys and signatures for the message &quot;Hello world&quot;.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_ecdsa_recover {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 
 		<span class="kw">let </span>message_hash = sp_io::hashing::blake2_256(<span class="string">&quot;Hello world&quot;</span>.as_bytes());
 		<span class="kw">let </span>key_type = sp_core::crypto::KeyTypeId(<span class="kw-2">*</span><span class="string">b&quot;code&quot;</span>);
-		<span class="kw">let </span>signatures = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>signatures = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>pub_key = sp_io::crypto::ecdsa_generate(key_type, <span class="prelude-val">None</span>);
 				<span class="kw">let </span>sig = sp_io::crypto::ecdsa_sign_prehashed(key_type, <span class="kw-2">&amp;</span>pub_key, <span class="kw-2">&amp;</span>message_hash).expect(<span class="string">&quot;Generates signature&quot;</span>);
@@ -5307,7 +5177,7 @@
 					value: signatures,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">32</span>, <span class="number">65</span>), <span class="comment">// signature_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// message_hash_ptr
 				</span>Regular(Instruction::I32Const(signatures_bytes_len + <span class="number">32</span>)), <span class="comment">// output_len_ptr
@@ -5324,9 +5194,9 @@
 	// generated different ECDSA keys.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_ecdsa_to_eth_address {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>key_type = sp_core::crypto::KeyTypeId(<span class="kw-2">*</span><span class="string">b&quot;code&quot;</span>);
-		<span class="kw">let </span>pub_keys_bytes = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>pub_keys_bytes = (<span class="number">0</span>..r)
 			.flat_map(|<span class="kw">_</span>| {
 				sp_io::crypto::ecdsa_generate(key_type, <span class="prelude-val">None</span>).<span class="number">0
 			</span>})
@@ -5346,7 +5216,7 @@
 					value: pub_keys_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, <span class="number">33</span>), <span class="comment">// pub_key_ptr
 				</span>Regular(Instruction::I32Const(pub_keys_bytes_len)), <span class="comment">// out_ptr
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
@@ -5361,7 +5231,7 @@
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_set_code_hash {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
-		<span class="kw">let </span>code_hashes = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>code_hashes = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>new_code = WasmModule::&lt;T&gt;::dummy_with_bytes(i);
 				Contracts::&lt;T&gt;::store_code_raw(new_code.code, whitelisted_caller())<span class="question-mark">?</span>;
@@ -5388,7 +5258,7 @@
 					value: code_hashes_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, code_hash_len <span class="kw">as </span>u32), <span class="comment">// code_hash_ptr
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
 				Regular(Instruction::Drop),
@@ -5410,7 +5280,7 @@
 				params: <span class="macro">vec!</span>[],
 				return_type: <span class="prelude-val">Some</span>(ValueType::I32),
 			}],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::Call(<span class="number">0</span>),
 				Instruction::Drop,
 			])),
@@ -5424,7 +5294,7 @@
 	</span>seal_account_reentrance_count {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
 		<span class="kw">let </span>dummy_code = WasmModule::&lt;T&gt;::dummy_with_bytes(<span class="number">0</span>);
-		<span class="kw">let </span>accounts = (<span class="number">0</span>..r * API_BENCHMARK_BATCH_SIZE)
+		<span class="kw">let </span>accounts = (<span class="number">0</span>..r)
 			.map(|i| Contract::with_index(i + <span class="number">1</span>, dummy_code.clone(), <span class="macro">vec!</span>[]))
 			.collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 		<span class="kw">let </span>account_id_len = accounts.get(<span class="number">0</span>).map(|i| i.account_id.encode().len()).unwrap_or(<span class="number">0</span>);
@@ -5443,7 +5313,7 @@
 					value: account_id_bytes,
 				},
 			],
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * API_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(<span class="number">0</span>, account_id_len <span class="kw">as </span>u32), <span class="comment">// account_ptr
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
 				Regular(Instruction::Drop),
@@ -5465,7 +5335,7 @@
 				params: <span class="macro">vec!</span>[],
 				return_type: <span class="prelude-val">Some</span>(ValueType::I64),
 			}],
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * API_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::Call(<span class="number">0</span>),
 				Instruction::Drop,
 			])),
@@ -5489,7 +5359,7 @@
 	</span>instr_i64const {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI64Repeated(<span class="number">1</span>),
 				Regular(Instruction::Drop),
 			])),
@@ -5505,7 +5375,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomUnaligned(<span class="number">0</span>, code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024 </span>- <span class="number">8</span>),
 				Regular(Instruction::I64Load(<span class="number">3</span>, <span class="number">0</span>)),
 				Regular(Instruction::Drop),
@@ -5522,7 +5392,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomUnaligned(<span class="number">0</span>, code::max_pages::&lt;T&gt;() * <span class="number">64 </span>* <span class="number">1024 </span>- <span class="number">8</span>),
 				RandomI64Repeated(<span class="number">1</span>),
 				Regular(Instruction::I64Store(<span class="number">3</span>, <span class="number">0</span>)),
@@ -5538,7 +5408,7 @@
 	</span>instr_select {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI64Repeated(<span class="number">1</span>),
 				RandomI64Repeated(<span class="number">1</span>),
 				RandomI32(<span class="number">0</span>, <span class="number">2</span>),
@@ -5556,7 +5426,7 @@
 	</span>instr_if {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI32(<span class="number">0</span>, <span class="number">2</span>),
 				Regular(Instruction::If(BlockType::Value(ValueType::I64))),
 				RandomI64Repeated(<span class="number">1</span>),
@@ -5577,7 +5447,7 @@
 	</span>instr_br {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Regular(Instruction::Block(BlockType::NoResult)),
 				Regular(Instruction::Block(BlockType::NoResult)),
 				Regular(Instruction::Block(BlockType::NoResult)),
@@ -5604,7 +5474,7 @@
 	</span>instr_br_if {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Regular(Instruction::Block(BlockType::NoResult)),
 				Regular(Instruction::Block(BlockType::NoResult)),
 				Regular(Instruction::Block(BlockType::NoResult)),
@@ -5636,7 +5506,7 @@
 			default: <span class="number">1</span>,
 		});
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Regular(Instruction::Block(BlockType::NoResult)),
 				Regular(Instruction::Block(BlockType::NoResult)),
 				Regular(Instruction::Block(BlockType::NoResult)),
@@ -5671,21 +5541,22 @@
 			default: <span class="number">0</span>,
 		});
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				Regular(Instruction::Block(BlockType::NoResult)),
-				Regular(Instruction::Block(BlockType::NoResult)),
-				Regular(Instruction::Block(BlockType::NoResult)),
-				RandomI32(<span class="number">0</span>, (e + <span class="number">1</span>) <span class="kw">as </span>i32), <span class="comment">// Make sure the default entry is also used
-				</span>Regular(Instruction::BrTable(table)),
-				RandomI64Repeated(<span class="number">1</span>),
-				Regular(Instruction::Drop),
-				Regular(Instruction::End),
-				RandomI64Repeated(<span class="number">1</span>),
-				Regular(Instruction::Drop),
-				Regular(Instruction::End),
-				RandomI64Repeated(<span class="number">1</span>),
-				Regular(Instruction::Drop),
-				Regular(Instruction::End),
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
+				Instruction::Block(BlockType::NoResult),
+				Instruction::Block(BlockType::NoResult),
+				Instruction::Block(BlockType::NoResult),
+				Instruction::I32Const((e / <span class="number">2</span>) <span class="kw">as </span>i32),
+				Instruction::BrTable(table),
+				Instruction::I64Const(<span class="number">42</span>),
+				Instruction::Drop,
+				Instruction::End,
+				Instruction::I64Const(<span class="number">42</span>),
+				Instruction::Drop,
+				Instruction::End,
+				Instruction::I64Const(<span class="number">42</span>),
+				Instruction::Drop,
+				Instruction::End,
+				Instruction::End,
 			])),
 			.. Default::default()
 		}));
@@ -5705,7 +5576,7 @@
 				Instruction::Drop,
 				Instruction::End,
 			])),
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::Call(<span class="number">2</span>), <span class="comment">// call aux
 			</span>])),
 			.. Default::default()
@@ -5728,42 +5599,9 @@
 				Instruction::Drop,
 				Instruction::End,
 			])),
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI32(<span class="number">0</span>, num_elements <span class="kw">as </span>i32),
 				Regular(Instruction::CallIndirect(<span class="number">0</span>, <span class="number">0</span>)), <span class="comment">// we only have one sig: 0
-			</span>])),
-			table: <span class="prelude-val">Some</span>(TableSegment {
-				num_elements,
-				function_index: <span class="number">2</span>, <span class="comment">// aux
-			</span>}),
-			.. Default::default()
-		}));
-	}: {
-		sbox.invoke();
-	}
-
-	<span class="comment">// w_instr_call_indirect_per_param = w_bench - 1 * w_param
-	// Calling a function indirectly causes it to go through a thunk function whose runtime
-	// linearly depend on the amount of parameters to this function.
-	// Please note that this is not necessary with a direct call.
-	</span><span class="attr">#[pov_mode = Ignored]
-	</span>instr_call_indirect_per_param {
-		<span class="kw">let </span>p <span class="kw">in </span><span class="number">0 </span>.. T::Schedule::get().limits.parameters;
-		<span class="kw">let </span>num_elements = T::Schedule::get().limits.table_size;
-		<span class="kw">use </span><span class="self">self</span>::code::TableSegment;
-		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			<span class="comment">// We need to make use of the stack here in order to trigger stack height
-			// instrumentation.
-			</span>aux_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
-				Instruction::I64Const(<span class="number">42</span>),
-				Instruction::Drop,
-				Instruction::End,
-			])),
-			aux_arg_num: p,
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
-				RandomI64Repeated(p <span class="kw">as </span>usize),
-				RandomI32(<span class="number">0</span>, num_elements <span class="kw">as </span>i32),
-				Regular(Instruction::CallIndirect(p.min(<span class="number">1</span>), <span class="number">0</span>)), <span class="comment">// aux signature: 1 or 0
 			</span>])),
 			table: <span class="prelude-val">Some</span>(TableSegment {
 				num_elements,
@@ -5785,9 +5623,10 @@
 		body::inject_locals(<span class="kw-2">&amp;mut </span>aux_body, l);
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			aux_body: <span class="prelude-val">Some</span>(aux_body),
-			call_body: <span class="prelude-val">Some</span>(body::repeated(INSTR_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
 				Instruction::Call(<span class="number">2</span>), <span class="comment">// call aux
-			</span>])),
+				</span>Instruction::End,
+			])),
 			.. Default::default()
 		}));
 	}: {
@@ -5799,7 +5638,7 @@
 	</span>instr_local_get {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
-		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r, <span class="macro">vec!</span>[
 			RandomGetLocal(<span class="number">0</span>, max_locals),
 			Regular(Instruction::Drop),
 		]);
@@ -5817,7 +5656,7 @@
 	</span>instr_local_set {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
-		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r, <span class="macro">vec!</span>[
 			RandomI64Repeated(<span class="number">1</span>),
 			RandomSetLocal(<span class="number">0</span>, max_locals),
 		]);
@@ -5835,7 +5674,7 @@
 	</span>instr_local_tee {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
-		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r, <span class="macro">vec!</span>[
 			RandomI64Repeated(<span class="number">1</span>),
 			RandomTeeLocal(<span class="number">0</span>, max_locals),
 			Regular(Instruction::Drop),
@@ -5855,7 +5694,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span>max_globals = T::Schedule::get().limits.globals;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomGetGlobal(<span class="number">0</span>, max_globals),
 				Regular(Instruction::Drop),
 			])),
@@ -5872,7 +5711,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span>max_globals = T::Schedule::get().limits.globals;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI64Repeated(<span class="number">1</span>),
 				RandomSetGlobal(<span class="number">0</span>, max_globals),
 			])),
@@ -5889,7 +5728,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::CurrentMemory(<span class="number">0</span>),
 				Instruction::Drop
 			])),
@@ -5906,14 +5745,13 @@
 	// depends on how much memory is already allocated.
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_memory_grow {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. <span class="number">1</span>;
-		<span class="kw">let </span>max_pages = ImportedMemory::max::&lt;T&gt;().max_pages;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. ImportedMemory::max::&lt;T&gt;().max_pages;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory {
 				min_pages: <span class="number">0</span>,
-				max_pages,
+				max_pages: ImportedMemory::max::&lt;T&gt;().max_pages,
 			}),
-			call_body: <span class="prelude-val">Some</span>(body::repeated(r * max_pages, <span class="kw-2">&amp;</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I32Const(<span class="number">1</span>),
 				Instruction::GrowMemory(<span class="number">0</span>),
 				Instruction::Drop,
@@ -5932,7 +5770,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Clz,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -5943,7 +5781,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Ctz,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -5954,7 +5792,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Popcnt,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -5965,7 +5803,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Eqz,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -5975,7 +5813,7 @@
 	</span>instr_i64extendsi32 {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI32Repeated(<span class="number">1</span>),
 				Regular(Instruction::I64ExtendSI32),
 				Regular(Instruction::Drop),
@@ -5990,7 +5828,7 @@
 	</span>instr_i64extendui32 {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
-			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r * INSTR_BENCHMARK_BATCH_SIZE, <span class="macro">vec!</span>[
+			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI32Repeated(<span class="number">1</span>),
 				Regular(Instruction::I64ExtendUI32),
 				Regular(Instruction::Drop),
@@ -6006,7 +5844,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I32WrapI64,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6020,7 +5858,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Eq,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6031,7 +5869,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Ne,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6042,7 +5880,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LtS,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6053,7 +5891,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LtU,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6064,7 +5902,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GtS,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6075,7 +5913,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GtU,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6086,7 +5924,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LeS,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6097,7 +5935,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LeU,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6108,7 +5946,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GeS,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6119,7 +5957,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GeU,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6130,7 +5968,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Add,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6141,7 +5979,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Sub,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6152,7 +5990,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Mul,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6163,7 +6001,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64DivS,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6174,7 +6012,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64DivU,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6185,7 +6023,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64RemS,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6196,7 +6034,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64RemU,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6207,7 +6045,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64And,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6218,7 +6056,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Or,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6229,7 +6067,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Xor,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6240,7 +6078,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Shl,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6251,7 +6089,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64ShrS,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6262,7 +6100,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64ShrU,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6273,7 +6111,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Rotl,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
@@ -6284,7 +6122,7 @@
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Rotr,
-			r * INSTR_BENCHMARK_BATCH_SIZE,
+			r,
 		));
 	}: {
 		sbox.invoke();
