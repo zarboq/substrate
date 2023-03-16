@@ -239,6 +239,16 @@
 <a href="#239" id="239">239</a>
 <a href="#240" id="240">240</a>
 <a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -438,10 +448,15 @@
 		command: <span class="kw-2">&amp;</span>T,
 	) -&gt; error::Result&lt;Runner&lt;<span class="self">Self</span>&gt;&gt; {
 		<span class="kw">let </span>tokio_runtime = build_runtime()<span class="question-mark">?</span>;
+
+		<span class="comment">// `capture` needs to be called in a tokio context.
+		// Also capture them as early as possible.
+		</span><span class="kw">let </span>signals = tokio_runtime.block_on(<span class="kw">async </span>{ Signals::capture() })<span class="question-mark">?</span>;
+
 		<span class="kw">let </span>config = command.create_configuration(<span class="self">self</span>, tokio_runtime.handle().clone())<span class="question-mark">?</span>;
 
 		command.init(<span class="kw-2">&amp;</span><span class="self">Self</span>::support_url(), <span class="kw-2">&amp;</span><span class="self">Self</span>::impl_version(), |<span class="kw">_</span>, <span class="kw">_</span>| {}, <span class="kw-2">&amp;</span>config)<span class="question-mark">?</span>;
-		Runner::new(config, tokio_runtime)
+		Runner::new(config, tokio_runtime, signals)
 	}
 
 	<span class="doccomment">/// Create a runner for the command provided in argument. The `logger_hook` can be used to setup
@@ -472,10 +487,15 @@
 		</span>F: FnOnce(<span class="kw-2">&amp;mut </span>LoggerBuilder, <span class="kw-2">&amp;</span>Configuration),
 	{
 		<span class="kw">let </span>tokio_runtime = build_runtime()<span class="question-mark">?</span>;
+
+		<span class="comment">// `capture` needs to be called in a tokio context.
+		// Also capture them as early as possible.
+		</span><span class="kw">let </span>signals = tokio_runtime.block_on(<span class="kw">async </span>{ Signals::capture() })<span class="question-mark">?</span>;
+
 		<span class="kw">let </span>config = command.create_configuration(<span class="self">self</span>, tokio_runtime.handle().clone())<span class="question-mark">?</span>;
 
 		command.init(<span class="kw-2">&amp;</span><span class="self">Self</span>::support_url(), <span class="kw-2">&amp;</span><span class="self">Self</span>::impl_version(), logger_hook, <span class="kw-2">&amp;</span>config)<span class="question-mark">?</span>;
-		Runner::new(config, tokio_runtime)
+		Runner::new(config, tokio_runtime, signals)
 	}
 	<span class="doccomment">/// Native runtime version.
 	</span><span class="kw">fn </span>native_runtime_version(chain_spec: <span class="kw-2">&amp;</span>Box&lt;<span class="kw">dyn </span>ChainSpec&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>RuntimeVersion;
