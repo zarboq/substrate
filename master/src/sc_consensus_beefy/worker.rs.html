@@ -1617,78 +1617,6 @@
 <a href="#1617" id="1617">1617</a>
 <a href="#1618" id="1618">1618</a>
 <a href="#1619" id="1619">1619</a>
-<a href="#1620" id="1620">1620</a>
-<a href="#1621" id="1621">1621</a>
-<a href="#1622" id="1622">1622</a>
-<a href="#1623" id="1623">1623</a>
-<a href="#1624" id="1624">1624</a>
-<a href="#1625" id="1625">1625</a>
-<a href="#1626" id="1626">1626</a>
-<a href="#1627" id="1627">1627</a>
-<a href="#1628" id="1628">1628</a>
-<a href="#1629" id="1629">1629</a>
-<a href="#1630" id="1630">1630</a>
-<a href="#1631" id="1631">1631</a>
-<a href="#1632" id="1632">1632</a>
-<a href="#1633" id="1633">1633</a>
-<a href="#1634" id="1634">1634</a>
-<a href="#1635" id="1635">1635</a>
-<a href="#1636" id="1636">1636</a>
-<a href="#1637" id="1637">1637</a>
-<a href="#1638" id="1638">1638</a>
-<a href="#1639" id="1639">1639</a>
-<a href="#1640" id="1640">1640</a>
-<a href="#1641" id="1641">1641</a>
-<a href="#1642" id="1642">1642</a>
-<a href="#1643" id="1643">1643</a>
-<a href="#1644" id="1644">1644</a>
-<a href="#1645" id="1645">1645</a>
-<a href="#1646" id="1646">1646</a>
-<a href="#1647" id="1647">1647</a>
-<a href="#1648" id="1648">1648</a>
-<a href="#1649" id="1649">1649</a>
-<a href="#1650" id="1650">1650</a>
-<a href="#1651" id="1651">1651</a>
-<a href="#1652" id="1652">1652</a>
-<a href="#1653" id="1653">1653</a>
-<a href="#1654" id="1654">1654</a>
-<a href="#1655" id="1655">1655</a>
-<a href="#1656" id="1656">1656</a>
-<a href="#1657" id="1657">1657</a>
-<a href="#1658" id="1658">1658</a>
-<a href="#1659" id="1659">1659</a>
-<a href="#1660" id="1660">1660</a>
-<a href="#1661" id="1661">1661</a>
-<a href="#1662" id="1662">1662</a>
-<a href="#1663" id="1663">1663</a>
-<a href="#1664" id="1664">1664</a>
-<a href="#1665" id="1665">1665</a>
-<a href="#1666" id="1666">1666</a>
-<a href="#1667" id="1667">1667</a>
-<a href="#1668" id="1668">1668</a>
-<a href="#1669" id="1669">1669</a>
-<a href="#1670" id="1670">1670</a>
-<a href="#1671" id="1671">1671</a>
-<a href="#1672" id="1672">1672</a>
-<a href="#1673" id="1673">1673</a>
-<a href="#1674" id="1674">1674</a>
-<a href="#1675" id="1675">1675</a>
-<a href="#1676" id="1676">1676</a>
-<a href="#1677" id="1677">1677</a>
-<a href="#1678" id="1678">1678</a>
-<a href="#1679" id="1679">1679</a>
-<a href="#1680" id="1680">1680</a>
-<a href="#1681" id="1681">1681</a>
-<a href="#1682" id="1682">1682</a>
-<a href="#1683" id="1683">1683</a>
-<a href="#1684" id="1684">1684</a>
-<a href="#1685" id="1685">1685</a>
-<a href="#1686" id="1686">1686</a>
-<a href="#1687" id="1687">1687</a>
-<a href="#1688" id="1688">1688</a>
-<a href="#1689" id="1689">1689</a>
-<a href="#1690" id="1690">1690</a>
-<a href="#1691" id="1691">1691</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1709,13 +1637,13 @@
 
 </span><span class="kw">use crate</span>::{
 	communication::{
-		gossip::{topic, GossipValidator},
+		gossip::{topic, GossipValidator, GossipVoteFilter},
 		request_response::outgoing_requests_engine::OnDemandJustificationsEngine,
 	},
 	error::Error,
 	justification::BeefyVersionedFinalityProof,
 	keystore::{BeefyKeystore, BeefySignatureHasher},
-	metric_get, metric_inc, metric_set,
+	metric_inc, metric_set,
 	metrics::VoterMetrics,
 	round::{Rounds, VoteImportResult},
 	BeefyVoterLinks, LOG_TARGET,
@@ -1733,24 +1661,19 @@
 	check_equivocation_proof,
 	crypto::{AuthorityId, Signature},
 	BeefyApi, Commitment, ConsensusLog, EquivocationProof, PayloadProvider, ValidatorSet,
-	VersionedFinalityProof, VoteMessage, BEEFY_ENGINE_ID,
+	ValidatorSetId, VersionedFinalityProof, VoteMessage, BEEFY_ENGINE_ID,
 };
 <span class="kw">use </span>sp_runtime::{
 	generic::OpaqueDigestItemId,
-	traits::{Block, ConstU32, Header, NumberFor, Zero},
-	BoundedVec, SaturatedConversion,
+	traits::{Block, Header, NumberFor, Zero},
+	SaturatedConversion,
 };
 <span class="kw">use </span>std::{
 	collections::{BTreeMap, BTreeSet, VecDeque},
 	fmt::Debug,
-	marker::PhantomData,
 	sync::Arc,
 };
 
-<span class="doccomment">/// Bound for the number of buffered future voting rounds.
-</span><span class="kw">const </span>MAX_BUFFERED_VOTE_ROUNDS: usize = <span class="number">600</span>;
-<span class="doccomment">/// Bound for the number of buffered votes per round number.
-</span><span class="kw">const </span>MAX_BUFFERED_VOTES_PER_ROUND: u32 = <span class="number">1000</span>;
 <span class="doccomment">/// Bound for the number of pending justifications - use 2400 - the max number
 /// of justifications possible in a single session.
 </span><span class="kw">const </span>MAX_BUFFERED_JUSTIFICATIONS: usize = <span class="number">2400</span>;
@@ -1778,23 +1701,34 @@
 	</span>sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;,
 	<span class="doccomment">/// Min delta in block numbers between two blocks, BEEFY should vote on.
 	</span>min_block_delta: u32,
+	<span class="doccomment">/// Best block we received a GRANDPA finality for.
+	</span>best_grandpa_block_header: &lt;B <span class="kw">as </span>Block&gt;::Header,
+	<span class="doccomment">/// Best block a BEEFY voting round has been concluded for.
+	</span>best_beefy_block: NumberFor&lt;B&gt;,
 }
 
 <span class="kw">impl</span>&lt;B: Block&gt; VoterOracle&lt;B&gt; {
 	<span class="doccomment">/// Verify provided `sessions` satisfies requirements, then build `VoterOracle`.
-	</span><span class="kw">pub fn </span>checked_new(sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;, min_block_delta: u32) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+	</span><span class="kw">pub fn </span>checked_new(
+		sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;,
+		min_block_delta: u32,
+		grandpa_header: &lt;B <span class="kw">as </span>Block&gt;::Header,
+		best_beefy: NumberFor&lt;B&gt;,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>prev_start = Zero::zero();
 		<span class="kw">let </span><span class="kw-2">mut </span>prev_validator_id = <span class="prelude-val">None</span>;
 		<span class="comment">// verifies the
 		</span><span class="kw">let </span><span class="kw-2">mut </span>validate = || -&gt; bool {
-			<span class="kw">if </span>sessions.is_empty() {
+			<span class="kw">let </span>best_grandpa = <span class="kw-2">*</span>grandpa_header.number();
+			<span class="kw">if </span>sessions.is_empty() || best_beefy &gt; best_grandpa {
 				<span class="kw">return </span><span class="bool-val">false
 			</span>}
 			<span class="kw">for </span>(idx, session) <span class="kw">in </span>sessions.iter().enumerate() {
+				<span class="kw">let </span>start = session.session_start();
 				<span class="kw">if </span>session.validators().is_empty() {
 					<span class="kw">return </span><span class="bool-val">false
 				</span>}
-				<span class="kw">if </span>session.session_start() &lt;= prev_start {
+				<span class="kw">if </span>start &gt; best_grandpa || start &lt;= prev_start {
 					<span class="kw">return </span><span class="bool-val">false
 				</span>}
 				<span class="attr">#[cfg(not(test))]
@@ -1816,23 +1750,35 @@
 				sessions,
 				<span class="comment">// Always target at least one block better than current best beefy.
 				</span>min_block_delta: min_block_delta.max(<span class="number">1</span>),
+				best_grandpa_block_header: grandpa_header,
+				best_beefy_block: best_beefy,
 			})
 		} <span class="kw">else </span>{
-			<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Invalid sessions queue: {:?}.&quot;</span>, sessions);
+			<span class="macro">error!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;🥩 Invalid sessions queue: {:?}; best-beefy {:?} best-grandpa-header {:?}.&quot;</span>,
+				sessions,
+				best_beefy,
+				grandpa_header
+			);
 			<span class="prelude-val">None
 		</span>}
 	}
 
 	<span class="comment">// Return reference to rounds pertaining to first session in the queue.
 	// Voting will always happen at the head of the queue.
-	</span><span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;&gt; {
-		<span class="self">self</span>.sessions.front()
+	</span><span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;, Error&gt; {
+		<span class="self">self</span>.sessions.front().ok_or(Error::UninitSession)
 	}
 
 	<span class="comment">// Return mutable reference to rounds pertaining to first session in the queue.
 	// Voting will always happen at the head of the queue.
-	</span><span class="kw">fn </span>active_rounds_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Rounds&lt;B&gt;&gt; {
-		<span class="self">self</span>.sessions.front_mut()
+	</span><span class="kw">fn </span>active_rounds_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;mut </span>Rounds&lt;B&gt;, Error&gt; {
+		<span class="self">self</span>.sessions.front_mut().ok_or(Error::UninitSession)
+	}
+
+	<span class="kw">fn </span>current_validator_set_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ValidatorSetId, Error&gt; {
+		<span class="self">self</span>.active_rounds().map(|r| r.validator_set_id())
 	}
 
 	<span class="comment">// Prune the sessions queue to keep the Oracle in one of the expected three states.
@@ -1855,7 +1801,7 @@
 	<span class="doccomment">/// Finalize a particular block.
 	</span><span class="kw">pub fn </span>finalize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, block: NumberFor&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 		<span class="comment">// Conclude voting round for this block.
-		</span><span class="self">self</span>.active_rounds_mut().ok_or(Error::UninitSession)<span class="question-mark">?</span>.conclude(block);
+		</span><span class="self">self</span>.active_rounds_mut()<span class="question-mark">?</span>.conclude(block);
 		<span class="comment">// Prune any now &quot;finalized&quot; sessions from queue.
 		</span><span class="self">self</span>.try_prune();
 		<span class="prelude-val">Ok</span>(())
@@ -1873,30 +1819,26 @@
 	}
 
 	<span class="doccomment">/// Return `(A, B)` tuple representing inclusive [A, B] interval of votes to accept.
-	</span><span class="kw">pub fn </span>accepted_interval(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		best_grandpa: NumberFor&lt;B&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(NumberFor&lt;B&gt;, NumberFor&lt;B&gt;), Error&gt; {
+	</span><span class="kw">pub fn </span>accepted_interval(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(NumberFor&lt;B&gt;, NumberFor&lt;B&gt;), Error&gt; {
 		<span class="kw">let </span>rounds = <span class="self">self</span>.sessions.front().ok_or(Error::UninitSession)<span class="question-mark">?</span>;
 
 		<span class="kw">if </span>rounds.mandatory_done() {
 			<span class="comment">// There&#39;s only one session active and its mandatory is done.
-			// Accept any GRANDPA finalized vote.
-			</span><span class="prelude-val">Ok</span>((rounds.session_start(), best_grandpa.into()))
+			// Accept any vote for a GRANDPA finalized block in a better round.
+			</span><span class="prelude-val">Ok</span>((
+				rounds.session_start().max(<span class="self">self</span>.best_beefy_block),
+				(<span class="kw-2">*</span><span class="self">self</span>.best_grandpa_block_header.number()).into(),
+			))
 		} <span class="kw">else </span>{
-			<span class="comment">// There&#39;s at least one session with mandatory not done.
+			<span class="comment">// Current session has mandatory not done.
 			// Only accept votes for the mandatory block in the front of queue.
 			</span><span class="prelude-val">Ok</span>((rounds.session_start(), rounds.session_start()))
 		}
 	}
 
 	<span class="doccomment">/// Utility function to quickly decide what to do for each round.
-	</span><span class="kw">pub fn </span>triage_round(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		round: NumberFor&lt;B&gt;,
-		best_grandpa: NumberFor&lt;B&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;RoundAction, Error&gt; {
-		<span class="kw">let </span>(start, end) = <span class="self">self</span>.accepted_interval(best_grandpa)<span class="question-mark">?</span>;
+	</span><span class="kw">pub fn </span>triage_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;RoundAction, Error&gt; {
+		<span class="kw">let </span>(start, end) = <span class="self">self</span>.accepted_interval()<span class="question-mark">?</span>;
 		<span class="kw">if </span>start &lt;= round &amp;&amp; round &lt;= end {
 			<span class="prelude-val">Ok</span>(RoundAction::Process)
 		} <span class="kw">else if </span>round &gt; end {
@@ -1908,17 +1850,15 @@
 
 	<span class="doccomment">/// Return `Some(number)` if we should be voting on block `number`,
 	/// return `None` if there is no block we should vote on.
-	</span><span class="kw">pub fn </span>voting_target(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		best_beefy: NumberFor&lt;B&gt;,
-		best_grandpa: NumberFor&lt;B&gt;,
-	) -&gt; <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt; {
+	</span><span class="kw">pub fn </span>voting_target(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt; {
 		<span class="kw">let </span>rounds = <span class="kw">if let </span><span class="prelude-val">Some</span>(r) = <span class="self">self</span>.sessions.front() {
 			r
 		} <span class="kw">else </span>{
 			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 No voting round started&quot;</span>);
 			<span class="kw">return </span><span class="prelude-val">None
 		</span>};
+		<span class="kw">let </span>best_grandpa = <span class="kw-2">*</span><span class="self">self</span>.best_grandpa_block_header.number();
+		<span class="kw">let </span>best_beefy = <span class="self">self</span>.best_beefy_block;
 
 		<span class="comment">// `target` is guaranteed &gt; `best_beefy` since `min_block_delta` is at least `1`.
 		</span><span class="kw">let </span>target =
@@ -1950,10 +1890,6 @@
 
 <span class="attr">#[derive(Debug, Decode, Encode, PartialEq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PersistedState&lt;B: Block&gt; {
-	<span class="doccomment">/// Best block we received a GRANDPA finality for.
-	</span>best_grandpa_block_header: &lt;B <span class="kw">as </span>Block&gt;::Header,
-	<span class="doccomment">/// Best block a BEEFY voting round has been concluded for.
-	</span>best_beefy_block: NumberFor&lt;B&gt;,
 	<span class="doccomment">/// Best block we voted on.
 	</span>best_voted: NumberFor&lt;B&gt;,
 	<span class="doccomment">/// Chooses which incoming votes to accept and which votes to generate.
@@ -1968,20 +1904,26 @@
 		sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;,
 		min_block_delta: u32,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
-		VoterOracle::checked_new(sessions, min_block_delta).map(|voting_oracle| PersistedState {
-			best_grandpa_block_header: grandpa_header,
-			best_beefy_block: best_beefy,
-			best_voted: Zero::zero(),
-			voting_oracle,
-		})
+		VoterOracle::checked_new(sessions, min_block_delta, grandpa_header, best_beefy)
+			.map(|voting_oracle| PersistedState { best_voted: Zero::zero(), voting_oracle })
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_min_block_delta(<span class="kw-2">&amp;mut </span><span class="self">self</span>, min_block_delta: u32) {
 		<span class="self">self</span>.voting_oracle.min_block_delta = min_block_delta.max(<span class="number">1</span>);
 	}
 
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_best_beefy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, best_beefy: NumberFor&lt;B&gt;) {
+		<span class="self">self</span>.voting_oracle.best_beefy_block = best_beefy;
+	}
+
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_best_grandpa(<span class="kw-2">&amp;mut </span><span class="self">self</span>, best_grandpa: &lt;B <span class="kw">as </span>Block&gt;::Header) {
-		<span class="self">self</span>.best_grandpa_block_header = best_grandpa;
+		<span class="self">self</span>.voting_oracle.best_grandpa_block_header = best_grandpa;
+	}
+
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>current_gossip_filter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;GossipVoteFilter&lt;B&gt;, Error&gt; {
+		<span class="kw">let </span>(start, end) = <span class="self">self</span>.voting_oracle.accepted_interval()<span class="question-mark">?</span>;
+		<span class="kw">let </span>validator_set_id = <span class="self">self</span>.voting_oracle.current_validator_set_id()<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(GossipVoteFilter { start, end, validator_set_id })
 	}
 }
 
@@ -2006,14 +1948,6 @@
 	<span class="comment">// voter state
 	</span><span class="doccomment">/// BEEFY client metrics.
 	</span>metrics: <span class="prelude-ty">Option</span>&lt;VoterMetrics&gt;,
-	<span class="doccomment">/// Buffer holding votes for future processing.
-	</span>pending_votes: BTreeMap&lt;
-		NumberFor&lt;B&gt;,
-		BoundedVec&lt;
-			VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;,
-			ConstU32&lt;MAX_BUFFERED_VOTES_PER_ROUND&gt;,
-		&gt;,
-	&gt;,
 	<span class="doccomment">/// Buffer holding justifications for future processing.
 	</span>pending_justifications: BTreeMap&lt;NumberFor&lt;B&gt;, BeefyVersionedFinalityProof&lt;B&gt;&gt;,
 	<span class="doccomment">/// Persisted voter state.
@@ -2061,25 +1995,20 @@
 			on_demand_justifications,
 			links,
 			metrics,
-			pending_votes: BTreeMap::new(),
 			pending_justifications: BTreeMap::new(),
 			persisted_state,
 		}
 	}
 
 	<span class="kw">fn </span>best_grandpa_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NumberFor&lt;B&gt; {
-		<span class="kw-2">*</span><span class="self">self</span>.persisted_state.best_grandpa_block_header.number()
-	}
-
-	<span class="kw">fn </span>best_beefy_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NumberFor&lt;B&gt; {
-		<span class="self">self</span>.persisted_state.best_beefy_block
+		<span class="kw-2">*</span><span class="self">self</span>.persisted_state.voting_oracle.best_grandpa_block_header.number()
 	}
 
 	<span class="kw">fn </span>voting_oracle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>VoterOracle&lt;B&gt; {
 		<span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state.voting_oracle
 	}
 
-	<span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;&gt; {
+	<span class="kw">fn </span>active_rounds(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;, Error&gt; {
 		<span class="self">self</span>.persisted_state.voting_oracle.active_rounds()
 	}
 
@@ -2120,7 +2049,7 @@
 		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 New active validator set: {:?}&quot;</span>, validator_set);
 
 		<span class="comment">// BEEFY should finalize a mandatory block during each session.
-		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(active_session) = <span class="self">self</span>.active_rounds() {
+		</span><span class="kw">if let </span><span class="prelude-val">Ok</span>(active_session) = <span class="self">self</span>.active_rounds() {
 			<span class="kw">if </span>!active_session.mandatory_done() {
 				<span class="macro">debug!</span>(
 					target: LOG_TARGET,
@@ -2151,12 +2080,17 @@
 	}
 
 	<span class="kw">fn </span>handle_finality_notification(<span class="kw-2">&amp;mut </span><span class="self">self</span>, notification: <span class="kw-2">&amp;</span>FinalityNotification&lt;B&gt;) {
-		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Finality notification: {:?}&quot;</span>, notification);
+		<span class="macro">debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;🥩 Finality notification: header {:?} tree_route {:?}&quot;</span>,
+			notification.header,
+			notification.tree_route,
+		);
 		<span class="kw">let </span>header = <span class="kw-2">&amp;</span>notification.header;
 
 		<span class="kw">if </span><span class="kw-2">*</span>header.number() &gt; <span class="self">self</span>.best_grandpa_block() {
 			<span class="comment">// update best GRANDPA finalized block we have seen
-			</span><span class="self">self</span>.persisted_state.best_grandpa_block_header = header.clone();
+			</span><span class="self">self</span>.persisted_state.set_best_grandpa(header.clone());
 
 			<span class="comment">// Check all (newly) finalized blocks for new session(s).
 			</span><span class="kw">let </span>backend = <span class="self">self</span>.backend.clone();
@@ -2175,38 +2109,28 @@
 					<span class="self">self</span>.init_session_at(new_validator_set, <span class="kw-2">*</span>header.number());
 				}
 			}
+
+			<span class="comment">// Update gossip validator votes filter.
+			</span><span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="self">self
+				</span>.persisted_state
+				.current_gossip_filter()
+				.map(|filter| <span class="self">self</span>.gossip_validator.update_filter(filter))
+			{
+				<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Voter error: {:?}&quot;</span>, e);
+			}
 		}
 	}
 
-	<span class="doccomment">/// Based on [VoterOracle] this vote is either processed here or enqueued for later.
+	<span class="doccomment">/// Based on [VoterOracle] this vote is either processed here or discarded.
 	</span><span class="kw">fn </span>triage_incoming_vote(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		vote: VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 		<span class="kw">let </span>block_num = vote.commitment.block_number;
-		<span class="kw">let </span>best_grandpa = <span class="self">self</span>.best_grandpa_block();
-		<span class="self">self</span>.gossip_validator.note_round(block_num);
-		<span class="kw">match </span><span class="self">self</span>.voting_oracle().triage_round(block_num, best_grandpa)<span class="question-mark">? </span>{
+		<span class="kw">match </span><span class="self">self</span>.voting_oracle().triage_round(block_num)<span class="question-mark">? </span>{
 			RoundAction::Process =&gt; <span class="self">self</span>.handle_vote(vote)<span class="question-mark">?</span>,
-			RoundAction::Enqueue =&gt; {
-				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer vote for round: {:?}.&quot;</span>, block_num);
-				<span class="kw">if </span><span class="self">self</span>.pending_votes.len() &lt; MAX_BUFFERED_VOTE_ROUNDS {
-					<span class="kw">let </span>votes_vec = <span class="self">self</span>.pending_votes.entry(block_num).or_default();
-					<span class="kw">if </span>votes_vec.try_push(vote).is_ok() {
-						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_votes);
-					} <span class="kw">else </span>{
-						<span class="macro">warn!</span>(
-							target: LOG_TARGET,
-							<span class="string">&quot;🥩 Buffer vote dropped for round: {:?}&quot;</span>, block_num
-						);
-						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_votes_dropped);
-					}
-				} <span class="kw">else </span>{
-					<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Buffer vote dropped for round: {:?}.&quot;</span>, block_num);
-					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_buffered_votes_dropped);
-				}
-			},
 			RoundAction::Drop =&gt; <span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_stale_votes),
+			RoundAction::Enqueue =&gt; <span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 unexpected vote: {:?}.&quot;</span>, vote),
 		};
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2222,8 +2146,7 @@
 			VersionedFinalityProof::V1(<span class="kw-2">ref </span>sc) =&gt; sc,
 		};
 		<span class="kw">let </span>block_num = signed_commitment.commitment.block_number;
-		<span class="kw">let </span>best_grandpa = <span class="self">self</span>.best_grandpa_block();
-		<span class="kw">match </span><span class="self">self</span>.voting_oracle().triage_round(block_num, best_grandpa)<span class="question-mark">? </span>{
+		<span class="kw">match </span><span class="self">self</span>.voting_oracle().triage_round(block_num)<span class="question-mark">? </span>{
 			RoundAction::Process =&gt; {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Process justification for round: {:?}.&quot;</span>, block_num);
 				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_imported_justifications);
@@ -2251,11 +2174,7 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		vote: VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="kw">let </span>rounds = <span class="self">self
-			</span>.persisted_state
-			.voting_oracle
-			.active_rounds_mut()
-			.ok_or(Error::UninitSession)<span class="question-mark">?</span>;
+		<span class="kw">let </span>rounds = <span class="self">self</span>.persisted_state.voting_oracle.active_rounds_mut()<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>block_number = vote.commitment.block_number;
 		<span class="kw">match </span>rounds.add_vote(vote) {
@@ -2299,7 +2218,7 @@
 	/// 3. Persist voter state,
 	/// 4. Send best block hash and `finality_proof` to RPC worker.
 	///
-	/// Expects `finality proof` to be valid.
+	/// Expects `finality proof` to be valid and for a block &gt; current-best-beefy.
 	</span><span class="kw">fn </span>finalize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, finality_proof: BeefyVersionedFinalityProof&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 		<span class="kw">let </span>block_num = <span class="kw">match </span>finality_proof {
 			VersionedFinalityProof::V1(<span class="kw-2">ref </span>sc) =&gt; sc.commitment.block_number,
@@ -2307,74 +2226,62 @@
 
 		<span class="comment">// Finalize inner round and update voting_oracle state.
 		</span><span class="self">self</span>.persisted_state.voting_oracle.finalize(block_num)<span class="question-mark">?</span>;
-		<span class="self">self</span>.gossip_validator.conclude_round(block_num);
 
-		<span class="kw">if </span>block_num &gt; <span class="self">self</span>.best_beefy_block() {
-			<span class="comment">// Set new best BEEFY block number.
-			</span><span class="self">self</span>.persisted_state.best_beefy_block = block_num;
-			<span class="kw">crate</span>::aux_schema::write_voter_state(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, <span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state)
-				.map_err(|e| Error::Backend(e.to_string()))<span class="question-mark">?</span>;
+		<span class="comment">// Set new best BEEFY block number.
+		</span><span class="self">self</span>.persisted_state.set_best_beefy(block_num);
+		<span class="kw">crate</span>::aux_schema::write_voter_state(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend, <span class="kw-2">&amp;</span><span class="self">self</span>.persisted_state)
+			.map_err(|e| Error::Backend(e.to_string()))<span class="question-mark">?</span>;
 
-			<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_best_block, block_num);
+		<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_best_block, block_num);
 
-			<span class="self">self</span>.on_demand_justifications.cancel_requests_older_than(block_num);
+		<span class="self">self</span>.on_demand_justifications.cancel_requests_older_than(block_num);
 
-			<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="self">self
-				</span>.backend
-				.blockchain()
-				.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(block_num))
-				.and_then(|hash| {
-					<span class="self">self</span>.links
-						.to_rpc_best_block_sender
-						.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(hash))
-						.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
+		<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="self">self
+			</span>.backend
+			.blockchain()
+			.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(block_num))
+			.and_then(|hash| {
+				<span class="self">self</span>.links
+					.to_rpc_best_block_sender
+					.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(hash))
+					.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
 
-					<span class="self">self</span>.backend
-						.append_justification(hash, (BEEFY_ENGINE_ID, finality_proof.encode()))
-				}) {
-				<span class="macro">error!</span>(
-					target: LOG_TARGET,
-					<span class="string">&quot;🥩 Error {:?} on appending justification: {:?}&quot;</span>, e, finality_proof
-				);
-			}
-
-			<span class="self">self</span>.links
-				.to_rpc_justif_sender
-				.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(finality_proof))
-				.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
-		} <span class="kw">else </span>{
-			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Can&#39;t set best beefy to old: {}&quot;</span>, block_num);
-			<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_best_block_set_last_failure, block_num);
+				<span class="self">self</span>.backend
+					.append_justification(hash, (BEEFY_ENGINE_ID, finality_proof.encode()))
+			}) {
+			<span class="macro">error!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;🥩 Error {:?} on appending justification: {:?}&quot;</span>, e, finality_proof
+			);
 		}
+
+		<span class="self">self</span>.links
+			.to_rpc_justif_sender
+			.notify(|| <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, ()&gt;(finality_proof))
+			.expect(<span class="string">&quot;forwards closure result; the closure always returns Ok; qed.&quot;</span>);
+
+		<span class="comment">// Update gossip validator votes filter.
+		</span><span class="self">self</span>.persisted_state
+			.current_gossip_filter()
+			.map(|filter| <span class="self">self</span>.gossip_validator.update_filter(filter))<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 
-	<span class="doccomment">/// Handle previously buffered justifications and votes that now land in the voting interval.
-	</span><span class="kw">fn </span>try_pending_justif_and_votes(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="kw">let </span>best_grandpa = <span class="self">self</span>.best_grandpa_block();
-		<span class="kw">let </span>_ph = PhantomData::&lt;B&gt;::default();
-
-		<span class="kw">fn </span>to_process_for&lt;B: Block, T&gt;(
-			pending: <span class="kw-2">&amp;mut </span>BTreeMap&lt;NumberFor&lt;B&gt;, T&gt;,
-			(start, end): (NumberFor&lt;B&gt;, NumberFor&lt;B&gt;),
-			<span class="kw">_</span>: PhantomData&lt;B&gt;,
-		) -&gt; BTreeMap&lt;NumberFor&lt;B&gt;, T&gt; {
-			<span class="comment">// These are still pending.
-			</span><span class="kw">let </span>still_pending = pending.split_off(<span class="kw-2">&amp;</span>end.saturating_add(<span class="number">1u32</span>.into()));
-			<span class="comment">// These can be processed.
-			</span><span class="kw">let </span>to_handle = pending.split_off(<span class="kw-2">&amp;</span>start);
-			<span class="comment">// The rest can be dropped.
-			</span><span class="kw-2">*</span>pending = still_pending;
-			<span class="comment">// Return ones to process.
-			</span>to_handle
-		}
+	<span class="doccomment">/// Handle previously buffered justifications, that now land in the voting interval.
+	</span><span class="kw">fn </span>try_pending_justififactions(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 		<span class="comment">// Interval of blocks for which we can process justifications and votes right now.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>interval = <span class="self">self</span>.voting_oracle().accepted_interval(best_grandpa)<span class="question-mark">?</span>;
-
+		</span><span class="kw">let </span>(start, end) = <span class="self">self</span>.voting_oracle().accepted_interval()<span class="question-mark">?</span>;
 		<span class="comment">// Process pending justifications.
 		</span><span class="kw">if </span>!<span class="self">self</span>.pending_justifications.is_empty() {
-			<span class="kw">let </span>justifs_to_handle = to_process_for(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pending_justifications, interval, _ph);
-			<span class="kw">for </span>(num, justification) <span class="kw">in </span>justifs_to_handle.into_iter() {
+			<span class="comment">// These are still pending.
+			</span><span class="kw">let </span>still_pending =
+				<span class="self">self</span>.pending_justifications.split_off(<span class="kw-2">&amp;</span>end.saturating_add(<span class="number">1u32</span>.into()));
+			<span class="comment">// These can be processed.
+			</span><span class="kw">let </span>justifs_to_process = <span class="self">self</span>.pending_justifications.split_off(<span class="kw-2">&amp;</span>start);
+			<span class="comment">// The rest can be dropped.
+			</span><span class="self">self</span>.pending_justifications = still_pending;
+
+			<span class="kw">for </span>(num, justification) <span class="kw">in </span>justifs_to_process.into_iter() {
 				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Handle buffered justification for: {:?}.&quot;</span>, num);
 				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_imported_justifications);
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.finalize(justification) {
@@ -2382,27 +2289,6 @@
 				}
 			}
 			<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_buffered_justifications, <span class="self">self</span>.pending_justifications.len());
-			<span class="comment">// Possibly new interval after processing justifications.
-			</span>interval = <span class="self">self</span>.voting_oracle().accepted_interval(best_grandpa)<span class="question-mark">?</span>;
-		}
-
-		<span class="comment">// Process pending votes.
-		</span><span class="kw">if </span>!<span class="self">self</span>.pending_votes.is_empty() {
-			<span class="kw">let </span><span class="kw-2">mut </span>processed = <span class="number">0u64</span>;
-			<span class="kw">let </span>votes_to_handle = to_process_for(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pending_votes, interval, _ph);
-			<span class="kw">for </span>(num, votes) <span class="kw">in </span>votes_to_handle.into_iter() {
-				<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Handle buffered votes for: {:?}.&quot;</span>, num);
-				processed += votes.len() <span class="kw">as </span>u64;
-				<span class="kw">for </span>v <span class="kw">in </span>votes.into_iter() {
-					<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.handle_vote(v) {
-						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error handling buffered vote: {}&quot;</span>, err);
-					};
-				}
-			}
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(previous) = <span class="macro">metric_get!</span>(<span class="self">self</span>, beefy_buffered_votes) {
-				previous.sub(processed);
-				<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_buffered_votes, previous.get());
-			}
 		}
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -2410,10 +2296,7 @@
 	<span class="doccomment">/// Decide if should vote, then vote.. or don&#39;t..
 	</span><span class="kw">fn </span>try_to_vote(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 		<span class="comment">// Vote if there&#39;s now a new vote target.
-		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = <span class="self">self
-			</span>.voting_oracle()
-			.voting_target(<span class="self">self</span>.best_beefy_block(), <span class="self">self</span>.best_grandpa_block())
-		{
+		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = <span class="self">self</span>.voting_oracle().voting_target() {
 			<span class="macro">metric_set!</span>(<span class="self">self</span>, beefy_should_vote_on, target);
 			<span class="kw">if </span>target &gt; <span class="self">self</span>.persisted_state.best_voted {
 				<span class="self">self</span>.do_vote(target)<span class="question-mark">?</span>;
@@ -2431,7 +2314,7 @@
 		<span class="comment">// Most of the time we get here, `target` is actually `best_grandpa`,
 		// avoid getting header from backend in that case.
 		</span><span class="kw">let </span>target_header = <span class="kw">if </span>target_number == <span class="self">self</span>.best_grandpa_block() {
-			<span class="self">self</span>.persisted_state.best_grandpa_block_header.clone()
+			<span class="self">self</span>.persisted_state.voting_oracle.best_grandpa_block_header.clone()
 		} <span class="kw">else </span>{
 			<span class="kw">let </span>hash = <span class="self">self
 				</span>.backend
@@ -2462,11 +2345,7 @@
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 		};
 
-		<span class="kw">let </span>rounds = <span class="self">self
-			</span>.persisted_state
-			.voting_oracle
-			.active_rounds_mut()
-			.ok_or(Error::UninitSession)<span class="question-mark">?</span>;
+		<span class="kw">let </span>rounds = <span class="self">self</span>.persisted_state.voting_oracle.active_rounds_mut()<span class="question-mark">?</span>;
 		<span class="kw">let </span>(validators, validator_set_id) = (rounds.validators(), rounds.validator_set_id());
 
 		<span class="kw">let </span>authority_id = <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = <span class="self">self</span>.key_store.authority_id(validators) {
@@ -2521,7 +2400,7 @@
 
 	<span class="kw">fn </span>process_new_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
 		<span class="comment">// Handle pending justifications and/or votes for now GRANDPA finalized blocks.
-		</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_pending_justif_and_votes() {
+		</span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.try_pending_justififactions() {
 			<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
 		}
 
@@ -2558,12 +2437,12 @@
 			<span class="self">self</span>.gossip_engine
 				.messages_for(topic::&lt;B&gt;())
 				.filter_map(|notification| <span class="kw">async move </span>{
-					<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Got vote message: {:?}&quot;</span>, notification);
-
-					VoteMessage::&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;::decode(
+					<span class="kw">let </span>vote = VoteMessage::&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;::decode(
 						<span class="kw-2">&amp;mut &amp;</span>notification.message[..],
 					)
-					.ok()
+					.ok();
+					<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Got vote message: {:?}&quot;</span>, vote);
+					vote
 				})
 				.fuse(),
 		);
@@ -2637,8 +2516,7 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		proof: EquivocationProof&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="kw">let </span>rounds =
-			<span class="self">self</span>.persisted_state.voting_oracle.active_rounds().ok_or(Error::UninitSession)<span class="question-mark">?</span>;
+		<span class="kw">let </span>rounds = <span class="self">self</span>.persisted_state.voting_oracle.active_rounds()<span class="question-mark">?</span>;
 		<span class="kw">let </span>(validators, validator_set_id) = (rounds.validators(), rounds.validator_set_id());
 		<span class="kw">let </span>offender_id = proof.offender_id().clone();
 
@@ -2774,16 +2652,16 @@
 			<span class="kw-2">&amp;</span><span class="self">self</span>.voting_oracle
 		}
 
-		<span class="kw">pub fn </span>active_round(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;&gt; {
+		<span class="kw">pub fn </span>active_round(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>Rounds&lt;B&gt;, Error&gt; {
 			<span class="self">self</span>.voting_oracle.active_rounds()
 		}
 
 		<span class="kw">pub fn </span>best_beefy_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NumberFor&lt;B&gt; {
-			<span class="self">self</span>.best_beefy_block
+			<span class="self">self</span>.voting_oracle.best_beefy_block
 		}
 
-		<span class="kw">pub fn </span>best_grandpa_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NumberFor&lt;B&gt; {
-			<span class="kw-2">*</span><span class="self">self</span>.best_grandpa_block_header.number()
+		<span class="kw">pub fn </span>best_grandpa_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NumberFor&lt;B&gt; {
+			<span class="kw-2">*</span><span class="self">self</span>.voting_oracle.best_grandpa_block_header.number()
 		}
 	}
 
@@ -2794,7 +2672,7 @@
 	}
 
 	<span class="kw">fn </span>create_beefy_worker(
-		peer: <span class="kw-2">&amp;</span>BeefyPeer,
+		peer: <span class="kw-2">&amp;mut </span>BeefyPeer,
 		key: <span class="kw-2">&amp;</span>Keyring,
 		min_block_delta: u32,
 		genesis_validator_set: ValidatorSet&lt;AuthorityId&gt;,
@@ -2844,12 +2722,15 @@
 			known_peers,
 			<span class="prelude-val">None</span>,
 		);
-		<span class="kw">let </span>genesis_header = backend
+		<span class="comment">// Push 1 block - will start first session.
+		</span><span class="kw">let </span>hashes = peer.push_blocks(<span class="number">1</span>, <span class="bool-val">false</span>);
+		backend.finalize_block(hashes[<span class="number">0</span>], <span class="prelude-val">None</span>).unwrap();
+		<span class="kw">let </span>first_header = backend
 			.blockchain()
-			.expect_header(backend.blockchain().info().genesis_hash)
+			.expect_header(backend.blockchain().info().best_hash)
 			.unwrap();
 		<span class="kw">let </span>persisted_state = PersistedState::checked_new(
-			genesis_header,
+			first_header,
 			Zero::zero(),
 			<span class="macro">vec!</span>[Rounds::new(One::one(), genesis_validator_set)].into(),
 			min_block_delta,
@@ -2966,10 +2847,30 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>should_vote_target() {
-		<span class="kw">let </span><span class="kw-2">mut </span>oracle = VoterOracle::&lt;Block&gt; { min_block_delta: <span class="number">1</span>, sessions: VecDeque::new() };
+		<span class="kw">let </span>header = Header::new(
+			<span class="number">1u32</span>.into(),
+			Default::default(),
+			Default::default(),
+			Default::default(),
+			Digest::default(),
+		);
+		<span class="kw">let </span><span class="kw-2">mut </span>oracle = VoterOracle::&lt;Block&gt; {
+			best_beefy_block: <span class="number">0</span>,
+			best_grandpa_block_header: header,
+			min_block_delta: <span class="number">1</span>,
+			sessions: VecDeque::new(),
+		};
+		<span class="kw">let </span>voting_target_with = |oracle: <span class="kw-2">&amp;mut </span>VoterOracle&lt;Block&gt;,
+		                          best_beefy: NumberFor&lt;Block&gt;,
+		                          best_grandpa: NumberFor&lt;Block&gt;|
+		 -&gt; <span class="prelude-ty">Option</span>&lt;NumberFor&lt;Block&gt;&gt; {
+			oracle.best_beefy_block = best_beefy;
+			oracle.best_grandpa_block_header.number = best_grandpa;
+			oracle.voting_target()
+		};
 
 		<span class="comment">// rounds not initialized -&gt; should vote: `None`
-		</span><span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">0</span>, <span class="number">1</span>), <span class="prelude-val">None</span>);
+		</span><span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">0</span>, <span class="number">1</span>), <span class="prelude-val">None</span>);
 
 		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
@@ -2978,29 +2879,29 @@
 
 		<span class="comment">// under min delta
 		</span>oracle.min_block_delta = <span class="number">4</span>;
-		<span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">1</span>, <span class="number">1</span>), <span class="prelude-val">None</span>);
-		<span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">2</span>, <span class="number">5</span>), <span class="prelude-val">None</span>);
+		<span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">1</span>, <span class="number">1</span>), <span class="prelude-val">None</span>);
+		<span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">2</span>, <span class="number">5</span>), <span class="prelude-val">None</span>);
 
 		<span class="comment">// vote on min delta
-		</span><span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">4</span>, <span class="number">9</span>), <span class="prelude-val">Some</span>(<span class="number">8</span>));
+		</span><span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">4</span>, <span class="number">9</span>), <span class="prelude-val">Some</span>(<span class="number">8</span>));
 		oracle.min_block_delta = <span class="number">8</span>;
-		<span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">10</span>, <span class="number">18</span>), <span class="prelude-val">Some</span>(<span class="number">18</span>));
+		<span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">10</span>, <span class="number">18</span>), <span class="prelude-val">Some</span>(<span class="number">18</span>));
 
 		<span class="comment">// vote on power of two
 		</span>oracle.min_block_delta = <span class="number">1</span>;
-		<span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">1000</span>, <span class="number">1008</span>), <span class="prelude-val">Some</span>(<span class="number">1004</span>));
-		<span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">1000</span>, <span class="number">1016</span>), <span class="prelude-val">Some</span>(<span class="number">1008</span>));
+		<span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">1000</span>, <span class="number">1008</span>), <span class="prelude-val">Some</span>(<span class="number">1004</span>));
+		<span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">1000</span>, <span class="number">1016</span>), <span class="prelude-val">Some</span>(<span class="number">1008</span>));
 
 		<span class="comment">// nothing new to vote on
-		</span><span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">1000</span>, <span class="number">1000</span>), <span class="prelude-val">None</span>);
+		</span><span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">1000</span>, <span class="number">1000</span>), <span class="prelude-val">None</span>);
 
 		<span class="comment">// vote on mandatory
 		</span>oracle.sessions.clear();
 		oracle.add_session(Rounds::new(<span class="number">1000</span>, validator_set.clone()));
-		<span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">0</span>, <span class="number">1008</span>), <span class="prelude-val">Some</span>(<span class="number">1000</span>));
+		<span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">0</span>, <span class="number">1008</span>), <span class="prelude-val">Some</span>(<span class="number">1000</span>));
 		oracle.sessions.clear();
 		oracle.add_session(Rounds::new(<span class="number">1001</span>, validator_set.clone()));
-		<span class="macro">assert_eq!</span>(oracle.voting_target(<span class="number">1000</span>, <span class="number">1008</span>), <span class="prelude-val">Some</span>(<span class="number">1001</span>));
+		<span class="macro">assert_eq!</span>(voting_target_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">1000</span>, <span class="number">1008</span>), <span class="prelude-val">Some</span>(<span class="number">1001</span>));
 	}
 
 	<span class="attr">#[test]
@@ -3008,16 +2909,34 @@
 		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
 
-		<span class="kw">let </span><span class="kw-2">mut </span>oracle = VoterOracle::&lt;Block&gt; { min_block_delta: <span class="number">1</span>, sessions: VecDeque::new() };
+		<span class="kw">let </span>header = Header::new(
+			<span class="number">1u32</span>.into(),
+			Default::default(),
+			Default::default(),
+			Default::default(),
+			Digest::default(),
+		);
+		<span class="kw">let </span><span class="kw-2">mut </span>oracle = VoterOracle::&lt;Block&gt; {
+			best_beefy_block: <span class="number">0</span>,
+			best_grandpa_block_header: header,
+			min_block_delta: <span class="number">1</span>,
+			sessions: VecDeque::new(),
+		};
+		<span class="kw">let </span>accepted_interval_with = |oracle: <span class="kw-2">&amp;mut </span>VoterOracle&lt;Block&gt;,
+		                              best_grandpa: NumberFor&lt;Block&gt;|
+		 -&gt; <span class="prelude-ty">Result</span>&lt;(NumberFor&lt;Block&gt;, NumberFor&lt;Block&gt;), Error&gt; {
+			oracle.best_grandpa_block_header.number = best_grandpa;
+			oracle.accepted_interval()
+		};
 
 		<span class="comment">// rounds not initialized -&gt; should accept votes: `None`
-		</span><span class="macro">assert!</span>(oracle.accepted_interval(<span class="number">1</span>).is_err());
+		</span><span class="macro">assert!</span>(accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, <span class="number">1</span>).is_err());
 
 		<span class="kw">let </span>session_one = <span class="number">1</span>;
 		oracle.add_session(Rounds::new(session_one, validator_set.clone()));
 		<span class="comment">// mandatory not done, only accept mandatory
 		</span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">15 </span>{
-			<span class="macro">assert_eq!</span>(oracle.accepted_interval(i), <span class="prelude-val">Ok</span>((session_one, session_one)));
+			<span class="macro">assert_eq!</span>(accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, i), <span class="prelude-val">Ok</span>((session_one, session_one)));
 		}
 
 		<span class="comment">// add more sessions, nothing changes
@@ -3027,7 +2946,7 @@
 		oracle.add_session(Rounds::new(session_three, validator_set.clone()));
 		<span class="comment">// mandatory not done, should accept mandatory for session_one
 		</span><span class="kw">for </span>i <span class="kw">in </span>session_three..session_three + <span class="number">15 </span>{
-			<span class="macro">assert_eq!</span>(oracle.accepted_interval(i), <span class="prelude-val">Ok</span>((session_one, session_one)));
+			<span class="macro">assert_eq!</span>(accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, i), <span class="prelude-val">Ok</span>((session_one, session_one)));
 		}
 
 		<span class="comment">// simulate finish mandatory for session one, prune oracle
@@ -3035,7 +2954,7 @@
 		oracle.try_prune();
 		<span class="comment">// session_one pruned, should accept mandatory for session_two
 		</span><span class="kw">for </span>i <span class="kw">in </span>session_three..session_three + <span class="number">15 </span>{
-			<span class="macro">assert_eq!</span>(oracle.accepted_interval(i), <span class="prelude-val">Ok</span>((session_two, session_two)));
+			<span class="macro">assert_eq!</span>(accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, i), <span class="prelude-val">Ok</span>((session_two, session_two)));
 		}
 
 		<span class="comment">// simulate finish mandatory for session two, prune oracle
@@ -3043,26 +2962,29 @@
 		oracle.try_prune();
 		<span class="comment">// session_two pruned, should accept mandatory for session_three
 		</span><span class="kw">for </span>i <span class="kw">in </span>session_three..session_three + <span class="number">15 </span>{
-			<span class="macro">assert_eq!</span>(oracle.accepted_interval(i), <span class="prelude-val">Ok</span>((session_three, session_three)));
+			<span class="macro">assert_eq!</span>(accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, i), <span class="prelude-val">Ok</span>((session_three, session_three)));
 		}
 
 		<span class="comment">// simulate finish mandatory for session three
 		</span>oracle.sessions.front_mut().unwrap().test_set_mandatory_done(<span class="bool-val">true</span>);
 		<span class="comment">// verify all other blocks in this session are now open to voting
 		</span><span class="kw">for </span>i <span class="kw">in </span>session_three..session_three + <span class="number">15 </span>{
-			<span class="macro">assert_eq!</span>(oracle.accepted_interval(i), <span class="prelude-val">Ok</span>((session_three, i)));
+			<span class="macro">assert_eq!</span>(accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, i), <span class="prelude-val">Ok</span>((session_three, i)));
 		}
 		<span class="comment">// pruning does nothing in this case
 		</span>oracle.try_prune();
 		<span class="kw">for </span>i <span class="kw">in </span>session_three..session_three + <span class="number">15 </span>{
-			<span class="macro">assert_eq!</span>(oracle.accepted_interval(i), <span class="prelude-val">Ok</span>((session_three, i)));
+			<span class="macro">assert_eq!</span>(accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, i), <span class="prelude-val">Ok</span>((session_three, i)));
 		}
 
 		<span class="comment">// adding new session automatically prunes &quot;finalized&quot; previous session
 		</span><span class="kw">let </span>session_four = <span class="number">31</span>;
 		oracle.add_session(Rounds::new(session_four, validator_set.clone()));
 		<span class="macro">assert_eq!</span>(oracle.sessions.front().unwrap().session_start(), session_four);
-		<span class="macro">assert_eq!</span>(oracle.accepted_interval(session_four + <span class="number">10</span>), <span class="prelude-val">Ok</span>((session_four, session_four)));
+		<span class="macro">assert_eq!</span>(
+			accepted_interval_with(<span class="kw-2">&amp;mut </span>oracle, session_four + <span class="number">10</span>),
+			<span class="prelude-val">Ok</span>((session_four, session_four))
+		);
 	}
 
 	<span class="attr">#[test]
@@ -3096,7 +3018,7 @@
 		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
 		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
-		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
+		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 
 		<span class="comment">// keystore doesn&#39;t contain other keys than validators&#39;
 		</span><span class="macro">assert_eq!</span>(worker.verify_validator_set(<span class="kw-2">&amp;</span><span class="number">1</span>, <span class="kw-2">&amp;</span>validator_set), <span class="prelude-val">Ok</span>(()));
@@ -3120,7 +3042,7 @@
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(<span class="kw-2">&amp;</span>keys), <span class="number">0</span>).unwrap();
 		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
 		<span class="kw">let </span>backend = net.peer(<span class="number">0</span>).client().as_backend();
-		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
+		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 		<span class="comment">// remove default session, will manually add custom one.
 		</span>worker.persisted_state.voting_oracle.sessions.clear();
 
@@ -3140,7 +3062,7 @@
 		};
 
 		<span class="comment">// no &#39;best beefy block&#39; or finality proofs
-		</span><span class="macro">assert_eq!</span>(worker.best_beefy_block(), <span class="number">0</span>);
+		</span><span class="macro">assert_eq!</span>(worker.persisted_state.best_beefy_block(), <span class="number">0</span>);
 		poll_fn(<span class="kw">move </span>|cx| {
 			<span class="macro">assert_eq!</span>(best_block_stream.poll_next_unpin(cx), Poll::Pending);
 			<span class="macro">assert_eq!</span>(finality_proof.poll_next_unpin(cx), Poll::Pending);
@@ -3148,6 +3070,7 @@
 		})
 		.<span class="kw">await</span>;
 
+		<span class="kw">let </span>client = net.peer(<span class="number">0</span>).client().as_client();
 		<span class="comment">// unknown hash for block #1
 		</span><span class="kw">let </span>(<span class="kw-2">mut </span>best_block_streams, <span class="kw-2">mut </span>finality_proofs) =
 			get_beefy_streams(<span class="kw-2">&amp;mut </span>net, keys.clone());
@@ -3162,10 +3085,16 @@
 		<span class="comment">// try to finalize block #1
 		</span>worker.finalize(justif.clone()).unwrap();
 		<span class="comment">// verify block finalized
-		</span><span class="macro">assert_eq!</span>(worker.best_beefy_block(), <span class="number">1</span>);
+		</span><span class="macro">assert_eq!</span>(worker.persisted_state.best_beefy_block(), <span class="number">1</span>);
 		poll_fn(<span class="kw">move </span>|cx| {
-			<span class="comment">// unknown hash -&gt; nothing streamed
-			</span><span class="macro">assert_eq!</span>(best_block_stream.poll_next_unpin(cx), Poll::Pending);
+			<span class="comment">// expect Some(hash-of-block-1)
+			</span><span class="kw">match </span>best_block_stream.poll_next_unpin(cx) {
+				Poll::Ready(<span class="prelude-val">Some</span>(hash)) =&gt; {
+					<span class="kw">let </span>block_num = client.number(hash).unwrap();
+					<span class="macro">assert_eq!</span>(block_num, <span class="prelude-val">Some</span>(<span class="number">1</span>));
+				},
+				v =&gt; <span class="macro">panic!</span>(<span class="string">&quot;unexpected value: {:?}&quot;</span>, v),
+			}
 			<span class="comment">// commitment streamed
 			</span><span class="kw">match </span>finality_proof.poll_next_unpin(cx) {
 				<span class="comment">// expect justification
@@ -3179,11 +3108,9 @@
 		<span class="comment">// generate 2 blocks, try again expect success
 		</span><span class="kw">let </span>(<span class="kw-2">mut </span>best_block_streams, <span class="kw">_</span>) = get_beefy_streams(<span class="kw-2">&amp;mut </span>net, keys);
 		<span class="kw">let </span><span class="kw-2">mut </span>best_block_stream = best_block_streams.drain(..).next().unwrap();
-		<span class="kw">let </span>hashes = net.peer(<span class="number">0</span>).push_blocks(<span class="number">2</span>, <span class="bool-val">false</span>);
+		<span class="kw">let </span>hashes = net.peer(<span class="number">0</span>).push_blocks(<span class="number">1</span>, <span class="bool-val">false</span>);
 		<span class="comment">// finalize 1 and 2 without justifications (hashes does not contain genesis)
-		</span><span class="kw">let </span>hashof1 = hashes[<span class="number">0</span>];
-		<span class="kw">let </span>hashof2 = hashes[<span class="number">1</span>];
-		backend.finalize_block(hashof1, <span class="prelude-val">None</span>).unwrap();
+		</span><span class="kw">let </span>hashof2 = hashes[<span class="number">0</span>];
 		backend.finalize_block(hashof2, <span class="prelude-val">None</span>).unwrap();
 
 		<span class="kw">let </span>justif = create_finality_proof(<span class="number">2</span>);
@@ -3195,7 +3122,7 @@
 		<span class="comment">// new session starting at #2 is in front
 		</span><span class="macro">assert_eq!</span>(worker.active_rounds().unwrap().session_start(), <span class="number">2</span>);
 		<span class="comment">// verify block finalized
-		</span><span class="macro">assert_eq!</span>(worker.best_beefy_block(), <span class="number">2</span>);
+		</span><span class="macro">assert_eq!</span>(worker.persisted_state.best_beefy_block(), <span class="number">2</span>);
 		poll_fn(<span class="kw">move </span>|cx| {
 			<span class="kw">match </span>best_block_stream.poll_next_unpin(cx) {
 				<span class="comment">// expect Some(hash-of-block-2)
@@ -3219,7 +3146,7 @@
 		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice, Keyring::Bob];
 		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
 		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
-		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
+		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 
 		<span class="kw">let </span>worker_rounds = worker.active_rounds().unwrap();
 		<span class="macro">assert_eq!</span>(worker_rounds.session_start(), <span class="number">1</span>);
@@ -3246,77 +3173,6 @@
 	}
 
 	<span class="attr">#[tokio::test]
-	</span><span class="kw">async fn </span>should_triage_votes_and_process_later() {
-		<span class="kw">let </span>keys = <span class="kw-2">&amp;</span>[Keyring::Alice, Keyring::Bob];
-		<span class="kw">let </span>validator_set = ValidatorSet::new(make_beefy_ids(keys), <span class="number">0</span>).unwrap();
-		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
-		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
-		<span class="comment">// remove default session, will manually add custom one.
-		</span>worker.persisted_state.voting_oracle.sessions.clear();
-
-		<span class="kw">fn </span>new_vote(
-			block_number: NumberFor&lt;Block&gt;,
-		) -&gt; VoteMessage&lt;NumberFor&lt;Block&gt;, AuthorityId, Signature&gt; {
-			<span class="kw">let </span>commitment = Commitment {
-				payload: Payload::from_single_entry(<span class="kw-2">*</span><span class="string">b&quot;BF&quot;</span>, <span class="macro">vec!</span>[]),
-				block_number,
-				validator_set_id: <span class="number">0</span>,
-			};
-			VoteMessage {
-				commitment,
-				id: Keyring::Alice.public(),
-				signature: Keyring::Alice.sign(<span class="string">b&quot;I am committed&quot;</span>),
-			}
-		}
-
-		<span class="comment">// best grandpa is 20
-		</span><span class="kw">let </span>best_grandpa_header = Header::new(
-			<span class="number">20u32</span>.into(),
-			Default::default(),
-			Default::default(),
-			Default::default(),
-			Digest::default(),
-		);
-
-		worker
-			.persisted_state
-			.voting_oracle
-			.add_session(Rounds::new(<span class="number">10</span>, validator_set.clone()));
-		worker.persisted_state.best_grandpa_block_header = best_grandpa_header;
-
-		<span class="comment">// triage votes for blocks 10..13
-		</span>worker.triage_incoming_vote(new_vote(<span class="number">10</span>)).unwrap();
-		worker.triage_incoming_vote(new_vote(<span class="number">11</span>)).unwrap();
-		worker.triage_incoming_vote(new_vote(<span class="number">12</span>)).unwrap();
-		<span class="comment">// triage votes for blocks 20..23
-		</span>worker.triage_incoming_vote(new_vote(<span class="number">20</span>)).unwrap();
-		worker.triage_incoming_vote(new_vote(<span class="number">21</span>)).unwrap();
-		worker.triage_incoming_vote(new_vote(<span class="number">22</span>)).unwrap();
-
-		<span class="comment">// vote for 10 should have been handled, while the rest buffered for later processing
-		</span><span class="kw">let </span><span class="kw-2">mut </span>votes = worker.pending_votes.values();
-		<span class="macro">assert_eq!</span>(votes.next().unwrap().first().unwrap().commitment.block_number, <span class="number">11</span>);
-		<span class="macro">assert_eq!</span>(votes.next().unwrap().first().unwrap().commitment.block_number, <span class="number">12</span>);
-		<span class="macro">assert_eq!</span>(votes.next().unwrap().first().unwrap().commitment.block_number, <span class="number">20</span>);
-		<span class="macro">assert_eq!</span>(votes.next().unwrap().first().unwrap().commitment.block_number, <span class="number">21</span>);
-		<span class="macro">assert_eq!</span>(votes.next().unwrap().first().unwrap().commitment.block_number, <span class="number">22</span>);
-		<span class="macro">assert!</span>(votes.next().is_none());
-
-		<span class="comment">// simulate mandatory done, and retry buffered votes
-		</span>worker
-			.persisted_state
-			.voting_oracle
-			.active_rounds_mut()
-			.unwrap()
-			.test_set_mandatory_done(<span class="bool-val">true</span>);
-		worker.try_pending_justif_and_votes().unwrap();
-		<span class="comment">// all blocks &lt;= grandpa finalized should have been handled, rest still buffered
-		</span><span class="kw">let </span><span class="kw-2">mut </span>votes = worker.pending_votes.values();
-		<span class="macro">assert_eq!</span>(votes.next().unwrap().first().unwrap().commitment.block_number, <span class="number">21</span>);
-		<span class="macro">assert_eq!</span>(votes.next().unwrap().first().unwrap().commitment.block_number, <span class="number">22</span>);
-	}
-
-	<span class="attr">#[tokio::test]
 	</span><span class="kw">async fn </span>should_not_report_bad_old_or_self_equivocations() {
 		<span class="kw">let </span>block_num = <span class="number">1</span>;
 		<span class="kw">let </span>set_id = <span class="number">1</span>;
@@ -3328,7 +3184,7 @@
 		<span class="kw">let </span>api_alice = Arc::new(api_alice);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>net = BeefyTestNet::new(<span class="number">1</span>);
-		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(<span class="kw-2">&amp;</span>net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
+		<span class="kw">let </span><span class="kw-2">mut </span>worker = create_beefy_worker(net.peer(<span class="number">0</span>), <span class="kw-2">&amp;</span>keys[<span class="number">0</span>], <span class="number">1</span>, validator_set.clone());
 		worker.runtime = api_alice.clone();
 
 		<span class="comment">// let there be a block with num = 1:

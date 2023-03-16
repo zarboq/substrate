@@ -430,48 +430,6 @@
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
-<a href="#443" id="443">443</a>
-<a href="#444" id="444">444</a>
-<a href="#445" id="445">445</a>
-<a href="#446" id="446">446</a>
-<a href="#447" id="447">447</a>
-<a href="#448" id="448">448</a>
-<a href="#449" id="449">449</a>
-<a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
-<a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
-<a href="#456" id="456">456</a>
-<a href="#457" id="457">457</a>
-<a href="#458" id="458">458</a>
-<a href="#459" id="459">459</a>
-<a href="#460" id="460">460</a>
-<a href="#461" id="461">461</a>
-<a href="#462" id="462">462</a>
-<a href="#463" id="463">463</a>
-<a href="#464" id="464">464</a>
-<a href="#465" id="465">465</a>
-<a href="#466" id="466">466</a>
-<a href="#467" id="467">467</a>
-<a href="#468" id="468">468</a>
-<a href="#469" id="469">469</a>
-<a href="#470" id="470">470</a>
-<a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -505,11 +463,14 @@
 <span class="kw">use crate</span>::{communication::peers::KnownPeers, keystore::BeefyKeystore, LOG_TARGET};
 <span class="kw">use </span>sp_consensus_beefy::{
 	crypto::{Public, Signature},
-	VoteMessage,
+	ValidatorSetId, VoteMessage,
 };
 
 <span class="comment">// Timeout for rebroadcasting messages.
-</span><span class="kw">const </span>REBROADCAST_AFTER: Duration = Duration::from_secs(<span class="number">60 </span>* <span class="number">5</span>);
+</span><span class="attr">#[cfg(not(test))]
+</span><span class="kw">const </span>REBROADCAST_AFTER: Duration = Duration::from_secs(<span class="number">60</span>);
+<span class="attr">#[cfg(test)]
+</span><span class="kw">const </span>REBROADCAST_AFTER: Duration = Duration::from_secs(<span class="number">5</span>);
 
 <span class="doccomment">/// Gossip engine messages topic
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>topic&lt;B: Block&gt;() -&gt; B::Hash
@@ -519,45 +480,51 @@
 	&lt;&lt;B::Header <span class="kw">as </span>Header&gt;::Hashing <span class="kw">as </span>Hash&gt;::hash(<span class="string">b&quot;beefy&quot;</span>)
 }
 
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>GossipVoteFilter&lt;B: Block&gt; {
+	<span class="kw">pub </span>start: NumberFor&lt;B&gt;,
+	<span class="kw">pub </span>end: NumberFor&lt;B&gt;,
+	<span class="kw">pub </span>validator_set_id: ValidatorSetId,
+}
+
 <span class="doccomment">/// A type that represents hash of the message.
 </span><span class="kw">pub type </span>MessageHash = [u8; <span class="number">8</span>];
 
-<span class="kw">struct </span>KnownVotes&lt;B: Block&gt; {
-	last_done: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt;,
+<span class="kw">struct </span>VotesFilter&lt;B: Block&gt; {
+	filter: <span class="prelude-ty">Option</span>&lt;GossipVoteFilter&lt;B&gt;&gt;,
 	live: BTreeMap&lt;NumberFor&lt;B&gt;, fnv::FnvHashSet&lt;MessageHash&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;B: Block&gt; KnownVotes&lt;B&gt; {
+<span class="kw">impl</span>&lt;B: Block&gt; VotesFilter&lt;B&gt; {
 	<span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{ last_done: <span class="prelude-val">None</span>, live: BTreeMap::new() }
+		<span class="self">Self </span>{ filter: <span class="prelude-val">None</span>, live: BTreeMap::new() }
 	}
 
-	<span class="doccomment">/// Create new round votes set if not already present.
-	</span><span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, round: NumberFor&lt;B&gt;) {
-		<span class="self">self</span>.live.entry(round).or_default();
+	<span class="doccomment">/// Update filter to new `start` and `set_id`.
+	</span><span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, filter: GossipVoteFilter&lt;B&gt;) {
+		<span class="self">self</span>.live.retain(|<span class="kw-2">&amp;</span>round, <span class="kw">_</span>| round &gt;= filter.start &amp;&amp; round &lt;= filter.end);
+		<span class="self">self</span>.filter = <span class="prelude-val">Some</span>(filter);
 	}
 
-	<span class="doccomment">/// Remove `round` and older from live set, update `last_done` accordingly.
-	</span><span class="kw">fn </span>conclude(<span class="kw-2">&amp;mut </span><span class="self">self</span>, round: NumberFor&lt;B&gt;) {
-		<span class="self">self</span>.live.retain(|<span class="kw-2">&amp;</span>number, <span class="kw">_</span>| number &gt; round);
-		<span class="self">self</span>.last_done = <span class="self">self</span>.last_done.max(<span class="prelude-val">Some</span>(round));
-	}
-
-	<span class="doccomment">/// Return true if `round` is newer than previously concluded rounds.
+	<span class="doccomment">/// Return true if `round` is &gt;= than `max(session_start, best_beefy)`,
+	/// and vote set id matches session set id.
 	///
 	/// Latest concluded round is still considered alive to allow proper gossiping for it.
-	</span><span class="kw">fn </span>is_live(<span class="kw-2">&amp;</span><span class="self">self</span>, round: <span class="kw-2">&amp;</span>NumberFor&lt;B&gt;) -&gt; bool {
-		<span class="prelude-val">Some</span>(<span class="kw-2">*</span>round) &gt;= <span class="self">self</span>.last_done
+	</span><span class="kw">fn </span>is_live(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;, set_id: ValidatorSetId) -&gt; bool {
+		<span class="self">self</span>.filter
+			.as_ref()
+			.map(|f| set_id == f.validator_set_id &amp;&amp; round &gt;= f.start &amp;&amp; round &lt;= f.end)
+			.unwrap_or(<span class="bool-val">false</span>)
 	}
 
 	<span class="doccomment">/// Add new _known_ `hash` to the round&#39;s known votes.
-	</span><span class="kw">fn </span>add_known(<span class="kw-2">&amp;mut </span><span class="self">self</span>, round: <span class="kw-2">&amp;</span>NumberFor&lt;B&gt;, hash: MessageHash) {
-		<span class="self">self</span>.live.get_mut(round).map(|known| known.insert(hash));
+	</span><span class="kw">fn </span>add_known(<span class="kw-2">&amp;mut </span><span class="self">self</span>, round: NumberFor&lt;B&gt;, hash: MessageHash) {
+		<span class="self">self</span>.live.entry(round).or_default().insert(hash);
 	}
 
 	<span class="doccomment">/// Check if `hash` is already part of round&#39;s known votes.
-	</span><span class="kw">fn </span>is_known(<span class="kw-2">&amp;</span><span class="self">self</span>, round: <span class="kw-2">&amp;</span>NumberFor&lt;B&gt;, hash: <span class="kw-2">&amp;</span>MessageHash) -&gt; bool {
-		<span class="self">self</span>.live.get(round).map(|known| known.contains(hash)).unwrap_or(<span class="bool-val">false</span>)
+	</span><span class="kw">fn </span>is_known(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;, hash: <span class="kw-2">&amp;</span>MessageHash) -&gt; bool {
+		<span class="self">self</span>.live.get(<span class="kw-2">&amp;</span>round).map(|known| known.contains(hash)).unwrap_or(<span class="bool-val">false</span>)
 	}
 }
 
@@ -574,7 +541,7 @@
 	</span>B: Block,
 {
 	topic: B::Hash,
-	known_votes: RwLock&lt;KnownVotes&lt;B&gt;&gt;,
+	votes_filter: RwLock&lt;VotesFilter&lt;B&gt;&gt;,
 	next_rebroadcast: Mutex&lt;Instant&gt;,
 	known_peers: Arc&lt;Mutex&lt;KnownPeers&lt;B&gt;&gt;&gt;,
 }
@@ -586,26 +553,18 @@
 	<span class="kw">pub fn </span>new(known_peers: Arc&lt;Mutex&lt;KnownPeers&lt;B&gt;&gt;&gt;) -&gt; GossipValidator&lt;B&gt; {
 		GossipValidator {
 			topic: topic::&lt;B&gt;(),
-			known_votes: RwLock::new(KnownVotes::new()),
+			votes_filter: RwLock::new(VotesFilter::new()),
 			next_rebroadcast: Mutex::new(Instant::now() + REBROADCAST_AFTER),
 			known_peers,
 		}
 	}
 
-	<span class="doccomment">/// Note a voting round.
+	<span class="doccomment">/// Update gossip validator filter.
 	///
-	/// Noting round will track gossiped votes for `round`.
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>note_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;) {
-		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 About to note gossip round #{}&quot;</span>, round);
-		<span class="self">self</span>.known_votes.write().insert(round);
-	}
-
-	<span class="doccomment">/// Conclude a voting round.
-	///
-	/// This can be called once round is complete so we stop gossiping for it.
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>conclude_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: NumberFor&lt;B&gt;) {
-		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 About to drop gossip round #{}&quot;</span>, round);
-		<span class="self">self</span>.known_votes.write().conclude(round);
+	/// Only votes for `set_id` and rounds `start &lt;= round &lt;= end` will be accepted.
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>update_filter(<span class="kw-2">&amp;</span><span class="self">self</span>, filter: GossipVoteFilter&lt;B&gt;) {
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 New gossip filter {:?}&quot;</span>, filter);
+		<span class="self">self</span>.votes_filter.write().update(filter);
 	}
 }
 
@@ -626,25 +585,26 @@
 		<span class="kw">if let </span><span class="prelude-val">Ok</span>(msg) = VoteMessage::&lt;NumberFor&lt;B&gt;, Public, Signature&gt;::decode(<span class="kw-2">&amp;mut </span>data) {
 			<span class="kw">let </span>msg_hash = twox_64(data);
 			<span class="kw">let </span>round = msg.commitment.block_number;
+			<span class="kw">let </span>set_id = msg.commitment.validator_set_id;
+			<span class="self">self</span>.known_peers.lock().note_vote_for(<span class="kw-2">*</span>sender, round);
 
 			<span class="comment">// Verify general usefulness of the message.
 			// We are going to discard old votes right away (without verification)
 			// Also we keep track of already received votes to avoid verifying duplicates.
 			</span>{
-				<span class="kw">let </span>known_votes = <span class="self">self</span>.known_votes.read();
+				<span class="kw">let </span>filter = <span class="self">self</span>.votes_filter.read();
 
-				<span class="kw">if </span>!known_votes.is_live(<span class="kw-2">&amp;</span>round) {
+				<span class="kw">if </span>!filter.is_live(round, set_id) {
 					<span class="kw">return </span>ValidationResult::Discard
 				}
 
-				<span class="kw">if </span>known_votes.is_known(<span class="kw-2">&amp;</span>round, <span class="kw-2">&amp;</span>msg_hash) {
+				<span class="kw">if </span>filter.is_known(round, <span class="kw-2">&amp;</span>msg_hash) {
 					<span class="kw">return </span>ValidationResult::ProcessAndKeep(<span class="self">self</span>.topic)
 				}
 			}
 
 			<span class="kw">if </span>BeefyKeystore::verify(<span class="kw-2">&amp;</span>msg.id, <span class="kw-2">&amp;</span>msg.signature, <span class="kw-2">&amp;</span>msg.commitment.encode()) {
-				<span class="self">self</span>.known_votes.write().add_known(<span class="kw-2">&amp;</span>round, msg_hash);
-				<span class="self">self</span>.known_peers.lock().note_vote_for(<span class="kw-2">*</span>sender, round);
+				<span class="self">self</span>.votes_filter.write().add_known(round, msg_hash);
 				<span class="kw">return </span>ValidationResult::ProcessAndKeep(<span class="self">self</span>.topic)
 			} <span class="kw">else </span>{
 				<span class="comment">// TODO: report peer
@@ -659,7 +619,7 @@
 	}
 
 	<span class="kw">fn </span>message_expired&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>FnMut(B::Hash, <span class="kw-2">&amp;</span>[u8]) -&gt; bool + <span class="lifetime">&#39;a</span>&gt; {
-		<span class="kw">let </span>known_votes = <span class="self">self</span>.known_votes.read();
+		<span class="kw">let </span>filter = <span class="self">self</span>.votes_filter.read();
 		Box::new(<span class="kw">move </span>|_topic, <span class="kw-2">mut </span>data| {
 			<span class="kw">let </span>msg = <span class="kw">match </span>VoteMessage::&lt;NumberFor&lt;B&gt;, Public, Signature&gt;::decode(<span class="kw-2">&amp;mut </span>data) {
 				<span class="prelude-val">Ok</span>(vote) =&gt; vote,
@@ -667,7 +627,8 @@
 			};
 
 			<span class="kw">let </span>round = msg.commitment.block_number;
-			<span class="kw">let </span>expired = !known_votes.is_live(<span class="kw-2">&amp;</span>round);
+			<span class="kw">let </span>set_id = msg.commitment.validator_set_id;
+			<span class="kw">let </span>expired = !filter.is_live(round, set_id);
 
 			<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Message for round #{} expired: {}&quot;</span>, round, expired);
 
@@ -682,6 +643,7 @@
 			<span class="kw">let </span>now = Instant::now();
 			<span class="kw">let </span><span class="kw-2">mut </span>next_rebroadcast = <span class="self">self</span>.next_rebroadcast.lock();
 			<span class="kw">if </span>now &gt;= <span class="kw-2">*</span>next_rebroadcast {
+				<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Gossip rebroadcast&quot;</span>);
 				<span class="kw-2">*</span>next_rebroadcast = now + REBROADCAST_AFTER;
 				<span class="bool-val">true
 			</span>} <span class="kw">else </span>{
@@ -689,7 +651,7 @@
 			</span>}
 		};
 
-		<span class="kw">let </span>known_votes = <span class="self">self</span>.known_votes.read();
+		<span class="kw">let </span>filter = <span class="self">self</span>.votes_filter.read();
 		Box::new(<span class="kw">move </span>|_who, intent, _topic, <span class="kw-2">mut </span>data| {
 			<span class="kw">if let </span>MessageIntent::PeriodicRebroadcast = intent {
 				<span class="kw">return </span>do_rebroadcast
@@ -701,7 +663,8 @@
 			};
 
 			<span class="kw">let </span>round = msg.commitment.block_number;
-			<span class="kw">let </span>allowed = known_votes.is_live(<span class="kw-2">&amp;</span>round);
+			<span class="kw">let </span>set_id = msg.commitment.validator_set_id;
+			<span class="kw">let </span>allowed = filter.is_live(round, set_id);
 
 			<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Message for round #{} allowed: {}&quot;</span>, round, allowed);
 
@@ -726,79 +689,33 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>known_votes_insert_remove() {
-		<span class="kw">let </span><span class="kw-2">mut </span>kv = KnownVotes::&lt;Block&gt;::new();
+		<span class="kw">let </span><span class="kw-2">mut </span>kv = VotesFilter::&lt;Block&gt;::new();
+		<span class="kw">let </span>msg_hash = twox_64(<span class="string">b&quot;data&quot;</span>);
 
-		kv.insert(<span class="number">1</span>);
-		kv.insert(<span class="number">1</span>);
-		kv.insert(<span class="number">2</span>);
+		kv.add_known(<span class="number">1</span>, msg_hash);
+		kv.add_known(<span class="number">1</span>, msg_hash);
+		kv.add_known(<span class="number">2</span>, msg_hash);
 		<span class="macro">assert_eq!</span>(kv.live.len(), <span class="number">2</span>);
 
-		<span class="kw">let </span><span class="kw-2">mut </span>kv = KnownVotes::&lt;Block&gt;::new();
-		kv.insert(<span class="number">1</span>);
-		kv.insert(<span class="number">2</span>);
-		kv.insert(<span class="number">3</span>);
+		kv.add_known(<span class="number">3</span>, msg_hash);
+		<span class="macro">assert!</span>(kv.is_known(<span class="number">3</span>, <span class="kw-2">&amp;</span>msg_hash));
+		<span class="macro">assert!</span>(!kv.is_known(<span class="number">3</span>, <span class="kw-2">&amp;</span>twox_64(<span class="string">b&quot;other&quot;</span>)));
+		<span class="macro">assert!</span>(!kv.is_known(<span class="number">4</span>, <span class="kw-2">&amp;</span>msg_hash));
+		<span class="macro">assert_eq!</span>(kv.live.len(), <span class="number">3</span>);
 
-		<span class="macro">assert!</span>(kv.last_done.is_none());
-		kv.conclude(<span class="number">2</span>);
+		<span class="macro">assert!</span>(kv.filter.is_none());
+		<span class="macro">assert!</span>(!kv.is_live(<span class="number">1</span>, <span class="number">1</span>));
+
+		kv.update(GossipVoteFilter { start: <span class="number">3</span>, end: <span class="number">10</span>, validator_set_id: <span class="number">1 </span>});
 		<span class="macro">assert_eq!</span>(kv.live.len(), <span class="number">1</span>);
-		<span class="macro">assert!</span>(!kv.live.contains_key(<span class="kw-2">&amp;</span><span class="number">2</span>));
-		<span class="macro">assert_eq!</span>(kv.last_done, <span class="prelude-val">Some</span>(<span class="number">2</span>));
+		<span class="macro">assert!</span>(kv.live.contains_key(<span class="kw-2">&amp;</span><span class="number">3</span>));
+		<span class="macro">assert!</span>(!kv.is_live(<span class="number">2</span>, <span class="number">1</span>));
+		<span class="macro">assert!</span>(kv.is_live(<span class="number">3</span>, <span class="number">1</span>));
+		<span class="macro">assert!</span>(kv.is_live(<span class="number">4</span>, <span class="number">1</span>));
+		<span class="macro">assert!</span>(!kv.is_live(<span class="number">4</span>, <span class="number">2</span>));
 
-		kv.conclude(<span class="number">1</span>);
-		<span class="macro">assert_eq!</span>(kv.last_done, <span class="prelude-val">Some</span>(<span class="number">2</span>));
-
-		kv.conclude(<span class="number">3</span>);
-		<span class="macro">assert_eq!</span>(kv.last_done, <span class="prelude-val">Some</span>(<span class="number">3</span>));
+		kv.update(GossipVoteFilter { start: <span class="number">5</span>, end: <span class="number">10</span>, validator_set_id: <span class="number">2 </span>});
 		<span class="macro">assert!</span>(kv.live.is_empty());
-	}
-
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>note_and_drop_round_works() {
-		<span class="kw">let </span>gv = GossipValidator::&lt;Block&gt;::new(Arc::new(Mutex::new(KnownPeers::new())));
-
-		gv.note_round(<span class="number">1u64</span>);
-
-		<span class="macro">assert!</span>(gv.known_votes.read().is_live(<span class="kw-2">&amp;</span><span class="number">1u64</span>));
-
-		gv.note_round(<span class="number">3u64</span>);
-		gv.note_round(<span class="number">7u64</span>);
-		gv.note_round(<span class="number">10u64</span>);
-
-		<span class="macro">assert_eq!</span>(gv.known_votes.read().live.len(), <span class="number">4</span>);
-
-		gv.conclude_round(<span class="number">7u64</span>);
-
-		<span class="kw">let </span>votes = gv.known_votes.read();
-
-		<span class="comment">// rounds 1 and 3 are outdated, don&#39;t gossip anymore
-		</span><span class="macro">assert!</span>(!votes.is_live(<span class="kw-2">&amp;</span><span class="number">1u64</span>));
-		<span class="macro">assert!</span>(!votes.is_live(<span class="kw-2">&amp;</span><span class="number">3u64</span>));
-		<span class="comment">// latest concluded round is still gossiped
-		</span><span class="macro">assert!</span>(votes.is_live(<span class="kw-2">&amp;</span><span class="number">7u64</span>));
-		<span class="comment">// round 10 is alive and in-progress
-		</span><span class="macro">assert!</span>(votes.is_live(<span class="kw-2">&amp;</span><span class="number">10u64</span>));
-	}
-
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>note_same_round_twice() {
-		<span class="kw">let </span>gv = GossipValidator::&lt;Block&gt;::new(Arc::new(Mutex::new(KnownPeers::new())));
-
-		gv.note_round(<span class="number">3u64</span>);
-		gv.note_round(<span class="number">7u64</span>);
-		gv.note_round(<span class="number">10u64</span>);
-
-		<span class="macro">assert_eq!</span>(gv.known_votes.read().live.len(), <span class="number">3</span>);
-
-		<span class="comment">// note round #7 again -&gt; should not change anything
-		</span>gv.note_round(<span class="number">7u64</span>);
-
-		<span class="kw">let </span>votes = gv.known_votes.read();
-
-		<span class="macro">assert_eq!</span>(votes.live.len(), <span class="number">3</span>);
-
-		<span class="macro">assert!</span>(votes.is_live(<span class="kw-2">&amp;</span><span class="number">3u64</span>));
-		<span class="macro">assert!</span>(votes.is_live(<span class="kw-2">&amp;</span><span class="number">7u64</span>));
-		<span class="macro">assert!</span>(votes.is_live(<span class="kw-2">&amp;</span><span class="number">10u64</span>));
 	}
 
 	<span class="kw">struct </span>TestContext;
@@ -842,21 +759,18 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>should_avoid_verifying_signatures_twice() {
 		<span class="kw">let </span>gv = GossipValidator::&lt;Block&gt;::new(Arc::new(Mutex::new(KnownPeers::new())));
+		gv.update_filter(GossipVoteFilter { start: <span class="number">0</span>, end: <span class="number">10</span>, validator_set_id: <span class="number">0 </span>});
 		<span class="kw">let </span>sender = sc_network::PeerId::random();
 		<span class="kw">let </span><span class="kw-2">mut </span>context = TestContext;
 
 		<span class="kw">let </span>vote = dummy_vote(<span class="number">3</span>);
-
-		gv.note_round(<span class="number">3u64</span>);
-		gv.note_round(<span class="number">7u64</span>);
-		gv.note_round(<span class="number">10u64</span>);
 
 		<span class="comment">// first time the cache should be populated
 		</span><span class="kw">let </span>res = gv.validate(<span class="kw-2">&amp;mut </span>context, <span class="kw-2">&amp;</span>sender, <span class="kw-2">&amp;</span>vote.encode());
 
 		<span class="macro">assert!</span>(<span class="macro">matches!</span>(res, ValidationResult::ProcessAndKeep(<span class="kw">_</span>)));
 		<span class="macro">assert_eq!</span>(
-			gv.known_votes.read().live.get(<span class="kw-2">&amp;</span>vote.commitment.block_number).map(|x| x.len()),
+			gv.votes_filter.read().live.get(<span class="kw-2">&amp;</span>vote.commitment.block_number).map(|x| x.len()),
 			<span class="prelude-val">Some</span>(<span class="number">1</span>)
 		);
 
@@ -866,9 +780,11 @@
 		<span class="macro">assert!</span>(<span class="macro">matches!</span>(res, ValidationResult::ProcessAndKeep(<span class="kw">_</span>)));
 
 		<span class="comment">// next we should quickly reject if the round is not live
-		</span>gv.conclude_round(<span class="number">7_u64</span>);
+		</span>gv.update_filter(GossipVoteFilter { start: <span class="number">7</span>, end: <span class="number">10</span>, validator_set_id: <span class="number">0 </span>});
 
-		<span class="macro">assert!</span>(!gv.known_votes.read().is_live(<span class="kw-2">&amp;</span>vote.commitment.block_number));
+		<span class="kw">let </span>number = vote.commitment.block_number;
+		<span class="kw">let </span>set_id = vote.commitment.validator_set_id;
+		<span class="macro">assert!</span>(!gv.votes_filter.read().is_live(number, set_id));
 
 		<span class="kw">let </span>res = gv.validate(<span class="kw-2">&amp;mut </span>context, <span class="kw-2">&amp;</span>sender, <span class="kw-2">&amp;</span>vote.encode());
 
@@ -878,14 +794,13 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>messages_allowed_and_expired() {
 		<span class="kw">let </span>gv = GossipValidator::&lt;Block&gt;::new(Arc::new(Mutex::new(KnownPeers::new())));
+		gv.update_filter(GossipVoteFilter { start: <span class="number">0</span>, end: <span class="number">10</span>, validator_set_id: <span class="number">0 </span>});
 		<span class="kw">let </span>sender = sc_network::PeerId::random();
 		<span class="kw">let </span>topic = Default::default();
 		<span class="kw">let </span>intent = MessageIntent::Broadcast;
 
-		<span class="comment">// note round 2 and 3, then conclude 2
-		</span>gv.note_round(<span class="number">2u64</span>);
-		gv.note_round(<span class="number">3u64</span>);
-		gv.conclude_round(<span class="number">2u64</span>);
+		<span class="comment">// conclude 2
+		</span>gv.update_filter(GossipVoteFilter { start: <span class="number">2</span>, end: <span class="number">10</span>, validator_set_id: <span class="number">0 </span>});
 		<span class="kw">let </span><span class="kw-2">mut </span>allowed = gv.message_allowed();
 		<span class="kw">let </span><span class="kw-2">mut </span>expired = gv.message_expired();
 
@@ -921,6 +836,7 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>messages_rebroadcast() {
 		<span class="kw">let </span>gv = GossipValidator::&lt;Block&gt;::new(Arc::new(Mutex::new(KnownPeers::new())));
+		gv.update_filter(GossipVoteFilter { start: <span class="number">0</span>, end: <span class="number">10</span>, validator_set_id: <span class="number">0 </span>});
 		<span class="kw">let </span>sender = sc_network::PeerId::random();
 		<span class="kw">let </span>topic = Default::default();
 
