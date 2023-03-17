@@ -1386,6 +1386,8 @@
 <a href="#1386" id="1386">1386</a>
 <a href="#1387" id="1387">1387</a>
 <a href="#1388" id="1388">1388</a>
+<a href="#1389" id="1389">1389</a>
+<a href="#1390" id="1390">1390</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1488,7 +1490,7 @@
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">use crate</span>::{
-	exec::{AccountIdOf, ErrorOrigin, ExecError, Executable, Stack <span class="kw">as </span>ExecStack},
+	exec::{AccountIdOf, ErrorOrigin, ExecError, Executable, Key, Stack <span class="kw">as </span>ExecStack},
 	gas::GasMeter,
 	storage::{meter::Meter <span class="kw">as </span>StorageMeter, ContractInfo, DeletedContract},
 	wasm::{OwnerInfo, PrefabWasmModule, TryInstantiate},
@@ -1519,7 +1521,7 @@
 
 <span class="kw">pub use crate</span>::{
 	address::{AddressGenerator, DefaultAddressGenerator},
-	exec::{Frame, VarSizedKey <span class="kw">as </span>StorageKey},
+	exec::Frame,
 	migration::Migration,
 	pallet::<span class="kw-2">*</span>,
 	schedule::{HostFnWeights, InstructionWeights, Limits, Schedule},
@@ -2653,7 +2655,9 @@
 			ContractInfoOf::&lt;T&gt;::get(<span class="kw-2">&amp;</span>address).ok_or(ContractAccessError::DoesntExist)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>maybe_value = contract_info.read(
-			<span class="kw-2">&amp;</span>StorageKey::&lt;T&gt;::try_from(key).map_err(|<span class="kw">_</span>| ContractAccessError::KeyDecodingFailed)<span class="question-mark">?</span>,
+			<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key)
+				.map_err(|<span class="kw">_</span>| ContractAccessError::KeyDecodingFailed)<span class="question-mark">?
+				</span>.into(),
 		);
 		<span class="prelude-val">Ok</span>(maybe_value)
 	}

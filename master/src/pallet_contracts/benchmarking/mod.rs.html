@@ -3155,7 +3155,7 @@
 	sandbox::Sandbox,
 };
 <span class="kw">use crate</span>::{
-	exec::{AccountIdOf, FixSizedKey, VarSizedKey},
+	exec::{AccountIdOf, Key},
 	wasm::CallFlags,
 	Pallet <span class="kw">as </span>Contracts, <span class="kw-2">*</span>,
 };
@@ -3260,10 +3260,10 @@
 	}
 
 	<span class="doccomment">/// Store the supplied storage items into this contracts storage.
-	</span><span class="kw">fn </span>store(<span class="kw-2">&amp;</span><span class="self">self</span>, items: <span class="kw-2">&amp;</span>Vec&lt;(FixSizedKey, Vec&lt;u8&gt;)&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>store(<span class="kw-2">&amp;</span><span class="self">self</span>, items: <span class="kw-2">&amp;</span>Vec&lt;([u8; <span class="number">32</span>], Vec&lt;u8&gt;)&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="kw">let </span>info = <span class="self">self</span>.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>item <span class="kw">in </span>items {
-			info.write(<span class="kw-2">&amp;</span>item.<span class="number">0 </span><span class="kw">as </span><span class="kw-2">&amp;</span>FixSizedKey, <span class="prelude-val">Some</span>(item.<span class="number">1</span>.clone()), <span class="prelude-val">None</span>, <span class="bool-val">false</span>)
+			info.write(<span class="kw-2">&amp;</span>Key::Fix(item.<span class="number">0</span>), <span class="prelude-val">Some</span>(item.<span class="number">1</span>.clone()), <span class="prelude-val">None</span>, <span class="bool-val">false</span>)
 				.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to write storage to restoration dest&quot;</span>)<span class="question-mark">?</span>;
 		}
 		&lt;ContractInfoOf&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span><span class="self">self</span>.account_id, info);
@@ -4169,7 +4169,7 @@
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
 			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+				<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
 				<span class="bool-val">false</span>,
@@ -4213,7 +4213,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		info.write(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 			<span class="prelude-val">None</span>,
 			<span class="bool-val">false</span>,
@@ -4256,7 +4256,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		info.write(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
 			<span class="prelude-val">None</span>,
 			<span class="bool-val">false</span>,
@@ -4305,7 +4305,7 @@
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
 			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+				<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
 				<span class="bool-val">false</span>,
@@ -4348,7 +4348,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		info.write(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
 			<span class="prelude-val">None</span>,
 			<span class="bool-val">false</span>,
@@ -4401,7 +4401,7 @@
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
 			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+				<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
 				<span class="bool-val">false</span>,
@@ -4450,7 +4450,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		info.write(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
 			<span class="prelude-val">None</span>,
 			<span class="bool-val">false</span>,
@@ -4498,7 +4498,7 @@
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
 			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+				<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
 				<span class="bool-val">false</span>,
@@ -4541,7 +4541,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		info.write(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
 			<span class="prelude-val">None</span>,
 			<span class="bool-val">false</span>,
@@ -4594,7 +4594,7 @@
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		<span class="kw">for </span>key <span class="kw">in </span>keys {
 			info.write(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+				<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 				<span class="prelude-val">None</span>,
 				<span class="bool-val">false</span>,
@@ -4643,7 +4643,7 @@
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>info = instance.info()<span class="question-mark">?</span>;
 		info.write(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;T&gt;::try_from(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
+			<span class="kw-2">&amp;</span>Key::&lt;T&gt;::try_from_var(key).map_err(|e| <span class="string">&quot;Key has wrong length&quot;</span>)<span class="question-mark">?</span>,
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>; n <span class="kw">as </span>usize]),
 			<span class="prelude-val">None</span>,
 			<span class="bool-val">false</span>,

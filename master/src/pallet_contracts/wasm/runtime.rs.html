@@ -2586,31 +2586,6 @@
 <a href="#2586" id="2586">2586</a>
 <a href="#2587" id="2587">2587</a>
 <a href="#2588" id="2588">2588</a>
-<a href="#2589" id="2589">2589</a>
-<a href="#2590" id="2590">2590</a>
-<a href="#2591" id="2591">2591</a>
-<a href="#2592" id="2592">2592</a>
-<a href="#2593" id="2593">2593</a>
-<a href="#2594" id="2594">2594</a>
-<a href="#2595" id="2595">2595</a>
-<a href="#2596" id="2596">2596</a>
-<a href="#2597" id="2597">2597</a>
-<a href="#2598" id="2598">2598</a>
-<a href="#2599" id="2599">2599</a>
-<a href="#2600" id="2600">2600</a>
-<a href="#2601" id="2601">2601</a>
-<a href="#2602" id="2602">2602</a>
-<a href="#2603" id="2603">2603</a>
-<a href="#2604" id="2604">2604</a>
-<a href="#2605" id="2605">2605</a>
-<a href="#2606" id="2606">2606</a>
-<a href="#2607" id="2607">2607</a>
-<a href="#2608" id="2608">2608</a>
-<a href="#2609" id="2609">2609</a>
-<a href="#2610" id="2610">2610</a>
-<a href="#2611" id="2611">2611</a>
-<a href="#2612" id="2612">2612</a>
-<a href="#2613" id="2613">2613</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2631,7 +2606,7 @@
 </span><span class="doccomment">//! Environment definition of the wasm smart-contract runtime.
 
 </span><span class="kw">use crate</span>::{
-	exec::{ExecError, ExecResult, Ext, FixSizedKey, TopicOf, VarSizedKey},
+	exec::{ExecError, ExecResult, Ext, Key, TopicOf},
 	gas::{ChargedAmount, Token},
 	schedule::HostFnWeights,
 	BalanceOf, CodeHash, Config, DebugBufferVec, Error, SENTINEL,
@@ -2686,19 +2661,7 @@
 	</span>Fix,
 	<span class="doccomment">/// Variable sized key used in transparent hashing,
 	/// cannot be larger than MaxStorageKeyLen.
-	</span>Variable(u32),
-}
-
-<span class="kw">impl </span>KeyType {
-	<span class="kw">fn </span>len&lt;T: Config&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
-		<span class="kw">match </span><span class="self">self </span>{
-			KeyType::Fix =&gt; <span class="prelude-val">Ok</span>(<span class="number">32u32</span>),
-			KeyType::Variable(len) =&gt; {
-				<span class="macro">ensure!</span>(len &lt;= <span class="kw-2">&amp;</span>&lt;T&gt;::MaxStorageKeyLen::get(), Error::&lt;T&gt;::DecodingFailed);
-				<span class="prelude-val">Ok</span>(<span class="kw-2">*</span>len)
-			},
-		}
-	}
+	</span>Var(u32),
 }
 
 <span class="doccomment">/// Every error that can be returned to a contract when it calls any of the host functions.
@@ -3365,6 +3328,29 @@
 			(err, <span class="kw">_</span>) =&gt; <span class="self">Self</span>::err_into_return_code(err),
 		}
 	}
+	<span class="kw">fn </span>decode_key(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		memory: <span class="kw-2">&amp;</span>[u8],
+		key_type: KeyType,
+		key_ptr: u32,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">crate</span>::exec::Key&lt;E::T&gt;, TrapReason&gt; {
+		<span class="kw">let </span>res = <span class="kw">match </span>key_type {
+			KeyType::Fix =&gt; {
+				<span class="kw">let </span>key = <span class="self">self</span>.read_sandbox_memory(memory, key_ptr, <span class="number">32u32</span>)<span class="question-mark">?</span>;
+				Key::try_from_fix(key)
+			},
+			KeyType::Var(len) =&gt; {
+				<span class="macro">ensure!</span>(
+					len &lt;= &lt;&lt;E <span class="kw">as </span>Ext&gt;::T <span class="kw">as </span>Config&gt;::MaxStorageKeyLen::get(),
+					Error::&lt;E::T&gt;::DecodingFailed
+				);
+				<span class="kw">let </span>key = <span class="self">self</span>.read_sandbox_memory(memory, key_ptr, len)<span class="question-mark">?</span>;
+				Key::try_from_var(key)
+			},
+		};
+
+		res.map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed.into())
+	}
 
 	<span class="kw">fn </span>set_storage(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -3380,20 +3366,9 @@
 		<span class="kw">if </span>value_len &gt; max_size {
 			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;E::T&gt;::ValueTooLarge.into())
 		}
-		<span class="kw">let </span>key = <span class="self">self</span>.read_sandbox_memory(memory, key_ptr, key_type.len::&lt;E::T&gt;()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+		<span class="kw">let </span>key = <span class="self">self</span>.decode_key(memory, key_type, key_ptr)<span class="question-mark">?</span>;
 		<span class="kw">let </span>value = <span class="prelude-val">Some</span>(<span class="self">self</span>.read_sandbox_memory(memory, value_ptr, value_len)<span class="question-mark">?</span>);
-		<span class="kw">let </span>write_outcome = <span class="kw">match </span>key_type {
-			KeyType::Fix =&gt; <span class="self">self</span>.ext.set_storage(
-				<span class="kw-2">&amp;</span>FixSizedKey::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-				value,
-				<span class="bool-val">false</span>,
-			)<span class="question-mark">?</span>,
-			KeyType::Variable(<span class="kw">_</span>) =&gt; <span class="self">self</span>.ext.set_storage_transparent(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;E::T&gt;::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-				value,
-				<span class="bool-val">false</span>,
-			)<span class="question-mark">?</span>,
-		};
+		<span class="kw">let </span>write_outcome = <span class="self">self</span>.ext.set_storage(<span class="kw-2">&amp;</span>key, value, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
 
 		<span class="self">self</span>.adjust_gas(
 			charged,
@@ -3409,19 +3384,8 @@
 		key_ptr: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
 		<span class="kw">let </span>charged = <span class="self">self</span>.charge_gas(RuntimeCosts::ClearStorage(<span class="self">self</span>.ext.max_value_size()))<span class="question-mark">?</span>;
-		<span class="kw">let </span>key = <span class="self">self</span>.read_sandbox_memory(memory, key_ptr, key_type.len::&lt;E::T&gt;()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-		<span class="kw">let </span>outcome = <span class="kw">match </span>key_type {
-			KeyType::Fix =&gt; <span class="self">self</span>.ext.set_storage(
-				<span class="kw-2">&amp;</span>FixSizedKey::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-				<span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)<span class="question-mark">?</span>,
-			KeyType::Variable(<span class="kw">_</span>) =&gt; <span class="self">self</span>.ext.set_storage_transparent(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;E::T&gt;::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-				<span class="prelude-val">None</span>,
-				<span class="bool-val">false</span>,
-			)<span class="question-mark">?</span>,
-		};
+		<span class="kw">let </span>key = <span class="self">self</span>.decode_key(memory, key_type, key_ptr)<span class="question-mark">?</span>;
+		<span class="kw">let </span>outcome = <span class="self">self</span>.ext.set_storage(<span class="kw-2">&amp;</span>key, <span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
 
 		<span class="self">self</span>.adjust_gas(charged, RuntimeCosts::ClearStorage(outcome.old_len()));
 		<span class="prelude-val">Ok</span>(outcome.old_len_with_sentinel())
@@ -3436,15 +3400,8 @@
 		out_len_ptr: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ReturnCode, TrapReason&gt; {
 		<span class="kw">let </span>charged = <span class="self">self</span>.charge_gas(RuntimeCosts::GetStorage(<span class="self">self</span>.ext.max_value_size()))<span class="question-mark">?</span>;
-		<span class="kw">let </span>key = <span class="self">self</span>.read_sandbox_memory(memory, key_ptr, key_type.len::&lt;E::T&gt;()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-		<span class="kw">let </span>outcome = <span class="kw">match </span>key_type {
-			KeyType::Fix =&gt; <span class="self">self</span>.ext.get_storage(
-				<span class="kw-2">&amp;</span>FixSizedKey::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-			),
-			KeyType::Variable(<span class="kw">_</span>) =&gt; <span class="self">self</span>.ext.get_storage_transparent(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;E::T&gt;::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-			),
-		};
+		<span class="kw">let </span>key = <span class="self">self</span>.decode_key(memory, key_type, key_ptr)<span class="question-mark">?</span>;
+		<span class="kw">let </span>outcome = <span class="self">self</span>.ext.get_storage(<span class="kw-2">&amp;</span>key);
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(value) = outcome {
 			<span class="self">self</span>.adjust_gas(charged, RuntimeCosts::GetStorage(value.len() <span class="kw">as </span>u32));
@@ -3470,15 +3427,8 @@
 		key_ptr: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
 		<span class="kw">let </span>charged = <span class="self">self</span>.charge_gas(RuntimeCosts::ContainsStorage(<span class="self">self</span>.ext.max_value_size()))<span class="question-mark">?</span>;
-		<span class="kw">let </span>key = <span class="self">self</span>.read_sandbox_memory(memory, key_ptr, key_type.len::&lt;E::T&gt;()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-		<span class="kw">let </span>outcome = <span class="kw">match </span>key_type {
-			KeyType::Fix =&gt; <span class="self">self</span>.ext.get_storage_size(
-				<span class="kw-2">&amp;</span>FixSizedKey::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-			),
-			KeyType::Variable(<span class="kw">_</span>) =&gt; <span class="self">self</span>.ext.get_storage_size_transparent(
-				<span class="kw-2">&amp;</span>VarSizedKey::&lt;E::T&gt;::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
-			),
-		};
+		<span class="kw">let </span>key = <span class="self">self</span>.decode_key(memory, key_type, key_ptr)<span class="question-mark">?</span>;
+		<span class="kw">let </span>outcome = <span class="self">self</span>.ext.get_storage_size(<span class="kw-2">&amp;</span>key);
 
 		<span class="self">self</span>.adjust_gas(charged, RuntimeCosts::ClearStorage(outcome.unwrap_or(<span class="number">0</span>)));
 		<span class="prelude-val">Ok</span>(outcome.unwrap_or(SENTINEL))
@@ -3705,7 +3655,7 @@
 		value_ptr: u32,
 		value_len: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
-		ctx.set_storage(memory, KeyType::Variable(key_len), key_ptr, value_ptr, value_len)
+		ctx.set_storage(memory, KeyType::Var(key_len), key_ptr, value_ptr, value_len)
 	}
 
 	<span class="doccomment">/// Clear the value at the given key in the contract storage.
@@ -3731,7 +3681,7 @@
 	</span><span class="attr">#[version(<span class="number">1</span>)]
 	#[prefixed_alias]
 	</span><span class="kw">fn </span>clear_storage(ctx: <span class="kw">_</span>, memory: <span class="kw">_</span>, key_ptr: u32, key_len: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
-		ctx.clear_storage(memory, KeyType::Variable(key_len), key_ptr)
+		ctx.clear_storage(memory, KeyType::Var(key_len), key_ptr)
 	}
 
 	<span class="doccomment">/// Retrieve the value under the given key from storage.
@@ -3788,7 +3738,7 @@
 		out_ptr: u32,
 		out_len_ptr: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ReturnCode, TrapReason&gt; {
-		ctx.get_storage(memory, KeyType::Variable(key_len), key_ptr, out_ptr, out_len_ptr)
+		ctx.get_storage(memory, KeyType::Var(key_len), key_ptr, out_ptr, out_len_ptr)
 	}
 
 	<span class="doccomment">/// Checks whether there is a value stored under the given key.
@@ -3825,7 +3775,7 @@
 	</span><span class="attr">#[version(<span class="number">1</span>)]
 	#[prefixed_alias]
 	</span><span class="kw">fn </span>contains_storage(ctx: <span class="kw">_</span>, memory: <span class="kw">_</span>, key_ptr: u32, key_len: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
-		ctx.contains_storage(memory, KeyType::Variable(key_len), key_ptr)
+		ctx.contains_storage(memory, KeyType::Var(key_len), key_ptr)
 	}
 
 	<span class="doccomment">/// Retrieve and remove the value under the given key from storage.
@@ -3852,8 +3802,8 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ReturnCode, TrapReason&gt; {
 		<span class="kw">let </span>charged = ctx.charge_gas(RuntimeCosts::TakeStorage(ctx.ext.max_value_size()))<span class="question-mark">?</span>;
 		<span class="kw">let </span>key = ctx.read_sandbox_memory(memory, key_ptr, key_len)<span class="question-mark">?</span>;
-		<span class="kw">if let </span><span class="kw">crate</span>::storage::WriteOutcome::Taken(value) = ctx.ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;E::T&gt;::try_from(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
+		<span class="kw">if let </span><span class="kw">crate</span>::storage::WriteOutcome::Taken(value) = ctx.ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;E::T&gt;::try_from_var(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
 			<span class="prelude-val">None</span>,
 			<span class="bool-val">true</span>,
 		)<span class="question-mark">? </span>{

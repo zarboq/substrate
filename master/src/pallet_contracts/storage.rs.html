@@ -374,7 +374,7 @@
 </span><span class="kw">pub mod </span>meter;
 
 <span class="kw">use crate</span>::{
-	exec::{AccountIdOf, StorageKey},
+	exec::{AccountIdOf, Key},
 	weights::WeightInfo,
 	AddressGenerator, BalanceOf, CodeHash, Config, ContractInfoOf, DeletionQueue, Error, Pallet,
 	TrieId, SENTINEL,
@@ -486,7 +486,7 @@
 	///
 	/// The read is performed from the `trie_id` only. The `address` is not necessary. If the
 	/// contract doesn&#39;t store under the given `key` `None` is returned.
-	</span><span class="kw">pub fn </span>read&lt;K: StorageKey&lt;T&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+	</span><span class="kw">pub fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
 		child::get_raw(<span class="kw-2">&amp;</span><span class="self">self</span>.child_trie_info(), key.hash().as_slice())
 	}
 
@@ -494,7 +494,7 @@
 	///
 	/// Returns `None` if the `key` wasn&#39;t previously set by `set_storage` or
 	/// was deleted.
-	</span><span class="kw">pub fn </span>size&lt;K: StorageKey&lt;T&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>K) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
+	</span><span class="kw">pub fn </span>size(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
 		child::len(<span class="kw-2">&amp;</span><span class="self">self</span>.child_trie_info(), key.hash().as_slice())
 	}
 
@@ -505,9 +505,9 @@
 	///
 	/// This function also records how much storage was created or removed if a `storage_meter`
 	/// is supplied. It should only be absent for testing or benchmarking code.
-	</span><span class="kw">pub fn </span>write&lt;K: StorageKey&lt;T&gt;&gt;(
+	</span><span class="kw">pub fn </span>write(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		key: <span class="kw-2">&amp;</span>K,
+		key: <span class="kw-2">&amp;</span>Key&lt;T&gt;,
 		new_value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 		storage_meter: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>meter::NestedMeter&lt;T&gt;&gt;,
 		take: bool,

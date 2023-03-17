@@ -3162,34 +3162,6 @@
 <a href="#3162" id="3162">3162</a>
 <a href="#3163" id="3163">3163</a>
 <a href="#3164" id="3164">3164</a>
-<a href="#3165" id="3165">3165</a>
-<a href="#3166" id="3166">3166</a>
-<a href="#3167" id="3167">3167</a>
-<a href="#3168" id="3168">3168</a>
-<a href="#3169" id="3169">3169</a>
-<a href="#3170" id="3170">3170</a>
-<a href="#3171" id="3171">3171</a>
-<a href="#3172" id="3172">3172</a>
-<a href="#3173" id="3173">3173</a>
-<a href="#3174" id="3174">3174</a>
-<a href="#3175" id="3175">3175</a>
-<a href="#3176" id="3176">3176</a>
-<a href="#3177" id="3177">3177</a>
-<a href="#3178" id="3178">3178</a>
-<a href="#3179" id="3179">3179</a>
-<a href="#3180" id="3180">3180</a>
-<a href="#3181" id="3181">3181</a>
-<a href="#3182" id="3182">3182</a>
-<a href="#3183" id="3183">3183</a>
-<a href="#3184" id="3184">3184</a>
-<a href="#3185" id="3185">3185</a>
-<a href="#3186" id="3186">3186</a>
-<a href="#3187" id="3187">3187</a>
-<a href="#3188" id="3188">3188</a>
-<a href="#3189" id="3189">3189</a>
-<a href="#3190" id="3190">3190</a>
-<a href="#3191" id="3191">3191</a>
-<a href="#3192" id="3192">3192</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3558,10 +3530,7 @@
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use crate</span>::{
-		exec::{
-			AccountIdOf, BlockNumberOf, ErrorOrigin, ExecError, Executable, Ext, FixSizedKey,
-			SeedOf, VarSizedKey,
-		},
+		exec::{AccountIdOf, BlockNumberOf, ErrorOrigin, ExecError, Executable, Ext, Key, SeedOf},
 		gas::GasMeter,
 		storage::WriteOutcome,
 		tests::{RuntimeCall, Test, ALICE, BOB},
@@ -3713,40 +3682,15 @@
 			<span class="self">self</span>.terminations.push(TerminationEntry { beneficiary: beneficiary.clone() });
 			<span class="prelude-val">Ok</span>(())
 		}
-		<span class="kw">fn </span>get_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		<span class="kw">fn </span>get_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
 			<span class="self">self</span>.storage.get(<span class="kw-2">&amp;</span>key.to_vec()).cloned()
 		}
-		<span class="kw">fn </span>get_storage_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-			<span class="self">self</span>.storage.get(<span class="kw-2">&amp;</span>key.to_vec()).cloned()
-		}
-		<span class="kw">fn </span>get_storage_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
-			<span class="self">self</span>.storage.get(<span class="kw-2">&amp;</span>key.to_vec()).map(|val| val.len() <span class="kw">as </span>u32)
-		}
-		<span class="kw">fn </span>get_storage_size_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
+		<span class="kw">fn </span>get_storage_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
 			<span class="self">self</span>.storage.get(<span class="kw-2">&amp;</span>key.to_vec()).map(|val| val.len() <span class="kw">as </span>u32)
 		}
 		<span class="kw">fn </span>set_storage(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-			key: <span class="kw-2">&amp;</span>FixSizedKey,
-			value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
-			take_old: bool,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt; {
-			<span class="kw">let </span>key = key.to_vec();
-			<span class="kw">let </span>entry = <span class="self">self</span>.storage.entry(key.clone());
-			<span class="kw">let </span>result = <span class="kw">match </span>(entry, take_old) {
-				(Entry::Vacant(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; WriteOutcome::New,
-				(Entry::Occupied(entry), <span class="bool-val">false</span>) =&gt;
-					WriteOutcome::Overwritten(entry.remove().len() <span class="kw">as </span>u32),
-				(Entry::Occupied(entry), <span class="bool-val">true</span>) =&gt; WriteOutcome::Taken(entry.remove()),
-			};
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value {
-				<span class="self">self</span>.storage.insert(key, value);
-			}
-			<span class="prelude-val">Ok</span>(result)
-		}
-		<span class="kw">fn </span>set_storage_transparent(
-			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-			key: <span class="kw-2">&amp;</span>VarSizedKey&lt;<span class="self">Self</span>::T&gt;,
+			key: <span class="kw-2">&amp;</span>Key&lt;<span class="self">Self</span>::T&gt;,
 			value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 			take_old: bool,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt; {
@@ -4263,14 +4207,14 @@
 &quot;#</span>;
 
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = MockExt::default();
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>]),
 			<span class="bool-val">false</span>,
 		)
 		.unwrap();
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 			<span class="bool-val">false</span>,
 		)
@@ -5739,15 +5683,15 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = MockExt::default();
 
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>]),
 			<span class="bool-val">false</span>,
 		)
 		.unwrap();
 
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 			<span class="bool-val">false</span>,
 		)
@@ -5823,14 +5767,14 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = MockExt::default();
 
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>]),
 			<span class="bool-val">false</span>,
 		)
 		.unwrap();
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 			<span class="bool-val">false</span>,
 		)
@@ -5920,15 +5864,15 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = MockExt::default();
 
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1u8</span>; <span class="number">64</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42u8</span>]),
 			<span class="bool-val">false</span>,
 		)
 		.unwrap();
 
-		ext.set_storage_transparent(
-			<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
+		ext.set_storage(
+			<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2u8</span>; <span class="number">19</span>].to_vec()).unwrap(),
 			<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 			<span class="bool-val">false</span>,
 		)

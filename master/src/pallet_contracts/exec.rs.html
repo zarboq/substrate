@@ -3433,47 +3433,6 @@
 <a href="#3433" id="3433">3433</a>
 <a href="#3434" id="3434">3434</a>
 <a href="#3435" id="3435">3435</a>
-<a href="#3436" id="3436">3436</a>
-<a href="#3437" id="3437">3437</a>
-<a href="#3438" id="3438">3438</a>
-<a href="#3439" id="3439">3439</a>
-<a href="#3440" id="3440">3440</a>
-<a href="#3441" id="3441">3441</a>
-<a href="#3442" id="3442">3442</a>
-<a href="#3443" id="3443">3443</a>
-<a href="#3444" id="3444">3444</a>
-<a href="#3445" id="3445">3445</a>
-<a href="#3446" id="3446">3446</a>
-<a href="#3447" id="3447">3447</a>
-<a href="#3448" id="3448">3448</a>
-<a href="#3449" id="3449">3449</a>
-<a href="#3450" id="3450">3450</a>
-<a href="#3451" id="3451">3451</a>
-<a href="#3452" id="3452">3452</a>
-<a href="#3453" id="3453">3453</a>
-<a href="#3454" id="3454">3454</a>
-<a href="#3455" id="3455">3455</a>
-<a href="#3456" id="3456">3456</a>
-<a href="#3457" id="3457">3457</a>
-<a href="#3458" id="3458">3458</a>
-<a href="#3459" id="3459">3459</a>
-<a href="#3460" id="3460">3460</a>
-<a href="#3461" id="3461">3461</a>
-<a href="#3462" id="3462">3462</a>
-<a href="#3463" id="3463">3463</a>
-<a href="#3464" id="3464">3464</a>
-<a href="#3465" id="3465">3465</a>
-<a href="#3466" id="3466">3466</a>
-<a href="#3467" id="3467">3467</a>
-<a href="#3468" id="3468">3468</a>
-<a href="#3469" id="3469">3469</a>
-<a href="#3470" id="3470">3470</a>
-<a href="#3471" id="3471">3471</a>
-<a href="#3472" id="3472">3472</a>
-<a href="#3473" id="3473">3473</a>
-<a href="#3474" id="3474">3474</a>
-<a href="#3475" id="3475">3475</a>
-<a href="#3476" id="3476">3476</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3511,7 +3470,7 @@
 <span class="kw">use </span>sp_core::ecdsa::Public <span class="kw">as </span>ECDSAPublic;
 <span class="kw">use </span>sp_io::{crypto::secp256k1_ecdsa_recover_compressed, hashing::blake2_256};
 <span class="kw">use </span>sp_runtime::traits::{Convert, Hash};
-<span class="kw">use </span>sp_std::{marker::PhantomData, mem, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>sp_std::{marker::PhantomData, mem, prelude::<span class="kw-2">*</span>, vec::Vec};
 
 <span class="kw">pub type </span>AccountIdOf&lt;T&gt; = &lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId;
 <span class="kw">pub type </span>MomentOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>Config&gt;::Time <span class="kw">as </span>Time&gt;::Moment;
@@ -3522,32 +3481,39 @@
 <span class="doccomment">/// A type that represents a topic of an event. At the moment a hash is used.
 </span><span class="kw">pub type </span>TopicOf&lt;T&gt; = &lt;T <span class="kw">as </span>frame_system::Config&gt;::Hash;
 
-<span class="doccomment">/// Type for fix sized storage key.
-</span><span class="kw">pub type </span>FixSizedKey = [u8; <span class="number">32</span>];
-
 <span class="doccomment">/// Type for variable sized storage key. Used for transparent hashing.
-</span><span class="kw">pub type </span>VarSizedKey&lt;T&gt; = BoundedVec&lt;u8, &lt;T <span class="kw">as </span>Config&gt;::MaxStorageKeyLen&gt;;
+</span><span class="kw">type </span>VarSizedKey&lt;T&gt; = BoundedVec&lt;u8, &lt;T <span class="kw">as </span>Config&gt;::MaxStorageKeyLen&gt;;
 
-<span class="doccomment">/// Trait for hashing storage keys.
-</span><span class="kw">pub trait </span>StorageKey&lt;T&gt;
-<span class="kw">where
-	</span>T: Config,
-{
-	<span class="kw">fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt;;
+<span class="doccomment">/// Combined key type for both fixed and variable sized storage keys.
+</span><span class="kw">pub enum </span>Key&lt;T: Config&gt; {
+	<span class="doccomment">/// Variant for fixed sized keys.
+	</span>Fix([u8; <span class="number">32</span>]),
+	<span class="doccomment">/// Variant for variable sized keys.
+	</span>Var(VarSizedKey&lt;T&gt;),
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; StorageKey&lt;T&gt; <span class="kw">for </span>FixSizedKey {
-	<span class="kw">fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-		blake2_256(<span class="self">self</span>.as_slice()).to_vec()
+<span class="kw">impl</span>&lt;T: Config&gt; Key&lt;T&gt; {
+	<span class="doccomment">/// Copies self into a new vec.
+	</span><span class="kw">pub fn </span>to_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+		<span class="kw">match </span><span class="self">self </span>{
+			Key::Fix(v) =&gt; v.to_vec(),
+			Key::Var(v) =&gt; v.to_vec(),
+		}
 	}
-}
 
-<span class="kw">impl</span>&lt;T&gt; StorageKey&lt;T&gt; <span class="kw">for </span>VarSizedKey&lt;T&gt;
-<span class="kw">where
-	</span>T: Config,
-{
-	<span class="kw">fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-		Blake2_128Concat::hash(<span class="self">self</span>.as_slice())
+	<span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+		<span class="kw">match </span><span class="self">self </span>{
+			Key::Fix(v) =&gt; blake2_256(v.as_slice()).to_vec(),
+			Key::Var(v) =&gt; Blake2_128Concat::hash(v.as_slice()),
+		}
+	}
+
+	<span class="kw">pub fn </span>try_from_fix(v: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Vec&lt;u8&gt;&gt; {
+		&lt;[u8; <span class="number">32</span>]&gt;::try_from(v).map(<span class="self">Self</span>::Fix)
+	}
+
+	<span class="kw">pub fn </span>try_from_var(v: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Vec&lt;u8&gt;&gt; {
+		VarSizedKey::&lt;T&gt;::try_from(v).map(<span class="self">Self</span>::Var)
 	}
 }
 
@@ -3645,44 +3611,19 @@
 	///
 	/// Returns `None` if the `key` wasn&#39;t previously set by `set_storage` or
 	/// was deleted.
-	</span><span class="kw">fn </span>get_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;;
-
-	<span class="doccomment">/// This is a variation of `get_storage()` to be used with transparent hashing.
-	/// These two will be merged into a single function after some refactoring is done.
-	/// Returns the storage entry of the executing account by the given `key`.
-	///
-	/// Returns `None` if the `key` wasn&#39;t previously set by `set_storage` or
-	/// was deleted.
-	</span><span class="kw">fn </span>get_storage_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;;
+	</span><span class="kw">fn </span>get_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;;
 
 	<span class="doccomment">/// Returns `Some(len)` (in bytes) if a storage item exists at `key`.
 	///
 	/// Returns `None` if the `key` wasn&#39;t previously set by `set_storage` or
 	/// was deleted.
-	</span><span class="kw">fn </span>get_storage_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt;;
-
-	<span class="doccomment">/// This is the variation of `get_storage_size()` to be used with transparent hashing.
-	/// These two will be merged into a single function after some refactoring is done.
-	/// Returns `Some(len)` (in bytes) if a storage item exists at `key`.
-	///
-	/// Returns `None` if the `key` wasn&#39;t previously set by `set_storage` or
-	/// was deleted.
-	</span><span class="kw">fn </span>get_storage_size_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt;;
+	</span><span class="kw">fn </span>get_storage_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt;;
 
 	<span class="doccomment">/// Sets the storage entry by the given key to the specified value. If `value` is `None` then
 	/// the storage entry is deleted.
 	</span><span class="kw">fn </span>set_storage(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		key: <span class="kw-2">&amp;</span>FixSizedKey,
-		value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
-		take_old: bool,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt;;
-
-	<span class="doccomment">/// This is the variation of `set_storage()` to be used with transparent hashing.
-	/// These two will be merged into a single function after some refactoring is done.
-	</span><span class="kw">fn </span>set_storage_transparent(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		key: <span class="kw-2">&amp;</span>VarSizedKey&lt;<span class="self">Self</span>::T&gt;,
+		key: <span class="kw-2">&amp;</span>Key&lt;<span class="self">Self</span>::T&gt;,
 		value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 		take_old: bool,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt;;
@@ -4712,46 +4653,23 @@
 		<span class="self">Self</span>::transfer(ExistenceRequirement::KeepAlive, <span class="kw-2">&amp;</span><span class="self">self</span>.top_frame().account_id, to, value)
 	}
 
-	<span class="kw">fn </span>get_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+	<span class="kw">fn </span>get_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
 		<span class="self">self</span>.top_frame_mut().contract_info().read(key)
 	}
 
-	<span class="kw">fn </span>get_storage_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-		<span class="self">self</span>.top_frame_mut().contract_info().read(key)
-	}
-
-	<span class="kw">fn </span>get_storage_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>FixSizedKey) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
-		<span class="self">self</span>.top_frame_mut().contract_info().size(key)
-	}
-
-	<span class="kw">fn </span>get_storage_size_transparent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>VarSizedKey&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
-		<span class="self">self</span>.top_frame_mut().contract_info().size(key)
+	<span class="kw">fn </span>get_storage_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Key&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
+		<span class="self">self</span>.top_frame_mut().contract_info().size(key.into())
 	}
 
 	<span class="kw">fn </span>set_storage(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		key: <span class="kw-2">&amp;</span>FixSizedKey,
+		key: <span class="kw-2">&amp;</span>Key&lt;T&gt;,
 		value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 		take_old: bool,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt; {
 		<span class="kw">let </span>frame = <span class="self">self</span>.top_frame_mut();
 		frame.contract_info.get(<span class="kw-2">&amp;</span>frame.account_id).write(
-			key,
-			value,
-			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>frame.nested_storage),
-			take_old,
-		)
-	}
-
-	<span class="kw">fn </span>set_storage_transparent(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		key: <span class="kw-2">&amp;</span>VarSizedKey&lt;T&gt;,
-		value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
-		take_old: bool,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;WriteOutcome, DispatchError&gt; {
-		<span class="kw">let </span>frame = <span class="self">self</span>.top_frame_mut();
-		frame.contract_info.get(<span class="kw-2">&amp;</span>frame.account_id).write(
-			key,
+			key.into(),
 			value,
 			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>frame.nested_storage),
 			take_old,
@@ -5164,7 +5082,7 @@
 			place_contract(<span class="kw-2">&amp;</span>dest, success_ch);
 			set_balance(<span class="kw-2">&amp;</span>origin, <span class="number">100</span>);
 			<span class="kw">let </span>balance = get_balance(<span class="kw-2">&amp;</span>dest);
-			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>origin, <span class="prelude-val">Some</span>(<span class="number">0</span>), <span class="number">55</span>).unwrap();
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = storage::meter::Meter::new(<span class="kw-2">&amp;</span>origin, <span class="prelude-val">Some</span>(<span class="number">0</span>), value).unwrap();
 
 			<span class="kw">let _ </span>= MockStack::run_call(
 				origin.clone(),
@@ -6462,35 +6380,41 @@
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="comment">// Write
 			</span><span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">1</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]), <span class="bool-val">false</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">1</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]), <span class="bool-val">false</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">2</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]), <span class="bool-val">true</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">2</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]), <span class="bool-val">true</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">3</span>; <span class="number">32</span>], <span class="prelude-val">None</span>, <span class="bool-val">false</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">4</span>; <span class="number">32</span>], <span class="prelude-val">None</span>, <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">5</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">6</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
+			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">3</span>; <span class="number">32</span>]), <span class="prelude-val">None</span>, <span class="bool-val">false</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
+			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">4</span>; <span class="number">32</span>]), <span class="prelude-val">None</span>, <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
+			<span class="macro">assert_eq!</span>(
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">5</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>),
+				<span class="prelude-val">Ok</span>(WriteOutcome::New)
+			);
+			<span class="macro">assert_eq!</span>(
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">6</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">true</span>),
+				<span class="prelude-val">Ok</span>(WriteOutcome::New)
+			);
 
 			<span class="comment">// Overwrite
 			</span><span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">1</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42</span>]), <span class="bool-val">false</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">1</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42</span>]), <span class="bool-val">false</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::Overwritten(<span class="number">3</span>))
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">2</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">48</span>]), <span class="bool-val">true</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">2</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">48</span>]), <span class="bool-val">true</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::Taken(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]))
 			);
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">3</span>; <span class="number">32</span>], <span class="prelude-val">None</span>, <span class="bool-val">false</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">4</span>; <span class="number">32</span>], <span class="prelude-val">None</span>, <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
+			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">3</span>; <span class="number">32</span>]), <span class="prelude-val">None</span>, <span class="bool-val">false</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
+			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">4</span>; <span class="number">32</span>]), <span class="prelude-val">None</span>, <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">5</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">5</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::Overwritten(<span class="number">0</span>))
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">6</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">true</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">6</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">true</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::Taken(<span class="macro">vec!</span>[]))
 			);
 
@@ -6519,52 +6443,52 @@
 	}
 
 	<span class="attr">#[test]
-	</span><span class="kw">fn </span>set_storage_transparent_works() {
+	</span><span class="kw">fn </span>set_storage_varsized_key_works() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="comment">// Write
 			</span><span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1</span>; <span class="number">64</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1</span>; <span class="number">64</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2</span>; <span class="number">19</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2</span>; <span class="number">19</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]),
 					<span class="bool-val">true
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">3</span>; <span class="number">19</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">3</span>; <span class="number">19</span>].to_vec()).unwrap(),
 					<span class="prelude-val">None</span>,
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">4</span>; <span class="number">64</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">4</span>; <span class="number">64</span>].to_vec()).unwrap(),
 					<span class="prelude-val">None</span>,
 					<span class="bool-val">true
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">5</span>; <span class="number">30</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">5</span>; <span class="number">30</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">6</span>; <span class="number">128</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">6</span>; <span class="number">128</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 					<span class="bool-val">true
 				</span>),
@@ -6573,48 +6497,48 @@
 
 			<span class="comment">// Overwrite
 			</span><span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1</span>; <span class="number">64</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1</span>; <span class="number">64</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">42</span>, <span class="number">43</span>, <span class="number">44</span>]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::Overwritten(<span class="number">3</span>))
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2</span>; <span class="number">19</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2</span>; <span class="number">19</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">48</span>]),
 					<span class="bool-val">true
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::Taken(<span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]))
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">3</span>; <span class="number">19</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">3</span>; <span class="number">19</span>].to_vec()).unwrap(),
 					<span class="prelude-val">None</span>,
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">4</span>; <span class="number">64</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">4</span>; <span class="number">64</span>].to_vec()).unwrap(),
 					<span class="prelude-val">None</span>,
 					<span class="bool-val">true
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">5</span>; <span class="number">30</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">5</span>; <span class="number">30</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::Overwritten(<span class="number">0</span>))
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">6</span>; <span class="number">128</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">6</span>; <span class="number">128</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 					<span class="bool-val">true
 				</span>),
@@ -6649,13 +6573,16 @@
 	</span><span class="kw">fn </span>get_storage_works() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">1</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]), <span class="bool-val">false</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">1</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]), <span class="bool-val">false</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">2</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
-			<span class="macro">assert_eq!</span>(ctx.ext.get_storage(<span class="kw-2">&amp;</span>[<span class="number">1</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]));
-			<span class="macro">assert_eq!</span>(ctx.ext.get_storage(<span class="kw-2">&amp;</span>[<span class="number">2</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]));
-			<span class="macro">assert_eq!</span>(ctx.ext.get_storage(<span class="kw-2">&amp;</span>[<span class="number">3</span>; <span class="number">32</span>]), <span class="prelude-val">None</span>);
+			<span class="macro">assert_eq!</span>(
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">2</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>),
+				<span class="prelude-val">Ok</span>(WriteOutcome::New)
+			);
+			<span class="macro">assert_eq!</span>(ctx.ext.get_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">1</span>; <span class="number">32</span>])), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]));
+			<span class="macro">assert_eq!</span>(ctx.ext.get_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">2</span>; <span class="number">32</span>])), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]));
+			<span class="macro">assert_eq!</span>(ctx.ext.get_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">3</span>; <span class="number">32</span>])), <span class="prelude-val">None</span>);
 
 			exec_success()
 		});
@@ -6685,13 +6612,16 @@
 	</span><span class="kw">fn </span>get_storage_size_works() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">1</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]), <span class="bool-val">false</span>),
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">1</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]), <span class="bool-val">false</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
-			<span class="macro">assert_eq!</span>(ctx.ext.set_storage(<span class="kw-2">&amp;</span>[<span class="number">2</span>; <span class="number">32</span>], <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>), <span class="prelude-val">Ok</span>(WriteOutcome::New));
-			<span class="macro">assert_eq!</span>(ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>[<span class="number">1</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="number">3</span>));
-			<span class="macro">assert_eq!</span>(ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>[<span class="number">2</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="number">0</span>));
-			<span class="macro">assert_eq!</span>(ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>[<span class="number">3</span>; <span class="number">32</span>]), <span class="prelude-val">None</span>);
+			<span class="macro">assert_eq!</span>(
+				ctx.ext.set_storage(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">2</span>; <span class="number">32</span>]), <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]), <span class="bool-val">false</span>),
+				<span class="prelude-val">Ok</span>(WriteOutcome::New)
+			);
+			<span class="macro">assert_eq!</span>(ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">1</span>; <span class="number">32</span>])), <span class="prelude-val">Some</span>(<span class="number">3</span>));
+			<span class="macro">assert_eq!</span>(ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">2</span>; <span class="number">32</span>])), <span class="prelude-val">Some</span>(<span class="number">0</span>));
+			<span class="macro">assert_eq!</span>(ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>Key::Fix([<span class="number">3</span>; <span class="number">32</span>])), <span class="prelude-val">None</span>);
 
 			exec_success()
 		});
@@ -6718,40 +6648,34 @@
 	}
 
 	<span class="attr">#[test]
-	</span><span class="kw">fn </span>get_storage_transparent_works() {
+	</span><span class="kw">fn </span>get_storage_varsized_key_works() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.get_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap()
-				),
+				ctx.ext.get_storage(<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap()),
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>])
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.get_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap()
-				),
+				ctx.ext.get_storage(<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap()),
 				<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[])
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.get_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">3</span>; <span class="number">8</span>].to_vec()).unwrap()
-				),
+				ctx.ext.get_storage(<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">3</span>; <span class="number">8</span>].to_vec()).unwrap()),
 				<span class="prelude-val">None
 			</span>);
 
@@ -6780,40 +6704,34 @@
 	}
 
 	<span class="attr">#[test]
-	</span><span class="kw">fn </span>get_storage_size_transparent_works() {
+	</span><span class="kw">fn </span>get_storage_size_varsized_key_works() {
 		<span class="kw">let </span>code_hash = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.set_storage_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap(),
+				ctx.ext.set_storage(
+					<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap(),
 					<span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
 					<span class="bool-val">false
 				</span>),
 				<span class="prelude-val">Ok</span>(WriteOutcome::New)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.get_storage_size_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap()
-				),
+				ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">1</span>; <span class="number">19</span>].to_vec()).unwrap()),
 				<span class="prelude-val">Some</span>(<span class="number">3</span>)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.get_storage_size_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap()
-				),
+				ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">2</span>; <span class="number">16</span>].to_vec()).unwrap()),
 				<span class="prelude-val">Some</span>(<span class="number">0</span>)
 			);
 			<span class="macro">assert_eq!</span>(
-				ctx.ext.get_storage_size_transparent(
-					<span class="kw-2">&amp;</span>VarSizedKey::&lt;Test&gt;::try_from([<span class="number">3</span>; <span class="number">8</span>].to_vec()).unwrap()
-				),
+				ctx.ext.get_storage_size(<span class="kw-2">&amp;</span>Key::&lt;Test&gt;::try_from_var([<span class="number">3</span>; <span class="number">8</span>].to_vec()).unwrap()),
 				<span class="prelude-val">None
 			</span>);
 
