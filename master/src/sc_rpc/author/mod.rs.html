@@ -254,7 +254,7 @@
 <span class="kw">use </span>sp_api::ProvideRuntimeApi;
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_core::Bytes;
-<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">use </span>sp_runtime::{generic, traits::Block <span class="kw">as </span>BlockT};
 <span class="kw">use </span>sp_session::SessionKeys;
 
@@ -269,7 +269,7 @@
 	<span class="doccomment">/// Transactions pool
 	</span>pool: Arc&lt;P&gt;,
 	<span class="doccomment">/// The key store.
-	</span>keystore: SyncCryptoStorePtr,
+	</span>keystore: KeystorePtr,
 	<span class="doccomment">/// Whether to deny unsafe calls
 	</span>deny_unsafe: DenyUnsafe,
 	<span class="doccomment">/// Executor to spawn subscriptions.
@@ -281,7 +281,7 @@
 	</span><span class="kw">pub fn </span>new(
 		client: Arc&lt;Client&gt;,
 		pool: Arc&lt;P&gt;,
-		keystore: SyncCryptoStorePtr,
+		keystore: KeystorePtr,
 		deny_unsafe: DenyUnsafe,
 		executor: SubscriptionTaskExecutor,
 	) -&gt; <span class="self">Self </span>{
@@ -326,8 +326,8 @@
 		<span class="self">self</span>.deny_unsafe.check_if_safe()<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>key_type = key_type.as_str().try_into().map_err(|<span class="kw">_</span>| Error::BadKeyType)<span class="question-mark">?</span>;
-		SyncCryptoStore::insert_unknown(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, key_type, <span class="kw-2">&amp;</span>suri, <span class="kw-2">&amp;</span>public[..])
-			.map_err(|<span class="kw">_</span>| Error::KeyStoreUnavailable)<span class="question-mark">?</span>;
+		Keystore::insert(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, key_type, <span class="kw-2">&amp;</span>suri, <span class="kw-2">&amp;</span>public[..])
+			.map_err(|<span class="kw">_</span>| Error::KeystoreUnavailable)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -353,14 +353,14 @@
 			.map_err(|e| Error::Client(Box::new(e)))<span class="question-mark">?
 			</span>.ok_or(Error::InvalidSessionKeys)<span class="question-mark">?</span>;
 
-		<span class="prelude-val">Ok</span>(SyncCryptoStore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>keys))
+		<span class="prelude-val">Ok</span>(Keystore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>keys))
 	}
 
 	<span class="kw">fn </span>has_key(<span class="kw-2">&amp;</span><span class="self">self</span>, public_key: Bytes, key_type: String) -&gt; RpcResult&lt;bool&gt; {
 		<span class="self">self</span>.deny_unsafe.check_if_safe()<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>key_type = key_type.as_str().try_into().map_err(|<span class="kw">_</span>| Error::BadKeyType)<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(SyncCryptoStore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>[(public_key.to_vec(), key_type)]))
+		<span class="prelude-val">Ok</span>(Keystore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>[(public_key.to_vec(), key_type)]))
 	}
 
 	<span class="kw">fn </span>pending_extrinsics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RpcResult&lt;Vec&lt;Bytes&gt;&gt; {

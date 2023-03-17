@@ -677,7 +677,7 @@
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use </span>sc_keystore::LocalKeystore;
 	<span class="kw">use </span>sc_network_test::Block;
-	<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+	<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 
 	<span class="kw">use </span><span class="kw">crate</span>::keystore::BeefyKeystore;
 	<span class="kw">use </span>sp_consensus_beefy::{
@@ -738,8 +738,8 @@
 	}
 
 	<span class="kw">fn </span>sign_commitment&lt;BN: Encode&gt;(who: <span class="kw-2">&amp;</span>Keyring, commitment: <span class="kw-2">&amp;</span>Commitment&lt;BN&gt;) -&gt; Signature {
-		<span class="kw">let </span>store: SyncCryptoStorePtr = std::sync::Arc::new(LocalKeystore::in_memory());
-		SyncCryptoStore::ecdsa_generate_new(<span class="kw-2">&amp;*</span>store, KEY_TYPE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>who.to_seed())).unwrap();
+		<span class="kw">let </span>store: KeystorePtr = std::sync::Arc::new(LocalKeystore::in_memory());
+		Keystore::ecdsa_generate_new(<span class="kw-2">&amp;*</span>store, KEY_TYPE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>who.to_seed())).unwrap();
 		<span class="kw">let </span>beefy_keystore: BeefyKeystore = <span class="prelude-val">Some</span>(store).into();
 
 		beefy_keystore.sign(<span class="kw-2">&amp;</span>who.public(), <span class="kw-2">&amp;</span>commitment.encode()).unwrap()

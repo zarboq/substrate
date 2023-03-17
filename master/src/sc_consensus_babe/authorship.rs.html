@@ -356,7 +356,7 @@
 };
 <span class="kw">use </span>sp_consensus_vrf::schnorrkel::{VRFOutput, VRFProof};
 <span class="kw">use </span>sp_core::{blake2_256, crypto::ByteArray, U256};
-<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 
 <span class="doccomment">/// Calculates the primary selection threshold for a given authority, taking
 /// into account `c` (`1 - c` represents the probability of a slot being empty).
@@ -460,7 +460,7 @@
 	slot: Slot,
 	epoch: <span class="kw-2">&amp;</span>Epoch,
 	keys: <span class="kw-2">&amp;</span>[(AuthorityId, usize)],
-	keystore: <span class="kw-2">&amp;</span>SyncCryptoStorePtr,
+	keystore: <span class="kw-2">&amp;</span>KeystorePtr,
 	author_secondary_vrf: bool,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(PreDigest, AuthorityId)&gt; {
 	<span class="kw">let </span>Epoch { authorities, randomness, <span class="kw-2">mut </span>epoch_index, .. } = epoch;
@@ -480,7 +480,7 @@
 		<span class="kw">if </span>authority_id == expected_author {
 			<span class="kw">let </span>pre_digest = <span class="kw">if </span>author_secondary_vrf {
 				<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, epoch_index);
-				<span class="kw">let </span>result = SyncCryptoStore::sr25519_vrf_sign(
+				<span class="kw">let </span>result = Keystore::sr25519_vrf_sign(
 					<span class="kw-2">&amp;**</span>keystore,
 					AuthorityId::ID,
 					authority_id.as_ref(),
@@ -496,7 +496,7 @@
 				} <span class="kw">else </span>{
 					<span class="prelude-val">None
 				</span>}
-			} <span class="kw">else if </span>SyncCryptoStore::has_keys(
+			} <span class="kw">else if </span>Keystore::has_keys(
 				<span class="kw-2">&amp;**</span>keystore,
 				<span class="kw-2">&amp;</span>[(authority_id.to_raw_vec(), AuthorityId::ID)],
 			) {
@@ -524,7 +524,7 @@
 </span><span class="kw">pub fn </span>claim_slot(
 	slot: Slot,
 	epoch: <span class="kw-2">&amp;</span>Epoch,
-	keystore: <span class="kw-2">&amp;</span>SyncCryptoStorePtr,
+	keystore: <span class="kw-2">&amp;</span>KeystorePtr,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(PreDigest, AuthorityId)&gt; {
 	<span class="kw">let </span>authorities = epoch
 		.authorities
@@ -540,7 +540,7 @@
 </span><span class="kw">pub fn </span>claim_slot_using_keys(
 	slot: Slot,
 	epoch: <span class="kw-2">&amp;</span>Epoch,
-	keystore: <span class="kw-2">&amp;</span>SyncCryptoStorePtr,
+	keystore: <span class="kw-2">&amp;</span>KeystorePtr,
 	keys: <span class="kw-2">&amp;</span>[(AuthorityId, usize)],
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(PreDigest, AuthorityId)&gt; {
 	claim_primary_slot(slot, epoch, epoch.config.c, keystore, keys).or_else(|| {
@@ -568,7 +568,7 @@
 	slot: Slot,
 	epoch: <span class="kw-2">&amp;</span>Epoch,
 	c: (u64, u64),
-	keystore: <span class="kw-2">&amp;</span>SyncCryptoStorePtr,
+	keystore: <span class="kw-2">&amp;</span>KeystorePtr,
 	keys: <span class="kw-2">&amp;</span>[(AuthorityId, usize)],
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(PreDigest, AuthorityId)&gt; {
 	<span class="kw">let </span>Epoch { authorities, randomness, <span class="kw-2">mut </span>epoch_index, .. } = epoch;
@@ -581,7 +581,7 @@
 	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
 		<span class="kw">let </span>transcript = make_transcript(randomness, slot, epoch_index);
 		<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, epoch_index);
-		<span class="kw">let </span>result = SyncCryptoStore::sr25519_vrf_sign(
+		<span class="kw">let </span>result = Keystore::sr25519_vrf_sign(
 			<span class="kw-2">&amp;**</span>keystore,
 			AuthorityId::ID,
 			authority_id.as_ref(),
@@ -621,8 +621,8 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>claim_secondary_plain_slot_works() {
-		<span class="kw">let </span>keystore: SyncCryptoStorePtr = Arc::new(LocalKeystore::in_memory());
-		<span class="kw">let </span>valid_public_key = SyncCryptoStore::sr25519_generate_new(
+		<span class="kw">let </span>keystore: KeystorePtr = Arc::new(LocalKeystore::in_memory());
+		<span class="kw">let </span>valid_public_key = Keystore::sr25519_generate_new(
 			<span class="kw-2">&amp;*</span>keystore,
 			AuthorityId::ID,
 			<span class="prelude-val">Some</span>(sp_core::crypto::DEV_PHRASE),

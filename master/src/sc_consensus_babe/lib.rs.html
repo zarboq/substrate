@@ -2033,7 +2033,7 @@
 <span class="kw">use </span>sp_consensus_slots::Slot;
 <span class="kw">use </span>sp_core::{crypto::ByteArray, ExecutionContext};
 <span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentData, InherentDataProvider};
-<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">use </span>sp_runtime::{
 	generic::OpaqueDigestItemId,
 	traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, SaturatedConversion, Zero},
@@ -2318,7 +2318,7 @@
 <span class="doccomment">/// Parameters for BABE.
 </span><span class="kw">pub struct </span>BabeParams&lt;B: BlockT, C, SC, E, I, SO, L, CIDP, BS&gt; {
 	<span class="doccomment">/// The keystore that manages the keys of the node.
-	</span><span class="kw">pub </span>keystore: SyncCryptoStorePtr,
+	</span><span class="kw">pub </span>keystore: KeystorePtr,
 
 	<span class="doccomment">/// The client to use
 	</span><span class="kw">pub </span>client: Arc&lt;C&gt;,
@@ -2625,7 +2625,7 @@
 	justification_sync_link: L,
 	force_authoring: bool,
 	backoff_authoring_blocks: <span class="prelude-ty">Option</span>&lt;BS&gt;,
-	keystore: SyncCryptoStorePtr,
+	keystore: KeystorePtr,
 	epoch_changes: SharedEpochChanges&lt;B, Epoch&gt;,
 	slot_notification_sinks: SlotNotificationSinks&lt;B&gt;,
 	config: BabeConfiguration,
@@ -2748,7 +2748,7 @@
 		// add it to a digest item.
 		</span><span class="kw">let </span>public_type_pair = public.clone().into();
 		<span class="kw">let </span>public = public.to_raw_vec();
-		<span class="kw">let </span>signature = SyncCryptoStore::sign_with(
+		<span class="kw">let </span>signature = Keystore::sign_with(
 			<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore,
 			&lt;AuthorityId <span class="kw">as </span>AppKey&gt;::ID,
 			<span class="kw-2">&amp;</span>public_type_pair,

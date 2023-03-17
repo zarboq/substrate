@@ -767,14 +767,6 @@
 <a href="#767" id="767">767</a>
 <a href="#768" id="768">768</a>
 <a href="#769" id="769">769</a>
-<a href="#770" id="770">770</a>
-<a href="#771" id="771">771</a>
-<a href="#772" id="772">772</a>
-<a href="#773" id="773">773</a>
-<a href="#774" id="774">774</a>
-<a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -830,7 +822,7 @@
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 
 <span class="kw">use </span>sp_core::crypto::{key_types, CryptoTypePublicPair, Pair};
-<span class="kw">use </span>sp_keystore::CryptoStore;
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
 <span class="kw">mod </span>addr_cache;
@@ -855,7 +847,7 @@
 <span class="doccomment">/// Role an authority discovery [`Worker`] can run as.
 </span><span class="kw">pub enum </span>Role {
 	<span class="doccomment">/// Publish own addresses and discover addresses of others.
-	</span>PublishAndDiscover(Arc&lt;<span class="kw">dyn </span>CryptoStore&gt;),
+	</span>PublishAndDiscover(KeystorePtr),
 	<span class="doccomment">/// Discover addresses of others.
 	</span>Discover,
 }
@@ -1141,8 +1133,7 @@
 			<span class="prelude-val">Some</span>(peer_signature),
 			key_store.as_ref(),
 			keys_vec,
-		)
-		.<span class="kw">await</span><span class="question-mark">?</span>;
+		)<span class="question-mark">?</span>;
 
 		<span class="kw">for </span>(key, value) <span class="kw">in </span>kv_pairs.into_iter() {
 			<span class="self">self</span>.network.put_value(key, value);
@@ -1159,8 +1150,7 @@
 		<span class="kw">let </span>local_keys = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.role {
 			Role::PublishAndDiscover(key_store) =&gt; key_store
 				.sr25519_public_keys(key_types::AUTHORITY_DISCOVERY)
-				.<span class="kw">await
-				</span>.into_iter()
+				.into_iter()
 				.collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;(),
 			Role::Discover =&gt; HashSet::new(),
 		};
@@ -1365,13 +1355,12 @@
 	// next authority set with two keys. The function does not return all of the local authority
 	// discovery public keys, but only the ones intersecting with the current or next authority set.
 	</span><span class="kw">async fn </span>get_own_public_keys_within_authority_set(
-		key_store: Arc&lt;<span class="kw">dyn </span>CryptoStore&gt;,
+		key_store: KeystorePtr,
 		client: <span class="kw-2">&amp;</span>Client,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;HashSet&lt;AuthorityId&gt;&gt; {
 		<span class="kw">let </span>local_pub_keys = key_store
 			.sr25519_public_keys(key_types::AUTHORITY_DISCOVERY)
-			.<span class="kw">await
-			</span>.into_iter()
+			.into_iter()
 			.collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
 
 		<span class="kw">let </span>best_hash = client.info().best_hash;
@@ -1440,33 +1429,28 @@
 	<span class="prelude-val">Ok</span>(schema::PeerSignature { signature, public_key })
 }
 
-<span class="kw">async fn </span>sign_record_with_authority_ids(
+<span class="kw">fn </span>sign_record_with_authority_ids(
 	serialized_record: Vec&lt;u8&gt;,
 	peer_signature: <span class="prelude-ty">Option</span>&lt;schema::PeerSignature&gt;,
-	key_store: <span class="kw-2">&amp;</span><span class="kw">dyn </span>CryptoStore,
+	key_store: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Keystore,
 	keys: Vec&lt;CryptoTypePublicPair&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(KademliaKey, Vec&lt;u8&gt;)&gt;&gt; {
-	<span class="kw">let </span>signatures = key_store
-		.sign_with_all(key_types::AUTHORITY_DISCOVERY, keys.clone(), <span class="kw-2">&amp;</span>serialized_record)
-		.<span class="kw">await
-		</span>.map_err(|<span class="kw">_</span>| Error::Signing)<span class="question-mark">?</span>;
+	<span class="kw">let </span><span class="kw-2">mut </span>result = Vec::with_capacity(keys.len());
 
-	<span class="kw">let </span><span class="kw-2">mut </span>result = <span class="macro">vec!</span>[];
-	<span class="kw">for </span>(sign_result, key) <span class="kw">in </span>signatures.into_iter().zip(keys.iter()) {
-		<span class="kw">let </span><span class="kw-2">mut </span>signed_record = <span class="macro">vec!</span>[];
+	<span class="kw">for </span>key <span class="kw">in </span>keys.iter() {
+		<span class="kw">let </span>auth_signature = key_store
+			.sign_with(key_types::AUTHORITY_DISCOVERY, key, <span class="kw-2">&amp;</span>serialized_record)
+			.map_err(|<span class="kw">_</span>| Error::Signing)<span class="question-mark">?
+			</span>.ok_or_else(|| Error::MissingSignature(key.clone()))<span class="question-mark">?</span>;
 
-		<span class="comment">// Verify that all signatures exist for all provided keys.
-		</span><span class="kw">let </span>auth_signature =
-			sign_result.ok().flatten().ok_or_else(|| Error::MissingSignature(key.clone()))<span class="question-mark">?</span>;
-		schema::SignedAuthorityRecord {
+		<span class="kw">let </span>signed_record = schema::SignedAuthorityRecord {
 			record: serialized_record.clone(),
 			auth_signature,
 			peer_signature: peer_signature.clone(),
 		}
-		.encode(<span class="kw-2">&amp;mut </span>signed_record)
-		.map_err(Error::EncodingProto)<span class="question-mark">?</span>;
+		.encode_to_vec();
 
-		result.push((hash_authority_id(key.<span class="number">1</span>.as_ref()), signed_record));
+		result.push((hash_authority_id(<span class="kw-2">&amp;</span>key.<span class="number">1</span>), signed_record));
 	}
 
 	<span class="prelude-val">Ok</span>(result)

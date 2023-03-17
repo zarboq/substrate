@@ -339,7 +339,6 @@
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 </span><span class="kw">use </span>node_template_runtime::{<span class="self">self</span>, opaque::Block, RuntimeApi};
@@ -492,7 +491,7 @@
 <span class="kw">fn </span>remote_keystore(_url: <span class="kw-2">&amp;</span>String) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;LocalKeystore&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 	<span class="comment">// FIXME: here would the concrete keystore be built,
 	//        must return a concrete type (NOT `LocalKeystore`) that
-	//        implements `CryptoStore` and `SyncCryptoStore`
+	//        implements `Keystore`
 	</span><span class="prelude-val">Err</span>(<span class="string">&quot;Remote Keystore not supported.&quot;</span>)
 }
 
@@ -575,7 +574,7 @@
 	<span class="kw">let </span>_rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		network: network.clone(),
 		client: client.clone(),
-		keystore: keystore_container.sync_keystore(),
+		keystore: keystore_container.keystore(),
 		task_manager: <span class="kw-2">&amp;mut </span>task_manager,
 		transaction_pool: transaction_pool.clone(),
 		rpc_builder: rpc_extensions_builder,
@@ -618,7 +617,7 @@
 				},
 				force_authoring,
 				backoff_authoring_blocks,
-				keystore: keystore_container.sync_keystore(),
+				keystore: keystore_container.keystore(),
 				sync_oracle: sync_service.clone(),
 				justification_sync_link: sync_service.clone(),
 				block_proposal_slot_portion: SlotProportion::new(<span class="number">2f32 </span>/ <span class="number">3f32</span>),
@@ -638,8 +637,7 @@
 	<span class="kw">if </span>enable_grandpa {
 		<span class="comment">// if the node isn&#39;t actively participating in consensus then it doesn&#39;t
 		// need a keystore, regardless of which protocol we use below.
-		</span><span class="kw">let </span>keystore =
-			<span class="kw">if </span>role.is_authority() { <span class="prelude-val">Some</span>(keystore_container.sync_keystore()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+		</span><span class="kw">let </span>keystore = <span class="kw">if </span>role.is_authority() { <span class="prelude-val">Some</span>(keystore_container.keystore()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 
 		<span class="kw">let </span>grandpa_config = sc_consensus_grandpa::Config {
 			<span class="comment">// FIXME #1578 make this available through chainspec

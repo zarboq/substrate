@@ -276,9 +276,6 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -318,7 +315,7 @@
 	digests::PreDigest, AuthorityId, BabeApi <span class="kw">as </span>BabeRuntimeApi, BabeConfiguration,
 };
 <span class="kw">use </span>sp_core::crypto::ByteArray;
-<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as _</span>};
 <span class="kw">use </span>std::{collections::HashMap, sync::Arc};
 
@@ -338,7 +335,7 @@
 	<span class="doccomment">/// shared reference to EpochChanges
 	</span>shared_epoch_changes: SharedEpochChanges&lt;B, Epoch&gt;,
 	<span class="doccomment">/// shared reference to the Keystore
-	</span>keystore: SyncCryptoStorePtr,
+	</span>keystore: KeystorePtr,
 	<span class="doccomment">/// config (actually holds the slot duration)
 	</span>babe_config: BabeConfiguration,
 	<span class="doccomment">/// The SelectChain strategy
@@ -352,7 +349,7 @@
 	</span><span class="kw">pub fn </span>new(
 		client: Arc&lt;C&gt;,
 		shared_epoch_changes: SharedEpochChanges&lt;B, Epoch&gt;,
-		keystore: SyncCryptoStorePtr,
+		keystore: KeystorePtr,
 		babe_config: BabeConfiguration,
 		select_chain: SC,
 		deny_unsafe: DenyUnsafe,
@@ -398,10 +395,7 @@
 				.iter()
 				.enumerate()
 				.filter_map(|(i, a)| {
-					<span class="kw">if </span>SyncCryptoStore::has_keys(
-						<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore,
-						<span class="kw-2">&amp;</span>[(a.<span class="number">0</span>.to_raw_vec(), AuthorityId::ID)],
-					) {
+					<span class="kw">if </span>Keystore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>[(a.<span class="number">0</span>.to_raw_vec(), AuthorityId::ID)]) {
 						<span class="prelude-val">Some</span>((a.<span class="number">0</span>.clone(), i))
 					} <span class="kw">else </span>{
 						<span class="prelude-val">None
@@ -498,7 +492,7 @@
 	<span class="kw">use </span>sp_application_crypto::AppPair;
 	<span class="kw">use </span>sp_core::crypto::key_types::BABE;
 	<span class="kw">use </span>sp_keyring::Sr25519Keyring;
-	<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+	<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		runtime::Block, Backend, DefaultTestClientBuilderExt, TestClient, TestClientBuilder,
 		TestClientBuilderExt,
@@ -510,11 +504,11 @@
 	<span class="doccomment">/// creates keystore backed by a temp file
 	</span><span class="kw">fn </span>create_temp_keystore&lt;P: AppPair&gt;(
 		authority: Sr25519Keyring,
-	) -&gt; (SyncCryptoStorePtr, tempfile::TempDir) {
+	) -&gt; (KeystorePtr, tempfile::TempDir) {
 		<span class="kw">let </span>keystore_path = tempfile::tempdir().expect(<span class="string">&quot;Creates keystore path&quot;</span>);
 		<span class="kw">let </span>keystore =
 			Arc::new(LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore&quot;</span>));
-		SyncCryptoStore::sr25519_generate_new(<span class="kw-2">&amp;*</span>keystore, BABE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>authority.to_seed()))
+		Keystore::sr25519_generate_new(<span class="kw-2">&amp;*</span>keystore, BABE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>authority.to_seed()))
 			.expect(<span class="string">&quot;Creates authority key&quot;</span>);
 
 		(keystore, keystore_path)

@@ -194,7 +194,7 @@
 <span class="kw">use </span>sc_keystore::LocalKeystore;
 <span class="kw">use </span>sc_service::config::{BasePath, KeystoreConfig};
 <span class="kw">use </span>sp_core::crypto::{KeyTypeId, SecretString};
-<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="doccomment">/// The `insert` command
@@ -239,7 +239,7 @@
 		<span class="kw">let </span>(keystore, public) = <span class="kw">match </span><span class="self">self</span>.keystore_params.keystore_config(<span class="kw-2">&amp;</span>config_dir)<span class="question-mark">? </span>{
 			(<span class="kw">_</span>, KeystoreConfig::Path { path, password }) =&gt; {
 				<span class="kw">let </span>public = <span class="macro">with_crypto_scheme!</span>(<span class="self">self</span>.scheme, to_vec(<span class="kw-2">&amp;</span>suri, password.clone()))<span class="question-mark">?</span>;
-				<span class="kw">let </span>keystore: SyncCryptoStorePtr = Arc::new(LocalKeystore::open(path, password)<span class="question-mark">?</span>);
+				<span class="kw">let </span>keystore: KeystorePtr = Arc::new(LocalKeystore::open(path, password)<span class="question-mark">?</span>);
 				(keystore, public)
 			},
 			<span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;keystore_config always returns path and password; qed&quot;</span>),
@@ -248,8 +248,8 @@
 		<span class="kw">let </span>key_type =
 			KeyTypeId::try_from(<span class="self">self</span>.key_type.as_str()).map_err(|<span class="kw">_</span>| Error::KeyTypeInvalid)<span class="question-mark">?</span>;
 
-		SyncCryptoStore::insert_unknown(<span class="kw-2">&amp;*</span>keystore, key_type, <span class="kw-2">&amp;</span>suri, <span class="kw-2">&amp;</span>public[..])
-			.map_err(|<span class="kw">_</span>| Error::KeyStoreOperation)<span class="question-mark">?</span>;
+		Keystore::insert(<span class="kw-2">&amp;*</span>keystore, key_type, <span class="kw-2">&amp;</span>suri, <span class="kw-2">&amp;</span>public[..])
+			.map_err(|<span class="kw">_</span>| Error::KeystoreOperation)<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(())
 	}

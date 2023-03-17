@@ -831,7 +831,6 @@
 <a href="#831" id="831">831</a>
 <a href="#832" id="832">832</a>
 <a href="#833" id="833">833</a>
-<a href="#834" id="834">834</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1085,7 +1084,7 @@
 		<span class="kw">let </span>client = client.clone();
 		<span class="kw">let </span>pool = transaction_pool.clone();
 		<span class="kw">let </span>select_chain = select_chain.clone();
-		<span class="kw">let </span>keystore = keystore_container.sync_keystore();
+		<span class="kw">let </span>keystore = keystore_container.keystore();
 		<span class="kw">let </span>chain_spec = config.chain_spec.cloned_box();
 
 		<span class="kw">let </span>rpc_backend = backend.clone();
@@ -1220,7 +1219,7 @@
 		config,
 		backend,
 		client: client.clone(),
-		keystore: keystore_container.sync_keystore(),
+		keystore: keystore_container.keystore(),
 		network: network.clone(),
 		rpc_builder: Box::new(rpc_builder),
 		transaction_pool: transaction_pool.clone(),
@@ -1265,7 +1264,7 @@
 		<span class="kw">let </span>client_clone = client.clone();
 		<span class="kw">let </span>slot_duration = babe_link.config().slot_duration();
 		<span class="kw">let </span>babe_config = sc_consensus_babe::BabeParams {
-			keystore: keystore_container.sync_keystore(),
+			keystore: keystore_container.keystore(),
 			client: client.clone(),
 			select_chain,
 			env: proposer,
@@ -1341,8 +1340,7 @@
 
 	<span class="comment">// if the node isn&#39;t actively participating in consensus then it doesn&#39;t
 	// need a keystore, regardless of which protocol we use below.
-	</span><span class="kw">let </span>keystore =
-		<span class="kw">if </span>role.is_authority() { <span class="prelude-val">Some</span>(keystore_container.sync_keystore()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+	</span><span class="kw">let </span>keystore = <span class="kw">if </span>role.is_authority() { <span class="prelude-val">Some</span>(keystore_container.keystore()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 
 	<span class="kw">let </span>config = grandpa::Config {
 		<span class="comment">// FIXME #1578 make this available through chainspec
@@ -1430,7 +1428,7 @@
 	<span class="kw">use </span>sp_core::{crypto::Pair <span class="kw">as </span>CryptoPair, Public};
 	<span class="kw">use </span>sp_inherents::InherentDataProvider;
 	<span class="kw">use </span>sp_keyring::AccountKeyring;
-	<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+	<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 	<span class="kw">use </span>sp_runtime::{
 		generic::{Digest, Era, SignedPayload},
 		key_types::BABE,
@@ -1450,10 +1448,10 @@
 		sp_tracing::try_init_simple();
 
 		<span class="kw">let </span>keystore_path = tempfile::tempdir().expect(<span class="string">&quot;Creates keystore path&quot;</span>);
-		<span class="kw">let </span>keystore: SyncCryptoStorePtr =
+		<span class="kw">let </span>keystore: KeystorePtr =
 			Arc::new(LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore&quot;</span>));
 		<span class="kw">let </span>alice: sp_consensus_babe::AuthorityId =
-			SyncCryptoStore::sr25519_generate_new(<span class="kw-2">&amp;*</span>keystore, BABE, <span class="prelude-val">Some</span>(<span class="string">&quot;//Alice&quot;</span>))
+			Keystore::sr25519_generate_new(<span class="kw-2">&amp;*</span>keystore, BABE, <span class="prelude-val">Some</span>(<span class="string">&quot;//Alice&quot;</span>))
 				.expect(<span class="string">&quot;Creates authority pair&quot;</span>)
 				.into();
 
@@ -1570,7 +1568,7 @@
 				<span class="comment">// sign the pre-sealed hash of the block and then
 				// add it to a digest item.
 				</span><span class="kw">let </span>to_sign = pre_hash.encode();
-				<span class="kw">let </span>signature = SyncCryptoStore::sign_with(
+				<span class="kw">let </span>signature = Keystore::sign_with(
 					<span class="kw-2">&amp;*</span>keystore,
 					sp_consensus_babe::AuthorityId::ID,
 					<span class="kw-2">&amp;</span>alice.to_public_crypto_pair(),

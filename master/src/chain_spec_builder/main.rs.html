@@ -324,7 +324,7 @@
 	crypto::{ByteArray, Ss58Codec},
 	sr25519,
 };
-<span class="kw">use </span>sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 
 <span class="doccomment">/// A utility to easily create a testnet chain spec definition with a given set
 /// of authorities and endowed accounts and/or generate random accounts.
@@ -456,7 +456,7 @@
 
 <span class="kw">fn </span>generate_authority_keys_and_store(seeds: <span class="kw-2">&amp;</span>[String], keystore_path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
 	<span class="kw">for </span>(n, seed) <span class="kw">in </span>seeds.iter().enumerate() {
-		<span class="kw">let </span>keystore: SyncCryptoStorePtr = Arc::new(
+		<span class="kw">let </span>keystore: KeystorePtr = Arc::new(
 			LocalKeystore::open(keystore_path.join(<span class="macro">format!</span>(<span class="string">&quot;auth-{}&quot;</span>, n)), <span class="prelude-val">None</span>)
 				.map_err(|err| err.to_string())<span class="question-mark">?</span>,
 		);
@@ -465,7 +465,7 @@
 			chain_spec::authority_keys_from_seed(seed);
 
 		<span class="kw">let </span>insert_key = |key_type, public| {
-			SyncCryptoStore::insert_unknown(<span class="kw-2">&amp;*</span>keystore, key_type, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;//{}&quot;</span>, seed), public)
+			Keystore::insert(<span class="kw-2">&amp;*</span>keystore, key_type, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;//{}&quot;</span>, seed), public)
 				.map_err(|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">&quot;Failed to insert key: {}&quot;</span>, grandpa))
 		};
 

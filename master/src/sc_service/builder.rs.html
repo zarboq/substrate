@@ -1036,19 +1036,6 @@
 <a href="#1036" id="1036">1036</a>
 <a href="#1037" id="1037">1037</a>
 <a href="#1038" id="1038">1038</a>
-<a href="#1039" id="1039">1039</a>
-<a href="#1040" id="1040">1040</a>
-<a href="#1041" id="1041">1041</a>
-<a href="#1042" id="1042">1042</a>
-<a href="#1043" id="1043">1043</a>
-<a href="#1044" id="1044">1044</a>
-<a href="#1045" id="1045">1045</a>
-<a href="#1046" id="1046">1046</a>
-<a href="#1047" id="1047">1047</a>
-<a href="#1048" id="1048">1048</a>
-<a href="#1049" id="1049">1049</a>
-<a href="#1050" id="1050">1050</a>
-<a href="#1051" id="1051">1051</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1118,7 +1105,7 @@
 	BlockAnnounceValidator, Chain, DefaultBlockAnnounceValidator,
 };
 <span class="kw">use </span>sp_core::traits::{CodeExecutor, SpawnNamed};
-<span class="kw">use </span>sp_keystore::{CryptoStore, SyncCryptoStore, SyncCryptoStorePtr};
+<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, BlockIdTo, NumberFor, Zero};
 <span class="kw">use </span>std::{str::FromStr, sync::Arc, time::SystemTime};
 
@@ -1136,26 +1123,22 @@
 <span class="kw">type </span>TFullParts&lt;TBl, TRtApi, TExec&gt; =
 	(TFullClient&lt;TBl, TRtApi, TExec&gt;, Arc&lt;TFullBackend&lt;TBl&gt;&gt;, KeystoreContainer, TaskManager);
 
-<span class="kw">trait </span>AsCryptoStoreRef {
-	<span class="kw">fn </span>keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>CryptoStore&gt;;
-	<span class="kw">fn </span>sync_keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>SyncCryptoStore&gt;;
+<span class="kw">trait </span>AsKeystoreRef {
+	<span class="kw">fn </span>keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Keystore&gt;;
 }
 
-<span class="kw">impl</span>&lt;T&gt; AsCryptoStoreRef <span class="kw">for </span>Arc&lt;T&gt;
+<span class="kw">impl</span>&lt;T&gt; AsKeystoreRef <span class="kw">for </span>Arc&lt;T&gt;
 <span class="kw">where
-	</span>T: CryptoStore + SyncCryptoStore + <span class="lifetime">&#39;static</span>,
+	</span>T: Keystore + <span class="lifetime">&#39;static</span>,
 {
-	<span class="kw">fn </span>keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>CryptoStore&gt; {
-		<span class="self">self</span>.clone()
-	}
-	<span class="kw">fn </span>sync_keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>SyncCryptoStore&gt; {
+	<span class="kw">fn </span>keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Keystore&gt; {
 		<span class="self">self</span>.clone()
 	}
 }
 
 <span class="doccomment">/// Construct and hold different layers of Keystore wrappers
 </span><span class="kw">pub struct </span>KeystoreContainer {
-	remote: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>AsCryptoStoreRef&gt;&gt;,
+	remote: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>AsKeystoreRef&gt;&gt;,
 	local: Arc&lt;LocalKeystore&gt;,
 }
 
@@ -1178,26 +1161,17 @@
 	/// stick around.
 	</span><span class="kw">pub fn </span>set_remote_keystore&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, remote: Arc&lt;T&gt;)
 	<span class="kw">where
-		</span>T: CryptoStore + SyncCryptoStore + <span class="lifetime">&#39;static</span>,
+		</span>T: Keystore + <span class="lifetime">&#39;static</span>,
 	{
 		<span class="self">self</span>.remote = <span class="prelude-val">Some</span>(Box::new(remote))
 	}
 
-	<span class="doccomment">/// Returns an adapter to the asynchronous keystore that implements `CryptoStore`
-	</span><span class="kw">pub fn </span>keystore(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>CryptoStore&gt; {
+	<span class="doccomment">/// Returns an adapter to a `Keystore` implementation.
+	</span><span class="kw">pub fn </span>keystore(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Keystore&gt; {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(c) = <span class="self">self</span>.remote.as_ref() {
 			c.keystore_ref()
 		} <span class="kw">else </span>{
 			<span class="self">self</span>.local.clone()
-		}
-	}
-
-	<span class="doccomment">/// Returns the synchronous keystore wrapper
-	</span><span class="kw">pub fn </span>sync_keystore(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SyncCryptoStorePtr {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(c) = <span class="self">self</span>.remote.as_ref() {
-			c.sync_keystore_ref()
-		} <span class="kw">else </span>{
-			<span class="self">self</span>.local.clone() <span class="kw">as </span>SyncCryptoStorePtr
 		}
 	}
 
@@ -1285,7 +1259,7 @@
 	<span class="kw">let </span>client = {
 		<span class="kw">let </span>extensions = sc_client_api::execution_extensions::ExecutionExtensions::new(
 			config.execution_strategies.clone(),
-			<span class="prelude-val">Some</span>(keystore_container.sync_keystore()),
+			<span class="prelude-val">Some</span>(keystore_container.keystore()),
 			sc_offchain::OffchainDb::factory_from_backend(<span class="kw-2">&amp;*</span>backend),
 		);
 
@@ -1425,7 +1399,7 @@
 	<span class="doccomment">/// A task manager returned by `new_full_parts`.
 	</span><span class="kw">pub </span>task_manager: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>TaskManager,
 	<span class="doccomment">/// A shared keystore returned by `new_full_parts`.
-	</span><span class="kw">pub </span>keystore: SyncCryptoStorePtr,
+	</span><span class="kw">pub </span>keystore: KeystorePtr,
 	<span class="doccomment">/// A shared transaction pool.
 	</span><span class="kw">pub </span>transaction_pool: Arc&lt;TExPool&gt;,
 	<span class="doccomment">/// Builds additional [`RpcModule`]s that should be added to the server
@@ -1696,7 +1670,7 @@
 	spawn_handle: SpawnTaskHandle,
 	client: Arc&lt;TCl&gt;,
 	transaction_pool: Arc&lt;TExPool&gt;,
-	keystore: SyncCryptoStorePtr,
+	keystore: KeystorePtr,
 	system_rpc_tx: TracingUnboundedSender&lt;sc_rpc::system::Request&lt;TBl&gt;&gt;,
 	config: <span class="kw-2">&amp;</span>Configuration,
 	backend: Arc&lt;TBackend&gt;,
