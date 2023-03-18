@@ -230,6 +230,9 @@
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -289,9 +292,12 @@
 	<span class="kw">let </span>fee = value / <span class="number">2u32</span>.into();
 	<span class="kw">let </span>deposit = T::BountyDepositBase::get() +
 		T::DataDepositPerByte::get() * T::MaximumReasonLength::get().into();
-	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, deposit);
+	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, deposit + T::Currency::minimum_balance());
 	<span class="kw">let </span>curator = account(<span class="string">&quot;curator&quot;</span>, u, SEED);
-	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>curator, fee / <span class="number">2u32</span>.into());
+	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(
+		<span class="kw-2">&amp;</span>curator,
+		fee / <span class="number">2u32</span>.into() + T::Currency::minimum_balance(),
+	);
 	<span class="kw">let </span>reason = <span class="macro">vec!</span>[<span class="number">0</span>; d <span class="kw">as </span>usize];
 	(caller, curator, fee, value, reason)
 }

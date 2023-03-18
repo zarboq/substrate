@@ -308,6 +308,12 @@
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -373,9 +379,12 @@
 	<span class="kw">let </span>fee = value / <span class="number">2u32</span>.into();
 	<span class="kw">let </span>deposit = T::BountyDepositBase::get() +
 		T::DataDepositPerByte::get() * T::MaximumReasonLength::get().into();
-	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, deposit);
+	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, deposit + T::Currency::minimum_balance());
 	<span class="kw">let </span>curator = account(<span class="string">&quot;curator&quot;</span>, user, SEED);
-	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>curator, fee / <span class="number">2u32</span>.into());
+	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(
+		<span class="kw-2">&amp;</span>curator,
+		fee / <span class="number">2u32</span>.into() + T::Currency::minimum_balance(),
+	);
 	<span class="kw">let </span>reason = <span class="macro">vec!</span>[<span class="number">0</span>; description <span class="kw">as </span>usize];
 	(caller, curator, fee, value, reason)
 }
@@ -383,7 +392,10 @@
 <span class="kw">fn </span>setup_child_bounty&lt;T: Config&gt;(user: u32, description: u32) -&gt; BenchmarkChildBounty&lt;T&gt; {
 	<span class="kw">let </span>(caller, curator, fee, value, reason) = setup_bounty::&lt;T&gt;(user, description);
 	<span class="kw">let </span>child_curator = account(<span class="string">&quot;child-curator&quot;</span>, user, SEED);
-	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>child_curator, fee / <span class="number">2u32</span>.into());
+	<span class="kw">let _ </span>= T::Currency::make_free_balance_be(
+		<span class="kw-2">&amp;</span>child_curator,
+		fee / <span class="number">2u32</span>.into() + T::Currency::minimum_balance(),
+	);
 	<span class="kw">let </span>child_bounty_value = (value - fee) / <span class="number">4u32</span>.into();
 	<span class="kw">let </span>child_bounty_fee = child_bounty_value / <span class="number">2u32</span>.into();
 

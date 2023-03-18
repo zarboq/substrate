@@ -218,6 +218,30 @@
 <a href="#218" id="218">218</a>
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -241,7 +265,9 @@
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
-<span class="kw">use </span>frame_support::traits::{nonfungible::Inspect, Currency, EnsureOrigin, Get};
+<span class="kw">use </span>frame_support::traits::{
+	fungible::Inspect <span class="kw">as </span>FunInspect, nonfungible::Inspect, EnsureOrigin, Get,
+};
 <span class="kw">use </span>frame_system::RawOrigin;
 <span class="kw">use </span>sp_arithmetic::Perquintill;
 <span class="kw">use </span>sp_runtime::{
@@ -255,7 +281,7 @@
 <span class="kw">const </span>SEED: u32 = <span class="number">0</span>;
 
 <span class="kw">type </span>BalanceOf&lt;T&gt; =
-	&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>Currency&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::Balance;
+	&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>FunInspect&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::Balance;
 
 <span class="kw">fn </span>fill_queues&lt;T: Config&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
 	<span class="comment">// filling queues involves filling the first queue entirely and placing a single item in all
@@ -265,10 +291,7 @@
 	<span class="kw">let </span>bids = T::MaxQueueLen::get();
 
 	<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-	T::Currency::make_free_balance_be(
-		<span class="kw-2">&amp;</span>caller,
-		T::MinBid::get() * BalanceOf::&lt;T&gt;::from(queues + bids),
-	);
+	T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, T::MinBid::get() * BalanceOf::&lt;T&gt;::from(queues + bids));
 
 	<span class="kw">for _ in </span><span class="number">0</span>..bids {
 		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
@@ -283,7 +306,9 @@
 	place_bid {
 		<span class="kw">let </span>l <span class="kw">in </span><span class="number">0</span>..(T::MaxQueueLen::get() - <span class="number">1</span>);
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, BalanceOf::&lt;T&gt;::max_value());
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		<span class="kw">let </span>bid = T::MinBid::get();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, (ed + bid) * BalanceOf::&lt;T&gt;::from(l + <span class="number">1</span>) + bid);
 		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..l {
 			Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
 		}
@@ -295,7 +320,10 @@
 	place_bid_max {
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
 		<span class="kw">let </span>origin = RawOrigin::Signed(caller.clone());
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, BalanceOf::&lt;T&gt;::max_value());
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		<span class="kw">let </span>bid = T::MinBid::get();
+		<span class="kw">let </span>ql = T::MaxQueueLen::get();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, (ed + bid) * BalanceOf::&lt;T&gt;::from(ql + <span class="number">1</span>) + bid);
 		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T::MaxQueueLen::get() {
 			Nis::&lt;T&gt;::place_bid(origin.clone().into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
 		}
@@ -310,7 +338,9 @@
 	retract_bid {
 		<span class="kw">let </span>l <span class="kw">in </span><span class="number">1</span>..T::MaxQueueLen::get();
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, BalanceOf::&lt;T&gt;::max_value());
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		<span class="kw">let </span>bid = T::MinBid::get();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, (ed + bid) * BalanceOf::&lt;T&gt;::from(l + <span class="number">1</span>) + bid);
 		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..l {
 			Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
 		}
@@ -324,50 +354,41 @@
 			T::FundOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
 		<span class="kw">let </span>bid = T::MinBid::get().max(One::one());
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, bid);
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, ed + bid);
 		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
 		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
 		Nis::&lt;T&gt;::communify(RawOrigin::Signed(caller.clone()).into(), <span class="number">0</span>)<span class="question-mark">?</span>;
-		<span class="kw">let </span>original = T::Currency::free_balance(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id());
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id(), BalanceOf::&lt;T&gt;::min_value());
+		<span class="kw">let </span>original = T::Currency::balance(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id());
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id(), BalanceOf::&lt;T&gt;::min_value());
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin)
 	verify {
 		<span class="comment">// Must fund at least 99.999% of the required amount.
 		</span><span class="kw">let </span>missing = Perquintill::from_rational(
-			T::Currency::free_balance(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id()), original).left_from_one();
+			T::Currency::balance(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id()), original).left_from_one();
 		<span class="macro">assert!</span>(missing &lt;= Perquintill::one() / <span class="number">100_000</span>);
 	}
 
-	thaw_private {
+	communify {
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::MinBid::get() * BalanceOf::&lt;T&gt;::from(<span class="number">3u32</span>));
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
+		<span class="kw">let </span>bid = T::MinBid::get().max(One::one()) * <span class="number">100u32</span>.into();
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, ed + bid + bid);
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
 		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
-		Receipts::&lt;T&gt;::mutate(<span class="number">0</span>, |m_g| <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>g) = m_g { g.expiry = Zero::zero() });
-	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), <span class="number">0</span>, <span class="prelude-val">None</span>)
-	verify {
-		<span class="macro">assert!</span>(Receipts::&lt;T&gt;::get(<span class="number">0</span>).is_none());
-	}
-
-	thaw_communal {
-		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::MinBid::get() * BalanceOf::&lt;T&gt;::from(<span class="number">3u32</span>));
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
-		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
-		Receipts::&lt;T&gt;::mutate(<span class="number">0</span>, |m_g| <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>g) = m_g { g.expiry = Zero::zero() });
-		Nis::&lt;T&gt;::communify(RawOrigin::Signed(caller.clone()).into(), <span class="number">0</span>)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), <span class="number">0</span>)
 	verify {
-		<span class="macro">assert!</span>(Receipts::&lt;T&gt;::get(<span class="number">0</span>).is_none());
+		<span class="macro">assert_eq!</span>(Nis::&lt;T&gt;::owner(<span class="kw-2">&amp;</span><span class="number">0</span>), <span class="prelude-val">None</span>);
 	}
 
 	privatize {
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::MinBid::get() * BalanceOf::&lt;T&gt;::from(<span class="number">3u32</span>));
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
+		<span class="kw">let </span>bid = T::MinBid::get().max(One::one());
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, ed + bid + bid);
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
 		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
 		Nis::&lt;T&gt;::communify(RawOrigin::Signed(caller.clone()).into(), <span class="number">0</span>)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), <span class="number">0</span>)
@@ -375,15 +396,39 @@
 		<span class="macro">assert_eq!</span>(Nis::&lt;T&gt;::owner(<span class="kw-2">&amp;</span><span class="number">0</span>), <span class="prelude-val">Some</span>(caller));
 	}
 
-	communify {
+	thaw_private {
+		<span class="kw">let </span>whale: T::AccountId = account(<span class="string">&quot;whale&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, T::MinBid::get() * BalanceOf::&lt;T&gt;::from(<span class="number">3u32</span>));
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
-		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), T::MinBid::get(), <span class="number">1</span>)<span class="question-mark">?</span>;
+		<span class="kw">let </span>bid = T::MinBid::get().max(One::one());
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, ed + bid + bid);
+		<span class="comment">// Ensure we don&#39;t get throttled.
+		</span>T::Currency::set_balance(<span class="kw-2">&amp;</span>whale, T::ThawThrottle::get().<span class="number">0</span>.saturating_reciprocal_mul_ceil(T::Currency::balance(<span class="kw-2">&amp;</span>caller)));
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
 		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
+		frame_system::Pallet::&lt;T&gt;::set_block_number(Receipts::&lt;T&gt;::get(<span class="number">0</span>).unwrap().expiry);
+	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), <span class="number">0</span>, <span class="prelude-val">None</span>)
+	verify {
+		<span class="macro">assert!</span>(Receipts::&lt;T&gt;::get(<span class="number">0</span>).is_none());
+	}
+
+	thaw_communal {
+		<span class="kw">let </span>whale: T::AccountId = account(<span class="string">&quot;whale&quot;</span>, <span class="number">0</span>, SEED);
+		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
+		<span class="kw">let </span>bid = T::MinBid::get().max(One::one());
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, ed + bid + bid);
+		<span class="comment">// Ensure we don&#39;t get throttled.
+		</span>T::Currency::set_balance(<span class="kw-2">&amp;</span>whale, T::ThawThrottle::get().<span class="number">0</span>.saturating_reciprocal_mul_ceil(T::Currency::balance(<span class="kw-2">&amp;</span>caller)));
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
+		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
+		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
+		frame_system::Pallet::&lt;T&gt;::set_block_number(Receipts::&lt;T&gt;::get(<span class="number">0</span>).unwrap().expiry);
+		Nis::&lt;T&gt;::communify(RawOrigin::Signed(caller.clone()).into(), <span class="number">0</span>)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), <span class="number">0</span>)
 	verify {
-		<span class="macro">assert_eq!</span>(Nis::&lt;T&gt;::owner(<span class="kw-2">&amp;</span><span class="number">0</span>), <span class="prelude-val">None</span>);
+		<span class="macro">assert!</span>(Receipts::&lt;T&gt;::get(<span class="number">0</span>).is_none());
 	}
 
 	process_queues {
@@ -417,6 +462,9 @@
 
 	process_bid {
 		<span class="kw">let </span>who = account::&lt;T::AccountId&gt;(<span class="string">&quot;bidder&quot;</span>, <span class="number">0</span>, SEED);
+		<span class="kw">let </span>min_bid = T::MinBid::get().max(One::one());
+		<span class="kw">let </span>ed = T::Currency::minimum_balance();
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>who, ed + min_bid);
 		<span class="kw">let </span>bid = Bid {
 			amount: T::MinBid::get(),
 			who,
@@ -436,7 +484,7 @@
 		)
 	}
 
-	<span class="macro">impl_benchmark_test_suite!</span>(Nis, <span class="kw">crate</span>::mock::new_test_ext(), <span class="kw">crate</span>::mock::Test);
+	<span class="macro">impl_benchmark_test_suite!</span>(Nis, <span class="kw">crate</span>::mock::new_test_ext_empty(), <span class="kw">crate</span>::mock::Test);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="pallet_nis" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

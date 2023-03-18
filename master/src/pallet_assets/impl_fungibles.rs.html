@@ -264,42 +264,6 @@
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
 <a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -319,7 +283,17 @@
 
 </span><span class="doccomment">//! Implementations for fungibles trait.
 
-</span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+</span><span class="kw">use </span>frame_support::{
+	defensive,
+	traits::tokens::{
+		Fortitude,
+		Precision::{<span class="self">self</span>, BestEffort},
+		Preservation::{<span class="self">self</span>, Expendable},
+		Provenance::{<span class="self">self</span>, Minted},
+	},
+};
+
+<span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::Inspect&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
 	<span class="kw">type </span>AssetId = T::AssetId;
@@ -337,21 +311,27 @@
 		Pallet::&lt;T, I&gt;::balance(asset, who)
 	}
 
+	<span class="kw">fn </span>total_balance(asset: <span class="self">Self</span>::AssetId, who: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId) -&gt; <span class="self">Self</span>::Balance {
+		Pallet::&lt;T, I&gt;::balance(asset, who)
+	}
+
 	<span class="kw">fn </span>reducible_balance(
 		asset: <span class="self">Self</span>::AssetId,
 		who: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId,
-		keep_alive: bool,
+		preservation: Preservation,
+		<span class="kw">_</span>: Fortitude,
 	) -&gt; <span class="self">Self</span>::Balance {
-		Pallet::&lt;T, I&gt;::reducible_balance(asset, who, keep_alive).unwrap_or(Zero::zero())
+		Pallet::&lt;T, I&gt;::reducible_balance(asset, who, !<span class="macro">matches!</span>(preservation, Expendable))
+			.unwrap_or(Zero::zero())
 	}
 
 	<span class="kw">fn </span>can_deposit(
 		asset: <span class="self">Self</span>::AssetId,
 		who: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId,
 		amount: <span class="self">Self</span>::Balance,
-		mint: bool,
+		provenance: Provenance,
 	) -&gt; DepositConsequence {
-		Pallet::&lt;T, I&gt;::can_increase(asset, who, amount, mint)
+		Pallet::&lt;T, I&gt;::can_increase(asset, who, amount, provenance == Minted)
 	}
 
 	<span class="kw">fn </span>can_withdraw(
@@ -367,69 +347,26 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::InspectMetadata&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt;
+<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::Mutate&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {}
+<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::Balanced&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt;
 	<span class="kw">for </span>Pallet&lt;T, I&gt;
 {
-	<span class="doccomment">/// Return the name of an asset.
-	</span><span class="kw">fn </span>name(asset: <span class="kw-2">&amp;</span><span class="self">Self</span>::AssetId) -&gt; Vec&lt;u8&gt; {
-		Metadata::&lt;T, I&gt;::get(asset).name.to_vec()
-	}
-
-	<span class="doccomment">/// Return the symbol of an asset.
-	</span><span class="kw">fn </span>symbol(asset: <span class="kw-2">&amp;</span><span class="self">Self</span>::AssetId) -&gt; Vec&lt;u8&gt; {
-		Metadata::&lt;T, I&gt;::get(asset).symbol.to_vec()
-	}
-
-	<span class="doccomment">/// Return the decimals of an asset.
-	</span><span class="kw">fn </span>decimals(asset: <span class="kw-2">&amp;</span><span class="self">Self</span>::AssetId) -&gt; u8 {
-		Metadata::&lt;T, I&gt;::get(asset).decimals
-	}
-}
-
-<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::Mutate&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
-	<span class="kw">fn </span>mint_into(
-		asset: <span class="self">Self</span>::AssetId,
-		who: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId,
-		amount: <span class="self">Self</span>::Balance,
-	) -&gt; DispatchResult {
-		<span class="self">Self</span>::do_mint(asset, who, amount, <span class="prelude-val">None</span>)
-	}
-
-	<span class="kw">fn </span>burn_from(
-		asset: <span class="self">Self</span>::AssetId,
-		who: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId,
-		amount: <span class="self">Self</span>::Balance,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>f = DebitFlags { keep_alive: <span class="bool-val">false</span>, best_effort: <span class="bool-val">false </span>};
-		<span class="self">Self</span>::do_burn(asset, who, amount, <span class="prelude-val">None</span>, f)
-	}
-
-	<span class="kw">fn </span>slash(
-		asset: <span class="self">Self</span>::AssetId,
-		who: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId,
-		amount: <span class="self">Self</span>::Balance,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>f = DebitFlags { keep_alive: <span class="bool-val">false</span>, best_effort: <span class="bool-val">true </span>};
-		<span class="self">Self</span>::do_burn(asset, who, amount, <span class="prelude-val">None</span>, f)
-	}
-}
-
-<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::Transfer&lt;T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
-	<span class="kw">fn </span>transfer(
-		asset: <span class="self">Self</span>::AssetId,
-		source: <span class="kw-2">&amp;</span>T::AccountId,
-		dest: <span class="kw-2">&amp;</span>T::AccountId,
-		amount: T::Balance,
-		keep_alive: bool,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;T::Balance, DispatchError&gt; {
-		<span class="kw">let </span>f = TransferFlags { keep_alive, best_effort: <span class="bool-val">false</span>, burn_dust: <span class="bool-val">false </span>};
-		<span class="self">Self</span>::do_transfer(asset, source, dest, amount, <span class="prelude-val">None</span>, f)
-	}
+	<span class="kw">type </span>OnDropCredit = fungibles::DecreaseIssuance&lt;T::AccountId, <span class="self">Self</span>&gt;;
+	<span class="kw">type </span>OnDropDebt = fungibles::IncreaseIssuance&lt;T::AccountId, <span class="self">Self</span>&gt;;
 }
 
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::Unbalanced&lt;T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
-	<span class="kw">fn </span>set_balance(<span class="kw">_</span>: <span class="self">Self</span>::AssetId, <span class="kw">_</span>: <span class="kw-2">&amp;</span>T::AccountId, <span class="kw">_</span>: <span class="self">Self</span>::Balance) -&gt; DispatchResult {
-		<span class="macro">unreachable!</span>(<span class="string">&quot;set_balance is not used if other functions are impl&#39;d&quot;</span>);
+	<span class="kw">fn </span>handle_raw_dust(<span class="kw">_</span>: <span class="self">Self</span>::AssetId, <span class="kw">_</span>: <span class="self">Self</span>::Balance) {}
+	<span class="kw">fn </span>handle_dust(<span class="kw">_</span>: fungibles::Dust&lt;T::AccountId, <span class="self">Self</span>&gt;) {
+		<span class="macro">defensive!</span>(<span class="string">&quot;`decrease_balance` and `increase_balance` have non-default impls; nothing else calls this; qed&quot;</span>);
+	}
+	<span class="kw">fn </span>write_balance(
+		<span class="kw">_</span>: <span class="self">Self</span>::AssetId,
+		<span class="kw">_</span>: <span class="kw-2">&amp;</span>T::AccountId,
+		<span class="kw">_</span>: <span class="self">Self</span>::Balance,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Balance&gt;, DispatchError&gt; {
+		<span class="macro">defensive!</span>(<span class="string">&quot;write_balance is not used if other functions are impl&#39;d&quot;</span>);
+		<span class="prelude-val">Err</span>(DispatchError::Unavailable)
 	}
 	<span class="kw">fn </span>set_total_issuance(id: T::AssetId, amount: <span class="self">Self</span>::Balance) {
 		Asset::&lt;T, I&gt;::mutate_exists(id, |maybe_asset| {
@@ -442,37 +379,28 @@
 		asset: T::AssetId,
 		who: <span class="kw-2">&amp;</span>T::AccountId,
 		amount: <span class="self">Self</span>::Balance,
+		precision: Precision,
+		preservation: Preservation,
+		<span class="kw">_</span>: Fortitude,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>f = DebitFlags { keep_alive: <span class="bool-val">false</span>, best_effort: <span class="bool-val">false </span>};
+		<span class="kw">let </span>f = DebitFlags {
+			keep_alive: preservation != Expendable,
+			best_effort: precision == BestEffort,
+		};
 		<span class="self">Self</span>::decrease_balance(asset, who, amount, f, |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))
-	}
-	<span class="kw">fn </span>decrease_balance_at_most(
-		asset: T::AssetId,
-		who: <span class="kw-2">&amp;</span>T::AccountId,
-		amount: <span class="self">Self</span>::Balance,
-	) -&gt; <span class="self">Self</span>::Balance {
-		<span class="kw">let </span>f = DebitFlags { keep_alive: <span class="bool-val">false</span>, best_effort: <span class="bool-val">true </span>};
-		<span class="self">Self</span>::decrease_balance(asset, who, amount, f, |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(())).unwrap_or(Zero::zero())
 	}
 	<span class="kw">fn </span>increase_balance(
 		asset: T::AssetId,
 		who: <span class="kw-2">&amp;</span>T::AccountId,
 		amount: <span class="self">Self</span>::Balance,
+		<span class="kw">_</span>: Precision,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
 		<span class="self">Self</span>::increase_balance(asset, who, amount, |<span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(amount)
 	}
-	<span class="kw">fn </span>increase_balance_at_most(
-		asset: T::AssetId,
-		who: <span class="kw-2">&amp;</span>T::AccountId,
-		amount: <span class="self">Self</span>::Balance,
-	) -&gt; <span class="self">Self</span>::Balance {
-		<span class="kw">match </span><span class="self">Self</span>::increase_balance(asset, who, amount, |<span class="kw">_</span>| <span class="prelude-val">Ok</span>(())) {
-			<span class="prelude-val">Ok</span>(()) =&gt; amount,
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; Zero::zero(),
-		}
-	}
-}
+
+	<span class="comment">// TODO: #13196 implement deactivate/reactivate once we have inactive balance tracking.
+</span>}
 
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; fungibles::Create&lt;T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
 	<span class="kw">fn </span>create(

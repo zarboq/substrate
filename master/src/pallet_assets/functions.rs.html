@@ -932,6 +932,13 @@
 <a href="#932" id="932">932</a>
 <a href="#933" id="933">933</a>
 <a href="#934" id="934">934</a>
+<a href="#935" id="935">935</a>
+<a href="#936" id="936">936</a>
+<a href="#937" id="937">937</a>
+<a href="#938" id="938">938</a>
+<a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
+<a href="#941" id="941">941</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1010,7 +1017,14 @@
 			d.sufficients += <span class="number">1</span>;
 			ExistenceReason::Sufficient
 		} <span class="kw">else </span>{
-			frame_system::Pallet::&lt;T&gt;::inc_consumers(who).map_err(|<span class="kw">_</span>| Error::&lt;T, I&gt;::NoProvider)<span class="question-mark">?</span>;
+			frame_system::Pallet::&lt;T&gt;::inc_consumers(who)
+				.map_err(|<span class="kw">_</span>| Error::&lt;T, I&gt;::UnavailableConsumer)<span class="question-mark">?</span>;
+			<span class="comment">// We ensure that we can still increment consumers once more because we could otherwise
+			// allow accidental usage of all consumer references which could cause grief.
+			</span><span class="kw">if </span>!frame_system::Pallet::&lt;T&gt;::can_inc_consumer(who) {
+				frame_system::Pallet::&lt;T&gt;::dec_consumers(who);
+				<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T, I&gt;::UnavailableConsumer.into())
+			}
 			ExistenceReason::Consumer
 		};
 		d.accounts = accounts;
@@ -1099,7 +1113,7 @@
 		}
 		<span class="kw">let </span>account = <span class="kw">match </span>Account::&lt;T, I&gt;::get(id, who) {
 			<span class="prelude-val">Some</span>(a) =&gt; a,
-			<span class="prelude-val">None </span>=&gt; <span class="kw">return </span>NoFunds,
+			<span class="prelude-val">None </span>=&gt; <span class="kw">return </span>BalanceLow,
 		};
 		<span class="kw">if </span>account.is_frozen {
 			<span class="kw">return </span>Frozen
@@ -1127,7 +1141,7 @@
 				Success
 			}
 		} <span class="kw">else </span>{
-			NoFunds
+			BalanceLow
 		}
 	}
 
@@ -1188,7 +1202,7 @@
 		<span class="macro">ensure!</span>(f.best_effort || actual &gt;= amount, Error::&lt;T, I&gt;::BalanceLow);
 
 		<span class="kw">let </span>conseq = <span class="self">Self</span>::can_decrease(id, target, actual, f.keep_alive);
-		<span class="kw">let </span>actual = <span class="kw">match </span>conseq.into_result() {
+		<span class="kw">let </span>actual = <span class="kw">match </span>conseq.into_result(f.keep_alive) {
 			<span class="prelude-val">Ok</span>(dust) =&gt; actual.saturating_add(dust), <span class="comment">//&lt; guaranteed by reducible_balance
 			</span><span class="prelude-val">Err</span>(e) =&gt; {
 				<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;passed from reducible_balance; qed&quot;</span>);

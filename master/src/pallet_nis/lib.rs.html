@@ -1151,6 +1151,8 @@
 <a href="#1151" id="1151">1151</a>
 <a href="#1152" id="1152">1152</a>
 <a href="#1153" id="1153">1153</a>
+<a href="#1154" id="1154">1154</a>
+<a href="#1155" id="1155">1155</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1224,21 +1226,21 @@
 //!
 //! ## Terms
 //!
-//! - *Effective total issuance*: The total issuance of balances in the system, including all claims
-//!   of all outstanding receipts but excluding `IgnoredIssuance`.
+//! - *Effective total issuance*: The total issuance of balances in the system, equal to the active
+//!   issuance plus the value of all outstanding receipts, less `IgnoredIssuance`.
 
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 
-</span><span class="kw">use </span>frame_support::{
-	dispatch::{DispatchError, DispatchResult},
-	traits::fungible::{Inspect <span class="kw">as </span>FungibleInspect, Mutate <span class="kw">as </span>FungibleMutate},
+</span><span class="kw">use </span>frame_support::traits::{
+	fungible::{<span class="self">self</span>, Inspect <span class="kw">as </span>FunInspect, Mutate <span class="kw">as </span>FunMutate},
+	tokens::{DepositConsequence, Fortitude, Preservation, Provenance, WithdrawConsequence},
 };
 <span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
 <span class="kw">use </span>sp_arithmetic::{traits::Unsigned, RationalArg};
 <span class="kw">use </span>sp_core::TypedGet;
 <span class="kw">use </span>sp_runtime::{
 	traits::{Convert, ConvertBack},
-	Perquintill,
+	DispatchError, Perquintill,
 };
 
 <span class="kw">mod </span>benchmarking;
@@ -1270,7 +1272,7 @@
 }
 
 <span class="kw">pub struct </span>NoCounterpart&lt;T&gt;(sp_std::marker::PhantomData&lt;T&gt;);
-<span class="kw">impl</span>&lt;T&gt; FungibleInspect&lt;T&gt; <span class="kw">for </span>NoCounterpart&lt;T&gt; {
+<span class="kw">impl</span>&lt;T&gt; FunInspect&lt;T&gt; <span class="kw">for </span>NoCounterpart&lt;T&gt; {
 	<span class="kw">type </span>Balance = u32;
 	<span class="kw">fn </span>total_issuance() -&gt; u32 {
 		<span class="number">0
@@ -1278,34 +1280,30 @@
 	<span class="kw">fn </span>minimum_balance() -&gt; u32 {
 		<span class="number">0
 	</span>}
-	<span class="kw">fn </span>balance(_who: <span class="kw-2">&amp;</span>T) -&gt; u32 {
+	<span class="kw">fn </span>balance(<span class="kw">_</span>: <span class="kw-2">&amp;</span>T) -&gt; u32 {
 		<span class="number">0
 	</span>}
-	<span class="kw">fn </span>reducible_balance(_who: <span class="kw-2">&amp;</span>T, _keep_alive: bool) -&gt; u32 {
+	<span class="kw">fn </span>total_balance(<span class="kw">_</span>: <span class="kw-2">&amp;</span>T) -&gt; u32 {
 		<span class="number">0
 	</span>}
-	<span class="kw">fn </span>can_deposit(
-		_who: <span class="kw-2">&amp;</span>T,
-		_amount: u32,
-		_mint: bool,
-	) -&gt; frame_support::traits::tokens::DepositConsequence {
-		frame_support::traits::tokens::DepositConsequence::Success
+	<span class="kw">fn </span>reducible_balance(<span class="kw">_</span>: <span class="kw-2">&amp;</span>T, <span class="kw">_</span>: Preservation, <span class="kw">_</span>: Fortitude) -&gt; u32 {
+		<span class="number">0
+	</span>}
+	<span class="kw">fn </span>can_deposit(<span class="kw">_</span>: <span class="kw-2">&amp;</span>T, <span class="kw">_</span>: u32, <span class="kw">_</span>: Provenance) -&gt; DepositConsequence {
+		DepositConsequence::Success
 	}
-	<span class="kw">fn </span>can_withdraw(
-		_who: <span class="kw-2">&amp;</span>T,
-		_amount: u32,
-	) -&gt; frame_support::traits::tokens::WithdrawConsequence&lt;u32&gt; {
-		frame_support::traits::tokens::WithdrawConsequence::Success
+	<span class="kw">fn </span>can_withdraw(<span class="kw">_</span>: <span class="kw-2">&amp;</span>T, <span class="kw">_</span>: u32) -&gt; WithdrawConsequence&lt;u32&gt; {
+		WithdrawConsequence::Success
 	}
 }
-<span class="kw">impl</span>&lt;T&gt; FungibleMutate&lt;T&gt; <span class="kw">for </span>NoCounterpart&lt;T&gt; {
-	<span class="kw">fn </span>mint_into(_who: <span class="kw-2">&amp;</span>T, _amount: u32) -&gt; DispatchResult {
-		<span class="prelude-val">Ok</span>(())
+<span class="kw">impl</span>&lt;T&gt; fungible::Unbalanced&lt;T&gt; <span class="kw">for </span>NoCounterpart&lt;T&gt; {
+	<span class="kw">fn </span>handle_dust(<span class="kw">_</span>: fungible::Dust&lt;T, <span class="self">Self</span>&gt;) {}
+	<span class="kw">fn </span>write_balance(<span class="kw">_</span>: <span class="kw-2">&amp;</span>T, <span class="kw">_</span>: <span class="self">Self</span>::Balance) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Balance&gt;, DispatchError&gt; {
+		<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 	}
-	<span class="kw">fn </span>burn_from(_who: <span class="kw-2">&amp;</span>T, _amount: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u32, DispatchError&gt; {
-		<span class="prelude-val">Ok</span>(<span class="number">0</span>)
-	}
+	<span class="kw">fn </span>set_total_issuance(<span class="kw">_</span>: <span class="self">Self</span>::Balance) {}
 }
+<span class="kw">impl</span>&lt;T&gt; FunMutate&lt;T&gt; <span class="kw">for </span>NoCounterpart&lt;T&gt; {}
 <span class="kw">impl</span>&lt;T&gt; Convert&lt;Perquintill, u32&gt; <span class="kw">for </span>NoCounterpart&lt;T&gt; {
 	<span class="kw">fn </span>convert(<span class="kw">_</span>: Perquintill) -&gt; u32 {
 		<span class="number">0
@@ -1314,15 +1312,24 @@
 
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
-	<span class="kw">use super</span>::{FungibleInspect, FungibleMutate};
+	<span class="kw">use super</span>::{FunInspect, FunMutate};
 	<span class="kw">pub use </span><span class="kw">crate</span>::weights::WeightInfo;
 	<span class="kw">use </span>frame_support::{
 		pallet_prelude::<span class="kw-2">*</span>,
 		traits::{
-			nonfungible::{Inspect <span class="kw">as </span>NonfungibleInspect, Transfer <span class="kw">as </span>NonfungibleTransfer},
-			Currency, Defensive, DefensiveSaturating,
-			ExistenceRequirement::AllowDeath,
-			NamedReservableCurrency, OnUnbalanced,
+			fungible::{
+				<span class="self">self</span>,
+				hold::{Inspect <span class="kw">as </span>FunHoldInspect, Mutate <span class="kw">as </span>FunHoldMutate},
+				Balanced <span class="kw">as </span>FunBalanced,
+			},
+			nonfungible::{Inspect <span class="kw">as </span>NftInspect, Transfer <span class="kw">as </span>NftTransfer},
+			tokens::{
+				Fortitude::Polite,
+				Precision::{BestEffort, Exact},
+				Preservation::Expendable,
+				Restriction::{Free, OnHold},
+			},
+			Defensive, DefensiveSaturating, OnUnbalanced,
 		},
 		PalletId,
 	};
@@ -1330,15 +1337,14 @@
 	<span class="kw">use </span>sp_arithmetic::{PerThing, Perquintill};
 	<span class="kw">use </span>sp_runtime::{
 		traits::{AccountIdConversion, Bounded, Convert, ConvertBack, Saturating, Zero},
-		TokenError,
+		Rounding, TokenError,
 	};
 	<span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 	<span class="kw">type </span>BalanceOf&lt;T&gt; =
-		&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>Currency&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::Balance;
-	<span class="kw">type </span>PositiveImbalanceOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>Currency&lt;
-		&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId,
-	&gt;&gt;::PositiveImbalance;
+		&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>FunInspect&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::Balance;
+	<span class="kw">type </span>DebtOf&lt;T&gt; =
+		fungible::Debt&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId, &lt;T <span class="kw">as </span>Config&gt;::Currency&gt;;
 	<span class="kw">type </span>ReceiptRecordOf&lt;T&gt; = ReceiptRecord&lt;
 		&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId,
 		&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber,
@@ -1362,7 +1368,16 @@
 		</span><span class="kw">type </span>PalletId: Get&lt;PalletId&gt;;
 
 		<span class="doccomment">/// Currency type that this works on.
-		</span><span class="kw">type </span>Currency: NamedReservableCurrency&lt;<span class="self">Self</span>::AccountId, Balance = <span class="self">Self</span>::CurrencyBalance&gt;;
+		</span><span class="kw">type </span>Currency: FunInspect&lt;<span class="self">Self</span>::AccountId, Balance = <span class="self">Self</span>::CurrencyBalance&gt;
+			+ FunMutate&lt;<span class="self">Self</span>::AccountId&gt;
+			+ FunBalanced&lt;<span class="self">Self</span>::AccountId&gt;
+			+ FunHoldInspect&lt;<span class="self">Self</span>::AccountId&gt;
+			+ FunHoldMutate&lt;<span class="self">Self</span>::AccountId&gt;;
+
+		<span class="doccomment">/// The identifier of the hold reason.
+
+		</span><span class="attr">#[pallet::constant]
+		</span><span class="kw">type </span>HoldReason: Get&lt;&lt;<span class="self">Self</span>::Currency <span class="kw">as </span>FunHoldInspect&lt;<span class="self">Self</span>::AccountId&gt;&gt;::Reason&gt;;
 
 		<span class="doccomment">/// Just the `Currency::Balance` type; we have this item to allow us to constrain it to
 		/// `From&lt;u64&gt;`.
@@ -1384,7 +1399,7 @@
 		</span><span class="kw">type </span>IgnoredIssuance: Get&lt;BalanceOf&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The accounting system for the fungible counterpart tokens.
-		</span><span class="kw">type </span>Counterpart: FungibleMutate&lt;<span class="self">Self</span>::AccountId&gt;;
+		</span><span class="kw">type </span>Counterpart: FunMutate&lt;<span class="self">Self</span>::AccountId&gt;;
 
 		<span class="doccomment">/// The system to convert an overall proportion of issuance into a number of fungible
 		/// counterpart tokens.
@@ -1392,12 +1407,12 @@
 		/// In general it&#39;s best to use `WithMaximumOf`.
 		</span><span class="kw">type </span>CounterpartAmount: ConvertBack&lt;
 			Perquintill,
-			&lt;<span class="self">Self</span>::Counterpart <span class="kw">as </span>FungibleInspect&lt;<span class="self">Self</span>::AccountId&gt;&gt;::Balance,
+			&lt;<span class="self">Self</span>::Counterpart <span class="kw">as </span>FunInspect&lt;<span class="self">Self</span>::AccountId&gt;&gt;::Balance,
 		&gt;;
 
 		<span class="doccomment">/// Unbalanced handler to account for funds created (in case of a higher total issuance over
 		/// freezing period).
-		</span><span class="kw">type </span>Deficit: OnUnbalanced&lt;PositiveImbalanceOf&lt;<span class="self">Self</span>&gt;&gt;;
+		</span><span class="kw">type </span>Deficit: OnUnbalanced&lt;DebtOf&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The target sum of all receipts&#39; proportions.
 		</span><span class="kw">type </span>Target: Get&lt;Perquintill&gt;;
@@ -1454,12 +1469,6 @@
 		<span class="doccomment">/// The maximum proportion which may be thawed and the period over which it is reset.
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>ThawThrottle: Get&lt;(Perquintill, <span class="self">Self</span>::BlockNumber)&gt;;
-
-		<span class="doccomment">/// The name for the reserve ID.
-		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>ReserveId: Get&lt;
-			&lt;<span class="self">Self</span>::Currency <span class="kw">as </span>NamedReservableCurrency&lt;<span class="self">Self</span>::AccountId&gt;&gt;::ReserveIdentifier,
-		&gt;;
 	}
 
 	<span class="attr">#[pallet::pallet]
@@ -1501,7 +1510,7 @@
 	///
 	/// `issuance - frozen + proportion * issuance`
 	///
-	/// where `issuance = total_issuance - IgnoredIssuance`
+	/// where `issuance = active_issuance - IgnoredIssuance`
 	</span><span class="attr">#[derive(
 		Clone, Eq, PartialEq, Default, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen,
 	)]
@@ -1626,6 +1635,9 @@
 		</span>AlreadyCommunal,
 		<span class="doccomment">/// The receipt is already private.
 		</span>AlreadyPrivate,
+		Release1,
+		Release2,
+		Tah,
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>WeightCounter {
@@ -1707,16 +1719,17 @@
 				|q| -&gt; <span class="prelude-ty">Result</span>&lt;(u32, BalanceOf&lt;T&gt;), DispatchError&gt; {
 					<span class="kw">let </span>queue_full = q.len() == T::MaxQueueLen::get() <span class="kw">as </span>usize;
 					<span class="macro">ensure!</span>(!queue_full || q[<span class="number">0</span>].amount &lt; amount, Error::&lt;T&gt;::BidTooLow);
-					T::Currency::reserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>who, amount)<span class="question-mark">?</span>;
+					T::Currency::hold(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>who, amount)<span class="question-mark">?</span>;
 
 					<span class="comment">// queue is &lt;Ordered: Lowest ... Highest&gt;&lt;Fifo: Last ... First&gt;
 					</span><span class="kw">let </span><span class="kw-2">mut </span>bid = Bid { amount, who: who.clone() };
 					<span class="kw">let </span>net = <span class="kw">if </span>queue_full {
 						sp_std::mem::swap(<span class="kw-2">&amp;mut </span>q[<span class="number">0</span>], <span class="kw-2">&amp;mut </span>bid);
-						<span class="kw">let _ </span>= T::Currency::unreserve_named(
-							<span class="kw-2">&amp;</span>T::ReserveId::get(),
+						<span class="kw">let _ </span>= T::Currency::release(
+							<span class="kw-2">&amp;</span>T::HoldReason::get(),
 							<span class="kw-2">&amp;</span>bid.who,
 							bid.amount,
+							BestEffort,
 						);
 						<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::BidDropped {
 							who: bid.who,
@@ -1768,19 +1781,21 @@
 			<span class="macro">ensure!</span>(queue_index &lt; queue_count, Error::&lt;T&gt;::DurationTooBig);
 
 			<span class="kw">let </span>bid = Bid { amount, who };
-			<span class="kw">let </span>new_len = Queues::&lt;T&gt;::try_mutate(duration, |q| -&gt; <span class="prelude-ty">Result</span>&lt;u32, DispatchError&gt; {
-				<span class="kw">let </span>pos = q.iter().position(|i| i == <span class="kw-2">&amp;</span>bid).ok_or(Error::&lt;T&gt;::UnknownBid)<span class="question-mark">?</span>;
-				q.remove(pos);
-				<span class="prelude-val">Ok</span>(q.len() <span class="kw">as </span>u32)
-			})<span class="question-mark">?</span>;
 
+			<span class="kw">let </span><span class="kw-2">mut </span>queue = Queues::&lt;T&gt;::get(duration);
+			<span class="kw">let </span>pos = queue.iter().position(|i| i == <span class="kw-2">&amp;</span>bid).ok_or(Error::&lt;T&gt;::UnknownBid)<span class="question-mark">?</span>;
+			queue.remove(pos);
+			<span class="kw">let </span>new_len = queue.len() <span class="kw">as </span>u32;
+
+			T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>bid.who, bid.amount, BestEffort)<span class="question-mark">?</span>;
+
+			Queues::&lt;T&gt;::insert(duration, queue);
 			QueueTotals::&lt;T&gt;::mutate(|qs| {
 				qs.bounded_resize(queue_count, (<span class="number">0</span>, Zero::zero()));
 				qs[queue_index].<span class="number">0 </span>= new_len;
 				qs[queue_index].<span class="number">1</span>.saturating_reduce(bid.amount);
 			});
 
-			T::Currency::unreserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>bid.who, bid.amount);
 			<span class="self">Self</span>::deposit_event(Event::BidRetracted { who: bid.who, amount: bid.amount, duration });
 
 			<span class="prelude-val">Ok</span>(())
@@ -1798,7 +1813,7 @@
 			<span class="kw">let </span>issuance = <span class="self">Self</span>::issuance_with(<span class="kw-2">&amp;</span>our_account, <span class="kw-2">&amp;</span>summary);
 			<span class="kw">let </span>deficit = issuance.required.saturating_sub(issuance.holdings);
 			<span class="macro">ensure!</span>(!deficit.is_zero(), Error::&lt;T&gt;::AlreadyFunded);
-			T::Deficit::on_unbalanced(T::Currency::deposit_creating(<span class="kw-2">&amp;</span>our_account, deficit));
+			T::Deficit::on_unbalanced(T::Currency::deposit(<span class="kw-2">&amp;</span>our_account, deficit, Exact)<span class="question-mark">?</span>);
 			<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::Funded { deficit });
 			<span class="prelude-val">Ok</span>(())
 		}
@@ -1855,7 +1870,8 @@
 			<span class="comment">// Multiply the proportion it is by the total issued.
 			</span><span class="kw">let </span>our_account = <span class="self">Self</span>::account_id();
 			<span class="kw">let </span>effective_issuance = <span class="self">Self</span>::issuance_with(<span class="kw-2">&amp;</span>our_account, <span class="kw-2">&amp;</span>summary).effective;
-			<span class="kw">let </span>amount = proportion * effective_issuance;
+			<span class="comment">//			let amount = proportion.mul_ceil(effective_issuance);
+			</span><span class="kw">let </span>amount = proportion * effective_issuance;
 
 			receipt.proportion.saturating_reduce(proportion);
 			summary.proportion_owed.saturating_reduce(proportion);
@@ -1863,46 +1879,40 @@
 			<span class="kw">let </span>dropped = receipt.proportion.is_zero();
 
 			<span class="kw">if </span>amount &gt; on_hold {
-				T::Currency::unreserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>who, on_hold);
+				T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>who, on_hold, Exact)
+					.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::Release1)<span class="question-mark">?</span>;
 				<span class="kw">let </span>deficit = amount - on_hold;
 				<span class="comment">// Try to transfer deficit from pot to receipt owner.
 				</span>summary.receipts_on_hold.saturating_reduce(on_hold);
 				on_hold = Zero::zero();
-				T::Currency::transfer(<span class="kw-2">&amp;</span>our_account, <span class="kw-2">&amp;</span>who, deficit, AllowDeath)
+				T::Currency::transfer(<span class="kw-2">&amp;</span>our_account, <span class="kw-2">&amp;</span>who, deficit, Expendable)
 					.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::Unfunded)<span class="question-mark">?</span>;
 			} <span class="kw">else </span>{
-				T::Currency::unreserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>who, amount);
 				on_hold.saturating_reduce(amount);
 				summary.receipts_on_hold.saturating_reduce(amount);
 				<span class="kw">if </span>dropped &amp;&amp; !on_hold.is_zero() {
 					<span class="comment">// Reclaim any remainder:
-					// Transfer `excess` to the pot if we have now fully compensated for the
-					// receipt.
-					//
-					// This will legitimately fail if there is no pot account in existance.
-					// There&#39;s nothing we can do about this so we just swallow the error.
-					// This code is not ideal and could fail in the second phase leaving
-					// the system in an invalid state. It can be fixed properly with the
-					// new API in https://github.com/paritytech/substrate/pull/12951
-					//
-					// Below is what it should look like then:
-					//	let _ = T::Currency::repatriate_reserved_named(
-					//		&amp;T::ReserveId::get(),
-					//		&amp;who,
-					//		&amp;our_account,
-					//		excess,
-					//		BalanceStatus::Free,
-					//	).defensive();
-					</span>T::Currency::unreserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>who, on_hold);
-					<span class="comment">// It could theoretically be locked, so really we should be using a more
-					// forceful variant. But the alternative `repatriate_reserved_named` will
-					// fail if the destination account doesn&#39;t exist. This should be fixed when
-					// we move to the `fungible::*` traits, which should include a force
-					// transfer function to transfer the reserved balance into free balance in
-					// the destination regardless of locks and create it if it doesn&#39;t exist.
-					</span><span class="kw">let _ </span>= T::Currency::transfer(<span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;</span><span class="self">Self</span>::account_id(), on_hold, AllowDeath);
+					// Transfer excess of `on_hold` to the pot if we have now fully compensated for
+					// the receipt.
+					</span>T::Currency::transfer_on_hold(
+						<span class="kw-2">&amp;</span>T::HoldReason::get(),
+						<span class="kw-2">&amp;</span>who,
+						<span class="kw-2">&amp;</span>our_account,
+						on_hold,
+						Exact,
+						Free,
+						Polite,
+					)
+					.map(|<span class="kw">_</span>| ())
+					<span class="comment">// We ignore this error as it just means the amount we&#39;re trying to deposit is
+					// dust and the beneficiary account doesn&#39;t exist.
+					</span>.or_else(
+						|e| <span class="kw">if </span>e == TokenError::CannotCreate.into() { <span class="prelude-val">Ok</span>(()) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(e) },
+					)<span class="question-mark">?</span>;
 					summary.receipts_on_hold.saturating_reduce(on_hold);
 				}
+				T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>who, amount, Exact)
+					.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::Release2)<span class="question-mark">?</span>;
 			}
 
 			<span class="kw">if </span>dropped {
@@ -1950,7 +1960,8 @@
 			summary.thawed.saturating_accrue(receipt.proportion);
 			<span class="macro">ensure!</span>(summary.thawed &lt;= throttle, Error::&lt;T&gt;::Throttled);
 
-			T::Counterpart::burn_from(<span class="kw-2">&amp;</span>who, T::CounterpartAmount::convert(receipt.proportion))<span class="question-mark">?</span>;
+			<span class="kw">let </span>cp_amount = T::CounterpartAmount::convert(receipt.proportion);
+			T::Counterpart::burn_from(<span class="kw-2">&amp;</span>who, cp_amount, Exact, Polite)<span class="question-mark">?</span>;
 
 			<span class="comment">// Multiply the proportion it is by the total issued.
 			</span><span class="kw">let </span>our_account = <span class="self">Self</span>::account_id();
@@ -1960,7 +1971,7 @@
 			summary.proportion_owed.saturating_reduce(receipt.proportion);
 
 			<span class="comment">// Try to transfer amount owed from pot to receipt owner.
-			</span>T::Currency::transfer(<span class="kw-2">&amp;</span>our_account, <span class="kw-2">&amp;</span>who, amount, AllowDeath)
+			</span>T::Currency::transfer(<span class="kw-2">&amp;</span>our_account, <span class="kw-2">&amp;</span>who, amount, Expendable)
 				.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::Unfunded)<span class="question-mark">?</span>;
 
 			Receipts::&lt;T&gt;::remove(index);
@@ -1993,13 +2004,12 @@
 			</span><span class="macro">ensure!</span>(owner == who, Error::&lt;T&gt;::NotOwner);
 
 			<span class="comment">// Unreserve and transfer the funds to the pot.
-			</span>T::Currency::unreserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>who, on_hold);
-			<span class="comment">// Transfer `excess` to the pot if we have now fully compensated for the receipt.
-			</span>T::Currency::transfer(<span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;</span><span class="self">Self</span>::account_id(), on_hold, AllowDeath)
+			</span><span class="kw">let </span>reason = T::HoldReason::get();
+			<span class="kw">let </span>us = <span class="self">Self</span>::account_id();
+			T::Currency::transfer_on_hold(<span class="kw-2">&amp;</span>reason, <span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;</span>us, on_hold, Exact, Free, Polite)
 				.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::Unfunded)<span class="question-mark">?</span>;
-			<span class="comment">// TODO #12951: ^^^ The above should be done in a single operation `transfer_on_hold`.
 
-			// Record that we&#39;ve moved the amount reserved.
+			<span class="comment">// Record that we&#39;ve moved the amount reserved.
 			</span><span class="kw">let </span><span class="kw-2">mut </span>summary: SummaryRecordOf&lt;T&gt; = Summary::&lt;T&gt;::get();
 			summary.receipts_on_hold.saturating_reduce(on_hold);
 			Summary::&lt;T&gt;::put(<span class="kw-2">&amp;</span>summary);
@@ -2034,18 +2044,22 @@
 			<span class="kw">let </span>effective_issuance = <span class="self">Self</span>::issuance_with(<span class="kw-2">&amp;</span>our_account, <span class="kw-2">&amp;</span>summary).effective;
 			<span class="kw">let </span>max_amount = receipt.proportion * effective_issuance;
 			<span class="comment">// Avoid trying to place more in the account&#39;s reserve than we have available in the pot
-			</span><span class="kw">let </span>amount = max_amount.min(T::Currency::free_balance(<span class="kw-2">&amp;</span>our_account));
+			</span><span class="kw">let </span>amount = max_amount.min(T::Currency::balance(<span class="kw-2">&amp;</span>our_account));
 
 			<span class="comment">// Burn fungible counterparts.
-			</span>T::Counterpart::burn_from(<span class="kw-2">&amp;</span>who, T::CounterpartAmount::convert(receipt.proportion))<span class="question-mark">?</span>;
+			</span>T::Counterpart::burn_from(
+				<span class="kw-2">&amp;</span>who,
+				T::CounterpartAmount::convert(receipt.proportion),
+				Exact,
+				Polite,
+			)<span class="question-mark">?</span>;
 
 			<span class="comment">// Transfer the funds from the pot to the owner and reserve
-			</span>T::Currency::transfer(<span class="kw-2">&amp;</span><span class="self">Self</span>::account_id(), <span class="kw-2">&amp;</span>who, amount, AllowDeath)
-				.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::Unfunded)<span class="question-mark">?</span>;
-			T::Currency::reserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>who, amount)<span class="question-mark">?</span>;
-			<span class="comment">// TODO: ^^^ The above should be done in a single operation `transfer_and_hold`.
+			</span><span class="kw">let </span>reason = T::HoldReason::get();
+			<span class="kw">let </span>us = <span class="self">Self</span>::account_id();
+			T::Currency::transfer_and_hold(<span class="kw-2">&amp;</span>reason, <span class="kw-2">&amp;</span>us, <span class="kw-2">&amp;</span>who, amount, Exact, Expendable, Polite)<span class="question-mark">?</span>;
 
-			// Record that we&#39;ve moved the amount reserved.
+			<span class="comment">// Record that we&#39;ve moved the amount reserved.
 			</span>summary.receipts_on_hold.saturating_accrue(amount);
 
 			receipt.owner = <span class="prelude-val">Some</span>((who, amount));
@@ -2073,7 +2087,7 @@
 		</span><span class="kw">pub </span>required: Balance,
 	}
 
-	<span class="kw">impl</span>&lt;T: Config&gt; NonfungibleInspect&lt;T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+	<span class="kw">impl</span>&lt;T: Config&gt; NftInspect&lt;T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 		<span class="kw">type </span>ItemId = ReceiptIndex;
 
 		<span class="kw">fn </span>owner(item: <span class="kw-2">&amp;</span>ReceiptIndex) -&gt; <span class="prelude-ty">Option</span>&lt;T::AccountId&gt; {
@@ -2092,31 +2106,19 @@
 		}
 	}
 
-	<span class="kw">impl</span>&lt;T: Config&gt; NonfungibleTransfer&lt;T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>transfer(index: <span class="kw-2">&amp;</span>ReceiptIndex, destination: <span class="kw-2">&amp;</span>T::AccountId) -&gt; DispatchResult {
+	<span class="kw">impl</span>&lt;T: Config&gt; NftTransfer&lt;T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+		<span class="kw">fn </span>transfer(index: <span class="kw-2">&amp;</span>ReceiptIndex, dest: <span class="kw-2">&amp;</span>T::AccountId) -&gt; DispatchResult {
 			<span class="kw">let </span><span class="kw-2">mut </span>item = Receipts::&lt;T&gt;::get(index).ok_or(TokenError::UnknownAsset)<span class="question-mark">?</span>;
 			<span class="kw">let </span>(owner, on_hold) = item.owner.take().ok_or(Error::&lt;T&gt;::AlreadyCommunal)<span class="question-mark">?</span>;
 
-			<span class="comment">// TODO: This should all be replaced by a single call `transfer_held`.
-			</span><span class="kw">let </span>shortfall = T::Currency::unreserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>owner, on_hold);
-			<span class="kw">if </span>!shortfall.is_zero() {
-				<span class="kw">let _ </span>=
-					T::Currency::reserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>owner, on_hold - shortfall);
-				<span class="kw">return </span><span class="prelude-val">Err</span>(TokenError::NoFunds.into())
-			}
-			<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = T::Currency::transfer(<span class="kw-2">&amp;</span>owner, destination, on_hold, AllowDeath) {
-				<span class="kw">let _ </span>= T::Currency::reserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), <span class="kw-2">&amp;</span>owner, on_hold);
-				<span class="kw">return </span><span class="prelude-val">Err</span>(e)
-			}
-			<span class="comment">// This can never fail, and if it somehow does, then we can&#39;t handle this gracefully.
-			</span><span class="kw">let _ </span>=
-				T::Currency::reserve_named(<span class="kw-2">&amp;</span>T::ReserveId::get(), destination, on_hold).defensive();
+			<span class="kw">let </span>reason = T::HoldReason::get();
+			T::Currency::transfer_on_hold(<span class="kw-2">&amp;</span>reason, <span class="kw-2">&amp;</span>owner, dest, on_hold, Exact, OnHold, Polite)<span class="question-mark">?</span>;
 
-			item.owner = <span class="prelude-val">Some</span>((destination.clone(), on_hold));
+			item.owner = <span class="prelude-val">Some</span>((dest.clone(), on_hold));
 			Receipts::&lt;T&gt;::insert(<span class="kw-2">&amp;</span>index, <span class="kw-2">&amp;</span>item);
 			Pallet::&lt;T&gt;::deposit_event(Event::&lt;T&gt;::Transferred {
 				from: owner,
-				to: destination.clone(),
+				to: dest.clone(),
 				index: <span class="kw-2">*</span>index,
 			});
 			<span class="prelude-val">Ok</span>(())
@@ -2150,9 +2152,9 @@
 			summary: <span class="kw-2">&amp;</span>SummaryRecordOf&lt;T&gt;,
 		) -&gt; IssuanceInfo&lt;BalanceOf&lt;T&gt;&gt; {
 			<span class="kw">let </span>total_issuance =
-				T::Currency::total_issuance().saturating_sub(T::IgnoredIssuance::get());
+				T::Currency::active_issuance().saturating_sub(T::IgnoredIssuance::get());
 			<span class="kw">let </span>holdings =
-				T::Currency::free_balance(our_account).saturating_add(summary.receipts_on_hold);
+				T::Currency::balance(our_account).saturating_add(summary.receipts_on_hold);
 			<span class="kw">let </span>other = total_issuance.saturating_sub(holdings);
 			<span class="kw">let </span>effective =
 				summary.proportion_owed.left_from_one().saturating_reciprocal_mul(other);
@@ -2289,7 +2291,9 @@
 			<span class="comment">// Now to activate the bid...
 			</span><span class="kw">let </span>n = amount;
 			<span class="kw">let </span>d = issuance.effective;
-			<span class="kw">let </span>proportion = Perquintill::from_rational(n, d);
+			<span class="kw">let </span>proportion =
+				Perquintill::from_rational_with_rounding(n, d, Rounding::NearestPrefDown)
+					.defensive_unwrap_or_default();
 			<span class="kw">let </span>who = bid.who;
 			<span class="kw">let </span>index = summary.index;
 			summary.proportion_owed.defensive_saturating_accrue(proportion);

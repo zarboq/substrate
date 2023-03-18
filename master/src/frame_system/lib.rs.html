@@ -1726,21 +1726,6 @@
 <a href="#1726" id="1726">1726</a>
 <a href="#1727" id="1727">1727</a>
 <a href="#1728" id="1728">1728</a>
-<a href="#1729" id="1729">1729</a>
-<a href="#1730" id="1730">1730</a>
-<a href="#1731" id="1731">1731</a>
-<a href="#1732" id="1732">1732</a>
-<a href="#1733" id="1733">1733</a>
-<a href="#1734" id="1734">1734</a>
-<a href="#1735" id="1735">1735</a>
-<a href="#1736" id="1736">1736</a>
-<a href="#1737" id="1737">1737</a>
-<a href="#1738" id="1738">1738</a>
-<a href="#1739" id="1739">1739</a>
-<a href="#1740" id="1740">1740</a>
-<a href="#1741" id="1741">1741</a>
-<a href="#1742" id="1742">1742</a>
-<a href="#1743" id="1743">1743</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3404,10 +3389,6 @@
 	}
 }
 
-<span class="kw">fn </span>is_providing&lt;T: Default + Eq&gt;(d: <span class="kw-2">&amp;</span>T) -&gt; bool {
-	d != <span class="kw-2">&amp;</span>T::default()
-}
-
 <span class="doccomment">/// Implement StoredMap for a simple single-item, provide-when-not-default system. This works fine
 /// for storing a single item which allows the account to continue existing as long as it&#39;s not
 /// empty/default.
@@ -3423,23 +3404,12 @@
 		f: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;T::AccountData&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;R, E&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;R, E&gt; {
 		<span class="kw">let </span>account = Account::&lt;T&gt;::get(k);
-		<span class="kw">let </span>was_providing = is_providing(<span class="kw-2">&amp;</span>account.data);
-		<span class="kw">let </span><span class="kw-2">mut </span>some_data = <span class="kw">if </span>was_providing { <span class="prelude-val">Some</span>(account.data) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+		<span class="kw">let </span>is_default = account.data == T::AccountData::default();
+		<span class="kw">let </span><span class="kw-2">mut </span>some_data = <span class="kw">if </span>is_default { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(account.data) };
 		<span class="kw">let </span>result = f(<span class="kw-2">&amp;mut </span>some_data)<span class="question-mark">?</span>;
-		<span class="kw">let </span>is_providing = some_data.is_some();
-		<span class="kw">if </span>!was_providing &amp;&amp; is_providing {
-			<span class="self">Self</span>::inc_providers(k);
-		} <span class="kw">else if </span>was_providing &amp;&amp; !is_providing {
-			<span class="kw">match </span><span class="self">Self</span>::dec_providers(k)<span class="question-mark">? </span>{
-				DecRefStatus::Reaped =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(result),
-				DecRefStatus::Exists =&gt; {
-					<span class="comment">// Update value as normal...
-				</span>},
-			}
-		} <span class="kw">else if </span>!was_providing &amp;&amp; !is_providing {
-			<span class="kw">return </span><span class="prelude-val">Ok</span>(result)
+		<span class="kw">if </span><span class="self">Self</span>::providers(k) &gt; <span class="number">0 </span>{
+			Account::&lt;T&gt;::mutate(k, |a| a.data = some_data.unwrap_or_default());
 		}
-		Account::&lt;T&gt;::mutate(k, |a| a.data = some_data.unwrap_or_default());
 		<span class="prelude-val">Ok</span>(result)
 	}
 }

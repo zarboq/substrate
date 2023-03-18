@@ -150,6 +150,13 @@
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -170,8 +177,11 @@
 </span><span class="doccomment">//! The imbalance type and its associates, which handles keeps everything adding up properly with
 //! unbalanced operations.
 
-</span><span class="kw">use super</span>::{<span class="kw">super</span>::Imbalance <span class="kw">as </span>ImbalanceT, balanced::Balanced, misc::Balance, <span class="kw-2">*</span>};
-<span class="kw">use </span><span class="kw">crate</span>::traits::misc::{SameOrOther, TryDrop};
+</span><span class="kw">use super</span>::{<span class="kw">super</span>::Imbalance <span class="kw">as </span>ImbalanceT, Balanced, <span class="kw-2">*</span>};
+<span class="kw">use </span><span class="kw">crate</span>::traits::{
+	misc::{SameOrOther, TryDrop},
+	tokens::Balance,
+};
 <span class="kw">use </span>sp_runtime::{traits::Zero, RuntimeDebug};
 <span class="kw">use </span>sp_std::marker::PhantomData;
 
@@ -180,6 +190,10 @@
 </span><span class="kw">pub trait </span>HandleImbalanceDrop&lt;Balance&gt; {
 	<span class="doccomment">/// Some something with the imbalance&#39;s value which is being dropped.
 	</span><span class="kw">fn </span>handle(amount: Balance);
+}
+
+<span class="kw">impl</span>&lt;Balance&gt; HandleImbalanceDrop&lt;Balance&gt; <span class="kw">for </span>() {
+	<span class="kw">fn </span>handle(<span class="kw">_</span>: Balance) {}
 }
 
 <span class="doccomment">/// An imbalance in the system, representing a divergence of recorded token supply from the sum of
@@ -287,7 +301,7 @@
 }
 
 <span class="doccomment">/// Imbalance implying that the total_issuance value is less than the sum of all account balances.
-</span><span class="kw">pub type </span>DebtOf&lt;AccountId, B&gt; = Imbalance&lt;
+</span><span class="kw">pub type </span>Debt&lt;AccountId, B&gt; = Imbalance&lt;
 	&lt;B <span class="kw">as </span>Inspect&lt;AccountId&gt;&gt;::Balance,
 	<span class="comment">// This will generally be implemented by increasing the total_issuance value.
 	</span>&lt;B <span class="kw">as </span>Balanced&lt;AccountId&gt;&gt;::OnDropDebt,
@@ -296,7 +310,7 @@
 
 <span class="doccomment">/// Imbalance implying that the total_issuance value is greater than the sum of all account
 /// balances.
-</span><span class="kw">pub type </span>CreditOf&lt;AccountId, B&gt; = Imbalance&lt;
+</span><span class="kw">pub type </span>Credit&lt;AccountId, B&gt; = Imbalance&lt;
 	&lt;B <span class="kw">as </span>Inspect&lt;AccountId&gt;&gt;::Balance,
 	<span class="comment">// This will generally be implemented by decreasing the total_issuance value.
 	</span>&lt;B <span class="kw">as </span>Balanced&lt;AccountId&gt;&gt;::OnDropCredit,

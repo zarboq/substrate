@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"trait":[["InspectEnumerable","Interface for enumerating assets in existence or owned by a given account."]]};

@@ -281,6 +281,10 @@
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -306,7 +310,11 @@
 <span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, whitelist_account};
 <span class="kw">use </span>frame_support::{
 	dispatch::RawOrigin,
-	traits::{fungible, Currency, Get},
+	traits::{
+		fungible,
+		tokens::{Fortitude::Polite, Preservation::Expendable},
+		Currency, Get,
+	},
 };
 <span class="kw">use </span>sp_runtime::traits::Bounded;
 <span class="kw">use </span>sp_std::collections::btree_map::BTreeMap;
@@ -540,13 +548,13 @@
 			}
 		}
 
-		<span class="kw">let </span>orig_usable = &lt;T::Currency <span class="kw">as </span>fungible::Inspect&lt;T::AccountId&gt;&gt;::reducible_balance(<span class="kw-2">&amp;</span>caller, <span class="bool-val">false</span>);
+		<span class="kw">let </span>orig_usable = &lt;T::Currency <span class="kw">as </span>fungible::Inspect&lt;T::AccountId&gt;&gt;::reducible_balance(<span class="kw-2">&amp;</span>caller, Expendable, Polite);
 		<span class="kw">let </span>polls = <span class="kw-2">&amp;</span>all_polls[<span class="kw-2">&amp;</span>class];
 
 		<span class="comment">// Vote big on the class with the most ongoing votes of them to bump the lock and make it
 		// hard to recompute when removed.
 		</span>ConvictionVoting::&lt;T, I&gt;::vote(RawOrigin::Signed(caller.clone()).into(), polls[<span class="number">0</span>], big_account_vote)<span class="question-mark">?</span>;
-		<span class="kw">let </span>now_usable = &lt;T::Currency <span class="kw">as </span>fungible::Inspect&lt;T::AccountId&gt;&gt;::reducible_balance(<span class="kw-2">&amp;</span>caller, <span class="bool-val">false</span>);
+		<span class="kw">let </span>now_usable = &lt;T::Currency <span class="kw">as </span>fungible::Inspect&lt;T::AccountId&gt;&gt;::reducible_balance(<span class="kw-2">&amp;</span>caller, Expendable, Polite);
 		<span class="macro">assert_eq!</span>(orig_usable - now_usable, <span class="number">100u32</span>.into());
 
 		<span class="comment">// Remove the vote
@@ -555,7 +563,7 @@
 		<span class="comment">// We can now unlock on `class` from 200 to 100...
 	</span>}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), class, caller_lookup)
 	verify {
-		<span class="macro">assert_eq!</span>(orig_usable, &lt;T::Currency <span class="kw">as </span>fungible::Inspect&lt;T::AccountId&gt;&gt;::reducible_balance(<span class="kw-2">&amp;</span>caller, <span class="bool-val">false</span>));
+		<span class="macro">assert_eq!</span>(orig_usable, &lt;T::Currency <span class="kw">as </span>fungible::Inspect&lt;T::AccountId&gt;&gt;::reducible_balance(<span class="kw-2">&amp;</span>caller, Expendable, Polite));
 	}
 
 	<span class="macro">impl_benchmark_test_suite!</span>(

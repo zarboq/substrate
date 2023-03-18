@@ -753,7 +753,7 @@
 
 	finalize_signed_phase_accept_solution {
 		<span class="kw">let </span>receiver = account(<span class="string">&quot;receiver&quot;</span>, <span class="number">0</span>, SEED);
-		<span class="kw">let </span>initial_balance = T::Currency::minimum_balance() * <span class="number">10u32</span>.into();
+		<span class="kw">let </span>initial_balance = T::Currency::minimum_balance() + <span class="number">10u32</span>.into();
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>receiver, initial_balance);
 		<span class="kw">let </span>ready = Default::default();
 		<span class="kw">let </span>deposit: BalanceOf&lt;T&gt; = <span class="number">10u32</span>.into();
@@ -762,7 +762,7 @@
 		<span class="kw">let </span>call_fee: BalanceOf&lt;T&gt; = <span class="number">30u32</span>.into();
 
 		<span class="macro">assert_ok!</span>(T::Currency::reserve(<span class="kw-2">&amp;</span>receiver, deposit));
-		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>receiver), initial_balance - <span class="number">10u32</span>.into());
+		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>receiver), T::Currency::minimum_balance());
 	}: {
 		&lt;MultiPhase&lt;T&gt;&gt;::finalize_signed_phase_accept_solution(
 			ready,
@@ -780,17 +780,17 @@
 
 	finalize_signed_phase_reject_solution {
 		<span class="kw">let </span>receiver = account(<span class="string">&quot;receiver&quot;</span>, <span class="number">0</span>, SEED);
-		<span class="kw">let </span>initial_balance = T::Currency::minimum_balance().max(One::one()) * <span class="number">10u32</span>.into();
+		<span class="kw">let </span>initial_balance = T::Currency::minimum_balance() + <span class="number">10u32</span>.into();
 		<span class="kw">let </span>deposit: BalanceOf&lt;T&gt; = <span class="number">10u32</span>.into();
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>receiver, initial_balance);
 		<span class="macro">assert_ok!</span>(T::Currency::reserve(<span class="kw-2">&amp;</span>receiver, deposit));
 
-		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>receiver), initial_balance - <span class="number">10u32</span>.into());
+		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>receiver), T::Currency::minimum_balance());
 		<span class="macro">assert_eq!</span>(T::Currency::reserved_balance(<span class="kw-2">&amp;</span>receiver), <span class="number">10u32</span>.into());
 	}: {
 		&lt;MultiPhase&lt;T&gt;&gt;::finalize_signed_phase_reject_solution(<span class="kw-2">&amp;</span>receiver, deposit)
 	} verify {
-		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>receiver), initial_balance - <span class="number">10u32</span>.into());
+		<span class="macro">assert_eq!</span>(T::Currency::free_balance(<span class="kw-2">&amp;</span>receiver), T::Currency::minimum_balance());
 		<span class="macro">assert_eq!</span>(T::Currency::reserved_balance(<span class="kw-2">&amp;</span>receiver), <span class="number">0u32</span>.into());
 	}
 

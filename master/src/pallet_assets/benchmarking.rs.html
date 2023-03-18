@@ -480,6 +480,10 @@
 <a href="#480" id="480">480</a>
 <a href="#481" id="481">481</a>
 <a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -587,14 +591,18 @@
 
 <span class="kw">fn </span>add_approvals&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt;(minter: T::AccountId, n: u32) {
 	<span class="kw">let </span>asset_id = default_asset_id::&lt;T, I&gt;();
-	T::Currency::deposit_creating(<span class="kw-2">&amp;</span>minter, T::ApprovalDeposit::get() * n.into());
+	T::Currency::deposit_creating(
+		<span class="kw-2">&amp;</span>minter,
+		T::ApprovalDeposit::get() * n.into() + T::Currency::minimum_balance(),
+	);
 	<span class="kw">let </span>minter_lookup = T::Lookup::unlookup(minter.clone());
 	<span class="kw">let </span>origin = SystemOrigin::Signed(minter);
 	Assets::&lt;T, I&gt;::mint(origin.clone().into(), asset_id, minter_lookup, (<span class="number">100 </span>* (n + <span class="number">1</span>)).into())
 		.unwrap();
+	<span class="kw">let </span>enough = T::Currency::minimum_balance();
 	<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..n {
 		<span class="kw">let </span>target = account(<span class="string">&quot;approval&quot;</span>, i, SEED);
-		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>target, T::Currency::minimum_balance());
+		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>target, enough);
 		<span class="kw">let </span>target_lookup = T::Lookup::unlookup(target);
 		Assets::&lt;T, I&gt;::approve_transfer(
 			origin.clone().into(),

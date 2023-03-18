@@ -1110,6 +1110,14 @@
 <a href="#1110" id="1110">1110</a>
 <a href="#1111" id="1111">1111</a>
 <a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1718,9 +1726,10 @@
 #[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>TokenError {
 	<span class="doccomment">/// Funds are unavailable.
-	</span>NoFunds,
-	<span class="doccomment">/// Account that must exist would die.
-	</span>WouldDie,
+	</span>FundsUnavailable,
+	<span class="doccomment">/// Some part of the balance gives the only provider reference to the account and thus cannot
+	/// be (re)moved.
+	</span>OnlyProvider,
 	<span class="doccomment">/// Account cannot exist with the funds that would be given.
 	</span>BelowMinimum,
 	<span class="doccomment">/// Account cannot be created.
@@ -1731,18 +1740,25 @@
 	</span>Frozen,
 	<span class="doccomment">/// Operation is not supported by the asset.
 	</span>Unsupported,
+	<span class="doccomment">/// Account cannot be created for a held balance.
+	</span>CannotCreateHold,
+	<span class="doccomment">/// Withdrawal would cause unwanted loss of account.
+	</span>NotExpendable,
 }
 
 <span class="kw">impl </span>From&lt;TokenError&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
 	<span class="kw">fn </span>from(e: TokenError) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
 		<span class="kw">match </span>e {
-			TokenError::NoFunds =&gt; <span class="string">&quot;Funds are unavailable&quot;</span>,
-			TokenError::WouldDie =&gt; <span class="string">&quot;Account that must exist would die&quot;</span>,
+			TokenError::FundsUnavailable =&gt; <span class="string">&quot;Funds are unavailable&quot;</span>,
+			TokenError::OnlyProvider =&gt; <span class="string">&quot;Account that must exist would die&quot;</span>,
 			TokenError::BelowMinimum =&gt; <span class="string">&quot;Account cannot exist with the funds that would be given&quot;</span>,
 			TokenError::CannotCreate =&gt; <span class="string">&quot;Account cannot be created&quot;</span>,
 			TokenError::UnknownAsset =&gt; <span class="string">&quot;The asset in question is unknown&quot;</span>,
 			TokenError::Frozen =&gt; <span class="string">&quot;Funds exist but are frozen&quot;</span>,
 			TokenError::Unsupported =&gt; <span class="string">&quot;Operation is not supported by the asset&quot;</span>,
+			TokenError::CannotCreateHold =&gt;
+				<span class="string">&quot;Account cannot be created for recording amount on hold&quot;</span>,
+			TokenError::NotExpendable =&gt; <span class="string">&quot;Account that is desired to remain would die&quot;</span>,
 		}
 	}
 }
@@ -2106,8 +2122,8 @@
 			Module(ModuleError { index: <span class="number">2</span>, error: [<span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>], message: <span class="prelude-val">None </span>}),
 			ConsumerRemaining,
 			NoProviders,
-			Token(TokenError::NoFunds),
-			Token(TokenError::WouldDie),
+			Token(TokenError::FundsUnavailable),
+			Token(TokenError::OnlyProvider),
 			Token(TokenError::BelowMinimum),
 			Token(TokenError::CannotCreate),
 			Token(TokenError::UnknownAsset),
