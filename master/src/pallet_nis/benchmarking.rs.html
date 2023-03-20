@@ -242,6 +242,12 @@
 <a href="#242" id="242">242</a>
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -408,6 +414,9 @@
 		Nis::&lt;T&gt;::place_bid(RawOrigin::Signed(caller.clone()).into(), bid, <span class="number">1</span>)<span class="question-mark">?</span>;
 		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
 		frame_system::Pallet::&lt;T&gt;::set_block_number(Receipts::&lt;T&gt;::get(<span class="number">0</span>).unwrap().expiry);
+		<span class="comment">// FIXME: Ensure that the pallet has enough funding. This should already be the case, but
+		// a rounding error can cause it to fail.
+		</span>T::Currency::set_balance(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id(), BalanceOf::&lt;T&gt;::max_value() / <span class="number">10u32</span>.into());
 	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), <span class="number">0</span>, <span class="prelude-val">None</span>)
 	verify {
 		<span class="macro">assert!</span>(Receipts::&lt;T&gt;::get(<span class="number">0</span>).is_none());
@@ -426,6 +435,9 @@
 		Nis::&lt;T&gt;::process_queues(Perquintill::one(), <span class="number">1</span>, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>WeightCounter::unlimited());
 		frame_system::Pallet::&lt;T&gt;::set_block_number(Receipts::&lt;T&gt;::get(<span class="number">0</span>).unwrap().expiry);
 		Nis::&lt;T&gt;::communify(RawOrigin::Signed(caller.clone()).into(), <span class="number">0</span>)<span class="question-mark">?</span>;
+		<span class="comment">// FIXME: Ensure that the pallet has enough funding. This should already be the case, but
+		// a rounding error can cause it to fail.
+		</span>T::Currency::set_balance(<span class="kw-2">&amp;</span>Nis::&lt;T&gt;::account_id(), BalanceOf::&lt;T&gt;::max_value() / <span class="number">10u32</span>.into());
 	}: <span class="kw">_</span>(RawOrigin::Signed(caller.clone()), <span class="number">0</span>)
 	verify {
 		<span class="macro">assert!</span>(Receipts::&lt;T&gt;::get(<span class="number">0</span>).is_none());
