@@ -1204,56 +1204,6 @@
 <a href="#1204" id="1204">1204</a>
 <a href="#1205" id="1205">1205</a>
 <a href="#1206" id="1206">1206</a>
-<a href="#1207" id="1207">1207</a>
-<a href="#1208" id="1208">1208</a>
-<a href="#1209" id="1209">1209</a>
-<a href="#1210" id="1210">1210</a>
-<a href="#1211" id="1211">1211</a>
-<a href="#1212" id="1212">1212</a>
-<a href="#1213" id="1213">1213</a>
-<a href="#1214" id="1214">1214</a>
-<a href="#1215" id="1215">1215</a>
-<a href="#1216" id="1216">1216</a>
-<a href="#1217" id="1217">1217</a>
-<a href="#1218" id="1218">1218</a>
-<a href="#1219" id="1219">1219</a>
-<a href="#1220" id="1220">1220</a>
-<a href="#1221" id="1221">1221</a>
-<a href="#1222" id="1222">1222</a>
-<a href="#1223" id="1223">1223</a>
-<a href="#1224" id="1224">1224</a>
-<a href="#1225" id="1225">1225</a>
-<a href="#1226" id="1226">1226</a>
-<a href="#1227" id="1227">1227</a>
-<a href="#1228" id="1228">1228</a>
-<a href="#1229" id="1229">1229</a>
-<a href="#1230" id="1230">1230</a>
-<a href="#1231" id="1231">1231</a>
-<a href="#1232" id="1232">1232</a>
-<a href="#1233" id="1233">1233</a>
-<a href="#1234" id="1234">1234</a>
-<a href="#1235" id="1235">1235</a>
-<a href="#1236" id="1236">1236</a>
-<a href="#1237" id="1237">1237</a>
-<a href="#1238" id="1238">1238</a>
-<a href="#1239" id="1239">1239</a>
-<a href="#1240" id="1240">1240</a>
-<a href="#1241" id="1241">1241</a>
-<a href="#1242" id="1242">1242</a>
-<a href="#1243" id="1243">1243</a>
-<a href="#1244" id="1244">1244</a>
-<a href="#1245" id="1245">1245</a>
-<a href="#1246" id="1246">1246</a>
-<a href="#1247" id="1247">1247</a>
-<a href="#1248" id="1248">1248</a>
-<a href="#1249" id="1249">1249</a>
-<a href="#1250" id="1250">1250</a>
-<a href="#1251" id="1251">1251</a>
-<a href="#1252" id="1252">1252</a>
-<a href="#1253" id="1253">1253</a>
-<a href="#1254" id="1254">1254</a>
-<a href="#1255" id="1255">1255</a>
-<a href="#1256" id="1256">1256</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1408,52 +1358,6 @@
 				}
 			}
 		}
-		<span class="prelude-val">Ok</span>(())
-	}
-
-	<span class="doccomment">/// Ensures that no floating point types are in use.
-	</span><span class="kw">fn </span>ensure_no_floating_types(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(global_section) = <span class="self">self</span>.module.global_section() {
-			<span class="kw">for </span>global <span class="kw">in </span>global_section.entries() {
-				<span class="kw">match </span>global.global_type().content_type() {
-					ValueType::F32 | ValueType::F64 =&gt;
-						<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;use of floating point type in globals is forbidden&quot;</span>),
-					<span class="kw">_ </span>=&gt; {},
-				}
-			}
-		}
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(code_section) = <span class="self">self</span>.module.code_section() {
-			<span class="kw">for </span>func_body <span class="kw">in </span>code_section.bodies() {
-				<span class="kw">for </span>local <span class="kw">in </span>func_body.locals() {
-					<span class="kw">match </span>local.value_type() {
-						ValueType::F32 | ValueType::F64 =&gt;
-							<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;use of floating point type in locals is forbidden&quot;</span>),
-						<span class="kw">_ </span>=&gt; {},
-					}
-				}
-			}
-		}
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(type_section) = <span class="self">self</span>.module.type_section() {
-			<span class="kw">for </span>wasm_type <span class="kw">in </span>type_section.types() {
-				<span class="kw">match </span>wasm_type {
-					Type::Function(func_type) =&gt; {
-						<span class="kw">let </span>return_type = func_type.results().get(<span class="number">0</span>);
-						<span class="kw">for </span>value_type <span class="kw">in </span>func_type.params().iter().chain(return_type) {
-							<span class="kw">match </span>value_type {
-								ValueType::F32 | ValueType::F64 =&gt;
-									<span class="kw">return </span><span class="prelude-val">Err</span>(
-										<span class="string">&quot;use of floating point type in function types is forbidden&quot;</span>,
-									),
-								<span class="kw">_ </span>=&gt; {},
-							}
-						}
-					},
-				}
-			}
-		}
-
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -1667,10 +1571,9 @@
 		memory64: <span class="bool-val">false</span>,
 		extended_const: <span class="bool-val">false</span>,
 		component_model: <span class="bool-val">false</span>,
-		<span class="comment">// This is not our only defense: We check for float types later in the preparation
-		// process. Additionally, all instructions explicitly  need to have weights assigned
+		<span class="comment">// This is not our only defense: All instructions explicitly need to have weights assigned
 		// or the deployment will fail. We have none assigned for float instructions.
-		</span>deterministic_only: <span class="macro">matches!</span>(determinism, Determinism::Deterministic),
+		</span>floats: <span class="macro">matches!</span>(determinism, Determinism::Relaxed),
 		mutable_global: <span class="bool-val">false</span>,
 		saturating_float_to_int: <span class="bool-val">false</span>,
 		sign_extension: <span class="bool-val">false</span>,
@@ -1678,6 +1581,7 @@
 		multi_value: <span class="bool-val">false</span>,
 		reference_types: <span class="bool-val">false</span>,
 		simd: <span class="bool-val">false</span>,
+		memory_control: <span class="bool-val">false</span>,
 	})
 	.validate_all(original_code)
 	.map_err(|err| {
@@ -1694,10 +1598,6 @@
 		contract_module.ensure_local_variable_limit(schedule.limits.locals)<span class="question-mark">?</span>;
 		contract_module.ensure_parameter_limit(schedule.limits.parameters)<span class="question-mark">?</span>;
 		contract_module.ensure_br_table_size_limit(schedule.limits.br_table_size)<span class="question-mark">?</span>;
-
-		<span class="kw">if </span><span class="macro">matches!</span>(determinism, Determinism::Deterministic) {
-			contract_module.ensure_no_floating_types()<span class="question-mark">?</span>;
-		}
 
 		<span class="comment">// We disallow importing `gas` function here since it is treated as implementation detail.
 		</span><span class="kw">let </span>disallowed_imports = [<span class="string">b&quot;gas&quot;</span>.as_ref()];
@@ -1864,7 +1764,7 @@
 				</span>deposit: Default::default(),
 				refcount: <span class="number">0</span>,
 			}),
-			determinism: Determinism::Deterministic,
+			determinism: Determinism::Enforced,
 		})
 	}
 }
@@ -1938,7 +1838,7 @@
 					wasm,
 					<span class="kw-2">&amp;</span>schedule,
 					ALICE,
-					Determinism::Deterministic,
+					Determinism::Enforced,
 					TryInstantiate::Instantiate,
 				);
 				<span class="macro">assert_matches::assert_matches!</span>(r.map_err(|(<span class="kw">_</span>, msg)| msg), $(<span class="macro-nonterminal">$expected</span>)<span class="kw-2">*</span>);
@@ -1960,7 +1860,7 @@
 			)
 			(func (export &quot;deploy&quot;))
 		)&quot;#</span>,
-		<span class="prelude-val">Err</span>(<span class="string">&quot;gas instrumentation failed&quot;</span>)
+		<span class="prelude-val">Err</span>(<span class="string">&quot;validation of new code failed&quot;</span>)
 	);
 
 	<span class="kw">mod </span>functions {
@@ -2470,7 +2370,7 @@
 				(func (export &quot;deploy&quot;))
 			)
 			&quot;#</span>,
-			<span class="prelude-val">Err</span>(<span class="string">&quot;use of floating point type in globals is forbidden&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;validation of new code failed&quot;</span>)
 		);
 
 		<span class="macro">prepare_test!</span>(
@@ -2482,7 +2382,7 @@
 				(func (export &quot;deploy&quot;))
 			)
 			&quot;#</span>,
-			<span class="prelude-val">Err</span>(<span class="string">&quot;use of floating point type in locals is forbidden&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;validation of new code failed&quot;</span>)
 		);
 
 		<span class="macro">prepare_test!</span>(
@@ -2494,7 +2394,7 @@
 				(func (export &quot;deploy&quot;))
 			)
 			&quot;#</span>,
-			<span class="prelude-val">Err</span>(<span class="string">&quot;use of floating point type in function types is forbidden&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;validation of new code failed&quot;</span>)
 		);
 
 		<span class="macro">prepare_test!</span>(
@@ -2506,7 +2406,7 @@
 				(func (export &quot;deploy&quot;))
 			)
 			&quot;#</span>,
-			<span class="prelude-val">Err</span>(<span class="string">&quot;use of floating point type in function types is forbidden&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;validation of new code failed&quot;</span>)
 		);
 	}
 }

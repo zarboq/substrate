@@ -1899,9 +1899,9 @@
 		/// the in storage version to the current
 		/// [`InstructionWeights::version`](InstructionWeights).
 		///
-		/// - `determinism`: If this is set to any other value but [`Determinism::Deterministic`]
-		///   then the only way to use this code is to delegate call into it from an offchain
-		///   execution. Set to [`Determinism::Deterministic`] if in doubt.
+		/// - `determinism`: If this is set to any other value but [`Determinism::Enforced`] then
+		///   the only way to use this code is to delegate call into it from an offchain execution.
+		///   Set to [`Determinism::Enforced`] if in doubt.
 		///
 		/// # Note
 		///
@@ -2015,8 +2015,8 @@
 				storage_deposit_limit: storage_deposit_limit.map(Into::into),
 				debug_message: <span class="prelude-val">None</span>,
 			};
-			<span class="kw">let </span><span class="kw-2">mut </span>output = CallInput::&lt;T&gt; { dest, determinism: Determinism::Deterministic }
-				.run_guarded(common);
+			<span class="kw">let </span><span class="kw-2">mut </span>output =
+				CallInput::&lt;T&gt; { dest, determinism: Determinism::Enforced }.run_guarded(common);
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>(retval) = <span class="kw-2">&amp;</span>output.result {
 				<span class="kw">if </span>retval.did_revert() {
 					output.result = <span class="prelude-val">Err</span>(&lt;Error&lt;T&gt;&gt;::ContractReverted.into());
@@ -2486,7 +2486,7 @@
 						binary.clone(),
 						<span class="kw-2">&amp;</span>schedule,
 						common.origin.clone(),
-						Determinism::Deterministic,
+						Determinism::Enforced,
 						TryInstantiate::Skip,
 					)
 					.map_err(|(err, msg)| {

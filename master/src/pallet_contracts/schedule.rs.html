@@ -743,7 +743,6 @@
 <a href="#743" id="743">743</a>
 <a href="#744" id="744">744</a>
 <a href="#745" id="745">745</a>
-<a href="#746" id="746">746</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -921,9 +920,9 @@
 	</span><span class="kw">pub </span>version: u32,
 	<span class="doccomment">/// Weight to be used for instructions which don&#39;t have benchmarks assigned.
 	///
-	/// This weight is used whenever a code is uploaded with [`Determinism::AllowIndeterminism`]
+	/// This weight is used whenever a code is uploaded with [`Determinism::Relaxed`]
 	/// and an instruction (usually a float instruction) is encountered. This weight is **not**
-	/// used if a contract is uploaded with [`Determinism::Deterministic`]. If this field is set to
+	/// used if a contract is uploaded with [`Determinism::Enforced`]. If this field is set to
 	/// `0` (the default) only deterministic codes are allowed to be uploaded.
 	</span><span class="kw">pub </span>fallback: u32,
 	<span class="kw">pub </span>i64const: u32,
@@ -1461,8 +1460,7 @@
 			<span class="comment">// Returning None makes the gas instrumentation fail which we intend for
 			// unsupported or unknown instructions. Offchain we might allow indeterminism and hence
 			// use the fallback weight for those instructions.
-			</span><span class="kw">_ if </span><span class="macro">matches!</span>(<span class="self">self</span>.determinism, Determinism::AllowIndeterminism) &amp;&amp; w.fallback &gt; <span class="number">0 </span>=&gt;
-				w.fallback,
+			</span><span class="kw">_ if </span><span class="macro">matches!</span>(<span class="self">self</span>.determinism, Determinism::Relaxed) &amp;&amp; w.fallback &gt; <span class="number">0 </span>=&gt; w.fallback,
 			<span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
 		};
 		<span class="prelude-val">Some</span>(weight)
