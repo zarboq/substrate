@@ -1639,6 +1639,9 @@
 <a href="#1639" id="1639">1639</a>
 <a href="#1640" id="1640">1640</a>
 <a href="#1641" id="1641">1641</a>
+<a href="#1642" id="1642">1642</a>
+<a href="#1643" id="1643">1643</a>
+<a href="#1644" id="1644">1644</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1778,6 +1781,9 @@
 };
 <span class="kw">use </span>sp_std::{marker::PhantomData, prelude::<span class="kw-2">*</span>};
 
+<span class="attr">#[allow(dead_code)]
+</span><span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;runtime::executive&quot;</span>;
+
 <span class="kw">pub type </span>CheckedOf&lt;E, C&gt; = &lt;E <span class="kw">as </span>Checkable&lt;C&gt;&gt;::Checked;
 <span class="kw">pub type </span>CallOf&lt;E, C&gt; = &lt;CheckedOf&lt;E, C&gt; <span class="kw">as </span>Applyable&gt;::Call;
 <span class="kw">pub type </span>OriginOf&lt;E, C&gt; = &lt;CallOf&lt;E, C&gt; <span class="kw">as </span>Dispatchable&gt;::RuntimeOrigin;
@@ -1881,7 +1887,7 @@
 		select: frame_try_runtime::TryStateSelect,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="macro">frame_support::log::info!</span>(
-			target: <span class="string">&quot;frame::executive&quot;</span>,
+			target: LOG_TARGET,
 			<span class="string">&quot;try-runtime: executing block #{:?} / state root check: {:?} / signature check: {:?} / try-state-select: {:?}&quot;</span>,
 			block.header().number(),
 			state_root_check,
@@ -1918,7 +1924,7 @@
 		<span class="kw">for </span>e <span class="kw">in </span>extrinsics {
 			<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = try_apply_extrinsic(e.clone()) {
 				<span class="macro">frame_support::log::error!</span>(
-					target: <span class="string">&quot;runtime::executive&quot;</span>, <span class="string">&quot;executing transaction {:?} failed due to {:?}. Aborting the rest of the block execution.&quot;</span>,
+					target: LOG_TARGET, <span class="string">&quot;executing transaction {:?} failed due to {:?}. Aborting the rest of the block execution.&quot;</span>,
 					e,
 					err,
 				);
@@ -1937,7 +1943,7 @@
 			select,
 		)
 		.map_err(|e| {
-			<span class="macro">frame_support::log::error!</span>(target: <span class="string">&quot;runtime::executive&quot;</span>, <span class="string">&quot;failure: {:?}&quot;</span>, e);
+			<span class="macro">frame_support::log::error!</span>(target: LOG_TARGET, <span class="string">&quot;failure: {:?}&quot;</span>, e);
 			e
 		})<span class="question-mark">?</span>;
 		drop(_guard);
