@@ -426,10 +426,6 @@
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -675,17 +671,14 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-	<span class="kw">use </span>sc_keystore::LocalKeystore;
-	<span class="kw">use </span>sc_network_test::Block;
-	<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
-
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span><span class="kw">crate</span>::keystore::BeefyKeystore;
+	<span class="kw">use </span>sc_network_test::Block;
 	<span class="kw">use </span>sp_consensus_beefy::{
 		crypto::Signature, known_payloads, Commitment, Keyring, MmrRootHash, Payload, VoteMessage,
 		KEY_TYPE,
 	};
-
-	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+	<span class="kw">use </span>sp_keystore::{testing::MemoryKeystore, Keystore};
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>known_votes_insert_remove() {
@@ -738,10 +731,9 @@
 	}
 
 	<span class="kw">fn </span>sign_commitment&lt;BN: Encode&gt;(who: <span class="kw-2">&amp;</span>Keyring, commitment: <span class="kw-2">&amp;</span>Commitment&lt;BN&gt;) -&gt; Signature {
-		<span class="kw">let </span>store: KeystorePtr = std::sync::Arc::new(LocalKeystore::in_memory());
-		Keystore::ecdsa_generate_new(<span class="kw-2">&amp;*</span>store, KEY_TYPE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>who.to_seed())).unwrap();
-		<span class="kw">let </span>beefy_keystore: BeefyKeystore = <span class="prelude-val">Some</span>(store).into();
-
+		<span class="kw">let </span>store = MemoryKeystore::new();
+		store.ecdsa_generate_new(KEY_TYPE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>who.to_seed())).unwrap();
+		<span class="kw">let </span>beefy_keystore: BeefyKeystore = <span class="prelude-val">Some</span>(store.into()).into();
 		beefy_keystore.sign(<span class="kw-2">&amp;</span>who.public(), <span class="kw-2">&amp;</span>commitment.encode()).unwrap()
 	}
 

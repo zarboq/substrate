@@ -375,10 +375,6 @@
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
 <a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -685,9 +681,9 @@
 	</span><span class="kw">fn </span>store_key_and_extract() {
 		<span class="kw">let </span>store = MemoryKeystore::new();
 
-		<span class="kw">let </span>public = Keystore::ed25519_generate_new(<span class="kw-2">&amp;</span>store, ED25519, <span class="prelude-val">None</span>).expect(<span class="string">&quot;Generates key&quot;</span>);
+		<span class="kw">let </span>public = store.ed25519_generate_new(ED25519, <span class="prelude-val">None</span>).expect(<span class="string">&quot;Generates key&quot;</span>);
 
-		<span class="kw">let </span>public_keys = Keystore::keys(<span class="kw-2">&amp;</span>store, ED25519).unwrap();
+		<span class="kw">let </span>public_keys = store.keys(ED25519).unwrap();
 
 		<span class="macro">assert!</span>(public_keys.contains(<span class="kw-2">&amp;</span>public.into()));
 	}
@@ -699,10 +695,11 @@
 		<span class="kw">let </span>secret_uri = <span class="string">&quot;//Alice&quot;</span>;
 		<span class="kw">let </span>key_pair = sr25519::Pair::from_string(secret_uri, <span class="prelude-val">None</span>).expect(<span class="string">&quot;Generates key pair&quot;</span>);
 
-		Keystore::insert(<span class="kw-2">&amp;</span>store, SR25519, secret_uri, key_pair.public().as_ref())
+		store
+			.insert(SR25519, secret_uri, key_pair.public().as_ref())
 			.expect(<span class="string">&quot;Inserts unknown key&quot;</span>);
 
-		<span class="kw">let </span>public_keys = Keystore::keys(<span class="kw-2">&amp;</span>store, SR25519).unwrap();
+		<span class="kw">let </span>public_keys = store.keys(SR25519).unwrap();
 
 		<span class="macro">assert!</span>(public_keys.contains(<span class="kw-2">&amp;</span>key_pair.public().into()));
 	}
@@ -723,19 +720,14 @@
 			],
 		};
 
-		<span class="kw">let </span>result = Keystore::sr25519_vrf_sign(
-			<span class="kw-2">&amp;</span>store,
-			SR25519,
-			<span class="kw-2">&amp;</span>key_pair.public(),
-			transcript_data.clone(),
-		);
+		<span class="kw">let </span>result = store.sr25519_vrf_sign(SR25519, <span class="kw-2">&amp;</span>key_pair.public(), transcript_data.clone());
 		<span class="macro">assert!</span>(result.unwrap().is_none());
 
-		Keystore::insert(<span class="kw-2">&amp;</span>store, SR25519, secret_uri, key_pair.public().as_ref())
+		store
+			.insert(SR25519, secret_uri, key_pair.public().as_ref())
 			.expect(<span class="string">&quot;Inserts unknown key&quot;</span>);
 
-		<span class="kw">let </span>result =
-			Keystore::sr25519_vrf_sign(<span class="kw-2">&amp;</span>store, SR25519, <span class="kw-2">&amp;</span>key_pair.public(), transcript_data);
+		<span class="kw">let </span>result = store.sr25519_vrf_sign(SR25519, <span class="kw-2">&amp;</span>key_pair.public(), transcript_data);
 
 		<span class="macro">assert!</span>(result.unwrap().is_some());
 	}
@@ -750,13 +742,13 @@
 		<span class="kw">let </span>msg = sp_core::keccak_256(<span class="string">b&quot;this should be a hashed message&quot;</span>);
 
 		<span class="comment">// no key in key store
-		</span><span class="kw">let </span>res = Keystore::ecdsa_sign_prehashed(<span class="kw-2">&amp;</span>store, ECDSA, <span class="kw-2">&amp;</span>pair.public(), <span class="kw-2">&amp;</span>msg).unwrap();
+		</span><span class="kw">let </span>res = store.ecdsa_sign_prehashed(ECDSA, <span class="kw-2">&amp;</span>pair.public(), <span class="kw-2">&amp;</span>msg).unwrap();
 		<span class="macro">assert!</span>(res.is_none());
 
 		<span class="comment">// insert key, sign again
-		</span>Keystore::insert(<span class="kw-2">&amp;</span>store, ECDSA, suri, pair.public().as_ref()).unwrap();
+		</span>store.insert(ECDSA, suri, pair.public().as_ref()).unwrap();
 
-		<span class="kw">let </span>res = Keystore::ecdsa_sign_prehashed(<span class="kw-2">&amp;</span>store, ECDSA, <span class="kw-2">&amp;</span>pair.public(), <span class="kw-2">&amp;</span>msg).unwrap();
+		<span class="kw">let </span>res = store.ecdsa_sign_prehashed(ECDSA, <span class="kw-2">&amp;</span>pair.public(), <span class="kw-2">&amp;</span>msg).unwrap();
 		<span class="macro">assert!</span>(res.is_some());
 	}
 }

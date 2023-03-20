@@ -831,6 +831,7 @@
 <a href="#831" id="831">831</a>
 <a href="#832" id="832">832</a>
 <a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1428,7 +1429,7 @@
 	<span class="kw">use </span>sp_core::{crypto::Pair <span class="kw">as </span>CryptoPair, Public};
 	<span class="kw">use </span>sp_inherents::InherentDataProvider;
 	<span class="kw">use </span>sp_keyring::AccountKeyring;
-	<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
+	<span class="kw">use </span>sp_keystore::KeystorePtr;
 	<span class="kw">use </span>sp_runtime::{
 		generic::{Digest, Era, SignedPayload},
 		key_types::BABE,
@@ -1448,12 +1449,13 @@
 		sp_tracing::try_init_simple();
 
 		<span class="kw">let </span>keystore_path = tempfile::tempdir().expect(<span class="string">&quot;Creates keystore path&quot;</span>);
-		<span class="kw">let </span>keystore: KeystorePtr =
-			Arc::new(LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore&quot;</span>));
-		<span class="kw">let </span>alice: sp_consensus_babe::AuthorityId =
-			Keystore::sr25519_generate_new(<span class="kw-2">&amp;*</span>keystore, BABE, <span class="prelude-val">Some</span>(<span class="string">&quot;//Alice&quot;</span>))
-				.expect(<span class="string">&quot;Creates authority pair&quot;</span>)
-				.into();
+		<span class="kw">let </span>keystore: KeystorePtr = LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>)
+			.expect(<span class="string">&quot;Creates keystore&quot;</span>)
+			.into();
+		<span class="kw">let </span>alice: sp_consensus_babe::AuthorityId = keystore
+			.sr25519_generate_new(BABE, <span class="prelude-val">Some</span>(<span class="string">&quot;//Alice&quot;</span>))
+			.expect(<span class="string">&quot;Creates authority pair&quot;</span>)
+			.into();
 
 		<span class="kw">let </span>chain_spec = <span class="kw">crate</span>::chain_spec::tests::integration_test_config_with_single_authority();
 
@@ -1568,16 +1570,16 @@
 				<span class="comment">// sign the pre-sealed hash of the block and then
 				// add it to a digest item.
 				</span><span class="kw">let </span>to_sign = pre_hash.encode();
-				<span class="kw">let </span>signature = Keystore::sign_with(
-					<span class="kw-2">&amp;*</span>keystore,
-					sp_consensus_babe::AuthorityId::ID,
-					<span class="kw-2">&amp;</span>alice.to_public_crypto_pair(),
-					<span class="kw-2">&amp;</span>to_sign,
-				)
-				.unwrap()
-				.unwrap()
-				.try_into()
-				.unwrap();
+				<span class="kw">let </span>signature = keystore
+					.sign_with(
+						sp_consensus_babe::AuthorityId::ID,
+						<span class="kw-2">&amp;</span>alice.to_public_crypto_pair(),
+						<span class="kw-2">&amp;</span>to_sign,
+					)
+					.unwrap()
+					.unwrap()
+					.try_into()
+					.unwrap();
 				<span class="kw">let </span>item = &lt;DigestItem <span class="kw">as </span>CompatibleDigestItem&gt;::babe_seal(signature);
 				slot += <span class="number">1</span>;
 

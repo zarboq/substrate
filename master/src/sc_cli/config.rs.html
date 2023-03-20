@@ -675,7 +675,6 @@
 <a href="#675" id="675">675</a>
 <a href="#676" id="676">676</a>
 <a href="#677" id="677">677</a>
-<a href="#678" id="678">678</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -863,10 +862,10 @@
 	///
 	/// By default this is retrieved from `KeystoreParams` if it is available. Otherwise it uses
 	/// `KeystoreConfig::InMemory`.
-	</span><span class="kw">fn </span>keystore_config(<span class="kw-2">&amp;</span><span class="self">self</span>, config_dir: <span class="kw-2">&amp;</span>PathBuf) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, KeystoreConfig)&gt; {
+	</span><span class="kw">fn </span>keystore_config(<span class="kw-2">&amp;</span><span class="self">self</span>, config_dir: <span class="kw-2">&amp;</span>PathBuf) -&gt; <span class="prelude-ty">Result</span>&lt;KeystoreConfig&gt; {
 		<span class="self">self</span>.keystore_params()
 			.map(|x| x.keystore_config(config_dir))
-			.unwrap_or_else(|| <span class="prelude-val">Ok</span>((<span class="prelude-val">None</span>, KeystoreConfig::InMemory)))
+			.unwrap_or_else(|| <span class="prelude-val">Ok</span>(KeystoreConfig::InMemory))
 	}
 
 	<span class="doccomment">/// Get the database cache size.
@@ -1183,7 +1182,7 @@
 		<span class="kw">let </span>role = <span class="self">self</span>.role(is_dev)<span class="question-mark">?</span>;
 		<span class="kw">let </span>max_runtime_instances = <span class="self">self</span>.max_runtime_instances()<span class="question-mark">?</span>.unwrap_or(<span class="number">8</span>);
 		<span class="kw">let </span>is_validator = role.is_authority();
-		<span class="kw">let </span>(keystore_remote, keystore) = <span class="self">self</span>.keystore_config(<span class="kw-2">&amp;</span>config_dir)<span class="question-mark">?</span>;
+		<span class="kw">let </span>keystore = <span class="self">self</span>.keystore_config(<span class="kw-2">&amp;</span>config_dir)<span class="question-mark">?</span>;
 		<span class="kw">let </span>telemetry_endpoints = <span class="self">self</span>.telemetry_endpoints(<span class="kw-2">&amp;</span>chain_spec)<span class="question-mark">?</span>;
 		<span class="kw">let </span>runtime_cache_size = <span class="self">self</span>.runtime_cache_size()<span class="question-mark">?</span>;
 
@@ -1202,7 +1201,6 @@
 				node_key,
 				DCV::p2p_listen_port(),
 			)<span class="question-mark">?</span>,
-			keystore_remote,
 			keystore,
 			database: <span class="self">self</span>.database_config(<span class="kw-2">&amp;</span>config_dir, database_cache_size, database)<span class="question-mark">?</span>,
 			trie_cache_maximum_size: <span class="self">self</span>.trie_cache_maximum_size()<span class="question-mark">?</span>,

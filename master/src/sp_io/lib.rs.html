@@ -1958,11 +1958,6 @@
 <a href="#1958" id="1958">1958</a>
 <a href="#1959" id="1959">1959</a>
 <a href="#1960" id="1960">1960</a>
-<a href="#1961" id="1961">1961</a>
-<a href="#1962" id="1962">1962</a>
-<a href="#1963" id="1963">1963</a>
-<a href="#1964" id="1964">1964</a>
-<a href="#1965" id="1965">1965</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2008,7 +2003,7 @@
 	traits::TaskExecutorExt,
 };
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">use </span>sp_keystore::{Keystore, KeystoreExt};
+</span><span class="kw">use </span>sp_keystore::KeystoreExt;
 
 <span class="kw">use </span>sp_core::{
 	crypto::KeyTypeId,
@@ -2696,10 +2691,9 @@
 </span><span class="kw">pub trait </span>Crypto {
 	<span class="doccomment">/// Returns all `ed25519` public keys for the given key id from the keystore.
 	</span><span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt; {
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::ed25519_public_keys(keystore, id)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.ed25519_public_keys(id)
 	}
 
 	<span class="doccomment">/// Generate an `ed22519` key for the given key type using an optional `seed` and
@@ -2710,10 +2704,10 @@
 	/// Returns the public key.
 	</span><span class="kw">fn </span>ed25519_generate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: KeyTypeId, seed: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;) -&gt; ed25519::Public {
 		<span class="kw">let </span>seed = seed.as_ref().map(|s| std::str::from_utf8(s).expect(<span class="string">&quot;Seed is valid utf8!&quot;</span>));
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::ed25519_generate_new(keystore, id, seed).expect(<span class="string">&quot;`ed25519_generate` failed&quot;</span>)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.ed25519_generate_new(id, seed)
+			.expect(<span class="string">&quot;`ed25519_generate` failed&quot;</span>)
 	}
 
 	<span class="doccomment">/// Sign the given `msg` with the `ed25519` key that corresponds to the given public key and
@@ -2726,10 +2720,9 @@
 		pub_key: <span class="kw-2">&amp;</span>ed25519::Public,
 		msg: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Option</span>&lt;ed25519::Signature&gt; {
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::sign_with(keystore, id, <span class="kw-2">&amp;</span>pub_key.into(), msg)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.sign_with(id, <span class="kw-2">&amp;</span>pub_key.into(), msg)
 			.ok()
 			.flatten()
 			.and_then(|sig| ed25519::Signature::from_slice(<span class="kw-2">&amp;</span>sig))
@@ -2838,10 +2831,9 @@
 
 	<span class="doccomment">/// Returns all `sr25519` public keys for the given key id from the keystore.
 	</span><span class="kw">fn </span>sr25519_public_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;sr25519::Public&gt; {
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::sr25519_public_keys(keystore, id)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.sr25519_public_keys(id)
 	}
 
 	<span class="doccomment">/// Generate an `sr22519` key for the given key type using an optional seed and
@@ -2852,10 +2844,10 @@
 	/// Returns the public key.
 	</span><span class="kw">fn </span>sr25519_generate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: KeyTypeId, seed: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;) -&gt; sr25519::Public {
 		<span class="kw">let </span>seed = seed.as_ref().map(|s| std::str::from_utf8(s).expect(<span class="string">&quot;Seed is valid utf8!&quot;</span>));
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::sr25519_generate_new(keystore, id, seed).expect(<span class="string">&quot;`sr25519_generate` failed&quot;</span>)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.sr25519_generate_new(id, seed)
+			.expect(<span class="string">&quot;`sr25519_generate` failed&quot;</span>)
 	}
 
 	<span class="doccomment">/// Sign the given `msg` with the `sr25519` key that corresponds to the given public key and
@@ -2868,10 +2860,9 @@
 		pub_key: <span class="kw-2">&amp;</span>sr25519::Public,
 		msg: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Option</span>&lt;sr25519::Signature&gt; {
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::sign_with(keystore, id, <span class="kw-2">&amp;</span>pub_key.into(), msg)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.sign_with(id, <span class="kw-2">&amp;</span>pub_key.into(), msg)
 			.ok()
 			.flatten()
 			.and_then(|sig| sr25519::Signature::from_slice(<span class="kw-2">&amp;</span>sig))
@@ -2887,10 +2878,9 @@
 
 	<span class="doccomment">/// Returns all `ecdsa` public keys for the given key id from the keystore.
 	</span><span class="kw">fn </span>ecdsa_public_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;ecdsa::Public&gt; {
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::ecdsa_public_keys(keystore, id)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.ecdsa_public_keys(id)
 	}
 
 	<span class="doccomment">/// Generate an `ecdsa` key for the given key type using an optional `seed` and
@@ -2901,10 +2891,10 @@
 	/// Returns the public key.
 	</span><span class="kw">fn </span>ecdsa_generate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: KeyTypeId, seed: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;) -&gt; ecdsa::Public {
 		<span class="kw">let </span>seed = seed.as_ref().map(|s| std::str::from_utf8(s).expect(<span class="string">&quot;Seed is valid utf8!&quot;</span>));
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::ecdsa_generate_new(keystore, id, seed).expect(<span class="string">&quot;`ecdsa_generate` failed&quot;</span>)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.ecdsa_generate_new(id, seed)
+			.expect(<span class="string">&quot;`ecdsa_generate` failed&quot;</span>)
 	}
 
 	<span class="doccomment">/// Sign the given `msg` with the `ecdsa` key that corresponds to the given public key and
@@ -2917,10 +2907,9 @@
 		pub_key: <span class="kw-2">&amp;</span>ecdsa::Public,
 		msg: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt; {
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::sign_with(keystore, id, <span class="kw-2">&amp;</span>pub_key.into(), msg)
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.sign_with(id, <span class="kw-2">&amp;</span>pub_key.into(), msg)
 			.ok()
 			.flatten()
 			.and_then(|sig| ecdsa::Signature::from_slice(<span class="kw-2">&amp;</span>sig))
@@ -2936,10 +2925,11 @@
 		pub_key: <span class="kw-2">&amp;</span>ecdsa::Public,
 		msg: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>],
 	) -&gt; <span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt; {
-		<span class="kw">let </span>keystore = <span class="kw-2">&amp;***</span><span class="self">self
-			</span>.extension::&lt;KeystoreExt&gt;()
-			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>);
-		Keystore::ecdsa_sign_prehashed(keystore, id, pub_key, msg).ok().flatten()
+		<span class="self">self</span>.extension::&lt;KeystoreExt&gt;()
+			.expect(<span class="string">&quot;No `keystore` associated for the current context!&quot;</span>)
+			.ecdsa_sign_prehashed(id, pub_key, msg)
+			.ok()
+			.flatten()
 	}
 
 	<span class="doccomment">/// Verify `ecdsa` signature.

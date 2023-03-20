@@ -212,6 +212,7 @@
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -254,7 +255,7 @@
 <span class="kw">use </span>sp_api::ProvideRuntimeApi;
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_core::Bytes;
-<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
+<span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::{generic, traits::Block <span class="kw">as </span>BlockT};
 <span class="kw">use </span>sp_session::SessionKeys;
 
@@ -326,7 +327,8 @@
 		<span class="self">self</span>.deny_unsafe.check_if_safe()<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>key_type = key_type.as_str().try_into().map_err(|<span class="kw">_</span>| Error::BadKeyType)<span class="question-mark">?</span>;
-		Keystore::insert(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, key_type, <span class="kw-2">&amp;</span>suri, <span class="kw-2">&amp;</span>public[..])
+		<span class="self">self</span>.keystore
+			.insert(key_type, <span class="kw-2">&amp;</span>suri, <span class="kw-2">&amp;</span>public[..])
 			.map_err(|<span class="kw">_</span>| Error::KeystoreUnavailable)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -353,14 +355,14 @@
 			.map_err(|e| Error::Client(Box::new(e)))<span class="question-mark">?
 			</span>.ok_or(Error::InvalidSessionKeys)<span class="question-mark">?</span>;
 
-		<span class="prelude-val">Ok</span>(Keystore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>keys))
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.keystore.has_keys(<span class="kw-2">&amp;</span>keys))
 	}
 
 	<span class="kw">fn </span>has_key(<span class="kw-2">&amp;</span><span class="self">self</span>, public_key: Bytes, key_type: String) -&gt; RpcResult&lt;bool&gt; {
 		<span class="self">self</span>.deny_unsafe.check_if_safe()<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>key_type = key_type.as_str().try_into().map_err(|<span class="kw">_</span>| Error::BadKeyType)<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(Keystore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>[(public_key.to_vec(), key_type)]))
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.keystore.has_keys(<span class="kw-2">&amp;</span>[(public_key.to_vec(), key_type)]))
 	}
 
 	<span class="kw">fn </span>pending_extrinsics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RpcResult&lt;Vec&lt;Bytes&gt;&gt; {

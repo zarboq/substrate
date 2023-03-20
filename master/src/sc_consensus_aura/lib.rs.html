@@ -978,9 +978,6 @@
 <a href="#978" id="978">978</a>
 <a href="#979" id="979">979</a>
 <a href="#980" id="980">980</a>
-<a href="#981" id="981">981</a>
-<a href="#982" id="982">982</a>
-<a href="#983" id="983">983</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1034,7 +1031,7 @@
 <span class="kw">use </span>sp_consensus_slots::Slot;
 <span class="kw">use </span>sp_core::crypto::{ByteArray, Pair, Public};
 <span class="kw">use </span>sp_inherents::CreateInherentDataProviders;
-<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
+<span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::{
 	traits::{Block <span class="kw">as </span>BlockT, Header, Member, NumberFor, Zero},
 	DigestItem,
@@ -1401,10 +1398,10 @@
 	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Claim&gt; {
 		<span class="kw">let </span>expected_author = slot_author::&lt;P&gt;(slot, epoch_data);
 		expected_author.and_then(|p| {
-			<span class="kw">if </span>Keystore::has_keys(
-				<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore,
-				<span class="kw-2">&amp;</span>[(p.to_raw_vec(), sp_application_crypto::key_types::AURA)],
-			) {
+			<span class="kw">if </span><span class="self">self
+				</span>.keystore
+				.has_keys(<span class="kw-2">&amp;</span>[(p.to_raw_vec(), sp_application_crypto::key_types::AURA)])
+			{
 				<span class="prelude-val">Some</span>(p.clone())
 			} <span class="kw">else </span>{
 				<span class="prelude-val">None
@@ -1432,19 +1429,16 @@
 		// add it to a digest item.
 		</span><span class="kw">let </span>public_type_pair = public.to_public_crypto_pair();
 		<span class="kw">let </span>public = public.to_raw_vec();
-		<span class="kw">let </span>signature = Keystore::sign_with(
-			<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore,
-			&lt;AuthorityId&lt;P&gt; <span class="kw">as </span>AppKey&gt;::ID,
-			<span class="kw-2">&amp;</span>public_type_pair,
-			header_hash.as_ref(),
-		)
-		.map_err(|e| sp_consensus::Error::CannotSign(public.clone(), e.to_string()))<span class="question-mark">?
-		</span>.ok_or_else(|| {
-			sp_consensus::Error::CannotSign(
-				public.clone(),
-				<span class="string">&quot;Could not find key in keystore.&quot;</span>.into(),
-			)
-		})<span class="question-mark">?</span>;
+		<span class="kw">let </span>signature = <span class="self">self
+			</span>.keystore
+			.sign_with(&lt;AuthorityId&lt;P&gt; <span class="kw">as </span>AppKey&gt;::ID, <span class="kw-2">&amp;</span>public_type_pair, header_hash.as_ref())
+			.map_err(|e| sp_consensus::Error::CannotSign(public.clone(), e.to_string()))<span class="question-mark">?
+			</span>.ok_or_else(|| {
+				sp_consensus::Error::CannotSign(
+					public.clone(),
+					<span class="string">&quot;Could not find key in keystore.&quot;</span>.into(),
+				)
+			})<span class="question-mark">?</span>;
 		<span class="kw">let </span>signature = signature
 			.clone()
 			.try_into()
@@ -1631,6 +1625,7 @@
 	<span class="kw">use </span>sp_consensus_aura::sr25519::AuthorityPair;
 	<span class="kw">use </span>sp_inherents::InherentData;
 	<span class="kw">use </span>sp_keyring::sr25519::Keyring;
+	<span class="kw">use </span>sp_keystore::Keystore;
 	<span class="kw">use </span>sp_runtime::{
 		traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as _</span>},
 		Digest,
@@ -1781,7 +1776,8 @@
 				LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore.&quot;</span>),
 			);
 
-			Keystore::sr25519_generate_new(<span class="kw-2">&amp;*</span>keystore, AURA, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>key.to_seed()))
+			keystore
+				.sr25519_generate_new(AURA, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>key.to_seed()))
 				.expect(<span class="string">&quot;Creates authority key&quot;</span>);
 			keystore_paths.push(keystore_path);
 
@@ -1866,7 +1862,8 @@
 
 		<span class="kw">let </span>keystore_path = tempfile::tempdir().expect(<span class="string">&quot;Creates keystore path&quot;</span>);
 		<span class="kw">let </span>keystore = LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore.&quot;</span>);
-		<span class="kw">let </span>public = Keystore::sr25519_generate_new(<span class="kw-2">&amp;</span>keystore, AuthorityPair::ID, <span class="prelude-val">None</span>)
+		<span class="kw">let </span>public = keystore
+			.sr25519_generate_new(AuthorityPair::ID, <span class="prelude-val">None</span>)
 			.expect(<span class="string">&quot;Key should be created&quot;</span>);
 		authorities.push(public.into());
 
@@ -1916,12 +1913,9 @@
 
 		<span class="kw">let </span>keystore_path = tempfile::tempdir().expect(<span class="string">&quot;Creates keystore path&quot;</span>);
 		<span class="kw">let </span>keystore = LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore.&quot;</span>);
-		Keystore::sr25519_generate_new(
-			<span class="kw-2">&amp;</span>keystore,
-			AuthorityPair::ID,
-			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Keyring::Alice.to_seed()),
-		)
-		.expect(<span class="string">&quot;Key should be created&quot;</span>);
+		keystore
+			.sr25519_generate_new(AuthorityPair::ID, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Keyring::Alice.to_seed()))
+			.expect(<span class="string">&quot;Key should be created&quot;</span>);
 
 		<span class="kw">let </span>net = Arc::new(Mutex::new(net));
 

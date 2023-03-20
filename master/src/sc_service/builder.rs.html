@@ -996,46 +996,6 @@
 <a href="#996" id="996">996</a>
 <a href="#997" id="997">997</a>
 <a href="#998" id="998">998</a>
-<a href="#999" id="999">999</a>
-<a href="#1000" id="1000">1000</a>
-<a href="#1001" id="1001">1001</a>
-<a href="#1002" id="1002">1002</a>
-<a href="#1003" id="1003">1003</a>
-<a href="#1004" id="1004">1004</a>
-<a href="#1005" id="1005">1005</a>
-<a href="#1006" id="1006">1006</a>
-<a href="#1007" id="1007">1007</a>
-<a href="#1008" id="1008">1008</a>
-<a href="#1009" id="1009">1009</a>
-<a href="#1010" id="1010">1010</a>
-<a href="#1011" id="1011">1011</a>
-<a href="#1012" id="1012">1012</a>
-<a href="#1013" id="1013">1013</a>
-<a href="#1014" id="1014">1014</a>
-<a href="#1015" id="1015">1015</a>
-<a href="#1016" id="1016">1016</a>
-<a href="#1017" id="1017">1017</a>
-<a href="#1018" id="1018">1018</a>
-<a href="#1019" id="1019">1019</a>
-<a href="#1020" id="1020">1020</a>
-<a href="#1021" id="1021">1021</a>
-<a href="#1022" id="1022">1022</a>
-<a href="#1023" id="1023">1023</a>
-<a href="#1024" id="1024">1024</a>
-<a href="#1025" id="1025">1025</a>
-<a href="#1026" id="1026">1026</a>
-<a href="#1027" id="1027">1027</a>
-<a href="#1028" id="1028">1028</a>
-<a href="#1029" id="1029">1029</a>
-<a href="#1030" id="1030">1030</a>
-<a href="#1031" id="1031">1031</a>
-<a href="#1032" id="1032">1032</a>
-<a href="#1033" id="1033">1033</a>
-<a href="#1034" id="1034">1034</a>
-<a href="#1035" id="1035">1035</a>
-<a href="#1036" id="1036">1036</a>
-<a href="#1037" id="1037">1037</a>
-<a href="#1038" id="1038">1038</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1105,7 +1065,7 @@
 	BlockAnnounceValidator, Chain, DefaultBlockAnnounceValidator,
 };
 <span class="kw">use </span>sp_core::traits::{CodeExecutor, SpawnNamed};
-<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
+<span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, BlockIdTo, NumberFor, Zero};
 <span class="kw">use </span>std::{str::FromStr, sync::Arc, time::SystemTime};
 
@@ -1123,24 +1083,8 @@
 <span class="kw">type </span>TFullParts&lt;TBl, TRtApi, TExec&gt; =
 	(TFullClient&lt;TBl, TRtApi, TExec&gt;, Arc&lt;TFullBackend&lt;TBl&gt;&gt;, KeystoreContainer, TaskManager);
 
-<span class="kw">trait </span>AsKeystoreRef {
-	<span class="kw">fn </span>keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Keystore&gt;;
-}
-
-<span class="kw">impl</span>&lt;T&gt; AsKeystoreRef <span class="kw">for </span>Arc&lt;T&gt;
-<span class="kw">where
-	</span>T: Keystore + <span class="lifetime">&#39;static</span>,
-{
-	<span class="kw">fn </span>keystore_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Keystore&gt; {
-		<span class="self">self</span>.clone()
-	}
-}
-
-<span class="doccomment">/// Construct and hold different layers of Keystore wrappers
-</span><span class="kw">pub struct </span>KeystoreContainer {
-	remote: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>AsKeystoreRef&gt;&gt;,
-	local: Arc&lt;LocalKeystore&gt;,
-}
+<span class="doccomment">/// Construct a local keystore shareable container
+</span><span class="kw">pub struct </span>KeystoreContainer(Arc&lt;LocalKeystore&gt;);
 
 <span class="kw">impl </span>KeystoreContainer {
 	<span class="doccomment">/// Construct KeystoreContainer
@@ -1151,41 +1095,17 @@
 			KeystoreConfig::InMemory =&gt; LocalKeystore::in_memory(),
 		});
 
-		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ remote: Default::default(), local: keystore })
+		<span class="prelude-val">Ok</span>(<span class="self">Self</span>(keystore))
 	}
 
-	<span class="doccomment">/// Set the remote keystore.
-	/// Should be called right away at startup and not at runtime:
-	/// even though this overrides any previously set remote store, it
-	/// does not reset any references previously handed out - they will
-	/// stick around.
-	</span><span class="kw">pub fn </span>set_remote_keystore&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, remote: Arc&lt;T&gt;)
-	<span class="kw">where
-		</span>T: Keystore + <span class="lifetime">&#39;static</span>,
-	{
-		<span class="self">self</span>.remote = <span class="prelude-val">Some</span>(Box::new(remote))
+	<span class="doccomment">/// Returns a shared reference to a dynamic `Keystore` trait implementation.
+	</span><span class="kw">pub fn </span>keystore(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; KeystorePtr {
+		<span class="self">self</span>.<span class="number">0</span>.clone()
 	}
 
-	<span class="doccomment">/// Returns an adapter to a `Keystore` implementation.
-	</span><span class="kw">pub fn </span>keystore(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;<span class="kw">dyn </span>Keystore&gt; {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(c) = <span class="self">self</span>.remote.as_ref() {
-			c.keystore_ref()
-		} <span class="kw">else </span>{
-			<span class="self">self</span>.local.clone()
-		}
-	}
-
-	<span class="doccomment">/// Returns the local keystore if available
-	///
-	/// The function will return None if the available keystore is not a local keystore.
-	///
-	/// # Note
-	///
-	/// Using the [`LocalKeystore`] will result in loosing the ability to use any other keystore
-	/// implementation, like a remote keystore for example. Only use this if you a certain that you
-	/// require it!
-	</span><span class="kw">pub fn </span>local_keystore(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;LocalKeystore&gt;&gt; {
-		<span class="prelude-val">Some</span>(<span class="self">self</span>.local.clone())
+	<span class="doccomment">/// Returns a shared reference to the local keystore .
+	</span><span class="kw">pub fn </span>local_keystore(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;LocalKeystore&gt; {
+		<span class="self">self</span>.<span class="number">0</span>.clone()
 	}
 }
 

@@ -267,15 +267,6 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -315,7 +306,7 @@
 	digests::PreDigest, AuthorityId, BabeApi <span class="kw">as </span>BabeRuntimeApi, BabeConfiguration,
 };
 <span class="kw">use </span>sp_core::crypto::ByteArray;
-<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
+<span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as _</span>};
 <span class="kw">use </span>std::{collections::HashMap, sync::Arc};
 
@@ -395,7 +386,7 @@
 				.iter()
 				.enumerate()
 				.filter_map(|(i, a)| {
-					<span class="kw">if </span>Keystore::has_keys(<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore, <span class="kw-2">&amp;</span>[(a.<span class="number">0</span>.to_raw_vec(), AuthorityId::ID)]) {
+					<span class="kw">if </span><span class="self">self</span>.keystore.has_keys(<span class="kw-2">&amp;</span>[(a.<span class="number">0</span>.to_raw_vec(), AuthorityId::ID)]) {
 						<span class="prelude-val">Some</span>((a.<span class="number">0</span>.clone(), i))
 					} <span class="kw">else </span>{
 						<span class="prelude-val">None
@@ -488,30 +479,21 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>sc_keystore::LocalKeystore;
-	<span class="kw">use </span>sp_application_crypto::AppPair;
+	<span class="kw">use </span>sc_consensus_babe::block_import;
 	<span class="kw">use </span>sp_core::crypto::key_types::BABE;
 	<span class="kw">use </span>sp_keyring::Sr25519Keyring;
-	<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
+	<span class="kw">use </span>sp_keystore::{testing::MemoryKeystore, Keystore};
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		runtime::Block, Backend, DefaultTestClientBuilderExt, TestClient, TestClientBuilder,
 		TestClientBuilderExt,
 	};
 
-	<span class="kw">use </span>sc_consensus_babe::{block_import, AuthorityPair};
-	<span class="kw">use </span>std::sync::Arc;
-
-	<span class="doccomment">/// creates keystore backed by a temp file
-	</span><span class="kw">fn </span>create_temp_keystore&lt;P: AppPair&gt;(
-		authority: Sr25519Keyring,
-	) -&gt; (KeystorePtr, tempfile::TempDir) {
-		<span class="kw">let </span>keystore_path = tempfile::tempdir().expect(<span class="string">&quot;Creates keystore path&quot;</span>);
-		<span class="kw">let </span>keystore =
-			Arc::new(LocalKeystore::open(keystore_path.path(), <span class="prelude-val">None</span>).expect(<span class="string">&quot;Creates keystore&quot;</span>));
-		Keystore::sr25519_generate_new(<span class="kw-2">&amp;*</span>keystore, BABE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>authority.to_seed()))
+	<span class="kw">fn </span>create_keystore(authority: Sr25519Keyring) -&gt; KeystorePtr {
+		<span class="kw">let </span>keystore = MemoryKeystore::new();
+		keystore
+			.sr25519_generate_new(BABE, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>authority.to_seed()))
 			.expect(<span class="string">&quot;Creates authority key&quot;</span>);
-
-		(keystore, keystore_path)
+		keystore.into()
 	}
 
 	<span class="kw">fn </span>test_babe_rpc_module(
@@ -525,7 +507,7 @@
 			.expect(<span class="string">&quot;can initialize block-import&quot;</span>);
 
 		<span class="kw">let </span>epoch_changes = link.epoch_changes().clone();
-		<span class="kw">let </span>keystore = create_temp_keystore::&lt;AuthorityPair&gt;(Sr25519Keyring::Alice).<span class="number">0</span>;
+		<span class="kw">let </span>keystore = create_keystore(Sr25519Keyring::Alice);
 
 		Babe::new(client.clone(), epoch_changes, keystore, config, longest_chain, deny_unsafe)
 	}

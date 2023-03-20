@@ -1909,9 +1909,6 @@
 <a href="#1909" id="1909">1909</a>
 <a href="#1910" id="1910">1910</a>
 <a href="#1911" id="1911">1911</a>
-<a href="#1912" id="1912">1912</a>
-<a href="#1913" id="1913">1913</a>
-<a href="#1914" id="1914">1914</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2033,7 +2030,7 @@
 <span class="kw">use </span>sp_consensus_slots::Slot;
 <span class="kw">use </span>sp_core::{crypto::ByteArray, ExecutionContext};
 <span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentData, InherentDataProvider};
-<span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
+<span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::{
 	generic::OpaqueDigestItemId,
 	traits::{Block <span class="kw">as </span>BlockT, Header, NumberFor, SaturatedConversion, Zero},
@@ -2748,19 +2745,16 @@
 		// add it to a digest item.
 		</span><span class="kw">let </span>public_type_pair = public.clone().into();
 		<span class="kw">let </span>public = public.to_raw_vec();
-		<span class="kw">let </span>signature = Keystore::sign_with(
-			<span class="kw-2">&amp;*</span><span class="self">self</span>.keystore,
-			&lt;AuthorityId <span class="kw">as </span>AppKey&gt;::ID,
-			<span class="kw-2">&amp;</span>public_type_pair,
-			header_hash.as_ref(),
-		)
-		.map_err(|e| sp_consensus::Error::CannotSign(public.clone(), e.to_string()))<span class="question-mark">?
-		</span>.ok_or_else(|| {
-			sp_consensus::Error::CannotSign(
-				public.clone(),
-				<span class="string">&quot;Could not find key in keystore.&quot;</span>.into(),
-			)
-		})<span class="question-mark">?</span>;
+		<span class="kw">let </span>signature = <span class="self">self
+			</span>.keystore
+			.sign_with(&lt;AuthorityId <span class="kw">as </span>AppKey&gt;::ID, <span class="kw-2">&amp;</span>public_type_pair, header_hash.as_ref())
+			.map_err(|e| sp_consensus::Error::CannotSign(public.clone(), e.to_string()))<span class="question-mark">?
+			</span>.ok_or_else(|| {
+				sp_consensus::Error::CannotSign(
+					public.clone(),
+					<span class="string">&quot;Could not find key in keystore.&quot;</span>.into(),
+				)
+			})<span class="question-mark">?</span>;
 		<span class="kw">let </span>signature: AuthoritySignature = signature
 			.clone()
 			.try_into()

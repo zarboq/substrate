@@ -755,6 +755,7 @@
 <a href="#755" id="755">755</a>
 <a href="#756" id="756">756</a>
 <a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -795,10 +796,10 @@
 	traits::CallContext,
 };
 <span class="kw">use </span>sp_externalities::Extensions;
-<span class="kw">use </span>sp_keystore::{testing::MemoryKeystore, KeystoreExt, KeystorePtr};
+<span class="kw">use </span>sp_keystore::{testing::MemoryKeystore, KeystoreExt};
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT};
 <span class="kw">use </span>sp_state_machine::StateMachine;
-<span class="kw">use </span>std::{collections::HashMap, fmt::Debug, fs, str::FromStr, sync::Arc, time};
+<span class="kw">use </span>std::{collections::HashMap, fmt::Debug, fs, str::FromStr, time};
 
 <span class="doccomment">/// Logging target
 </span><span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;frame::benchmark::pallet&quot;</span>;
@@ -975,9 +976,10 @@ not created by a node that was compiled with the flag&quot;</span>;
 
 		<span class="kw">let </span>extensions = || -&gt; Extensions {
 			<span class="kw">let </span><span class="kw-2">mut </span>extensions = Extensions::default();
-			extensions.register(KeystoreExt(Arc::new(MemoryKeystore::new()) <span class="kw">as </span>KeystorePtr));
 			<span class="kw">let </span>(offchain, <span class="kw">_</span>) = TestOffchainExt::new();
 			<span class="kw">let </span>(pool, <span class="kw">_</span>) = TestTransactionPoolExt::new();
+			<span class="kw">let </span>keystore = MemoryKeystore::new();
+			extensions.register(KeystoreExt::new(keystore));
 			extensions.register(OffchainWorkerExt::new(offchain.clone()));
 			extensions.register(OffchainDbExt::new(offchain));
 			extensions.register(TransactionPoolExt::new(pool));
