@@ -3123,6 +3123,12 @@
 <a href="#3123" id="3123">3123</a>
 <a href="#3124" id="3124">3124</a>
 <a href="#3125" id="3125">3125</a>
+<a href="#3126" id="3126">3126</a>
+<a href="#3127" id="3127">3127</a>
+<a href="#3128" id="3128">3128</a>
+<a href="#3129" id="3129">3129</a>
+<a href="#3130" id="3130">3130</a>
+<a href="#3131" id="3131">3131</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3170,18 +3176,18 @@
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>wasm_instrument::parity_wasm::elements::{BlockType, BrTableData, Instruction, ValueType};
 
-<span class="doccomment">/// How many batches we do per API benchmark.
+<span class="doccomment">/// How many runs we do per API benchmark.
 ///
 /// This is picked more or less arbitrary. We experimented with different numbers until
 /// the results appeared to be stable. Reducing the number would speed up the benchmarks
 /// but might make the results less precise.
-</span><span class="kw">const </span>API_BENCHMARK_BATCHES: u32 = <span class="number">1600</span>;
+</span><span class="kw">const </span>API_BENCHMARK_RUNS: u32 = <span class="number">1600</span>;
 
-<span class="doccomment">/// How many batches we do per instruction benchmark.
+<span class="doccomment">/// How many runs we do per instruction benchmark.
 ///
-/// Same rationale as for [`API_BENCHMARK_BATCHES`]. The number is bigger because instruction
+/// Same rationale as for [`API_BENCHMARK_RUNS`]. The number is bigger because instruction
 /// benchmarks are faster.
-</span><span class="kw">const </span>INSTR_BENCHMARK_BATCHES: u32 = <span class="number">5000</span>;
+</span><span class="kw">const </span>INSTR_BENCHMARK_RUNS: u32 = <span class="number">5000</span>;
 
 <span class="doccomment">/// An instantiated and deployed contract.
 </span><span class="kw">struct </span>Contract&lt;T: Config&gt; {
@@ -3550,7 +3556,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_caller {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_caller&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3559,7 +3565,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_is_contract {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r)
 			.map(|n| account::&lt;T::AccountId&gt;(<span class="string">&quot;account&quot;</span>, n, <span class="number">0</span>))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -3597,7 +3603,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_code_hash {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>accounts = (<span class="number">0 </span>.. r)
 			.map(|n| account::&lt;T::AccountId&gt;(<span class="string">&quot;account&quot;</span>, n, <span class="number">0</span>))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -3643,7 +3649,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_own_code_hash {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_own_code_hash&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3652,7 +3658,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_caller_is_origin {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -3673,7 +3679,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_address {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_address&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3682,7 +3688,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_gas_left {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_gas_left&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3691,7 +3697,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_balance {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_balance&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3700,7 +3706,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_value_transferred {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_value_transferred&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3709,7 +3715,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_minimum_balance {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_minimum_balance&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3718,7 +3724,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_block_number {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_block_number&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3727,7 +3733,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_now {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
 			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_now&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -3736,7 +3742,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_weight_to_fee {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>pages = code::max_pages::&lt;T&gt;();
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
@@ -3764,7 +3770,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_gas {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
 				module: <span class="string">&quot;seal0&quot;</span>,
@@ -3785,7 +3791,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_input {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -3940,7 +3946,7 @@
 	// used.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_random {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>pages = code::max_pages::&lt;T&gt;();
 		<span class="kw">let </span>subject_len = T::Schedule::get().limits.subject_len;
 		<span class="macro">assert!</span>(subject_len &lt; <span class="number">1024</span>);
@@ -3975,7 +3981,7 @@
 	// We benchmark for the worst case (largest event).
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_deposit_event {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4039,7 +4045,7 @@
 	// against an excessive use.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_debug_message {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory { min_pages: <span class="number">1</span>, max_pages: <span class="number">1 </span>}),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -4134,7 +4140,7 @@
 	</span><span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
 	</span>seal_set_storage {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
 		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
@@ -4268,11 +4274,11 @@
 	<span class="comment">// Similar to seal_set_storage. We store all the keys that we are about to
 	// delete beforehand in order to prevent any optimizations that could occur when
 	// deleting a non existing key. We generate keys of a maximum length, and have to
-	// reduce batch size in order to make resulting contract code size less than MaxCodeLen.
+	// the amount of runs in order to make resulting contract code size less than MaxCodeLen.
 	</span><span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
 	</span>seal_clear_storage {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
 		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
@@ -4361,7 +4367,7 @@
 	</span><span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
 	</span>seal_get_storage {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
 		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
@@ -4464,7 +4470,7 @@
 	</span><span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
 	</span>seal_contains_storage {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
 		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
@@ -4554,7 +4560,7 @@
 	<span class="attr">#[skip_meta]
 	#[pov_mode = Measured]
 	</span>seal_take_storage {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES/<span class="number">2</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS/<span class="number">2</span>;
 		<span class="kw">let </span>max_key_len = T::MaxStorageKeyLen::get();
 		<span class="kw">let </span>keys = (<span class="number">0 </span>.. r)
 				.map(|n| { <span class="kw">let </span><span class="kw-2">mut </span>h = T::Hashing::hash_of(<span class="kw-2">&amp;</span>n).as_ref().to_vec();
@@ -4656,7 +4662,7 @@
 	<span class="comment">// We transfer to unique accounts.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_transfer {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>accounts = (<span class="number">0</span>..r)
 			.map(|i| account::&lt;T::AccountId&gt;(<span class="string">&quot;receiver&quot;</span>, i, <span class="number">0</span>))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -4708,9 +4714,11 @@
 	}
 
 	<span class="comment">// We call unique accounts.
+	//
+	// This is a slow call: We redeuce the number of runs.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_call {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS / <span class="number">2</span>;
 		<span class="kw">let </span>dummy_code = WasmModule::&lt;T&gt;::dummy_with_bytes(<span class="number">0</span>);
 		<span class="kw">let </span>callees = (<span class="number">0</span>..r)
 			.map(|i| Contract::with_index(i + <span class="number">1</span>, dummy_code.clone(), <span class="macro">vec!</span>[]))
@@ -4767,9 +4775,10 @@
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
-	<span class="attr">#[pov_mode = Measured]
+	<span class="comment">// This is a slow call: We redeuce the number of runs.
+	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_delegate_call {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS / <span class="number">2</span>;
 		<span class="kw">let </span>hashes = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>code = WasmModule::&lt;T&gt;::dummy_with_bytes(i);
@@ -4876,9 +4885,10 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, bytes)
 
 	<span class="comment">// We assume that every instantiate sends at least the minimum balance.
+	// This is a slow call: We redeuce the number of runs.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_instantiate {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS / <span class="number">2</span>;
 		<span class="kw">let </span>hashes = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -5064,7 +5074,7 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_sha2_256 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
 			<span class="string">&quot;seal_hash_sha2_256&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -5084,7 +5094,7 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_keccak_256 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
 			<span class="string">&quot;seal_hash_keccak_256&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -5104,7 +5114,7 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_256 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
 			<span class="string">&quot;seal_hash_blake2_256&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -5124,7 +5134,7 @@
 	<span class="comment">// Only the overhead of calling the function itself with minimal arguments.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_hash_blake2_128 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::hasher(
 			<span class="string">&quot;seal_hash_blake2_128&quot;</span>, r, <span class="number">0</span>,
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
@@ -5143,9 +5153,10 @@
 
 	<span class="comment">// Only calling the function itself with valid arguments.
 	// It generates different private keys and signatures for the message &quot;Hello world&quot;.
+	// This is a slow call: We redeuce the number of runs.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_ecdsa_recover {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS / <span class="number">10</span>;
 
 		<span class="kw">let </span>message_hash = sp_io::hashing::blake2_256(<span class="string">&quot;Hello world&quot;</span>.as_bytes());
 		<span class="kw">let </span>key_type = sp_core::crypto::KeyTypeId(<span class="kw-2">*</span><span class="string">b&quot;code&quot;</span>);
@@ -5192,9 +5203,10 @@
 
 	<span class="comment">// Only calling the function itself for the list of
 	// generated different ECDSA keys.
+	// This is a slow call: We redeuce the number of runs.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_ecdsa_to_eth_address {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS / <span class="number">10</span>;
 		<span class="kw">let </span>key_type = sp_core::crypto::KeyTypeId(<span class="kw-2">*</span><span class="string">b&quot;code&quot;</span>);
 		<span class="kw">let </span>pub_keys_bytes = (<span class="number">0</span>..r)
 			.flat_map(|<span class="kw">_</span>| {
@@ -5230,7 +5242,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_set_code_hash {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code_hashes = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>new_code = WasmModule::&lt;T&gt;::dummy_with_bytes(i);
@@ -5271,7 +5283,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_reentrance_count {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -5292,7 +5304,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_account_reentrance_count {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>dummy_code = WasmModule::&lt;T&gt;::dummy_with_bytes(<span class="number">0</span>);
 		<span class="kw">let </span>accounts = (<span class="number">0</span>..r)
 			.map(|i| Contract::with_index(i + <span class="number">1</span>, dummy_code.clone(), <span class="macro">vec!</span>[]))
@@ -5326,7 +5338,7 @@
 
 	<span class="attr">#[pov_mode = Measured]
 	</span>seal_instantiation_nonce {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
@@ -5357,7 +5369,7 @@
 	// w_i{32,64}const = w_drop = w_bench / 2
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64const {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI64Repeated(<span class="number">1</span>),
@@ -5372,7 +5384,7 @@
 	<span class="comment">// w_i{32,64}load = w_bench - 2 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64load {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
@@ -5389,7 +5401,7 @@
 	<span class="comment">// w_i{32,64}store{...} = w_bench - 2 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64store {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
@@ -5406,7 +5418,7 @@
 	<span class="comment">// w_select = w_bench - 4 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_select {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI64Repeated(<span class="number">1</span>),
@@ -5424,7 +5436,7 @@
 	<span class="comment">// w_if = w_bench - 3 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_if {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI32(<span class="number">0</span>, <span class="number">2</span>),
@@ -5445,7 +5457,7 @@
 	// Block instructions are not counted.
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_br {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Regular(Instruction::Block(BlockType::NoResult)),
@@ -5472,7 +5484,7 @@
 	// Block instructions are not counted.
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_br_if {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Regular(Instruction::Block(BlockType::NoResult)),
@@ -5500,7 +5512,7 @@
 	// Block instructions are not counted.
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_br_table {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span>table = Box::new(BrTableData {
 			table: Box::new([<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>]),
 			default: <span class="number">1</span>,
@@ -5567,7 +5579,7 @@
 	<span class="comment">// w_call = w_bench - 2 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_call {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			<span class="comment">// We need to make use of the stack here in order to trigger stack height
 			// instrumentation.
@@ -5588,7 +5600,7 @@
 	<span class="comment">// w_call_indrect = w_bench - 3 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_call_indirect {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span>num_elements = T::Schedule::get().limits.table_size;
 		<span class="kw">use </span><span class="self">self</span>::code::TableSegment;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
@@ -5636,7 +5648,7 @@
 	<span class="comment">// w_local_get = w_bench - 1 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_local_get {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
 		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r, <span class="macro">vec!</span>[
 			RandomGetLocal(<span class="number">0</span>, max_locals),
@@ -5654,7 +5666,7 @@
 	<span class="comment">// w_local_set = w_bench - 1 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_local_set {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
 		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r, <span class="macro">vec!</span>[
 			RandomI64Repeated(<span class="number">1</span>),
@@ -5672,7 +5684,7 @@
 	<span class="comment">// w_local_tee = w_bench - 2 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_local_tee {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span>max_locals = T::Schedule::get().limits.locals;
 		<span class="kw">let </span><span class="kw-2">mut </span>call_body = body::repeated_dyn(r, <span class="macro">vec!</span>[
 			RandomI64Repeated(<span class="number">1</span>),
@@ -5691,7 +5703,7 @@
 	<span class="comment">// w_global_get = w_bench - 1 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_global_get {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span>max_globals = T::Schedule::get().limits.globals;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
@@ -5708,7 +5720,7 @@
 	<span class="comment">// w_global_set = w_bench - 1 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_global_set {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span>max_globals = T::Schedule::get().limits.globals;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
@@ -5725,7 +5737,7 @@
 	<span class="comment">// w_memory_get = w_bench - 1 * w_param
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_memory_current {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
@@ -5767,7 +5779,7 @@
 
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64clz {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Clz,
 			r,
@@ -5778,7 +5790,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64ctz {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Ctz,
 			r,
@@ -5789,7 +5801,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64popcnt {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Popcnt,
 			r,
@@ -5800,7 +5812,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64eqz {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I64Eqz,
 			r,
@@ -5811,7 +5823,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64extendsi32 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI32Repeated(<span class="number">1</span>),
@@ -5826,7 +5838,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64extendui32 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				RandomI32Repeated(<span class="number">1</span>),
@@ -5841,7 +5853,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i32wrapi64 {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::unary_instr(
 			Instruction::I32WrapI64,
 			r,
@@ -5855,7 +5867,7 @@
 
 	</span><span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64eq {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Eq,
 			r,
@@ -5866,7 +5878,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64ne {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Ne,
 			r,
@@ -5877,7 +5889,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64lts {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LtS,
 			r,
@@ -5888,7 +5900,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64ltu {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LtU,
 			r,
@@ -5899,7 +5911,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64gts {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GtS,
 			r,
@@ -5910,7 +5922,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64gtu {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GtU,
 			r,
@@ -5921,7 +5933,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64les {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LeS,
 			r,
@@ -5932,7 +5944,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64leu {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64LeU,
 			r,
@@ -5943,7 +5955,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64ges {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GeS,
 			r,
@@ -5954,7 +5966,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64geu {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64GeU,
 			r,
@@ -5965,7 +5977,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64add {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Add,
 			r,
@@ -5976,7 +5988,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64sub {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Sub,
 			r,
@@ -5987,7 +5999,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64mul {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Mul,
 			r,
@@ -5998,7 +6010,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64divs {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64DivS,
 			r,
@@ -6009,7 +6021,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64divu {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64DivU,
 			r,
@@ -6020,7 +6032,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64rems {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64RemS,
 			r,
@@ -6031,7 +6043,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64remu {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64RemU,
 			r,
@@ -6042,7 +6054,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64and {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64And,
 			r,
@@ -6053,7 +6065,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64or {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Or,
 			r,
@@ -6064,7 +6076,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64xor {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Xor,
 			r,
@@ -6075,7 +6087,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64shl {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Shl,
 			r,
@@ -6086,7 +6098,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64shrs {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64ShrS,
 			r,
@@ -6097,7 +6109,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64shru {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64ShrU,
 			r,
@@ -6108,7 +6120,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64rotl {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Rotl,
 			r,
@@ -6119,7 +6131,7 @@
 
 	<span class="attr">#[pov_mode = Ignored]
 	</span>instr_i64rotr {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_BATCHES;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. INSTR_BENCHMARK_RUNS;
 		<span class="kw">let </span><span class="kw-2">mut </span>sbox = Sandbox::from(<span class="kw-2">&amp;</span>WasmModule::&lt;T&gt;::binary_instr(
 			Instruction::I64Rotr,
 			r,
