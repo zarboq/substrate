@@ -328,37 +328,6 @@
 <a href="#328" id="328">328</a>
 <a href="#329" id="329">329</a>
 <a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
@@ -395,38 +364,21 @@
 
 <span class="kw">use crate</span>::{SpanDatum, TraceEvent, Values};
 <span class="kw">use </span>sc_client_api::BlockBackend;
-<span class="kw">use </span>sc_rpc_server::RPC_MAX_PAYLOAD_DEFAULT;
 <span class="kw">use </span>sp_api::{Core, Encode, Metadata, ProvideRuntimeApi};
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_core::hexdisplay::HexDisplay;
-<span class="kw">use </span>sp_rpc::tracing::{BlockTrace, Span, TraceBlockResponse, TraceError};
+<span class="kw">use </span>sp_rpc::tracing::{BlockTrace, Span, TraceBlockResponse};
 <span class="kw">use </span>sp_runtime::{
 	generic::BlockId,
 	traits::{Block <span class="kw">as </span>BlockT, Header},
 };
 <span class="kw">use </span>sp_tracing::{WASM_NAME_KEY, WASM_TARGET_KEY, WASM_TRACE_IDENTIFIER};
 
-<span class="comment">// Heuristic for average event size in bytes.
-</span><span class="kw">const </span>AVG_EVENT: usize = <span class="number">600 </span>* <span class="number">8</span>;
-<span class="comment">// Heuristic for average span size in bytes.
-</span><span class="kw">const </span>AVG_SPAN: usize = <span class="number">100 </span>* <span class="number">8</span>;
-<span class="comment">// Estimate of the max base RPC payload size when the Id is bound as a u64. If strings
-// are used for the RPC Id this may need to be adjusted. Note: The base payload
-// does not include the RPC result.
-//
-// The estimate is based on the JSON-RPC response message which has the following format:
-// `{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;result&quot;:[],&quot;id&quot;:18446744073709551615}`.
-//
-// We care about the total size of the payload because jsonrpc-server will simply ignore
-// messages larger than `sc_rpc_server::MAX_PAYLOAD` and the caller will not get any
-// response.
-</span><span class="kw">const </span>BASE_PAYLOAD: usize = <span class="number">100</span>;
 <span class="comment">// Default to only pallet, frame support and state related traces
 </span><span class="kw">const </span>DEFAULT_TARGETS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;pallet,frame,state&quot;</span>;
 <span class="kw">const </span>TRACE_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;block_trace&quot;</span>;
 <span class="comment">// The name of a field required for all events.
 </span><span class="kw">const </span>REQUIRED_EVENT_FIELD: <span class="kw-2">&amp;</span>str = <span class="string">&quot;method&quot;</span>;
-<span class="kw">const </span>MEGABYTE: usize = <span class="number">1024 </span>* <span class="number">1024</span>;
 
 <span class="doccomment">/// Tracing Block Result type alias
 </span><span class="kw">pub type </span>TraceBlockResult&lt;T&gt; = <span class="prelude-ty">Result</span>&lt;T, Error&gt;;
@@ -543,7 +495,6 @@
 	targets: <span class="prelude-ty">Option</span>&lt;String&gt;,
 	storage_keys: <span class="prelude-ty">Option</span>&lt;String&gt;,
 	methods: <span class="prelude-ty">Option</span>&lt;String&gt;,
-	rpc_max_payload: usize,
 }
 
 <span class="kw">impl</span>&lt;Block, Client&gt; BlockExecutor&lt;Block, Client&gt;
@@ -564,12 +515,8 @@
 		targets: <span class="prelude-ty">Option</span>&lt;String&gt;,
 		storage_keys: <span class="prelude-ty">Option</span>&lt;String&gt;,
 		methods: <span class="prelude-ty">Option</span>&lt;String&gt;,
-		rpc_max_payload: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 	) -&gt; <span class="self">Self </span>{
-		<span class="kw">let </span>rpc_max_payload = rpc_max_payload
-			.map(|mb| mb.saturating_mul(MEGABYTE))
-			.unwrap_or(RPC_MAX_PAYLOAD_DEFAULT);
-		<span class="self">Self </span>{ client, block, targets, storage_keys, methods, rpc_max_payload }
+		<span class="self">Self </span>{ client, block, targets, storage_keys, methods }
 	}
 
 	<span class="doccomment">/// Execute block, record all spans and events belonging to `Self::targets`
@@ -650,24 +597,15 @@
 			.collect();
 		<span class="macro">tracing::debug!</span>(target: <span class="string">&quot;state_tracing&quot;</span>, <span class="string">&quot;Captured {} spans and {} events&quot;</span>, spans.len(), events.len());
 
-		<span class="kw">let </span>approx_payload_size = BASE_PAYLOAD + events.len() * AVG_EVENT + spans.len() * AVG_SPAN;
-		<span class="kw">let </span>response = <span class="kw">if </span>approx_payload_size &gt; <span class="self">self</span>.rpc_max_payload {
-			TraceBlockResponse::TraceError(TraceError {
-				error: <span class="string">&quot;Payload likely exceeds max payload size of RPC server.&quot;</span>.to_string(),
-			})
-		} <span class="kw">else </span>{
-			TraceBlockResponse::BlockTrace(BlockTrace {
-				block_hash: block_id_as_string(BlockId::&lt;Block&gt;::Hash(<span class="self">self</span>.block)),
-				parent_hash: block_id_as_string(BlockId::&lt;Block&gt;::Hash(parent_hash)),
-				tracing_targets: targets.to_string(),
-				storage_keys: <span class="self">self</span>.storage_keys.clone().unwrap_or_default(),
-				methods: <span class="self">self</span>.methods.clone().unwrap_or_default(),
-				spans,
-				events,
-			})
-		};
-
-		<span class="prelude-val">Ok</span>(response)
+		<span class="prelude-val">Ok</span>(TraceBlockResponse::BlockTrace(BlockTrace {
+			block_hash: block_id_as_string(BlockId::&lt;Block&gt;::Hash(<span class="self">self</span>.block)),
+			parent_hash: block_id_as_string(BlockId::&lt;Block&gt;::Hash(parent_hash)),
+			tracing_targets: targets.to_string(),
+			storage_keys: <span class="self">self</span>.storage_keys.clone().unwrap_or_default(),
+			methods: <span class="self">self</span>.methods.clone().unwrap_or_default(),
+			spans,
+			events,
+		}))
 	}
 }
 
