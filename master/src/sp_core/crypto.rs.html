@@ -1435,6 +1435,41 @@
 <a href="#1435" id="1435">1435</a>
 <a href="#1436" id="1436">1436</a>
 <a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
+<a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
+<a href="#1454" id="1454">1454</a>
+<a href="#1455" id="1455">1455</a>
+<a href="#1456" id="1456">1456</a>
+<a href="#1457" id="1457">1457</a>
+<a href="#1458" id="1458">1458</a>
+<a href="#1459" id="1459">1459</a>
+<a href="#1460" id="1460">1460</a>
+<a href="#1461" id="1461">1461</a>
+<a href="#1462" id="1462">1462</a>
+<a href="#1463" id="1463">1463</a>
+<a href="#1464" id="1464">1464</a>
+<a href="#1465" id="1465">1465</a>
+<a href="#1466" id="1466">1466</a>
+<a href="#1467" id="1467">1467</a>
+<a href="#1468" id="1468">1468</a>
+<a href="#1469" id="1469">1469</a>
+<a href="#1470" id="1470">1470</a>
+<a href="#1471" id="1471">1471</a>
+<a href="#1472" id="1472">1472</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1461,6 +1496,8 @@
 <span class="kw">use crate</span>::{ed25519, sr25519};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>base58::{FromBase58, ToBase58};
+<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="kw">use </span>bip39::{Language, Mnemonic, MnemonicType};
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>rand::{rngs::OsRng, RngCore};
@@ -1488,10 +1525,6 @@
 
 <span class="doccomment">/// The address of the associated root phrase for our publicly known keys.
 </span><span class="kw">pub const </span>DEV_ADDRESS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;5DfhGyQdFobKM8NsWvEeAKk5EQQgYe9AydgJ7rMB6E1EqRzV&quot;</span>;
-
-<span class="doccomment">/// The infallible type.
-</span><span class="attr">#[derive(<span class="kw">crate</span>::RuntimeDebug)]
-</span><span class="kw">pub enum </span>Infallible {}
 
 <span class="doccomment">/// The length of the junction identifier. Note that this is also referred to as the
 /// `CHAIN_CODE_LENGTH` in the context of Schnorrkel.
@@ -1543,6 +1576,16 @@
 	<span class="doccomment">/// The derivation path was invalid (e.g. contains soft junctions when they are not supported).
 	</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, error(<span class="string">&quot;Invalid path&quot;</span>))]
 	</span>InvalidPath,
+}
+
+<span class="doccomment">/// An error when deriving a key.
+</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(thiserror::Error))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
+</span><span class="kw">pub enum </span>DeriveError {
+	<span class="doccomment">/// A soft key was found in the path (and is unsupported).
+	</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, error(<span class="string">&quot;Soft key in path&quot;</span>))]
+	</span>SoftKeyInPath,
 }
 
 <span class="doccomment">/// A since derivation junction description. It is the single parameter used when creating
@@ -2128,40 +2171,45 @@
 		<span class="kw">type </span>Public = Dummy;
 		<span class="kw">type </span>Seed = Dummy;
 		<span class="kw">type </span>Signature = Dummy;
-		<span class="kw">type </span>DeriveError = ();
+
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span><span class="kw">fn </span>generate_with_phrase(<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; (<span class="self">Self</span>, String, <span class="self">Self</span>::Seed) {
 			Default::default()
 		}
+
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span><span class="kw">fn </span>from_phrase(<span class="kw">_</span>: <span class="kw-2">&amp;</span>str, <span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="self">Self</span>::Seed), SecretStringError&gt; {
 			<span class="prelude-val">Ok</span>(Default::default())
 		}
+
 		<span class="kw">fn </span>derive&lt;Iter: Iterator&lt;Item = DeriveJunction&gt;&gt;(
 			<span class="kw-2">&amp;</span><span class="self">self</span>,
 			<span class="kw">_</span>: Iter,
 			<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;Dummy&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="prelude-ty">Option</span>&lt;Dummy&gt;), <span class="self">Self</span>::DeriveError&gt; {
+		) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="prelude-ty">Option</span>&lt;Dummy&gt;), DeriveError&gt; {
 			<span class="prelude-val">Ok</span>((<span class="self">Self</span>, <span class="prelude-val">None</span>))
 		}
-		<span class="kw">fn </span>from_seed(<span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::Seed) -&gt; <span class="self">Self </span>{
-			<span class="self">Self
-		</span>}
+
 		<span class="kw">fn </span>from_seed_slice(<span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, SecretStringError&gt; {
 			<span class="prelude-val">Ok</span>(<span class="self">Self</span>)
 		}
+
 		<span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self</span>::Signature {
 			<span class="self">Self
 		</span>}
+
 		<span class="kw">fn </span>verify&lt;M: AsRef&lt;[u8]&gt;&gt;(<span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signature, <span class="kw">_</span>: M, <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::Public) -&gt; bool {
 			<span class="bool-val">true
 		</span>}
+
 		<span class="kw">fn </span>verify_weak&lt;P: AsRef&lt;[u8]&gt;, M: AsRef&lt;[u8]&gt;&gt;(<span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8], <span class="kw">_</span>: M, <span class="kw">_</span>: P) -&gt; bool {
 			<span class="bool-val">true
 		</span>}
+
 		<span class="kw">fn </span>public(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Public {
 			<span class="self">Self
 		</span>}
+
 		<span class="kw">fn </span>to_raw_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
 			<span class="macro">vec!</span>[]
 		}
@@ -2282,9 +2330,6 @@
 	/// and verified with the message and a public key.
 	</span><span class="kw">type </span>Signature: AsRef&lt;[u8]&gt;;
 
-	<span class="doccomment">/// Error returned from the `derive` function.
-	</span><span class="kw">type </span>DeriveError;
-
 	<span class="doccomment">/// Generate new secure (random) key pair.
 	///
 	/// This is only for ephemeral keys really, since you won&#39;t have access to the secret key
@@ -2303,27 +2348,47 @@
 	/// This is generally slower than `generate()`, so prefer that unless you need to persist
 	/// the key from the current session.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-	</span><span class="kw">fn </span>generate_with_phrase(password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; (<span class="self">Self</span>, String, <span class="self">Self</span>::Seed);
+	</span><span class="kw">fn </span>generate_with_phrase(password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; (<span class="self">Self</span>, String, <span class="self">Self</span>::Seed) {
+		<span class="kw">let </span>mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
+		<span class="kw">let </span>phrase = mnemonic.phrase();
+		<span class="kw">let </span>(pair, seed) = <span class="self">Self</span>::from_phrase(phrase, password)
+			.expect(<span class="string">&quot;All phrases generated by Mnemonic are valid; qed&quot;</span>);
+		(pair, phrase.to_owned(), seed)
+	}
 
 	<span class="doccomment">/// Returns the KeyPair from the English BIP39 seed `phrase`, or `None` if it&#39;s invalid.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 	</span><span class="kw">fn </span>from_phrase(
 		phrase: <span class="kw-2">&amp;</span>str,
 		password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="self">Self</span>::Seed), SecretStringError&gt;;
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="self">Self</span>::Seed), SecretStringError&gt; {
+		<span class="kw">let </span>mnemonic = Mnemonic::from_phrase(phrase, Language::English)
+			.map_err(|<span class="kw">_</span>| SecretStringError::InvalidPhrase)<span class="question-mark">?</span>;
+		<span class="kw">let </span>big_seed =
+			substrate_bip39::seed_from_entropy(mnemonic.entropy(), password.unwrap_or(<span class="string">&quot;&quot;</span>))
+				.map_err(|<span class="kw">_</span>| SecretStringError::InvalidSeed)<span class="question-mark">?</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>seed = <span class="self">Self</span>::Seed::default();
+		<span class="kw">let </span>seed_slice = seed.as_mut();
+		<span class="kw">let </span>seed_len = seed_slice.len();
+		<span class="macro">debug_assert!</span>(seed_len &lt;= big_seed.len());
+		seed_slice[..seed_len].copy_from_slice(<span class="kw-2">&amp;</span>big_seed[..seed_len]);
+		<span class="self">Self</span>::from_seed_slice(seed_slice).map(|x| (x, seed))
+	}
 
 	<span class="doccomment">/// Derive a child key from a series of given junctions.
 	</span><span class="kw">fn </span>derive&lt;Iter: Iterator&lt;Item = DeriveJunction&gt;&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		path: Iter,
 		seed: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Seed&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Seed&gt;), <span class="self">Self</span>::DeriveError&gt;;
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Seed&gt;), DeriveError&gt;;
 
 	<span class="doccomment">/// Generate new key pair from the provided `seed`.
 	///
 	/// @WARNING: THIS WILL ONLY BE SECURE IF THE `seed` IS SECURE. If it can be guessed
 	/// by an attacker then they can also derive your key.
-	</span><span class="kw">fn </span>from_seed(seed: <span class="kw-2">&amp;</span><span class="self">Self</span>::Seed) -&gt; <span class="self">Self</span>;
+	</span><span class="kw">fn </span>from_seed(seed: <span class="kw-2">&amp;</span><span class="self">Self</span>::Seed) -&gt; <span class="self">Self </span>{
+		<span class="self">Self</span>::from_seed_slice(seed.as_ref()).expect(<span class="string">&quot;seed has valid length; qed&quot;</span>)
+	}
 
 	<span class="doccomment">/// Make a new key pair from secret seed material. The slice must be the correct size or
 	/// it will return `None`.
@@ -2639,14 +2704,15 @@
 		<span class="kw">type </span>Public = TestPublic;
 		<span class="kw">type </span>Seed = [u8; <span class="number">8</span>];
 		<span class="kw">type </span>Signature = [u8; <span class="number">0</span>];
-		<span class="kw">type </span>DeriveError = ();
 
 		<span class="kw">fn </span>generate() -&gt; (<span class="self">Self</span>, &lt;<span class="self">Self </span><span class="kw">as </span>Pair&gt;::Seed) {
 			(TestPair::Generated, [<span class="number">0u8</span>; <span class="number">8</span>])
 		}
+
 		<span class="kw">fn </span>generate_with_phrase(_password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; (<span class="self">Self</span>, String, &lt;<span class="self">Self </span><span class="kw">as </span>Pair&gt;::Seed) {
 			(TestPair::GeneratedWithPhrase, <span class="string">&quot;&quot;</span>.into(), [<span class="number">0u8</span>; <span class="number">8</span>])
 		}
+
 		<span class="kw">fn </span>from_phrase(
 			phrase: <span class="kw-2">&amp;</span>str,
 			password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
@@ -2659,11 +2725,12 @@
 				[<span class="number">0u8</span>; <span class="number">8</span>],
 			))
 		}
+
 		<span class="kw">fn </span>derive&lt;Iter: Iterator&lt;Item = DeriveJunction&gt;&gt;(
 			<span class="kw-2">&amp;</span><span class="self">self</span>,
 			path_iter: Iter,
 			<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;[u8; <span class="number">8</span>]&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="prelude-ty">Option</span>&lt;[u8; <span class="number">8</span>]&gt;), <span class="self">Self</span>::DeriveError&gt; {
+		) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, <span class="prelude-ty">Option</span>&lt;[u8; <span class="number">8</span>]&gt;), DeriveError&gt; {
 			<span class="prelude-val">Ok</span>((
 				<span class="kw">match </span><span class="self">self</span>.clone() {
 					TestPair::Standard { phrase, password, path } =&gt; TestPair::Standard {
@@ -2677,21 +2744,21 @@
 						<span class="kw">if </span>path_iter.count() == <span class="number">0 </span>{
 							x
 						} <span class="kw">else </span>{
-							<span class="kw">return </span><span class="prelude-val">Err</span>(())
+							<span class="kw">return </span><span class="prelude-val">Err</span>(DeriveError::SoftKeyInPath)
 						},
 				},
 				<span class="prelude-val">None</span>,
 			))
 		}
-		<span class="kw">fn </span>from_seed(_seed: <span class="kw-2">&amp;</span>&lt;TestPair <span class="kw">as </span>Pair&gt;::Seed) -&gt; <span class="self">Self </span>{
-			TestPair::Seed(_seed.as_ref().to_owned())
-		}
+
 		<span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, _message: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self</span>::Signature {
 			[]
 		}
+
 		<span class="kw">fn </span>verify&lt;M: AsRef&lt;[u8]&gt;&gt;(<span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signature, <span class="kw">_</span>: M, <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>::Public) -&gt; bool {
 			<span class="bool-val">true
 		</span>}
+
 		<span class="kw">fn </span>verify_weak&lt;P: AsRef&lt;[u8]&gt;, M: AsRef&lt;[u8]&gt;&gt;(
 			_sig: <span class="kw-2">&amp;</span>[u8],
 			_message: M,
@@ -2699,12 +2766,15 @@
 		) -&gt; bool {
 			<span class="bool-val">true
 		</span>}
+
 		<span class="kw">fn </span>public(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Public {
 			TestPublic
 		}
+
 		<span class="kw">fn </span>from_seed_slice(seed: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, SecretStringError&gt; {
 			<span class="prelude-val">Ok</span>(TestPair::Seed(seed.to_owned()))
 		}
+
 		<span class="kw">fn </span>to_raw_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
 			<span class="macro">vec!</span>[]
 		}

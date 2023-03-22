@@ -831,65 +831,6 @@
 <a href="#831" id="831">831</a>
 <a href="#832" id="832">832</a>
 <a href="#833" id="833">833</a>
-<a href="#834" id="834">834</a>
-<a href="#835" id="835">835</a>
-<a href="#836" id="836">836</a>
-<a href="#837" id="837">837</a>
-<a href="#838" id="838">838</a>
-<a href="#839" id="839">839</a>
-<a href="#840" id="840">840</a>
-<a href="#841" id="841">841</a>
-<a href="#842" id="842">842</a>
-<a href="#843" id="843">843</a>
-<a href="#844" id="844">844</a>
-<a href="#845" id="845">845</a>
-<a href="#846" id="846">846</a>
-<a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a>
-<a href="#849" id="849">849</a>
-<a href="#850" id="850">850</a>
-<a href="#851" id="851">851</a>
-<a href="#852" id="852">852</a>
-<a href="#853" id="853">853</a>
-<a href="#854" id="854">854</a>
-<a href="#855" id="855">855</a>
-<a href="#856" id="856">856</a>
-<a href="#857" id="857">857</a>
-<a href="#858" id="858">858</a>
-<a href="#859" id="859">859</a>
-<a href="#860" id="860">860</a>
-<a href="#861" id="861">861</a>
-<a href="#862" id="862">862</a>
-<a href="#863" id="863">863</a>
-<a href="#864" id="864">864</a>
-<a href="#865" id="865">865</a>
-<a href="#866" id="866">866</a>
-<a href="#867" id="867">867</a>
-<a href="#868" id="868">868</a>
-<a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
-<a href="#877" id="877">877</a>
-<a href="#878" id="878">878</a>
-<a href="#879" id="879">879</a>
-<a href="#880" id="880">880</a>
-<a href="#881" id="881">881</a>
-<a href="#882" id="882">882</a>
-<a href="#883" id="883">883</a>
-<a href="#884" id="884">884</a>
-<a href="#885" id="885">885</a>
-<a href="#886" id="886">886</a>
-<a href="#887" id="887">887</a>
-<a href="#888" id="888">888</a>
-<a href="#889" id="889">889</a>
-<a href="#890" id="890">890</a>
-<a href="#891" id="891">891</a>
-<a href="#892" id="892">892</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -916,9 +857,7 @@
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::crypto::Ss58Codec;
 <span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
-</span><span class="kw">use </span><span class="kw">crate</span>::crypto::{DeriveJunction, Infallible, Pair <span class="kw">as </span>TraitPair, SecretStringError};
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">use </span>bip39::{Language, Mnemonic, MnemonicType};
+</span><span class="kw">use </span><span class="kw">crate</span>::crypto::{DeriveError, DeriveJunction, Pair <span class="kw">as </span>TraitPair, SecretStringError};
 <span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
 </span><span class="kw">use </span>schnorrkel::{
 	derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH},
@@ -926,8 +865,6 @@
 };
 <span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
 </span><span class="kw">use </span>sp_std::vec::Vec;
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">use </span>substrate_bip39::mini_secret_from_entropy;
 
 <span class="kw">use crate</span>::{
 	crypto::{
@@ -1350,16 +1287,6 @@
 	<span class="kw">type </span>Public = Public;
 	<span class="kw">type </span>Seed = Seed;
 	<span class="kw">type </span>Signature = Signature;
-	<span class="kw">type </span>DeriveError = Infallible;
-
-	<span class="doccomment">/// Make a new key pair from raw secret seed material.
-	///
-	/// This is generated using schnorrkel&#39;s Mini-Secret-Keys.
-	///
-	/// A MiniSecretKey is literally what Ed25519 calls a SecretKey, which is just 32 random bytes.
-	</span><span class="kw">fn </span>from_seed(seed: <span class="kw-2">&amp;</span>Seed) -&gt; Pair {
-		<span class="self">Self</span>::from_seed_slice(<span class="kw-2">&amp;</span>seed[..]).expect(<span class="string">&quot;32 bytes can always build a key; qed&quot;</span>)
-	}
 
 	<span class="doccomment">/// Get the public key.
 	</span><span class="kw">fn </span>public(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Public {
@@ -1368,10 +1295,12 @@
 		Public(pk)
 	}
 
-	<span class="doccomment">/// Make a new key pair from secret seed material. The slice must be 32 bytes long or it
-	/// will return `None`.
+	<span class="doccomment">/// Make a new key pair from raw secret seed material.
 	///
-	/// You should never need to use this; generate(), generate_with_phrase(), from_phrase()
+	/// This is generated using schnorrkel&#39;s Mini-Secret-Keys.
+	///
+	/// A `MiniSecretKey` is literally what Ed25519 calls a `SecretKey`, which is just 32 random
+	/// bytes.
 	</span><span class="kw">fn </span>from_seed_slice(seed: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Pair, SecretStringError&gt; {
 		<span class="kw">match </span>seed.len() {
 			MINI_SECRET_KEY_LENGTH =&gt; <span class="prelude-val">Ok</span>(Pair(
@@ -1387,42 +1316,16 @@
 			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(SecretStringError::InvalidSeedLength),
 		}
 	}
-	<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-	</span><span class="kw">fn </span>generate_with_phrase(password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; (Pair, String, Seed) {
-		<span class="kw">let </span>mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-		<span class="kw">let </span>phrase = mnemonic.phrase();
-		<span class="kw">let </span>(pair, seed) = <span class="self">Self</span>::from_phrase(phrase, password)
-			.expect(<span class="string">&quot;All phrases generated by Mnemonic are valid; qed&quot;</span>);
-		(pair, phrase.to_owned(), seed)
-	}
-	<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-	</span><span class="kw">fn </span>from_phrase(
-		phrase: <span class="kw-2">&amp;</span>str,
-		password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(Pair, Seed), SecretStringError&gt; {
-		Mnemonic::from_phrase(phrase, Language::English)
-			.map_err(|<span class="kw">_</span>| SecretStringError::InvalidPhrase)
-			.map(|m| <span class="self">Self</span>::from_entropy(m.entropy(), password))
-	}
 
 	<span class="kw">fn </span>derive&lt;Iter: Iterator&lt;Item = DeriveJunction&gt;&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		path: Iter,
 		seed: <span class="prelude-ty">Option</span>&lt;Seed&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(Pair, <span class="prelude-ty">Option</span>&lt;Seed&gt;), <span class="self">Self</span>::DeriveError&gt; {
-		<span class="kw">let </span>seed = <span class="kw">if let </span><span class="prelude-val">Some</span>(s) = seed {
-			<span class="kw">if let </span><span class="prelude-val">Ok</span>(msk) = MiniSecretKey::from_bytes(<span class="kw-2">&amp;</span>s) {
-				<span class="kw">if </span>msk.expand(ExpansionMode::Ed25519) == <span class="self">self</span>.<span class="number">0</span>.secret {
-					<span class="prelude-val">Some</span>(msk)
-				} <span class="kw">else </span>{
-					<span class="prelude-val">None
-				</span>}
-			} <span class="kw">else </span>{
-				<span class="prelude-val">None
-			</span>}
-		} <span class="kw">else </span>{
-			<span class="prelude-val">None
-		</span>};
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(Pair, <span class="prelude-ty">Option</span>&lt;Seed&gt;), DeriveError&gt; {
+		<span class="kw">let </span>seed = seed
+			.and_then(|s| MiniSecretKey::from_bytes(<span class="kw-2">&amp;</span>s).ok())
+			.filter(|msk| msk.expand(ExpansionMode::Ed25519) == <span class="self">self</span>.<span class="number">0</span>.secret);
+
 		<span class="kw">let </span>init = <span class="self">self</span>.<span class="number">0</span>.secret.clone();
 		<span class="kw">let </span>(result, seed) = path.fold((init, seed), |(acc, acc_seed), j| <span class="kw">match </span>(j, acc_seed) {
 			(DeriveJunction::Soft(cc), <span class="kw">_</span>) =&gt; (acc.derived_key_simple(ChainCode(cc), <span class="kw-2">&amp;</span>[]).<span class="number">0</span>, <span class="prelude-val">None</span>),
@@ -1464,18 +1367,6 @@
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">impl </span>Pair {
-	<span class="doccomment">/// Make a new key pair from binary data derived from a valid seed phrase.
-	///
-	/// This uses a key derivation function to convert the entropy into a seed, then returns
-	/// the pair generated from it.
-	</span><span class="kw">pub fn </span>from_entropy(entropy: <span class="kw-2">&amp;</span>[u8], password: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; (Pair, Seed) {
-		<span class="kw">let </span>mini_key: MiniSecretKey = mini_secret_from_entropy(entropy, password.unwrap_or(<span class="string">&quot;&quot;</span>))
-			.expect(<span class="string">&quot;32 bytes can always build a key; qed&quot;</span>);
-
-		<span class="kw">let </span>kp = mini_key.expand_to_keypair(ExpansionMode::Ed25519);
-		(Pair(kp), mini_key.to_bytes())
-	}
-
 	<span class="doccomment">/// Verify a signature on a message. Returns `true` if the signature is good.
 	/// Supports old 0.1.1 deprecated signatures and should be used only for backward
 	/// compatibility.
@@ -1544,12 +1435,10 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>compatibility_test {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span><span class="kw">crate</span>::crypto::DEV_PHRASE;
+	<span class="kw">use </span><span class="kw">crate</span>::crypto::{Ss58Codec, DEV_ADDRESS, DEV_PHRASE};
+	<span class="kw">use </span>serde_json;
 
-	<span class="comment">// NOTE: tests to ensure addresses that are created with the `0.1.x` version (pre-audit) are
-	// still functional.
-
-	</span><span class="attr">#[test]
+	<span class="attr">#[test]
 	</span><span class="kw">fn </span>derive_soft_known_pair_should_work() {
 		<span class="kw">let </span>pair = Pair::from_string(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}/Alice&quot;</span>, DEV_PHRASE), <span class="prelude-val">None</span>).unwrap();
 		<span class="comment">// known address of DEV_PHRASE with 1.1
@@ -1582,13 +1471,6 @@
 		<span class="macro">assert!</span>(Pair::verify_deprecated(<span class="kw-2">&amp;</span>signature, <span class="kw-2">&amp;</span>message[..], <span class="kw-2">&amp;</span>public));
 		<span class="macro">assert!</span>(!Pair::verify(<span class="kw-2">&amp;</span>signature, <span class="kw-2">&amp;</span>message[..], <span class="kw-2">&amp;</span>public));
 	}
-}
-
-<span class="attr">#[cfg(test)]
-</span><span class="kw">mod </span>test {
-	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span><span class="kw">crate</span>::crypto::{Ss58Codec, DEV_ADDRESS, DEV_PHRASE};
-	<span class="kw">use </span>serde_json;
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>default_phrase_should_be_used() {
