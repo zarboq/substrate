@@ -123,7 +123,8 @@ var sourcesIndex = JSON.parse('{\
 "pallet_utility":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_vesting":["",[],["benchmarking.rs","lib.rs","migrations.rs","vesting_info.rs","weights.rs"]],\
 "pallet_whitelist":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
-"per_thing_rational":["",[],["per_thing_rational.rs"]],\
+"per_thing_from_rational":["",[],["per_thing_from_rational.rs"]],\
+"per_thing_mult_fraction":["",[],["per_thing_mult_fraction.rs"]],\
 "phragmen_balancing":["",[],["common.rs","phragmen_balancing.rs"]],\
 "phragmen_pjr":["",[],["common.rs","phragmen_pjr.rs"]],\
 "phragmms_balancing":["",[],["common.rs","phragmms_balancing.rs"]],\

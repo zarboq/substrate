@@ -78,6 +78,33 @@
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -109,53 +136,80 @@
 //! More information about `honggfuzz` can be found
 //! [here](https://docs.rs/honggfuzz/).
 
-</span><span class="kw">use </span>honggfuzz::fuzz;
-<span class="kw">use </span>sp_arithmetic::{helpers_128bit::multiply_by_rational_with_rounding, traits::Zero, Rounding};
+</span><span class="kw">use </span>fraction::prelude::BigFraction <span class="kw">as </span>Fraction;
+<span class="kw">use </span>honggfuzz::fuzz;
+<span class="kw">use </span>sp_arithmetic::{MultiplyRational, Rounding, Rounding::<span class="kw-2">*</span>};
 
-<span class="kw">fn </span>main() {
+<span class="doccomment">/// Tries to demonstrate that `multiply_by_rational_with_rounding` is incorrect.
+</span><span class="kw">fn </span>main() {
 	<span class="kw">loop </span>{
-		<span class="macro">fuzz!</span>(|data: ([u8; <span class="number">16</span>], [u8; <span class="number">16</span>], [u8; <span class="number">16</span>])| {
-			<span class="kw">let </span>(a_bytes, b_bytes, c_bytes) = data;
-			<span class="kw">let </span>(a, b, c) = (
-				u128::from_be_bytes(a_bytes),
-				u128::from_be_bytes(b_bytes),
-				u128::from_be_bytes(c_bytes),
-			);
+		<span class="macro">fuzz!</span>(|data: (u128, u128, u128, ArbitraryRounding)| {
+			<span class="kw">let </span>(f, n, d, r) = (data.<span class="number">0</span>, data.<span class="number">1</span>, data.<span class="number">2</span>, data.<span class="number">3 </span>.<span class="number">0</span>);
 
-			<span class="macro">println!</span>(<span class="string">&quot;++ Equation: {} * {} / {}&quot;</span>, a, b, c);
-
-			<span class="comment">// The point of this fuzzing is to make sure that `multiply_by_rational_with_rounding`
-			// is 100% accurate as long as the value fits in a u128.
-			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(result) = multiply_by_rational_with_rounding(a, b, c, Rounding::Down) {
-				<span class="kw">let </span>truth = mul_div(a, b, c);
-
-				<span class="kw">if </span>result != truth &amp;&amp; result != truth + <span class="number">1 </span>{
-					<span class="macro">println!</span>(<span class="string">&quot;++ Expected {}&quot;</span>, truth);
-					<span class="macro">println!</span>(<span class="string">&quot;+++++++ Got {}&quot;</span>, result);
-					<span class="macro">panic!</span>();
-				}
-			}
+			check::&lt;u8&gt;(f <span class="kw">as </span>u8, n <span class="kw">as </span>u8, d <span class="kw">as </span>u8, r);
+			check::&lt;u16&gt;(f <span class="kw">as </span>u16, n <span class="kw">as </span>u16, d <span class="kw">as </span>u16, r);
+			check::&lt;u32&gt;(f <span class="kw">as </span>u32, n <span class="kw">as </span>u32, d <span class="kw">as </span>u32, r);
+			check::&lt;u64&gt;(f <span class="kw">as </span>u64, n <span class="kw">as </span>u64, d <span class="kw">as </span>u64, r);
+			check::&lt;u128&gt;(f, n, d, r);
 		})
 	}
 }
 
-<span class="kw">fn </span>mul_div(a: u128, b: u128, c: u128) -&gt; u128 {
-	<span class="kw">use </span>primitive_types::U256;
-	<span class="kw">if </span>a.is_zero() {
-		<span class="kw">return </span>Zero::zero()
+<span class="kw">fn </span>check&lt;N&gt;(f: N, n: N, d: N, r: Rounding)
+<span class="kw">where
+	</span>N: MultiplyRational + Into&lt;u128&gt; + Copy + core::fmt::Debug,
+{
+	<span class="kw">let </span><span class="prelude-val">Some</span>(got) = f.multiply_rational(n, d, r) <span class="kw">else </span>{
+		<span class="kw">return</span>;
+	};
+
+	<span class="kw">let </span>(ae, be, ce) =
+		(Fraction::from(f.into()), Fraction::from(n.into()), Fraction::from(d.into()));
+	<span class="kw">let </span>want = round(ae * be / ce, r);
+
+	<span class="macro">assert_eq!</span>(
+		Fraction::from(got.into()),
+		want,
+		<span class="string">&quot;{:?} * {:?} / {:?} = {:?} != {:?}&quot;</span>,
+		f,
+		n,
+		d,
+		got,
+		want
+	);
+}
+
+<span class="doccomment">/// Round a `Fraction` according to the given mode.
+</span><span class="kw">fn </span>round(f: Fraction, r: Rounding) -&gt; Fraction {
+	<span class="kw">match </span>r {
+		Up =&gt; f.ceil(),
+		NearestPrefUp =&gt;
+			<span class="kw">if </span>f.fract() &lt; Fraction::from(<span class="number">0.5</span>) {
+				f.floor()
+			} <span class="kw">else </span>{
+				f.ceil()
+			},
+		Down =&gt; f.floor(),
+		NearestPrefDown =&gt;
+			<span class="kw">if </span>f.fract() &gt; Fraction::from(<span class="number">0.5</span>) {
+				f.ceil()
+			} <span class="kw">else </span>{
+				f.floor()
+			},
 	}
-	<span class="kw">let </span>c = c.max(<span class="number">1</span>);
+}
 
-	<span class="comment">// e for extended
-	</span><span class="kw">let </span>ae: U256 = a.into();
-	<span class="kw">let </span>be: U256 = b.into();
-	<span class="kw">let </span>ce: U256 = c.into();
-
-	<span class="kw">let </span>r = ae * be / ce;
-	<span class="kw">if </span>r &gt; u128::MAX.into() {
-		a
-	} <span class="kw">else </span>{
-		r.as_u128()
+<span class="doccomment">/// An [`arbitrary::Arbitrary`] [`Rounding`] mode.
+</span><span class="kw">struct </span>ArbitraryRounding(Rounding);
+<span class="kw">impl </span>arbitrary::Arbitrary&lt;<span class="lifetime">&#39;_</span>&gt; <span class="kw">for </span>ArbitraryRounding {
+	<span class="kw">fn </span>arbitrary(u: <span class="kw-2">&amp;mut </span>arbitrary::Unstructured&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; arbitrary::Result&lt;<span class="self">Self</span>&gt; {
+		<span class="prelude-val">Ok</span>(<span class="self">Self</span>(<span class="kw">match </span>u.int_in_range(<span class="number">0</span>..=<span class="number">3</span>).unwrap() {
+			<span class="number">0 </span>=&gt; Up,
+			<span class="number">1 </span>=&gt; NearestPrefUp,
+			<span class="number">2 </span>=&gt; Down,
+			<span class="number">3 </span>=&gt; NearestPrefDown,
+			<span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
+		}))
 	}
 }
 </code></pre></div>

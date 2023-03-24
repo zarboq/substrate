@@ -1868,41 +1868,6 @@
 <a href="#1868" id="1868">1868</a>
 <a href="#1869" id="1869">1869</a>
 <a href="#1870" id="1870">1870</a>
-<a href="#1871" id="1871">1871</a>
-<a href="#1872" id="1872">1872</a>
-<a href="#1873" id="1873">1873</a>
-<a href="#1874" id="1874">1874</a>
-<a href="#1875" id="1875">1875</a>
-<a href="#1876" id="1876">1876</a>
-<a href="#1877" id="1877">1877</a>
-<a href="#1878" id="1878">1878</a>
-<a href="#1879" id="1879">1879</a>
-<a href="#1880" id="1880">1880</a>
-<a href="#1881" id="1881">1881</a>
-<a href="#1882" id="1882">1882</a>
-<a href="#1883" id="1883">1883</a>
-<a href="#1884" id="1884">1884</a>
-<a href="#1885" id="1885">1885</a>
-<a href="#1886" id="1886">1886</a>
-<a href="#1887" id="1887">1887</a>
-<a href="#1888" id="1888">1888</a>
-<a href="#1889" id="1889">1889</a>
-<a href="#1890" id="1890">1890</a>
-<a href="#1891" id="1891">1891</a>
-<a href="#1892" id="1892">1892</a>
-<a href="#1893" id="1893">1893</a>
-<a href="#1894" id="1894">1894</a>
-<a href="#1895" id="1895">1895</a>
-<a href="#1896" id="1896">1896</a>
-<a href="#1897" id="1897">1897</a>
-<a href="#1898" id="1898">1898</a>
-<a href="#1899" id="1899">1899</a>
-<a href="#1900" id="1900">1900</a>
-<a href="#1901" id="1901">1901</a>
-<a href="#1902" id="1902">1902</a>
-<a href="#1903" id="1903">1903</a>
-<a href="#1904" id="1904">1904</a>
-<a href="#1905" id="1905">1905</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1931,7 +1896,7 @@
 <span class="kw">use </span>num_traits::{Pow, SaturatingAdd, SaturatingSub};
 <span class="kw">use </span>sp_std::{
 	fmt, ops,
-	ops::{Add, AddAssign, Div, Rem, Sub},
+	ops::{Add, Sub},
 	prelude::<span class="kw-2">*</span>,
 };
 
@@ -1951,6 +1916,7 @@
 	+ Unsigned
 	+ Zero
 	+ One
+	+ <span class="kw">crate</span>::MultiplyRational
 {
 }
 
@@ -1963,7 +1929,8 @@
 			+ ops::AddAssign&lt;<span class="self">Self</span>&gt;
 			+ Unsigned
 			+ Zero
-			+ One,
+			+ One
+			+ <span class="kw">crate</span>::MultiplyRational,
 	&gt; RationalArg <span class="kw">for </span>T
 {
 }
@@ -2010,7 +1977,7 @@
 	+ Pow&lt;usize, Output = <span class="self">Self</span>&gt;
 {
 	<span class="doccomment">/// The data type used to build this per-thingy.
-	</span><span class="kw">type </span>Inner: BaseArithmetic + Unsigned + Copy + Into&lt;u128&gt; + fmt::Debug;
+	</span><span class="kw">type </span>Inner: BaseArithmetic + Unsigned + Copy + Into&lt;u128&gt; + fmt::Debug + <span class="kw">crate</span>::MultiplyRational;
 
 	<span class="doccomment">/// A data type larger than `Self::Inner`, used to avoid overflow in some computations.
 	/// It must be able to compute `ACCURACY^2`.
@@ -2020,7 +1987,8 @@
 		+ TryInto&lt;<span class="self">Self</span>::Inner&gt;
 		+ UniqueSaturatedInto&lt;<span class="self">Self</span>::Inner&gt;
 		+ Unsigned
-		+ fmt::Debug;
+		+ fmt::Debug
+		+ <span class="kw">crate</span>::MultiplyRational;
 
 	<span class="doccomment">/// The accuracy of this type.
 	</span><span class="kw">const </span>ACCURACY: <span class="self">Self</span>::Inner;
@@ -2443,39 +2411,6 @@
 	rem_mul_div_inner.into()
 }
 
-<span class="doccomment">/// Just a simple generic integer divide with custom rounding.
-</span><span class="kw">fn </span>div_rounded&lt;N&gt;(n: N, d: N, r: Rounding) -&gt; N
-<span class="kw">where
-	</span>N: Clone
-		+ Eq
-		+ Ord
-		+ Zero
-		+ One
-		+ AddAssign
-		+ Add&lt;Output = N&gt;
-		+ Rem&lt;Output = N&gt;
-		+ Div&lt;Output = N&gt;,
-{
-	<span class="kw">let </span><span class="kw-2">mut </span>o = n.clone() / d.clone();
-	<span class="kw">use </span>Rounding::<span class="kw-2">*</span>;
-	<span class="kw">let </span>two = || N::one() + N::one();
-	<span class="kw">if match </span>r {
-		Up =&gt; !((n % d).is_zero()),
-		NearestPrefDown =&gt; {
-			<span class="kw">let </span>rem = n % d.clone();
-			rem &gt; d / two()
-		},
-		NearestPrefUp =&gt; {
-			<span class="kw">let </span>rem = n % d.clone();
-			rem &gt;= d.clone() / two() + d % two()
-		},
-		Down =&gt; <span class="bool-val">false</span>,
-	} {
-		o += N::one()
-	}
-	o
-}
-
 <span class="macro">macro_rules! </span>implement_per_thing {
 	(
 		<span class="macro-nonterminal">$name</span>:ident,
@@ -2592,7 +2527,8 @@
 					+ ops::AddAssign&lt;N&gt;
 					+ Unsigned
 					+ Zero
-					+ One,
+					+ One
+					+ <span class="macro-nonterminal">$crate::MultiplyRational</span>,
 				<span class="self">Self</span>::Inner: Into&lt;N&gt;
 			{
 				<span class="comment">// q cannot be zero.
@@ -2600,30 +2536,8 @@
 				<span class="comment">// p should not be bigger than q.
 				</span><span class="kw">if </span>p &gt; q { <span class="kw">return </span><span class="prelude-val">Err</span>(()) }
 
-				<span class="kw">let </span>factor = div_rounded::&lt;N&gt;(q.clone(), <span class="macro-nonterminal">$max</span>.into(), Rounding::Up).max(One::one());
-
-				<span class="comment">// q cannot overflow: (q / (q/$max)) &lt; $max. p &lt; q hence p also cannot overflow.
-				</span><span class="kw">let </span>q_reduce: <span class="macro-nonterminal">$</span><span class="kw">type </span>= <span class="macro-nonterminal">div_rounded</span>(q, factor.clone(), r)
-					.try_into()
-					.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to convert&quot;</span>)
-					.expect(
-						<span class="string">&quot;`q / ceil(q/$max) &lt; $max`; macro prevents any type being created that \
-						does not satisfy this; qed&quot;
-					</span>);
-				<span class="kw">let </span>p_reduce: <span class="macro-nonterminal">$</span><span class="kw">type </span>= <span class="macro-nonterminal">div_rounded</span>(p, factor, r)
-					.try_into()
-					.map_err(|<span class="kw">_</span>| <span class="string">&quot;Failed to convert&quot;</span>)
-					.expect(
-						<span class="string">&quot;`p / ceil(p/$max) &lt; $max`; macro prevents any type being created that \
-						does not satisfy this; qed&quot;
-					</span>);
-
-				<span class="comment">// `p_reduced` and `q_reduced` are within `Self::Inner`. Multiplication by another
-				// `$max` will always fit in `$upper_type`. This is guaranteed by the macro tests.
-				</span><span class="kw">let </span>n = p_reduce <span class="kw">as </span><span class="macro-nonterminal">$upper_type </span>* &lt;<span class="macro-nonterminal">$upper_type</span>&gt;::from(<span class="macro-nonterminal">$max</span>);
-				<span class="kw">let </span>d = q_reduce <span class="kw">as </span><span class="macro-nonterminal">$upper_type</span>;
-				<span class="kw">let </span>part = div_rounded(n, d, r);
-				<span class="prelude-val">Ok</span>(<span class="macro-nonterminal">$name</span>(part <span class="kw">as </span><span class="self">Self</span>::Inner))
+				<span class="kw">let </span>max: N = <span class="macro-nonterminal">$max</span>.into();
+				max.multiply_rational(p, q, r).ok_or(())<span class="question-mark">?</span>.try_into().map(|x| <span class="macro-nonterminal">$name</span>(x)).map_err(|<span class="kw">_</span>| ())
 			}
 		}
 
@@ -3765,6 +3679,22 @@
 		Perbill::from_rational_with_rounding(u64::max_value() - <span class="number">1</span>, u64::max_value(), r).unwrap();
 		Perbill::from_rational_with_rounding(u32::max_value() - <span class="number">1</span>, u32::max_value(), r).unwrap();
 	}
+}
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>from_rational_with_rounding_breakage() {
+	<span class="kw">let </span>n = <span class="number">372633774963620730670986667244911905u128</span>;
+	<span class="kw">let </span>d = <span class="number">512593663333074177468745541591173060u128</span>;
+	<span class="kw">let </span>q = Perquintill::from_rational_with_rounding(n, d, Rounding::Down).unwrap();
+	<span class="macro">assert!</span>(q * d &lt;= n);
+}
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>from_rational_with_rounding_breakage_2() {
+	<span class="kw">let </span>n = <span class="number">36893488147419103230u128</span>;
+	<span class="kw">let </span>d = <span class="number">36893488147419103630u128</span>;
+	<span class="kw">let </span>q = Perquintill::from_rational_with_rounding(n, d, Rounding::Up).unwrap();
+	<span class="macro">assert!</span>(q * d &gt;= n);
 }
 
 <span class="macro">implement_per_thing!</span>(Percent, test_per_cent, [u32, u64, u128], <span class="number">100u8</span>, u8, u16, <span class="string">&quot;_Percent_&quot;</span>,);

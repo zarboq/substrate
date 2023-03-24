@@ -533,6 +533,54 @@
 <a href="#533" id="533">533</a>
 <a href="#534" id="534">534</a>
 <a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -816,6 +864,54 @@
 				helpers_128bit::to_big_uint(other.<span class="number">0</span>) * helpers_128bit::to_big_uint(<span class="self">self</span>.<span class="number">1</span>);
 			self_n.eq(<span class="kw-2">&amp;</span>other_n)
 		}
+	}
+}
+
+<span class="kw">pub trait </span>MultiplyRational: Sized {
+	<span class="kw">fn </span>multiply_rational(<span class="self">self</span>, n: <span class="self">Self</span>, d: <span class="self">Self</span>, r: Rounding) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt;;
+}
+
+<span class="macro">macro_rules! </span>impl_rrm {
+	(<span class="macro-nonterminal">$ulow</span>:ty, <span class="macro-nonterminal">$uhi</span>:ty) =&gt; {
+		<span class="kw">impl </span>MultiplyRational <span class="kw">for </span><span class="macro-nonterminal">$ulow </span>{
+			<span class="kw">fn </span>multiply_rational(<span class="self">self</span>, n: <span class="self">Self</span>, d: <span class="self">Self</span>, r: Rounding) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+				<span class="kw">if </span>d.is_zero() {
+					<span class="kw">return </span><span class="prelude-val">None
+				</span>}
+
+				<span class="kw">let </span>sn = (<span class="self">self </span><span class="kw">as </span><span class="macro-nonterminal">$uhi</span>) * (n <span class="kw">as </span><span class="macro-nonterminal">$uhi</span>);
+				<span class="kw">let </span><span class="kw-2">mut </span>result = sn / (d <span class="kw">as </span><span class="macro-nonterminal">$uhi</span>);
+				<span class="kw">let </span>remainder = (sn % (d <span class="kw">as </span><span class="macro-nonterminal">$uhi</span>)) <span class="kw">as </span><span class="macro-nonterminal">$ulow</span>;
+				<span class="kw">if match </span>r {
+					Rounding::Up =&gt; remainder &gt; <span class="number">0</span>,
+					<span class="comment">// cannot be `(d + 1) / 2` since `d` might be `max_value` and overflow.
+					</span>Rounding::NearestPrefUp =&gt; remainder &gt;= d / <span class="number">2 </span>+ d % <span class="number">2</span>,
+					Rounding::NearestPrefDown =&gt; remainder &gt; d / <span class="number">2</span>,
+					Rounding::Down =&gt; <span class="bool-val">false</span>,
+				} {
+					result = <span class="kw">match </span>result.checked_add(<span class="number">1</span>) {
+						<span class="prelude-val">Some</span>(v) =&gt; v,
+						<span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
+					};
+				}
+				<span class="kw">if </span>result &gt; (&lt;<span class="macro-nonterminal">$ulow</span>&gt;::max_value() <span class="kw">as </span><span class="macro-nonterminal">$uhi</span>) {
+					<span class="prelude-val">None
+				</span>} <span class="kw">else </span>{
+					<span class="prelude-val">Some</span>(result <span class="kw">as </span><span class="macro-nonterminal">$ulow</span>)
+				}
+			}
+		}
+	};
+}
+
+<span class="macro">impl_rrm!</span>(u8, u16);
+<span class="macro">impl_rrm!</span>(u16, u32);
+<span class="macro">impl_rrm!</span>(u32, u64);
+<span class="macro">impl_rrm!</span>(u64, u128);
+
+<span class="kw">impl </span>MultiplyRational <span class="kw">for </span>u128 {
+	<span class="kw">fn </span>multiply_rational(<span class="self">self</span>, n: <span class="self">Self</span>, d: <span class="self">Self</span>, r: Rounding) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+		<span class="kw">crate</span>::helpers_128bit::multiply_by_rational_with_rounding(<span class="self">self</span>, n, d, r)
 	}
 }
 
