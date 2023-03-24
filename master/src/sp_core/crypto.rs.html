@@ -1439,37 +1439,6 @@
 <a href="#1439" id="1439">1439</a>
 <a href="#1440" id="1440">1440</a>
 <a href="#1441" id="1441">1441</a>
-<a href="#1442" id="1442">1442</a>
-<a href="#1443" id="1443">1443</a>
-<a href="#1444" id="1444">1444</a>
-<a href="#1445" id="1445">1445</a>
-<a href="#1446" id="1446">1446</a>
-<a href="#1447" id="1447">1447</a>
-<a href="#1448" id="1448">1448</a>
-<a href="#1449" id="1449">1449</a>
-<a href="#1450" id="1450">1450</a>
-<a href="#1451" id="1451">1451</a>
-<a href="#1452" id="1452">1452</a>
-<a href="#1453" id="1453">1453</a>
-<a href="#1454" id="1454">1454</a>
-<a href="#1455" id="1455">1455</a>
-<a href="#1456" id="1456">1456</a>
-<a href="#1457" id="1457">1457</a>
-<a href="#1458" id="1458">1458</a>
-<a href="#1459" id="1459">1459</a>
-<a href="#1460" id="1460">1460</a>
-<a href="#1461" id="1461">1461</a>
-<a href="#1462" id="1462">1462</a>
-<a href="#1463" id="1463">1463</a>
-<a href="#1464" id="1464">1464</a>
-<a href="#1465" id="1465">1465</a>
-<a href="#1466" id="1466">1466</a>
-<a href="#1467" id="1467">1467</a>
-<a href="#1468" id="1468">1468</a>
-<a href="#1469" id="1469">1469</a>
-<a href="#1470" id="1470">1470</a>
-<a href="#1471" id="1471">1471</a>
-<a href="#1472" id="1472">1472</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1491,9 +1460,7 @@
 </span><span class="doccomment">//! Cryptographic utilities.
 </span><span class="comment">// end::description[]
 
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">use </span><span class="kw">crate</span>::hexdisplay::HexDisplay;
-<span class="kw">use crate</span>::{ed25519, sr25519};
+</span><span class="kw">use crate</span>::{ed25519, sr25519};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>base58::{FromBase58, ToBase58};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
@@ -1959,10 +1926,7 @@
 }
 
 <span class="doccomment">/// Trait suitable for typical cryptographic PKI key public type.
-</span><span class="kw">pub trait </span>Public: ByteArray + Derive + CryptoType + PartialEq + Eq + Clone + Send + Sync {
-	<span class="doccomment">/// Return `CryptoTypePublicPair` from public key.
-	</span><span class="kw">fn </span>to_public_crypto_pair(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CryptoTypePublicPair;
-}
+</span><span class="kw">pub trait </span>Public: ByteArray + Derive + CryptoType + PartialEq + Eq + Clone + Send + Sync {}
 
 <span class="doccomment">/// An opaque 32-byte cryptographic identifier.
 </span><span class="attr">#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -2161,11 +2125,7 @@
 			<span class="string">b&quot;&quot;
 		</span>}
 	}
-	<span class="kw">impl </span>Public <span class="kw">for </span>Dummy {
-		<span class="kw">fn </span>to_public_crypto_pair(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CryptoTypePublicPair {
-			CryptoTypePublicPair(CryptoTypeId(<span class="kw-2">*</span><span class="string">b&quot;dumm&quot;</span>), &lt;<span class="self">Self </span><span class="kw">as </span>ByteArray&gt;::to_raw_vec(<span class="self">self</span>))
-		}
-	}
+	<span class="kw">impl </span>Public <span class="kw">for </span>Dummy {}
 
 	<span class="kw">impl </span>Pair <span class="kw">for </span>Dummy {
 		<span class="kw">type </span>Public = Dummy;
@@ -2590,24 +2550,6 @@
 #[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
 </span><span class="kw">pub struct </span>CryptoTypeId(<span class="kw">pub </span>[u8; <span class="number">4</span>]);
 
-<span class="doccomment">/// A type alias of CryptoTypeId &amp; a public key
-</span><span class="attr">#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Encode, Decode)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
-</span><span class="kw">pub struct </span>CryptoTypePublicPair(<span class="kw">pub </span>CryptoTypeId, <span class="kw">pub </span>Vec&lt;u8&gt;);
-
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">impl </span>sp_std::fmt::Display <span class="kw">for </span>CryptoTypePublicPair {
-	<span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>sp_std::fmt::Formatter) -&gt; sp_std::fmt::Result {
-		<span class="kw">let </span>id = <span class="kw">match </span>str::from_utf8(<span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="number">0</span>).<span class="number">0</span>[..]) {
-			<span class="prelude-val">Ok</span>(id) =&gt; id.to_string(),
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-				<span class="macro">format!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
-			},
-		};
-		<span class="macro">write!</span>(f, <span class="string">&quot;{}-{}&quot;</span>, id, HexDisplay::from(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">1</span>))
-	}
-}
-
 <span class="doccomment">/// Known key types; this also functions as a global registry of key types for projects wishing to
 /// avoid collisions with each other.
 ///
@@ -2695,11 +2637,7 @@
 			<span class="macro">vec!</span>[]
 		}
 	}
-	<span class="kw">impl </span>Public <span class="kw">for </span>TestPublic {
-		<span class="kw">fn </span>to_public_crypto_pair(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CryptoTypePublicPair {
-			CryptoTypePublicPair(CryptoTypeId(<span class="kw-2">*</span><span class="string">b&quot;dumm&quot;</span>), <span class="self">self</span>.to_raw_vec())
-		}
-	}
+	<span class="kw">impl </span>Public <span class="kw">for </span>TestPublic {}
 	<span class="kw">impl </span>Pair <span class="kw">for </span>TestPair {
 		<span class="kw">type </span>Public = TestPublic;
 		<span class="kw">type </span>Seed = [u8; <span class="number">8</span>];

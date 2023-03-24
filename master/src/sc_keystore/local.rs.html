@@ -672,8 +672,6 @@
 <a href="#672" id="672">672</a>
 <a href="#673" id="673">673</a>
 <a href="#674" id="674">674</a>
-<a href="#675" id="675">675</a>
-<a href="#676" id="676">676</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -694,13 +692,10 @@
 </span><span class="doccomment">//! Local keystore implementation
 
 </span><span class="kw">use </span>parking_lot::RwLock;
-<span class="kw">use </span>sp_application_crypto::{ecdsa, ed25519, sr25519, AppKey, AppPair, IsWrappedBy};
+<span class="kw">use </span>sp_application_crypto::{AppCrypto, AppPair, IsWrappedBy};
 <span class="kw">use </span>sp_core::{
-	crypto::{
-		ByteArray, CryptoTypePublicPair, ExposeSecret, KeyTypeId, Pair <span class="kw">as </span>PairT, SecretString,
-	},
-	sr25519::{Pair <span class="kw">as </span>Sr25519Pair, Public <span class="kw">as </span>Sr25519Public},
-	Encode,
+	crypto::{ByteArray, ExposeSecret, KeyTypeId, Pair <span class="kw">as </span>CorePair, SecretString},
+	ecdsa, ed25519, sr25519,
 };
 <span class="kw">use </span>sp_keystore::{
 	vrf::{make_transcript, VRFSignature, VRFTranscriptData},
@@ -738,67 +733,13 @@
 	/// `Err(_)` when something failed.
 	</span><span class="kw">pub fn </span>key_pair&lt;Pair: AppPair&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		public: <span class="kw-2">&amp;</span>&lt;Pair <span class="kw">as </span>AppKey&gt;::Public,
+		public: <span class="kw-2">&amp;</span>&lt;Pair <span class="kw">as </span>AppCrypto&gt;::Public,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Pair&gt;&gt; {
 		<span class="self">self</span>.<span class="number">0</span>.read().key_pair::&lt;Pair&gt;(public)
 	}
 }
 
 <span class="kw">impl </span>Keystore <span class="kw">for </span>LocalKeystore {
-	<span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; std::result::Result&lt;Vec&lt;CryptoTypePublicPair&gt;, TraitError&gt; {
-		<span class="kw">let </span>raw_keys = <span class="self">self</span>.<span class="number">0</span>.read().raw_public_keys(id)<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(raw_keys.into_iter().fold(Vec::new(), |<span class="kw-2">mut </span>v, k| {
-			v.push(CryptoTypePublicPair(sr25519::CRYPTO_ID, k.clone()));
-			v.push(CryptoTypePublicPair(ed25519::CRYPTO_ID, k.clone()));
-			v.push(CryptoTypePublicPair(ecdsa::CRYPTO_ID, k));
-			v
-		}))
-	}
-
-	<span class="kw">fn </span>sign_with(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
-		key: <span class="kw-2">&amp;</span>CryptoTypePublicPair,
-		msg: <span class="kw-2">&amp;</span>[u8],
-	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, TraitError&gt; {
-		<span class="kw">match </span>key.<span class="number">0 </span>{
-			ed25519::CRYPTO_ID =&gt; {
-				<span class="kw">let </span>pub_key = ed25519::Public::from_slice(key.<span class="number">1</span>.as_slice()).map_err(|()| {
-					TraitError::Other(<span class="string">&quot;Corrupted public key - Invalid size&quot;</span>.into())
-				})<span class="question-mark">?</span>;
-				<span class="kw">let </span>key_pair = <span class="self">self
-					</span>.<span class="number">0
-					</span>.read()
-					.key_pair_by_type::&lt;ed25519::Pair&gt;(<span class="kw-2">&amp;</span>pub_key, id)
-					.map_err(TraitError::from)<span class="question-mark">?</span>;
-				key_pair.map(|k| k.sign(msg).encode()).map(<span class="prelude-val">Ok</span>).transpose()
-			},
-			sr25519::CRYPTO_ID =&gt; {
-				<span class="kw">let </span>pub_key = sr25519::Public::from_slice(key.<span class="number">1</span>.as_slice()).map_err(|()| {
-					TraitError::Other(<span class="string">&quot;Corrupted public key - Invalid size&quot;</span>.into())
-				})<span class="question-mark">?</span>;
-				<span class="kw">let </span>key_pair = <span class="self">self
-					</span>.<span class="number">0
-					</span>.read()
-					.key_pair_by_type::&lt;sr25519::Pair&gt;(<span class="kw-2">&amp;</span>pub_key, id)
-					.map_err(TraitError::from)<span class="question-mark">?</span>;
-				key_pair.map(|k| k.sign(msg).encode()).map(<span class="prelude-val">Ok</span>).transpose()
-			},
-			ecdsa::CRYPTO_ID =&gt; {
-				<span class="kw">let </span>pub_key = ecdsa::Public::from_slice(key.<span class="number">1</span>.as_slice()).map_err(|()| {
-					TraitError::Other(<span class="string">&quot;Corrupted public key - Invalid size&quot;</span>.into())
-				})<span class="question-mark">?</span>;
-				<span class="kw">let </span>key_pair = <span class="self">self
-					</span>.<span class="number">0
-					</span>.read()
-					.key_pair_by_type::&lt;ecdsa::Pair&gt;(<span class="kw-2">&amp;</span>pub_key, id)
-					.map_err(TraitError::from)<span class="question-mark">?</span>;
-				key_pair.map(|k| k.sign(msg).encode()).map(<span class="prelude-val">Ok</span>).transpose()
-			},
-			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(TraitError::KeyNotSupported(id)),
-		}
-	}
-
 	<span class="kw">fn </span>sr25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;sr25519::Public&gt; {
 		<span class="self">self</span>.<span class="number">0
 			</span>.read()
@@ -816,17 +757,47 @@
 	/// If the `[seed]` is `Some` then the key will be ephemeral and stored in memory.
 	</span><span class="kw">fn </span>sr25519_generate_new(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
+		key_type: KeyTypeId,
 		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 	) -&gt; std::result::Result&lt;sr25519::Public, TraitError&gt; {
 		<span class="kw">let </span>pair = <span class="kw">match </span>seed {
-			<span class="prelude-val">Some</span>(seed) =&gt;
-				<span class="self">self</span>.<span class="number">0</span>.write().insert_ephemeral_from_seed_by_type::&lt;sr25519::Pair&gt;(seed, id),
-			<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.write().generate_by_type::&lt;sr25519::Pair&gt;(id),
+			<span class="prelude-val">Some</span>(seed) =&gt; <span class="self">self
+				</span>.<span class="number">0
+				</span>.write()
+				.insert_ephemeral_from_seed_by_type::&lt;sr25519::Pair&gt;(seed, key_type),
+			<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.write().generate_by_type::&lt;sr25519::Pair&gt;(key_type),
 		}
 		.map_err(|e| -&gt; TraitError { e.into() })<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(pair.public())
+	}
+
+	<span class="kw">fn </span>sr25519_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>sr25519::Public,
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;sr25519::Signature&gt;, TraitError&gt; {
+		<span class="kw">let </span>res = <span class="self">self
+			</span>.<span class="number">0
+			</span>.read()
+			.key_pair_by_type::&lt;sr25519::Pair&gt;(public, key_type)<span class="question-mark">?
+			</span>.map(|pair| pair.sign(msg));
+		<span class="prelude-val">Ok</span>(res)
+	}
+
+	<span class="kw">fn </span>sr25519_vrf_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>sr25519::Public,
+		transcript_data: VRFTranscriptData,
+	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;VRFSignature&gt;, TraitError&gt; {
+		<span class="kw">let </span>res = <span class="self">self</span>.<span class="number">0</span>.read().key_pair_by_type::&lt;sr25519::Pair&gt;(public, key_type)<span class="question-mark">?</span>.map(|pair| {
+			<span class="kw">let </span>transcript = make_transcript(transcript_data);
+			<span class="kw">let </span>(inout, proof, <span class="kw">_</span>) = pair.as_ref().vrf_sign(transcript);
+			VRFSignature { output: inout.to_output(), proof }
+		});
+		<span class="prelude-val">Ok</span>(res)
 	}
 
 	<span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt; {
@@ -846,17 +817,33 @@
 	/// If the `[seed]` is `Some` then the key will be ephemeral and stored in memory.
 	</span><span class="kw">fn </span>ed25519_generate_new(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
+		key_type: KeyTypeId,
 		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 	) -&gt; std::result::Result&lt;ed25519::Public, TraitError&gt; {
 		<span class="kw">let </span>pair = <span class="kw">match </span>seed {
-			<span class="prelude-val">Some</span>(seed) =&gt;
-				<span class="self">self</span>.<span class="number">0</span>.write().insert_ephemeral_from_seed_by_type::&lt;ed25519::Pair&gt;(seed, id),
-			<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.write().generate_by_type::&lt;ed25519::Pair&gt;(id),
+			<span class="prelude-val">Some</span>(seed) =&gt; <span class="self">self
+				</span>.<span class="number">0
+				</span>.write()
+				.insert_ephemeral_from_seed_by_type::&lt;ed25519::Pair&gt;(seed, key_type),
+			<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.write().generate_by_type::&lt;ed25519::Pair&gt;(key_type),
 		}
 		.map_err(|e| -&gt; TraitError { e.into() })<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(pair.public())
+	}
+
+	<span class="kw">fn </span>ed25519_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ed25519::Public,
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;ed25519::Signature&gt;, TraitError&gt; {
+		<span class="kw">let </span>res = <span class="self">self
+			</span>.<span class="number">0
+			</span>.read()
+			.key_pair_by_type::&lt;ed25519::Pair&gt;(public, key_type)<span class="question-mark">?
+			</span>.map(|pair| pair.sign(msg));
+		<span class="prelude-val">Ok</span>(res)
 	}
 
 	<span class="kw">fn </span>ecdsa_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ecdsa::Public&gt; {
@@ -876,17 +863,45 @@
 	/// If the `[seed]` is `Some` then the key will be ephemeral and stored in memory.
 	</span><span class="kw">fn </span>ecdsa_generate_new(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
+		key_type: KeyTypeId,
 		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 	) -&gt; std::result::Result&lt;ecdsa::Public, TraitError&gt; {
 		<span class="kw">let </span>pair = <span class="kw">match </span>seed {
 			<span class="prelude-val">Some</span>(seed) =&gt;
-				<span class="self">self</span>.<span class="number">0</span>.write().insert_ephemeral_from_seed_by_type::&lt;ecdsa::Pair&gt;(seed, id),
-			<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.write().generate_by_type::&lt;ecdsa::Pair&gt;(id),
+				<span class="self">self</span>.<span class="number">0</span>.write().insert_ephemeral_from_seed_by_type::&lt;ecdsa::Pair&gt;(seed, key_type),
+			<span class="prelude-val">None </span>=&gt; <span class="self">self</span>.<span class="number">0</span>.write().generate_by_type::&lt;ecdsa::Pair&gt;(key_type),
 		}
 		.map_err(|e| -&gt; TraitError { e.into() })<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(pair.public())
+	}
+
+	<span class="kw">fn </span>ecdsa_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ecdsa::Public,
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt;, TraitError&gt; {
+		<span class="kw">let </span>res = <span class="self">self
+			</span>.<span class="number">0
+			</span>.read()
+			.key_pair_by_type::&lt;ecdsa::Pair&gt;(public, key_type)<span class="question-mark">?
+			</span>.map(|pair| pair.sign(msg));
+		<span class="prelude-val">Ok</span>(res)
+	}
+
+	<span class="kw">fn </span>ecdsa_sign_prehashed(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ecdsa::Public,
+		msg: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>],
+	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt;, TraitError&gt; {
+		<span class="kw">let </span>res = <span class="self">self
+			</span>.<span class="number">0
+			</span>.read()
+			.key_pair_by_type::&lt;ecdsa::Pair&gt;(public, key_type)<span class="question-mark">?
+			</span>.map(|pair| pair.sign_prehashed(msg));
+		<span class="prelude-val">Ok</span>(res)
 	}
 
 	<span class="kw">fn </span>insert(
@@ -898,38 +913,14 @@
 		<span class="self">self</span>.<span class="number">0</span>.write().insert(key_type, suri, public).map_err(|<span class="kw">_</span>| ())
 	}
 
+	<span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; std::result::Result&lt;Vec&lt;Vec&lt;u8&gt;&gt;, TraitError&gt; {
+		<span class="self">self</span>.<span class="number">0</span>.read().raw_public_keys(key_type).map_err(|e| e.into())
+	}
+
 	<span class="kw">fn </span>has_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, public_keys: <span class="kw-2">&amp;</span>[(Vec&lt;u8&gt;, KeyTypeId)]) -&gt; bool {
 		public_keys
 			.iter()
 			.all(|(p, t)| <span class="self">self</span>.<span class="number">0</span>.read().key_phrase_by_type(p, <span class="kw-2">*</span>t).ok().flatten().is_some())
-	}
-
-	<span class="kw">fn </span>sr25519_vrf_sign(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		key_type: KeyTypeId,
-		public: <span class="kw-2">&amp;</span>Sr25519Public,
-		transcript_data: VRFTranscriptData,
-	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;VRFSignature&gt;, TraitError&gt; {
-		<span class="kw">let </span>transcript = make_transcript(transcript_data);
-		<span class="kw">let </span>pair = <span class="self">self</span>.<span class="number">0</span>.read().key_pair_by_type::&lt;Sr25519Pair&gt;(public, key_type)<span class="question-mark">?</span>;
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(pair) = pair {
-			<span class="kw">let </span>(inout, proof, <span class="kw">_</span>) = pair.as_ref().vrf_sign(transcript);
-			<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(VRFSignature { output: inout.to_output(), proof }))
-		} <span class="kw">else </span>{
-			<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-		}
-	}
-
-	<span class="kw">fn </span>ecdsa_sign_prehashed(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
-		public: <span class="kw-2">&amp;</span>ecdsa::Public,
-		msg: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>],
-	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt;, TraitError&gt; {
-		<span class="kw">let </span>pair = <span class="self">self</span>.<span class="number">0</span>.read().key_pair_by_type::&lt;ecdsa::Pair&gt;(public, id)<span class="question-mark">?</span>;
-
-		pair.map(|k| k.sign_prehashed(msg)).map(<span class="prelude-val">Ok</span>).transpose()
 	}
 }
 
@@ -981,7 +972,12 @@
 	<span class="doccomment">/// Insert the given public/private key pair with the given key type.
 	///
 	/// Does not place it into the file system store.
-	</span><span class="kw">fn </span>insert_ephemeral_pair&lt;Pair: PairT&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pair: <span class="kw-2">&amp;</span>Pair, seed: <span class="kw-2">&amp;</span>str, key_type: KeyTypeId) {
+	</span><span class="kw">fn </span>insert_ephemeral_pair&lt;Pair: CorePair&gt;(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		pair: <span class="kw-2">&amp;</span>Pair,
+		seed: <span class="kw-2">&amp;</span>str,
+		key_type: KeyTypeId,
+	) {
 		<span class="kw">let </span>key = (key_type, pair.public().to_raw_vec());
 		<span class="self">self</span>.additional.insert(key, seed.into());
 	}
@@ -1001,7 +997,7 @@
 	///
 	/// Places it into the file system store, if a path is configured. Otherwise insert
 	/// it into the memory cache only.
-	</span><span class="kw">fn </span>generate_by_type&lt;Pair: PairT&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key_type: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Pair&gt; {
+	</span><span class="kw">fn </span>generate_by_type&lt;Pair: CorePair&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key_type: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Pair&gt; {
 		<span class="kw">let </span>(pair, phrase, <span class="kw">_</span>) = Pair::generate_with_phrase(<span class="self">self</span>.password());
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(path) = <span class="self">self</span>.key_file_path(pair.public().as_slice(), key_type) {
 			<span class="self">Self</span>::write_to_file(path, <span class="kw-2">&amp;</span>phrase)<span class="question-mark">?</span>;
@@ -1030,7 +1026,7 @@
 	<span class="doccomment">/// Create a new key from seed.
 	///
 	/// Does not place it into the file system store.
-	</span><span class="kw">fn </span>insert_ephemeral_from_seed_by_type&lt;Pair: PairT&gt;(
+	</span><span class="kw">fn </span>insert_ephemeral_from_seed_by_type&lt;Pair: CorePair&gt;(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		seed: <span class="kw-2">&amp;</span>str,
 		key_type: KeyTypeId,
@@ -1062,7 +1058,7 @@
 	}
 
 	<span class="doccomment">/// Get a key pair for the given public key and key type.
-	</span><span class="kw">fn </span>key_pair_by_type&lt;Pair: PairT&gt;(
+	</span><span class="kw">fn </span>key_pair_by_type&lt;Pair: CorePair&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		public: <span class="kw-2">&amp;</span>Pair::Public,
 		key_type: KeyTypeId,
@@ -1094,12 +1090,12 @@
 	}
 
 	<span class="doccomment">/// Returns a list of raw public keys filtered by `KeyTypeId`
-	</span><span class="kw">fn </span>raw_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Vec&lt;u8&gt;&gt;&gt; {
+	</span><span class="kw">fn </span>raw_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Vec&lt;u8&gt;&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>public_keys: Vec&lt;Vec&lt;u8&gt;&gt; = <span class="self">self
 			</span>.additional
 			.keys()
 			.into_iter()
-			.filter_map(|k| <span class="kw">if </span>k.<span class="number">0 </span>== id { <span class="prelude-val">Some</span>(k.<span class="number">1</span>.clone()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>})
+			.filter_map(|k| <span class="kw">if </span>k.<span class="number">0 </span>== key_type { <span class="prelude-val">Some</span>(k.<span class="number">1</span>.clone()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>})
 			.collect();
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(path) = <span class="kw-2">&amp;</span><span class="self">self</span>.path {
@@ -1111,7 +1107,7 @@
 				</span><span class="kw">if let </span><span class="prelude-val">Some</span>(name) = path.file_name().and_then(|n| n.to_str()) {
 					<span class="kw">match </span>array_bytes::hex2bytes(name) {
 						<span class="prelude-val">Ok</span>(<span class="kw-2">ref </span>hex) <span class="kw">if </span>hex.len() &gt; <span class="number">4 </span>=&gt; {
-							<span class="kw">if </span>hex[<span class="number">0</span>..<span class="number">4</span>] != id.<span class="number">0 </span>{
+							<span class="kw">if </span>hex[<span class="number">0</span>..<span class="number">4</span>] != key_type.<span class="number">0 </span>{
 								<span class="kw">continue
 							</span>}
 							<span class="kw">let </span>public = hex[<span class="number">4</span>..].to_vec();
@@ -1132,7 +1128,7 @@
 	/// when something failed.
 	</span><span class="kw">pub fn </span>key_pair&lt;Pair: AppPair&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		public: <span class="kw-2">&amp;</span>&lt;Pair <span class="kw">as </span>AppKey&gt;::Public,
+		public: <span class="kw-2">&amp;</span>&lt;Pair <span class="kw">as </span>AppCrypto&gt;::Public,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Pair&gt;&gt; {
 		<span class="self">self</span>.key_pair_by_type::&lt;Pair::Generic&gt;(IsWrappedBy::from_ref(public), Pair::ID)
 			.map(|v| v.map(Into::into))

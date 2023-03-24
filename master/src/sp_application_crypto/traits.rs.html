@@ -161,7 +161,6 @@
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -187,24 +186,22 @@
 <span class="kw">use </span>sp_std::{fmt::Debug, vec::Vec};
 
 <span class="doccomment">/// An application-specific key.
-</span><span class="kw">pub trait </span>AppKey: <span class="lifetime">&#39;static </span>+ Send + Sync + Sized + CryptoType + Clone {
-	<span class="doccomment">/// The corresponding type as a generic crypto type.
-	</span><span class="kw">type </span>UntypedGeneric: IsWrappedBy&lt;<span class="self">Self</span>&gt;;
+</span><span class="kw">pub trait </span>AppCrypto: <span class="lifetime">&#39;static </span>+ Send + Sync + Sized + CryptoType + Clone {
+	<span class="doccomment">/// Identifier for application-specific key type.
+	</span><span class="kw">const </span>ID: KeyTypeId;
+
+	<span class="doccomment">/// Identifier of the crypto type of this application-specific key type.
+	</span><span class="kw">const </span>CRYPTO_ID: CryptoTypeId;
 
 	<span class="doccomment">/// The corresponding public key type in this application scheme.
 	</span><span class="kw">type </span>Public: AppPublic;
 
-	<span class="doccomment">/// The corresponding key pair type in this application scheme.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
-	</span><span class="kw">type </span>Pair: AppPair;
-
 	<span class="doccomment">/// The corresponding signature type in this application scheme.
 	</span><span class="kw">type </span>Signature: AppSignature;
 
-	<span class="doccomment">/// An identifier for this application-specific key type.
-	</span><span class="kw">const </span>ID: KeyTypeId;
-	<span class="doccomment">/// The identifier of the crypto type of this application-specific key type.
-	</span><span class="kw">const </span>CRYPTO_ID: CryptoTypeId;
+	<span class="doccomment">/// The corresponding key pair type in this application scheme.
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
+	</span><span class="kw">type </span>Pair: AppPair;
 }
 
 <span class="doccomment">/// Type which implements Hash in std, not when no-std (std variant).
@@ -227,7 +224,7 @@
 
 <span class="doccomment">/// A application&#39;s public key.
 </span><span class="kw">pub trait </span>AppPublic:
-	AppKey + Public + Ord + PartialOrd + Eq + PartialEq + Debug + MaybeHash + codec::Codec
+	AppCrypto + Public + Ord + PartialOrd + Eq + PartialEq + Debug + MaybeHash + codec::Codec
 {
 	<span class="doccomment">/// The wrapped type which is just a plain instance of `Public`.
 	</span><span class="kw">type </span>Generic: IsWrappedBy&lt;<span class="self">Self</span>&gt;
@@ -243,14 +240,15 @@
 
 <span class="doccomment">/// A application&#39;s key pair.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
-</span><span class="kw">pub trait </span>AppPair: AppKey + Pair&lt;Public = &lt;<span class="self">Self </span><span class="kw">as </span>AppKey&gt;::Public&gt; {
+</span><span class="kw">pub trait </span>AppPair: AppCrypto + Pair&lt;Public = &lt;<span class="self">Self </span><span class="kw">as </span>AppCrypto&gt;::Public&gt; {
 	<span class="doccomment">/// The wrapped type which is just a plain instance of `Pair`.
 	</span><span class="kw">type </span>Generic: IsWrappedBy&lt;<span class="self">Self</span>&gt;
-		+ Pair&lt;Public = &lt;&lt;<span class="self">Self </span><span class="kw">as </span>AppKey&gt;::Public <span class="kw">as </span>AppPublic&gt;::Generic&gt;;
+		+ Pair&lt;Public = &lt;&lt;<span class="self">Self </span><span class="kw">as </span>AppCrypto&gt;::Public <span class="kw">as </span>AppPublic&gt;::Generic&gt;
+		+ Pair&lt;Signature = &lt;&lt;<span class="self">Self </span><span class="kw">as </span>AppCrypto&gt;::Signature <span class="kw">as </span>AppSignature&gt;::Generic&gt;;
 }
 
 <span class="doccomment">/// A application&#39;s signature.
-</span><span class="kw">pub trait </span>AppSignature: AppKey + Eq + PartialEq + Debug + MaybeHash {
+</span><span class="kw">pub trait </span>AppSignature: AppCrypto + Eq + PartialEq + Debug + MaybeHash {
 	<span class="doccomment">/// The wrapped type which is just a plain instance of `Signature`.
 	</span><span class="kw">type </span>Generic: IsWrappedBy&lt;<span class="self">Self</span>&gt; + Eq + PartialEq + Debug + MaybeHash;
 }

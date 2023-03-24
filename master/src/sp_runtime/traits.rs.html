@@ -2075,6 +2075,8 @@
 <a href="#2075" id="2075">2075</a>
 <a href="#2076" id="2076">2076</a>
 <a href="#2077" id="2077">2077</a>
+<a href="#2078" id="2078">2078</a>
+<a href="#2079" id="2079">2079</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2107,7 +2109,7 @@
 <span class="kw">use </span>impl_trait_for_tuples::impl_for_tuples;
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>serde::{de::DeserializeOwned, Deserialize, Serialize};
-<span class="kw">use </span>sp_application_crypto::AppKey;
+<span class="kw">use </span>sp_application_crypto::AppCrypto;
 <span class="kw">pub use </span>sp_arithmetic::traits::{
 	checked_pow, ensure_pow, AtLeast32Bit, AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedDiv,
 	CheckedMul, CheckedShl, CheckedShr, CheckedSub, Ensure, EnsureAdd, EnsureAddAssign, EnsureDiv,
@@ -2225,10 +2227,10 @@
 }
 
 <span class="kw">impl</span>&lt;
-		S: Verify&lt;Signer = &lt;&lt;T <span class="kw">as </span>AppKey&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic&gt;
+		S: Verify&lt;Signer = &lt;&lt;T <span class="kw">as </span>AppCrypto&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic&gt;
 			+ From&lt;T&gt;,
 		T: sp_application_crypto::Wraps&lt;Inner = S&gt;
-			+ sp_application_crypto::AppKey
+			+ sp_application_crypto::AppCrypto
 			+ sp_application_crypto::AppSignature
 			+ AsRef&lt;S&gt;
 			+ AsMut&lt;S&gt;
@@ -2236,16 +2238,18 @@
 	&gt; AppVerify <span class="kw">for </span>T
 <span class="kw">where
 	</span>&lt;S <span class="kw">as </span>Verify&gt;::Signer: IdentifyAccount&lt;AccountId = &lt;S <span class="kw">as </span>Verify&gt;::Signer&gt;,
-	&lt;&lt;T <span class="kw">as </span>AppKey&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic: IdentifyAccount&lt;
-		AccountId = &lt;&lt;T <span class="kw">as </span>AppKey&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic,
+	&lt;&lt;T <span class="kw">as </span>AppCrypto&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic: IdentifyAccount&lt;
+		AccountId = &lt;&lt;T <span class="kw">as </span>AppCrypto&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic,
 	&gt;,
 {
-	<span class="kw">type </span>AccountId = &lt;T <span class="kw">as </span>AppKey&gt;::Public;
-	<span class="kw">fn </span>verify&lt;L: Lazy&lt;[u8]&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: L, signer: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>AppKey&gt;::Public) -&gt; bool {
+	<span class="kw">type </span>AccountId = &lt;T <span class="kw">as </span>AppCrypto&gt;::Public;
+	<span class="kw">fn </span>verify&lt;L: Lazy&lt;[u8]&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: L, signer: <span class="kw-2">&amp;</span>&lt;T <span class="kw">as </span>AppCrypto&gt;::Public) -&gt; bool {
 		<span class="kw">use </span>sp_application_crypto::IsWrappedBy;
 		<span class="kw">let </span>inner: <span class="kw-2">&amp;</span>S = <span class="self">self</span>.as_ref();
 		<span class="kw">let </span>inner_pubkey =
-			&lt;&lt;T <span class="kw">as </span>AppKey&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic::from_ref(signer);
+			&lt;&lt;T <span class="kw">as </span>AppCrypto&gt;::Public <span class="kw">as </span>sp_application_crypto::AppPublic&gt;::Generic::from_ref(
+				signer,
+			);
 		Verify::verify(inner, msg, inner_pubkey)
 	}
 }

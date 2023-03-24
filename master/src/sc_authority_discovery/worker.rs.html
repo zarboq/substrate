@@ -767,6 +767,11 @@
 <a href="#767" id="767">767</a>
 <a href="#768" id="768">768</a>
 <a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -801,7 +806,7 @@
 <span class="kw">use </span>futures::{channel::mpsc, future, stream::Fuse, FutureExt, Stream, StreamExt};
 
 <span class="kw">use </span>addr_cache::AddrCache;
-<span class="kw">use </span>codec::Decode;
+<span class="kw">use </span>codec::{Decode, Encode};
 <span class="kw">use </span>ip_network::IpNetwork;
 <span class="kw">use </span>libp2p::{
 	core::multiaddr,
@@ -812,6 +817,7 @@
 <span class="kw">use </span>prometheus_endpoint::{register, Counter, CounterVec, Gauge, Opts, U64};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>rand::{seq::SliceRandom, thread_rng};
+
 <span class="kw">use </span>sc_network::{
 	event::DhtEvent, KademliaKey, NetworkDHTProvider, NetworkSigner, NetworkStateInfo, Signature,
 };
@@ -820,8 +826,7 @@
 	AuthorityDiscoveryApi, AuthorityId, AuthorityPair, AuthoritySignature,
 };
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
-
-<span class="kw">use </span>sp_core::crypto::{key_types, CryptoTypePublicPair, Pair};
+<span class="kw">use </span>sp_core::crypto::{key_types, ByteArray, Pair};
 <span class="kw">use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
@@ -896,7 +901,7 @@
 	</span>publish_if_changed_interval: ExpIncInterval,
 	<span class="doccomment">/// List of keys onto which addresses have been published at the latest publication.
 	/// Used to check whether they have changed.
-	</span>latest_published_keys: HashSet&lt;CryptoTypePublicPair&gt;,
+	</span>latest_published_keys: HashSet&lt;AuthorityId&gt;,
 	<span class="doccomment">/// Same value as in the configuration.
 	</span>publish_non_global_ips: bool,
 	<span class="doccomment">/// Same value as in the configuration.
@@ -1108,7 +1113,7 @@
 		<span class="kw">let </span>keys = Worker::&lt;Client, Network, Block, DhtEventStream&gt;::get_own_public_keys_within_authority_set(
 			key_store.clone(),
 			<span class="self">self</span>.client.as_ref(),
-		).<span class="kw">await</span><span class="question-mark">?</span>.into_iter().map(Into::into).collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
+		).<span class="kw">await</span><span class="question-mark">?</span>.into_iter().collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
 
 		<span class="kw">if </span>only_if_changed &amp;&amp; keys == <span class="self">self</span>.latest_published_keys {
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
@@ -1423,7 +1428,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::PeerSignature&gt; {
 	<span class="kw">let </span>signature = network
 		.sign_with_local_identity(serialized_record)
-		.map_err(|<span class="kw">_</span>| Error::Signing)<span class="question-mark">?</span>;
+		.map_err(|e| Error::CannotSign(<span class="macro">format!</span>(<span class="string">&quot;{} (network packet)&quot;</span>, e)))<span class="question-mark">?</span>;
 	<span class="kw">let </span>public_key = signature.public_key.to_protobuf_encoding();
 	<span class="kw">let </span>signature = signature.bytes;
 	<span class="prelude-val">Ok</span>(schema::PeerSignature { signature, public_key })
@@ -1433,15 +1438,20 @@
 	serialized_record: Vec&lt;u8&gt;,
 	peer_signature: <span class="prelude-ty">Option</span>&lt;schema::PeerSignature&gt;,
 	key_store: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Keystore,
-	keys: Vec&lt;CryptoTypePublicPair&gt;,
+	keys: Vec&lt;AuthorityId&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(KademliaKey, Vec&lt;u8&gt;)&gt;&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>result = Vec::with_capacity(keys.len());
 
 	<span class="kw">for </span>key <span class="kw">in </span>keys.iter() {
 		<span class="kw">let </span>auth_signature = key_store
-			.sign_with(key_types::AUTHORITY_DISCOVERY, key, <span class="kw-2">&amp;</span>serialized_record)
-			.map_err(|<span class="kw">_</span>| Error::Signing)<span class="question-mark">?
-			</span>.ok_or_else(|| Error::MissingSignature(key.clone()))<span class="question-mark">?</span>;
+			.sr25519_sign(key_types::AUTHORITY_DISCOVERY, key.as_ref(), <span class="kw-2">&amp;</span>serialized_record)
+			.map_err(|e| Error::CannotSign(<span class="macro">format!</span>(<span class="string">&quot;{}. Key: {:?}&quot;</span>, e, key)))<span class="question-mark">?
+			</span>.ok_or_else(|| {
+				Error::CannotSign(<span class="macro">format!</span>(<span class="string">&quot;Could not find key in keystore. Key: {:?}&quot;</span>, key))
+			})<span class="question-mark">?</span>;
+
+		<span class="comment">// Scale encode
+		</span><span class="kw">let </span>auth_signature = auth_signature.encode();
 
 		<span class="kw">let </span>signed_record = schema::SignedAuthorityRecord {
 			record: serialized_record.clone(),
@@ -1450,7 +1460,7 @@
 		}
 		.encode_to_vec();
 
-		result.push((hash_authority_id(<span class="kw-2">&amp;</span>key.<span class="number">1</span>), signed_record));
+		result.push((hash_authority_id(key.as_slice()), signed_record));
 	}
 
 	<span class="prelude-val">Ok</span>(result)

@@ -164,6 +164,71 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -187,7 +252,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::vrf::{VRFSignature, VRFTranscriptData};
 <span class="kw">use </span>sp_core::{
-	crypto::{CryptoTypePublicPair, KeyTypeId},
+	crypto::{ByteArray, CryptoTypeId, KeyTypeId},
 	ecdsa, ed25519, sr25519,
 };
 <span class="kw">use </span>std::sync::Arc;
@@ -211,84 +276,44 @@
 
 <span class="doccomment">/// Something that generates, stores and provides access to secret keys.
 </span><span class="kw">pub trait </span>Keystore: Send + Sync {
-	<span class="doccomment">/// Returns all sr25519 public keys for the given key type.
-	</span><span class="kw">fn </span>sr25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;sr25519::Public&gt;;
+	<span class="doccomment">/// Returns all the sr25519 public keys for the given key type.
+	</span><span class="kw">fn </span>sr25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;sr25519::Public&gt;;
 
 	<span class="doccomment">/// Generate a new sr25519 key pair for the given key type and an optional seed.
 	///
-	/// If the given seed is `Some(_)`, the key pair will only be stored in memory.
-	///
-	/// Returns the public key of the generated key pair.
+	/// Returns an `sr25519::Public` key of the generated key pair or an `Err` if
+	/// something failed during key generation.
 	</span><span class="kw">fn </span>sr25519_generate_new(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
+		key_type: KeyTypeId,
 		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;sr25519::Public, Error&gt;;
 
-	<span class="doccomment">/// Returns all ed25519 public keys for the given key type.
-	</span><span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt;;
-
-	<span class="doccomment">/// Generate a new ed25519 key pair for the given key type and an optional seed.
+	<span class="doccomment">/// Generate an sr25519 signature for a given message.
 	///
-	/// If the given seed is `Some(_)`, the key pair will only be stored in memory.
+	/// Receives [`KeyTypeId`] and an [`sr25519::Public`] key to be able to map
+	/// them to a private key that exists in the keystore.
 	///
-	/// Returns the public key of the generated key pair.
-	</span><span class="kw">fn </span>ed25519_generate_new(
+	/// Returns an [`sr25519::Signature`] or `None` in case the given `key_type`
+	/// and `public` combination doesn&#39;t exist in the keystore.
+	/// An `Err` will be returned if generating the signature itself failed.
+	</span><span class="kw">fn </span>sr25519_sign(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
-		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;ed25519::Public, Error&gt;;
-
-	<span class="doccomment">/// Returns all ecdsa public keys for the given key type.
-	</span><span class="kw">fn </span>ecdsa_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;ecdsa::Public&gt;;
-
-	<span class="doccomment">/// Generate a new ecdsa key pair for the given key type and an optional seed.
-	///
-	/// If the given seed is `Some(_)`, the key pair will only be stored in memory.
-	///
-	/// Returns the public key of the generated key pair.
-	</span><span class="kw">fn </span>ecdsa_generate_new(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId, seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;)
-		-&gt; <span class="prelude-ty">Result</span>&lt;ecdsa::Public, Error&gt;;
-
-	<span class="doccomment">/// Insert a new secret key.
-	</span><span class="kw">fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId, suri: <span class="kw-2">&amp;</span>str, public: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt;;
-
-	<span class="doccomment">/// List all supported keys
-	///
-	/// Returns a set of public keys the signer supports.
-	</span><span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;CryptoTypePublicPair&gt;, Error&gt;;
-
-	<span class="doccomment">/// Checks if the private keys for the given public key and key type combinations exist.
-	///
-	/// Returns `true` iff all private keys could be found.
-	</span><span class="kw">fn </span>has_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, public_keys: <span class="kw-2">&amp;</span>[(Vec&lt;u8&gt;, KeyTypeId)]) -&gt; bool;
-
-	<span class="doccomment">/// Sign with key
-	///
-	/// Signs a message with the private key that matches
-	/// the public key passed.
-	///
-	/// Returns the SCALE encoded signature if key is found and supported, `None` if the key doesn&#39;t
-	/// exist or an error when something failed.
-	</span><span class="kw">fn </span>sign_with(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
-		key: <span class="kw-2">&amp;</span>CryptoTypePublicPair,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>sr25519::Public,
 		msg: <span class="kw-2">&amp;</span>[u8],
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, Error&gt;;
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;sr25519::Signature&gt;, Error&gt;;
 
-	<span class="doccomment">/// Generate VRF signature for given transcript data.
+	<span class="doccomment">/// Generate an sr25519 VRF signature for a given transcript data.
 	///
-	/// Receives KeyTypeId and Public key to be able to map
-	/// them to a private key that exists in the keystore which
-	/// is, in turn, used for signing the provided transcript.
+	/// Receives [`KeyTypeId`] and an [`sr25519::Public`] key to be able to map
+	/// them to a private key that exists in the keystore.
 	///
 	/// Returns a result containing the signature data.
-	/// Namely, VRFOutput and VRFProof which are returned
-	/// inside the `VRFSignature` container struct.
-	///
-	/// This function will return `None` if the given `key_type` and `public` combination
-	/// doesn&#39;t exist in the keystore or an `Err` when something failed.
+	/// Namely, VRFOutput and VRFProof which are returned inside the `VRFSignature`
+	/// container struct.
+	/// Returns `None` if the given `key_type` and `public` combination doesn&#39;t
+	/// exist in the keystore or an `Err` when something failed.
 	</span><span class="kw">fn </span>sr25519_vrf_sign(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		key_type: KeyTypeId,
@@ -296,24 +321,129 @@
 		transcript_data: VRFTranscriptData,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;VRFSignature&gt;, Error&gt;;
 
-	<span class="doccomment">/// Generate an ECDSA signature for a given pre-hashed message.
+	<span class="doccomment">/// Returns all ed25519 public keys for the given key type.
+	</span><span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt;;
+
+	<span class="doccomment">/// Generate a new ed25519 key pair for the given key type and an optional seed.
+	///
+	/// Returns an `ed25519::Public` key of the generated key pair or an `Err` if
+	/// something failed during key generation.
+	</span><span class="kw">fn </span>ed25519_generate_new(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ed25519::Public, Error&gt;;
+
+	<span class="doccomment">/// Generate an ed25519 signature for a given message.
+	///
+	/// Receives [`KeyTypeId`] and an [`ed25519::Public`] key to be able to map
+	/// them to a private key that exists in the keystore.
+	///
+	/// Returns an [`ed25519::Signature`] or `None` in case the given `key_type`
+	/// and `public` combination doesn&#39;t exist in the keystore.
+	/// An `Err` will be returned if generating the signature itself failed.
+	</span><span class="kw">fn </span>ed25519_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ed25519::Public,
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ed25519::Signature&gt;, Error&gt;;
+
+	<span class="doccomment">/// Returns all ecdsa public keys for the given key type.
+	</span><span class="kw">fn </span>ecdsa_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ecdsa::Public&gt;;
+
+	<span class="doccomment">/// Generate a new ecdsa key pair for the given key type and an optional seed.
+	///
+	/// Returns an `ecdsa::Public` key of the generated key pair or an `Err` if
+	/// something failed during key generation.
+	</span><span class="kw">fn </span>ecdsa_generate_new(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ecdsa::Public, Error&gt;;
+
+	<span class="doccomment">/// Generate an ecdsa signature for a given message.
 	///
 	/// Receives [`KeyTypeId`] and an [`ecdsa::Public`] key to be able to map
-	/// them to a private key that exists in the keystore. This private key is,
-	/// in turn, used for signing the provided pre-hashed message.
+	/// them to a private key that exists in the keystore.
 	///
-	/// The `msg` argument provided should be a hashed message for which an
-	/// ECDSA signature should be generated.
+	/// Returns an [`ecdsa::Signature`] or `None` in case the given `key_type`
+	/// and `public` combination doesn&#39;t exist in the keystore.
+	/// An `Err` will be returned if generating the signature itself failed.
+	</span><span class="kw">fn </span>ecdsa_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ecdsa::Public,
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt;, Error&gt;;
+
+	<span class="doccomment">/// Generate an ecdsa signature for a given pre-hashed message.
 	///
-	/// Returns an [`ecdsa::Signature`] or `None` in case the given `id` and
-	/// `public` combination doesn&#39;t exist in the keystore. An `Err` will be
-	/// returned if generating the signature itself failed.
+	/// Receives [`KeyTypeId`] and an [`ecdsa::Public`] key to be able to map
+	/// them to a private key that exists in the keystore.
+	///
+	/// Returns an [`ecdsa::Signature`] or `None` in case the given `key_type`
+	/// and `public` combination doesn&#39;t exist in the keystore.
+	/// An `Err` will be returned if generating the signature itself failed.
 	</span><span class="kw">fn </span>ecdsa_sign_prehashed(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
+		key_type: KeyTypeId,
 		public: <span class="kw-2">&amp;</span>ecdsa::Public,
 		msg: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>],
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt;, Error&gt;;
+
+	<span class="doccomment">/// Insert a new secret key.
+	</span><span class="kw">fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId, suri: <span class="kw-2">&amp;</span>str, public: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt;;
+
+	<span class="doccomment">/// List all supported keys of a given type.
+	///
+	/// Returns a set of public keys the signer supports in raw format.
+	</span><span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Vec&lt;u8&gt;&gt;, Error&gt;;
+
+	<span class="doccomment">/// Checks if the private keys for the given public key and key type combinations exist.
+	///
+	/// Returns `true` iff all private keys could be found.
+	</span><span class="kw">fn </span>has_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, public_keys: <span class="kw-2">&amp;</span>[(Vec&lt;u8&gt;, KeyTypeId)]) -&gt; bool;
+
+	<span class="doccomment">/// Convenience method to sign a message using the given key type and a raw public key
+	/// for secret lookup.
+	///
+	/// The message is signed using the cryptographic primitive specified by `crypto_id`.
+	///
+	/// Schemes supported by the default trait implementation: sr25519, ed25519 and ecdsa.
+	/// To support more schemes you can overwrite this method.
+	///
+	/// Returns the SCALE encoded signature if key is found and supported, `None` if the key doesn&#39;t
+	/// exist or an error when something failed.
+	</span><span class="kw">fn </span>sign_with(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		id: KeyTypeId,
+		crypto_id: CryptoTypeId,
+		public: <span class="kw-2">&amp;</span>[u8],
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, Error&gt; {
+		<span class="kw">use </span>codec::Encode;
+
+		<span class="kw">let </span>signature = <span class="kw">match </span>crypto_id {
+			sr25519::CRYPTO_ID =&gt; {
+				<span class="kw">let </span>public = sr25519::Public::from_slice(public)
+					.map_err(|<span class="kw">_</span>| Error::ValidationError(<span class="string">&quot;Invalid public key format&quot;</span>.into()))<span class="question-mark">?</span>;
+				<span class="self">self</span>.sr25519_sign(id, <span class="kw-2">&amp;</span>public, msg)<span class="question-mark">?</span>.map(|s| s.encode())
+			},
+			ed25519::CRYPTO_ID =&gt; {
+				<span class="kw">let </span>public = ed25519::Public::from_slice(public)
+					.map_err(|<span class="kw">_</span>| Error::ValidationError(<span class="string">&quot;Invalid public key format&quot;</span>.into()))<span class="question-mark">?</span>;
+				<span class="self">self</span>.ed25519_sign(id, <span class="kw-2">&amp;</span>public, msg)<span class="question-mark">?</span>.map(|s| s.encode())
+			},
+			ecdsa::CRYPTO_ID =&gt; {
+				<span class="kw">let </span>public = ecdsa::Public::from_slice(public)
+					.map_err(|<span class="kw">_</span>| Error::ValidationError(<span class="string">&quot;Invalid public key format&quot;</span>.into()))<span class="question-mark">?</span>;
+				<span class="self">self</span>.ecdsa_sign(id, <span class="kw-2">&amp;</span>public, msg)<span class="question-mark">?</span>.map(|s| s.encode())
+			},
+			<span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::KeyNotSupported(id)),
+		};
+		<span class="prelude-val">Ok</span>(signature)
+	}
 }
 
 <span class="doccomment">/// A shared pointer to a keystore implementation.

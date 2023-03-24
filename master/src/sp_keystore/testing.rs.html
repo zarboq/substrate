@@ -374,7 +374,6 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -395,7 +394,7 @@
 </span><span class="doccomment">//! Types that should only be used for testing!
 
 </span><span class="kw">use </span>sp_core::{
-	crypto::{ByteArray, CryptoTypePublicPair, KeyTypeId, Pair},
+	crypto::{ByteArray, KeyTypeId, Pair},
 	ecdsa, ed25519, sr25519,
 };
 
@@ -419,51 +418,44 @@
 		<span class="self">Self</span>::default()
 	}
 
-	<span class="kw">fn </span>sr25519_key_pair(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId, pub_key: <span class="kw-2">&amp;</span>sr25519::Public) -&gt; <span class="prelude-ty">Option</span>&lt;sr25519::Pair&gt; {
-		<span class="self">self</span>.keys.read().get(<span class="kw-2">&amp;</span>id).and_then(|inner| {
-			inner.get(pub_key.as_slice()).map(|s| {
+	<span class="kw">fn </span>sr25519_key_pair(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>sr25519::Public,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;sr25519::Pair&gt; {
+		<span class="self">self</span>.keys.read().get(<span class="kw-2">&amp;</span>key_type).and_then(|inner| {
+			inner.get(public.as_slice()).map(|s| {
 				sr25519::Pair::from_string(s, <span class="prelude-val">None</span>).expect(<span class="string">&quot;`sr25519` seed slice is valid&quot;</span>)
 			})
 		})
 	}
 
-	<span class="kw">fn </span>ed25519_key_pair(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId, pub_key: <span class="kw-2">&amp;</span>ed25519::Public) -&gt; <span class="prelude-ty">Option</span>&lt;ed25519::Pair&gt; {
-		<span class="self">self</span>.keys.read().get(<span class="kw-2">&amp;</span>id).and_then(|inner| {
-			inner.get(pub_key.as_slice()).map(|s| {
+	<span class="kw">fn </span>ed25519_key_pair(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ed25519::Public,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;ed25519::Pair&gt; {
+		<span class="self">self</span>.keys.read().get(<span class="kw-2">&amp;</span>key_type).and_then(|inner| {
+			inner.get(public.as_slice()).map(|s| {
 				ed25519::Pair::from_string(s, <span class="prelude-val">None</span>).expect(<span class="string">&quot;`ed25519` seed slice is valid&quot;</span>)
 			})
 		})
 	}
 
-	<span class="kw">fn </span>ecdsa_key_pair(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId, pub_key: <span class="kw-2">&amp;</span>ecdsa::Public) -&gt; <span class="prelude-ty">Option</span>&lt;ecdsa::Pair&gt; {
-		<span class="self">self</span>.keys.read().get(<span class="kw-2">&amp;</span>id).and_then(|inner| {
+	<span class="kw">fn </span>ecdsa_key_pair(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId, public: <span class="kw-2">&amp;</span>ecdsa::Public) -&gt; <span class="prelude-ty">Option</span>&lt;ecdsa::Pair&gt; {
+		<span class="self">self</span>.keys.read().get(<span class="kw-2">&amp;</span>key_type).and_then(|inner| {
 			inner
-				.get(pub_key.as_slice())
+				.get(public.as_slice())
 				.map(|s| ecdsa::Pair::from_string(s, <span class="prelude-val">None</span>).expect(<span class="string">&quot;`ecdsa` seed slice is valid&quot;</span>))
 		})
 	}
 }
 
 <span class="kw">impl </span>Keystore <span class="kw">for </span>MemoryKeystore {
-	<span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;CryptoTypePublicPair&gt;, Error&gt; {
+	<span class="kw">fn </span>sr25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;sr25519::Public&gt; {
 		<span class="self">self</span>.keys
 			.read()
-			.get(<span class="kw-2">&amp;</span>id)
-			.map(|map| {
-				<span class="prelude-val">Ok</span>(map.keys().fold(Vec::new(), |<span class="kw-2">mut </span>v, k| {
-					v.push(CryptoTypePublicPair(sr25519::CRYPTO_ID, k.clone()));
-					v.push(CryptoTypePublicPair(ed25519::CRYPTO_ID, k.clone()));
-					v.push(CryptoTypePublicPair(ecdsa::CRYPTO_ID, k.clone()));
-					v
-				}))
-			})
-			.unwrap_or_else(|| <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]))
-	}
-
-	<span class="kw">fn </span>sr25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;sr25519::Public&gt; {
-		<span class="self">self</span>.keys
-			.read()
-			.get(<span class="kw-2">&amp;</span>id)
+			.get(<span class="kw-2">&amp;</span>key_type)
 			.map(|keys| {
 				keys.values()
 					.map(|s| {
@@ -477,7 +469,7 @@
 
 	<span class="kw">fn </span>sr25519_generate_new(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
+		key_type: KeyTypeId,
 		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;sr25519::Public, Error&gt; {
 		<span class="kw">match </span>seed {
@@ -487,7 +479,7 @@
 				})<span class="question-mark">?</span>;
 				<span class="self">self</span>.keys
 					.write()
-					.entry(id)
+					.entry(key_type)
 					.or_default()
 					.insert(pair.public().to_raw_vec(), seed.into());
 				<span class="prelude-val">Ok</span>(pair.public())
@@ -496,7 +488,7 @@
 				<span class="kw">let </span>(pair, phrase, <span class="kw">_</span>) = sr25519::Pair::generate_with_phrase(<span class="prelude-val">None</span>);
 				<span class="self">self</span>.keys
 					.write()
-					.entry(id)
+					.entry(key_type)
 					.or_default()
 					.insert(pair.public().to_raw_vec(), phrase);
 				<span class="prelude-val">Ok</span>(pair.public())
@@ -504,137 +496,13 @@
 		}
 	}
 
-	<span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt; {
-		<span class="self">self</span>.keys
-			.read()
-			.get(<span class="kw-2">&amp;</span>id)
-			.map(|keys| {
-				keys.values()
-					.map(|s| {
-						ed25519::Pair::from_string(s, <span class="prelude-val">None</span>).expect(<span class="string">&quot;`ed25519` seed slice is valid&quot;</span>)
-					})
-					.map(|p| p.public())
-					.collect()
-			})
-			.unwrap_or_default()
-	}
-
-	<span class="kw">fn </span>ed25519_generate_new(
+	<span class="kw">fn </span>sr25519_sign(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
-		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;ed25519::Public, Error&gt; {
-		<span class="kw">match </span>seed {
-			<span class="prelude-val">Some</span>(seed) =&gt; {
-				<span class="kw">let </span>pair = ed25519::Pair::from_string(seed, <span class="prelude-val">None</span>).map_err(|<span class="kw">_</span>| {
-					Error::ValidationError(<span class="string">&quot;Generates an `ed25519` pair.&quot;</span>.to_owned())
-				})<span class="question-mark">?</span>;
-				<span class="self">self</span>.keys
-					.write()
-					.entry(id)
-					.or_default()
-					.insert(pair.public().to_raw_vec(), seed.into());
-				<span class="prelude-val">Ok</span>(pair.public())
-			},
-			<span class="prelude-val">None </span>=&gt; {
-				<span class="kw">let </span>(pair, phrase, <span class="kw">_</span>) = ed25519::Pair::generate_with_phrase(<span class="prelude-val">None</span>);
-				<span class="self">self</span>.keys
-					.write()
-					.entry(id)
-					.or_default()
-					.insert(pair.public().to_raw_vec(), phrase);
-				<span class="prelude-val">Ok</span>(pair.public())
-			},
-		}
-	}
-
-	<span class="kw">fn </span>ecdsa_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId) -&gt; Vec&lt;ecdsa::Public&gt; {
-		<span class="self">self</span>.keys
-			.read()
-			.get(<span class="kw-2">&amp;</span>id)
-			.map(|keys| {
-				keys.values()
-					.map(|s| {
-						ecdsa::Pair::from_string(s, <span class="prelude-val">None</span>).expect(<span class="string">&quot;`ecdsa` seed slice is valid&quot;</span>)
-					})
-					.map(|p| p.public())
-					.collect()
-			})
-			.unwrap_or_default()
-	}
-
-	<span class="kw">fn </span>ecdsa_generate_new(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
-		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;ecdsa::Public, Error&gt; {
-		<span class="kw">match </span>seed {
-			<span class="prelude-val">Some</span>(seed) =&gt; {
-				<span class="kw">let </span>pair = ecdsa::Pair::from_string(seed, <span class="prelude-val">None</span>)
-					.map_err(|<span class="kw">_</span>| Error::ValidationError(<span class="string">&quot;Generates an `ecdsa` pair.&quot;</span>.to_owned()))<span class="question-mark">?</span>;
-				<span class="self">self</span>.keys
-					.write()
-					.entry(id)
-					.or_default()
-					.insert(pair.public().to_raw_vec(), seed.into());
-				<span class="prelude-val">Ok</span>(pair.public())
-			},
-			<span class="prelude-val">None </span>=&gt; {
-				<span class="kw">let </span>(pair, phrase, <span class="kw">_</span>) = ecdsa::Pair::generate_with_phrase(<span class="prelude-val">None</span>);
-				<span class="self">self</span>.keys
-					.write()
-					.entry(id)
-					.or_default()
-					.insert(pair.public().to_raw_vec(), phrase);
-				<span class="prelude-val">Ok</span>(pair.public())
-			},
-		}
-	}
-
-	<span class="kw">fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, id: KeyTypeId, suri: <span class="kw-2">&amp;</span>str, public: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
-		<span class="self">self</span>.keys
-			.write()
-			.entry(id)
-			.or_default()
-			.insert(public.to_owned(), suri.to_string());
-		<span class="prelude-val">Ok</span>(())
-	}
-
-	<span class="kw">fn </span>has_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, public_keys: <span class="kw-2">&amp;</span>[(Vec&lt;u8&gt;, KeyTypeId)]) -&gt; bool {
-		public_keys
-			.iter()
-			.all(|(k, t)| <span class="self">self</span>.keys.read().get(t).and_then(|s| s.get(k)).is_some())
-	}
-
-	<span class="kw">fn </span>sign_with(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
-		key: <span class="kw-2">&amp;</span>CryptoTypePublicPair,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>sr25519::Public,
 		msg: <span class="kw-2">&amp;</span>[u8],
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, Error&gt; {
-		<span class="kw">use </span>codec::Encode;
-
-		<span class="kw">match </span>key.<span class="number">0 </span>{
-			ed25519::CRYPTO_ID =&gt; {
-				<span class="kw">let </span>key_pair = <span class="self">self
-					</span>.ed25519_key_pair(id, <span class="kw-2">&amp;</span>ed25519::Public::from_slice(key.<span class="number">1</span>.as_slice()).unwrap());
-
-				key_pair.map(|k| k.sign(msg).encode()).map(<span class="prelude-val">Ok</span>).transpose()
-			},
-			sr25519::CRYPTO_ID =&gt; {
-				<span class="kw">let </span>key_pair = <span class="self">self
-					</span>.sr25519_key_pair(id, <span class="kw-2">&amp;</span>sr25519::Public::from_slice(key.<span class="number">1</span>.as_slice()).unwrap());
-
-				key_pair.map(|k| k.sign(msg).encode()).map(<span class="prelude-val">Ok</span>).transpose()
-			},
-			ecdsa::CRYPTO_ID =&gt; {
-				<span class="kw">let </span>key_pair =
-					<span class="self">self</span>.ecdsa_key_pair(id, <span class="kw-2">&amp;</span>ecdsa::Public::from_slice(key.<span class="number">1</span>.as_slice()).unwrap());
-
-				key_pair.map(|k| k.sign(msg).encode()).map(<span class="prelude-val">Ok</span>).transpose()
-			},
-			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::KeyNotSupported(id)),
-		}
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;sr25519::Signature&gt;, Error&gt; {
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.sr25519_key_pair(key_type, public).map(|pair| pair.sign(msg)))
 	}
 
 	<span class="kw">fn </span>sr25519_vrf_sign(
@@ -651,14 +519,144 @@
 		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(VRFSignature { output: inout.to_output(), proof }))
 	}
 
+	<span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt; {
+		<span class="self">self</span>.keys
+			.read()
+			.get(<span class="kw-2">&amp;</span>key_type)
+			.map(|keys| {
+				keys.values()
+					.map(|s| {
+						ed25519::Pair::from_string(s, <span class="prelude-val">None</span>).expect(<span class="string">&quot;`ed25519` seed slice is valid&quot;</span>)
+					})
+					.map(|p| p.public())
+					.collect()
+			})
+			.unwrap_or_default()
+	}
+
+	<span class="kw">fn </span>ed25519_generate_new(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ed25519::Public, Error&gt; {
+		<span class="kw">match </span>seed {
+			<span class="prelude-val">Some</span>(seed) =&gt; {
+				<span class="kw">let </span>pair = ed25519::Pair::from_string(seed, <span class="prelude-val">None</span>).map_err(|<span class="kw">_</span>| {
+					Error::ValidationError(<span class="string">&quot;Generates an `ed25519` pair.&quot;</span>.to_owned())
+				})<span class="question-mark">?</span>;
+				<span class="self">self</span>.keys
+					.write()
+					.entry(key_type)
+					.or_default()
+					.insert(pair.public().to_raw_vec(), seed.into());
+				<span class="prelude-val">Ok</span>(pair.public())
+			},
+			<span class="prelude-val">None </span>=&gt; {
+				<span class="kw">let </span>(pair, phrase, <span class="kw">_</span>) = ed25519::Pair::generate_with_phrase(<span class="prelude-val">None</span>);
+				<span class="self">self</span>.keys
+					.write()
+					.entry(key_type)
+					.or_default()
+					.insert(pair.public().to_raw_vec(), phrase);
+				<span class="prelude-val">Ok</span>(pair.public())
+			},
+		}
+	}
+
+	<span class="kw">fn </span>ed25519_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ed25519::Public,
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ed25519::Signature&gt;, Error&gt; {
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.ed25519_key_pair(key_type, public).map(|pair| pair.sign(msg)))
+	}
+
+	<span class="kw">fn </span>ecdsa_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ecdsa::Public&gt; {
+		<span class="self">self</span>.keys
+			.read()
+			.get(<span class="kw-2">&amp;</span>key_type)
+			.map(|keys| {
+				keys.values()
+					.map(|s| {
+						ecdsa::Pair::from_string(s, <span class="prelude-val">None</span>).expect(<span class="string">&quot;`ecdsa` seed slice is valid&quot;</span>)
+					})
+					.map(|p| p.public())
+					.collect()
+			})
+			.unwrap_or_default()
+	}
+
+	<span class="kw">fn </span>ecdsa_generate_new(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		seed: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ecdsa::Public, Error&gt; {
+		<span class="kw">match </span>seed {
+			<span class="prelude-val">Some</span>(seed) =&gt; {
+				<span class="kw">let </span>pair = ecdsa::Pair::from_string(seed, <span class="prelude-val">None</span>)
+					.map_err(|<span class="kw">_</span>| Error::ValidationError(<span class="string">&quot;Generates an `ecdsa` pair.&quot;</span>.to_owned()))<span class="question-mark">?</span>;
+				<span class="self">self</span>.keys
+					.write()
+					.entry(key_type)
+					.or_default()
+					.insert(pair.public().to_raw_vec(), seed.into());
+				<span class="prelude-val">Ok</span>(pair.public())
+			},
+			<span class="prelude-val">None </span>=&gt; {
+				<span class="kw">let </span>(pair, phrase, <span class="kw">_</span>) = ecdsa::Pair::generate_with_phrase(<span class="prelude-val">None</span>);
+				<span class="self">self</span>.keys
+					.write()
+					.entry(key_type)
+					.or_default()
+					.insert(pair.public().to_raw_vec(), phrase);
+				<span class="prelude-val">Ok</span>(pair.public())
+			},
+		}
+	}
+
+	<span class="kw">fn </span>ecdsa_sign(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>ecdsa::Public,
+		msg: <span class="kw-2">&amp;</span>[u8],
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt;, Error&gt; {
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.ecdsa_key_pair(key_type, public).map(|pair| pair.sign(msg)))
+	}
+
 	<span class="kw">fn </span>ecdsa_sign_prehashed(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		id: KeyTypeId,
+		key_type: KeyTypeId,
 		public: <span class="kw-2">&amp;</span>ecdsa::Public,
 		msg: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>],
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ecdsa::Signature&gt;, Error&gt; {
-		<span class="kw">let </span>pair = <span class="self">self</span>.ecdsa_key_pair(id, public);
-		pair.map(|k| k.sign_prehashed(msg)).map(<span class="prelude-val">Ok</span>).transpose()
+		<span class="kw">let </span>pair = <span class="self">self</span>.ecdsa_key_pair(key_type, public);
+		pair.map(|pair| pair.sign_prehashed(msg)).map(<span class="prelude-val">Ok</span>).transpose()
+	}
+
+	<span class="kw">fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId, suri: <span class="kw-2">&amp;</span>str, public: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+		<span class="self">self</span>.keys
+			.write()
+			.entry(key_type)
+			.or_default()
+			.insert(public.to_owned(), suri.to_string());
+		<span class="prelude-val">Ok</span>(())
+	}
+
+	<span class="kw">fn </span>keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Vec&lt;u8&gt;&gt;, Error&gt; {
+		<span class="kw">let </span>keys = <span class="self">self
+			</span>.keys
+			.read()
+			.get(<span class="kw-2">&amp;</span>key_type)
+			.map(|map| map.keys().cloned().collect())
+			.unwrap_or_default();
+		<span class="prelude-val">Ok</span>(keys)
+	}
+
+	<span class="kw">fn </span>has_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, public_keys: <span class="kw-2">&amp;</span>[(Vec&lt;u8&gt;, KeyTypeId)]) -&gt; bool {
+		public_keys
+			.iter()
+			.all(|(k, t)| <span class="self">self</span>.keys.read().get(t).and_then(|s| s.get(k)).is_some())
 	}
 }
 
@@ -683,7 +681,7 @@
 
 		<span class="kw">let </span>public = store.ed25519_generate_new(ED25519, <span class="prelude-val">None</span>).expect(<span class="string">&quot;Generates key&quot;</span>);
 
-		<span class="kw">let </span>public_keys = store.keys(ED25519).unwrap();
+		<span class="kw">let </span>public_keys = store.ed25519_public_keys(ED25519);
 
 		<span class="macro">assert!</span>(public_keys.contains(<span class="kw-2">&amp;</span>public.into()));
 	}
@@ -699,7 +697,7 @@
 			.insert(SR25519, secret_uri, key_pair.public().as_ref())
 			.expect(<span class="string">&quot;Inserts unknown key&quot;</span>);
 
-		<span class="kw">let </span>public_keys = store.keys(SR25519).unwrap();
+		<span class="kw">let </span>public_keys = store.sr25519_public_keys(SR25519);
 
 		<span class="macro">assert!</span>(public_keys.contains(<span class="kw-2">&amp;</span>key_pair.public().into()));
 	}

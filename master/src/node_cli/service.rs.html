@@ -826,12 +826,6 @@
 <a href="#826" id="826">826</a>
 <a href="#827" id="827">827</a>
 <a href="#828" id="828">828</a>
-<a href="#829" id="829">829</a>
-<a href="#830" id="830">830</a>
-<a href="#831" id="831">831</a>
-<a href="#832" id="832">832</a>
-<a href="#833" id="833">833</a>
-<a href="#834" id="834">834</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1426,7 +1420,7 @@
 	<span class="kw">use </span>sc_service_test::TestNetNode;
 	<span class="kw">use </span>sc_transaction_pool_api::{ChainEvent, MaintainedTransactionPool};
 	<span class="kw">use </span>sp_consensus::{BlockOrigin, Environment, Proposer};
-	<span class="kw">use </span>sp_core::{crypto::Pair <span class="kw">as </span>CryptoPair, Public};
+	<span class="kw">use </span>sp_core::crypto::Pair;
 	<span class="kw">use </span>sp_inherents::InherentDataProvider;
 	<span class="kw">use </span>sp_keyring::AccountKeyring;
 	<span class="kw">use </span>sp_keystore::KeystorePtr;
@@ -1571,16 +1565,10 @@
 				// add it to a digest item.
 				</span><span class="kw">let </span>to_sign = pre_hash.encode();
 				<span class="kw">let </span>signature = keystore
-					.sign_with(
-						sp_consensus_babe::AuthorityId::ID,
-						<span class="kw-2">&amp;</span>alice.to_public_crypto_pair(),
-						<span class="kw-2">&amp;</span>to_sign,
-					)
+					.sr25519_sign(sp_consensus_babe::AuthorityId::ID, alice.as_ref(), <span class="kw-2">&amp;</span>to_sign)
 					.unwrap()
-					.unwrap()
-					.try_into()
 					.unwrap();
-				<span class="kw">let </span>item = &lt;DigestItem <span class="kw">as </span>CompatibleDigestItem&gt;::babe_seal(signature);
+				<span class="kw">let </span>item = &lt;DigestItem <span class="kw">as </span>CompatibleDigestItem&gt;::babe_seal(signature.into());
 				slot += <span class="number">1</span>;
 
 				<span class="kw">let </span><span class="kw-2">mut </span>params = BlockImportParams::new(BlockOrigin::File, new_header);
