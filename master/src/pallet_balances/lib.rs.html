@@ -1111,6 +1111,47 @@
 <a href="#1111" id="1111">1111</a>
 <a href="#1112" id="1112">1112</a>
 <a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
+<a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
+<a href="#1152" id="1152">1152</a>
+<a href="#1153" id="1153">1153</a>
+<a href="#1154" id="1154">1154</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1264,6 +1305,10 @@
 //! ## Assumptions
 //!
 //! * Total issued balanced of all accounts should be less than `Config::Balance::max_value()`.
+//! * Existential Deposit is set to a value greater than zero.
+//!
+//! Note, you may find the Balances pallet still functions with an ED of zero in some circumstances,
+//! however this is not a configuration which is generally supported, nor will it be.
 
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 </span><span class="kw">mod </span>benchmarking;
@@ -1344,7 +1389,14 @@
 		<span class="doccomment">/// Handler for the unbalanced reduction when removing a dust account.
 		</span><span class="kw">type </span>DustRemoval: OnUnbalanced&lt;CreditOf&lt;<span class="self">Self</span>, I&gt;&gt;;
 
-		<span class="doccomment">/// The minimum amount required to keep an account open.
+		<span class="doccomment">/// The minimum amount required to keep an account open. MUST BE GREATER THAN ZERO!
+		///
+		/// If you *really* need it to be zero, you can enable the feature `insecure_zero_ed` for
+		/// this pallet. However, you do so at your own risk: this will open up a major DoS vector.
+		/// In case you have multiple sources of provider references, you may also get unexpected
+		/// behaviour if you set this to zero.
+		///
+		/// Bottom line: Do yourself a favour and make it at least one!
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>ExistentialDeposit: Get&lt;<span class="self">Self</span>::Balance&gt;;
 
@@ -1558,6 +1610,7 @@
 	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; GenesisBuild&lt;T, I&gt; <span class="kw">for </span>GenesisConfig&lt;T, I&gt; {
 		<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {
 			<span class="kw">let </span>total = <span class="self">self</span>.balances.iter().fold(Zero::zero(), |acc: T::Balance, <span class="kw-2">&amp;</span>(<span class="kw">_</span>, n)| acc + n);
+
 			&lt;TotalIssuance&lt;T, I&gt;&gt;::put(total);
 
 			<span class="kw">for </span>(<span class="kw">_</span>, balance) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.balances {
@@ -1605,6 +1658,17 @@
 		}
 	}
 
+	<span class="attr">#[pallet::hooks]
+	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Hooks&lt;T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
+		<span class="attr">#[cfg(not(feature = <span class="string">&quot;insecure_zero_ed&quot;</span>))]
+		</span><span class="kw">fn </span>integrity_test() {
+			<span class="macro">assert!</span>(
+				!&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::ExistentialDeposit::get().is_zero(),
+				<span class="string">&quot;The existential deposit must be greater than zero!&quot;
+			</span>);
+		}
+	}
+
 	<span class="attr">#[pallet::call]
 	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
 		<span class="doccomment">/// Transfer some liquid free balance to another account.
@@ -1646,7 +1710,7 @@
 		) -&gt; DispatchResultWithPostInfo {
 			ensure_root(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>who = T::Lookup::lookup(who)<span class="question-mark">?</span>;
-			<span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
+			<span class="kw">let </span>existential_deposit = <span class="self">Self</span>::ed();
 
 			<span class="kw">let </span>wipeout = new_free &lt; existential_deposit;
 			<span class="kw">let </span>new_free = <span class="kw">if </span>wipeout { Zero::zero() } <span class="kw">else </span>{ new_free };
@@ -1829,7 +1893,7 @@
 		) -&gt; DispatchResultWithPostInfo {
 			ensure_root(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>who = T::Lookup::lookup(who)<span class="question-mark">?</span>;
-			<span class="kw">let </span>existential_deposit = T::ExistentialDeposit::get();
+			<span class="kw">let </span>existential_deposit = <span class="self">Self</span>::ed();
 
 			<span class="kw">let </span>wipeout = new_free &lt; existential_deposit;
 			<span class="kw">let </span>new_free = <span class="kw">if </span>wipeout { Zero::zero() } <span class="kw">else </span>{ new_free };
@@ -1855,6 +1919,9 @@
 	}
 
 	<span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
+		<span class="kw">fn </span>ed() -&gt; T::Balance {
+			T::ExistentialDeposit::get()
+		}
 		<span class="doccomment">/// Ensure the account `who` is using the new logic.
 		///
 		/// Returns `true` if the account did get upgraded, `false` if it didn&#39;t need upgrading.
@@ -1869,7 +1936,7 @@
 					<span class="comment">// Gah!! We have a non-zero reserve balance but no provider refs :(
 					// This shouldn&#39;t practically happen, but we need a failsafe anyway: let&#39;s give
 					// them enough for an ED.
-					</span>a.free = a.free.min(T::ExistentialDeposit::get());
+					</span>a.free = a.free.min(<span class="self">Self</span>::ed());
 					system::Pallet::&lt;T&gt;::inc_providers(who);
 				}
 				<span class="kw">let _ </span>= system::Pallet::&lt;T&gt;::inc_consumers(who).defensive();
@@ -1977,6 +2044,20 @@
 			<span class="self">Self</span>::try_mutate_account(who, |a, <span class="kw">_</span>| -&gt; <span class="prelude-ty">Result</span>&lt;R, DispatchError&gt; { <span class="prelude-val">Ok</span>(f(a)) })
 		}
 
+		<span class="doccomment">/// Returns `true` when `who` has some providers or `insecure_zero_ed` feature is disnabled.
+		/// Returns `false` otherwise.
+		</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;insecure_zero_ed&quot;</span>))]
+		</span><span class="kw">fn </span>have_providers_or_no_zero_ed(<span class="kw">_</span>: <span class="kw-2">&amp;</span>T::AccountId) -&gt; bool {
+			<span class="bool-val">true
+		</span>}
+
+		<span class="doccomment">/// Returns `true` when `who` has some providers or `insecure_zero_ed` feature is disnabled.
+		/// Returns `false` otherwise.
+		</span><span class="attr">#[cfg(feature = <span class="string">&quot;insecure_zero_ed&quot;</span>)]
+		</span><span class="kw">fn </span>have_providers_or_no_zero_ed(who: <span class="kw-2">&amp;</span>T::AccountId) -&gt; bool {
+			frame_system::Pallet::&lt;T&gt;::providers(who) &gt; <span class="number">0
+		</span>}
+
 		<span class="doccomment">/// Mutate an account to some new value, or delete it entirely with `None`. Will enforce
 		/// `ExistentialDeposit` law, annulling the account as needed. This will do nothing if the
 		/// result of `f` is an `Err`.
@@ -1998,13 +2079,14 @@
 			<span class="kw">let </span>result = T::AccountStore::try_mutate_exists(who, |maybe_account| {
 				<span class="kw">let </span>is_new = maybe_account.is_none();
 				<span class="kw">let </span><span class="kw-2">mut </span>account = maybe_account.take().unwrap_or_default();
-				<span class="kw">let </span>did_provide = account.free &gt;= T::ExistentialDeposit::get();
+				<span class="kw">let </span>did_provide =
+					account.free &gt;= <span class="self">Self</span>::ed() &amp;&amp; <span class="self">Self</span>::have_providers_or_no_zero_ed(who);
 				<span class="kw">let </span>did_consume =
 					!is_new &amp;&amp; (!account.reserved.is_zero() || !account.frozen.is_zero());
 
 				<span class="kw">let </span>result = f(<span class="kw-2">&amp;mut </span>account, is_new)<span class="question-mark">?</span>;
 
-				<span class="kw">let </span>does_provide = account.free &gt;= T::ExistentialDeposit::get();
+				<span class="kw">let </span>does_provide = account.free &gt;= <span class="self">Self</span>::ed();
 				<span class="kw">let </span>does_consume = !account.reserved.is_zero() || !account.frozen.is_zero();
 
 				<span class="kw">if </span>!did_provide &amp;&amp; does_provide {
@@ -2043,7 +2125,7 @@
 				//
 				// We should never be dropping if reserved is non-zero. Reserved being non-zero
 				// should imply that we have a consumer ref, so this is economically safe.
-				</span><span class="kw">let </span>ed = T::ExistentialDeposit::get();
+				</span><span class="kw">let </span>ed = <span class="self">Self</span>::ed();
 				<span class="kw">let </span>maybe_dust = <span class="kw">if </span>account.free &lt; ed &amp;&amp; account.reserved.is_zero() {
 					<span class="kw">if </span>account.free.is_zero() {
 						<span class="prelude-val">None
