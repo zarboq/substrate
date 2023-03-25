@@ -889,6 +889,8 @@
 <a href="#889" id="889">889</a>
 <a href="#890" id="890">890</a>
 <a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2023 Parity Technologies (UK) Ltd.
@@ -1602,7 +1604,9 @@
 				ToServiceCommand::NewBestBlockImported(hash, number) =&gt;
 					<span class="self">self</span>.new_best_block_imported(hash, number),
 				ToServiceCommand::Status(tx) =&gt; {
-					<span class="kw">let _ </span>= tx.send(<span class="self">self</span>.chain_sync.status());
+					<span class="kw">let </span><span class="kw-2">mut </span>status = <span class="self">self</span>.chain_sync.status();
+					status.num_connected_peers = <span class="self">self</span>.peers.len() <span class="kw">as </span>u32;
+					<span class="kw">let _ </span>= tx.send(status);
 				},
 				ToServiceCommand::NumActivePeers(tx) =&gt; {
 					<span class="kw">let _ </span>= tx.send(<span class="self">self</span>.chain_sync.num_active_peers());

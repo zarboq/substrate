@@ -1152,6 +1152,22 @@
 <a href="#1152" id="1152">1152</a>
 <a href="#1153" id="1153">1153</a>
 <a href="#1154" id="1154">1154</a>
+<a href="#1155" id="1155">1155</a>
+<a href="#1156" id="1156">1156</a>
+<a href="#1157" id="1157">1157</a>
+<a href="#1158" id="1158">1158</a>
+<a href="#1159" id="1159">1159</a>
+<a href="#1160" id="1160">1160</a>
+<a href="#1161" id="1161">1161</a>
+<a href="#1162" id="1162">1162</a>
+<a href="#1163" id="1163">1163</a>
+<a href="#1164" id="1164">1164</a>
+<a href="#1165" id="1165">1165</a>
+<a href="#1166" id="1166">1166</a>
+<a href="#1167" id="1167">1167</a>
+<a href="#1168" id="1168">1168</a>
+<a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1484,6 +1500,10 @@
 		</span>Issued { amount: T::Balance },
 		<span class="doccomment">/// Total issuance was decreased by `amount`, creating a debt to be balanced.
 		</span>Rescinded { amount: T::Balance },
+		<span class="doccomment">/// Some balance was locked.
+		</span>Locked { who: T::AccountId, amount: T::Balance },
+		<span class="doccomment">/// Some balance was unlocked.
+		</span>Unlocked { who: T::AccountId, amount: T::Balance },
 	}
 
 	<span class="attr">#[pallet::error]
@@ -2170,9 +2190,12 @@
 				</span>);
 			}
 			<span class="kw">let </span>freezes = Freezes::&lt;T, I&gt;::get(who);
+			<span class="kw">let </span><span class="kw-2">mut </span>prev_frozen = Zero::zero();
+			<span class="kw">let </span><span class="kw-2">mut </span>after_frozen = Zero::zero();
 			<span class="comment">// TODO: Revisit this assumption. We no manipulate consumer/provider refs.
 			// No way this can fail since we do not alter the existential balances.
 			</span><span class="kw">let </span>res = <span class="self">Self</span>::mutate_account(who, |b| {
+				prev_frozen = b.frozen;
 				b.frozen = Zero::zero();
 				<span class="kw">for </span>l <span class="kw">in </span>locks.iter() {
 					b.frozen = b.frozen.max(l.amount);
@@ -2180,6 +2203,7 @@
 				<span class="kw">for </span>l <span class="kw">in </span>freezes.iter() {
 					b.frozen = b.frozen.max(l.amount);
 				}
+				after_frozen = b.frozen;
 			});
 			<span class="macro">debug_assert!</span>(res.is_ok());
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>((<span class="kw">_</span>, maybe_dust)) = res {
@@ -2206,6 +2230,14 @@
 						This is unexpected but should be safe.&quot;
 					</span>);
 				}
+			}
+
+			<span class="kw">if </span>prev_frozen &gt; after_frozen {
+				<span class="kw">let </span>amount = prev_frozen.saturating_sub(after_frozen);
+				<span class="self">Self</span>::deposit_event(Event::Unlocked { who: who.clone(), amount });
+			} <span class="kw">else if </span>after_frozen &gt; prev_frozen {
+				<span class="kw">let </span>amount = after_frozen.saturating_sub(prev_frozen);
+				<span class="self">Self</span>::deposit_event(Event::Locked { who: who.clone(), amount });
 			}
 		}
 
