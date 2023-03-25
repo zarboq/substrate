@@ -472,6 +472,15 @@
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
 <a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -809,6 +818,12 @@
 			<span class="kw">let </span>balance_slash = |id| core::iter::once(
 				&lt;T <span class="kw">as </span>BalancesConfig&gt;::RuntimeEvent::from(pallet_balances::Event::&lt;T&gt;::Slashed{ who: id, amount: slash_amount.into() })
 			);
+			<span class="kw">let </span>balance_locked = |id| core::iter::once(
+				&lt;T <span class="kw">as </span>BalancesConfig&gt;::RuntimeEvent::from(pallet_balances::Event::&lt;T&gt;::Locked{ who: id, amount: slash_amount.into() })
+			);
+			<span class="kw">let </span>balance_unlocked = |id| core::iter::once(
+				&lt;T <span class="kw">as </span>BalancesConfig&gt;::RuntimeEvent::from(pallet_balances::Event::&lt;T&gt;::Unlocked{ who: id, amount: slash_amount.into() })
+			);
 			<span class="kw">let </span>chill = |id| core::iter::once(
 				&lt;T <span class="kw">as </span>StakingConfig&gt;::RuntimeEvent::from(StakingEvent::&lt;T&gt;::Chilled{ stash: id })
 			);
@@ -823,12 +838,15 @@
 			</span><span class="kw">let </span>slash_events = raw_offenders.into_iter()
 				.flat_map(|offender| {
 					<span class="kw">let </span>nom_slashes = offender.nominator_stashes.into_iter().flat_map(|nom| {
-						balance_slash(nom.clone()).map(Into::into).chain(slash(nom).map(Into::into)).map(Box::new)
+						balance_slash(nom.clone()).map(Into::into)
+						.chain(balance_unlocked(nom.clone()).map(Into::into))
+						.chain(slash(nom).map(Into::into)).map(Box::new)
 					});
 
 					<span class="kw">let </span>events = chill(offender.stash.clone()).map(Into::into).map(Box::new)
 						.chain(slash_report(offender.stash.clone()).map(Into::into).map(Box::new))
 						.chain(balance_slash(offender.stash.clone()).map(Into::into).map(Box::new))
+						.chain(balance_unlocked(offender.stash.clone()).map(Into::into).map(Box::new))
 						.chain(slash(offender.stash).map(Into::into).map(Box::new))
 						.chain(nom_slashes)
 						.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
