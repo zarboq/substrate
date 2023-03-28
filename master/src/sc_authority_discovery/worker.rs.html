@@ -772,6 +772,13 @@
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
 <a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -931,12 +938,15 @@
 	<span class="doccomment">/// Retrieve authority identifiers of the current and next authority set.
 	</span><span class="kw">async fn </span>authorities(<span class="kw-2">&amp;</span><span class="self">self</span>, at: Block::Hash)
 		-&gt; std::result::Result&lt;Vec&lt;AuthorityId&gt;, ApiError&gt;;
+
+	<span class="doccomment">/// Retrieve best block hash
+	</span><span class="kw">async fn </span>best_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::result::Result&lt;Block::Hash, Error&gt;;
 }
 
 <span class="attr">#[async_trait::async_trait]
 </span><span class="kw">impl</span>&lt;Block, T&gt; AuthorityDiscovery&lt;Block&gt; <span class="kw">for </span>T
 <span class="kw">where
-	</span>T: ProvideRuntimeApi&lt;Block&gt; + Send + Sync,
+	</span>T: ProvideRuntimeApi&lt;Block&gt; + HeaderBackend&lt;Block&gt; + Send + Sync,
 	T::Api: AuthorityDiscoveryApi&lt;Block&gt;,
 	Block: BlockT,
 {
@@ -946,13 +956,17 @@
 	) -&gt; std::result::Result&lt;Vec&lt;AuthorityId&gt;, ApiError&gt; {
 		<span class="self">self</span>.runtime_api().authorities(at)
 	}
+
+	<span class="kw">async fn </span>best_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::result::Result&lt;Block::Hash, Error&gt; {
+		<span class="prelude-val">Ok</span>(<span class="self">self</span>.info().best_hash)
+	}
 }
 
 <span class="kw">impl</span>&lt;Client, Network, Block, DhtEventStream&gt; Worker&lt;Client, Network, Block, DhtEventStream&gt;
 <span class="kw">where
 	</span>Block: BlockT + Unpin + <span class="lifetime">&#39;static</span>,
 	Network: NetworkProvider,
-	Client: AuthorityDiscovery&lt;Block&gt; + HeaderBackend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
+	Client: AuthorityDiscovery&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	DhtEventStream: Stream&lt;Item = DhtEvent&gt; + Unpin,
 {
 	<span class="doccomment">/// Construct a [`Worker`].
@@ -1150,7 +1164,7 @@
 	}
 
 	<span class="kw">async fn </span>refill_pending_lookups_queue(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-		<span class="kw">let </span>best_hash = <span class="self">self</span>.client.info().best_hash;
+		<span class="kw">let </span>best_hash = <span class="self">self</span>.client.best_hash().<span class="kw">await</span><span class="question-mark">?</span>;
 
 		<span class="kw">let </span>local_keys = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.role {
 			Role::PublishAndDiscover(key_store) =&gt; key_store
@@ -1368,7 +1382,7 @@
 			.into_iter()
 			.collect::&lt;HashSet&lt;<span class="kw">_</span>&gt;&gt;();
 
-		<span class="kw">let </span>best_hash = client.info().best_hash;
+		<span class="kw">let </span>best_hash = client.best_hash().<span class="kw">await</span><span class="question-mark">?</span>;
 		<span class="kw">let </span>authorities = client
 			.authorities(best_hash)
 			.<span class="kw">await

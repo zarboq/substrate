@@ -1794,11 +1794,6 @@
 <a href="#1794" id="1794">1794</a>
 <a href="#1795" id="1795">1795</a>
 <a href="#1796" id="1796">1796</a>
-<a href="#1797" id="1797">1797</a>
-<a href="#1798" id="1798">1798</a>
-<a href="#1799" id="1799">1799</a>
-<a href="#1800" id="1800">1800</a>
-<a href="#1801" id="1801">1801</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1874,8 +1869,7 @@
 <span class="kw">use </span>sc_network_common::ExHashT;
 <span class="kw">use </span>sc_peerset::PeersetHandle;
 <span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender};
-<span class="kw">use </span>sp_blockchain::HeaderBackend;
-<span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Zero};
+<span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
 <span class="kw">use </span>std::{
 	cmp,
@@ -1948,9 +1942,7 @@
 	/// Returns a `NetworkWorker` that implements `Future` and must be regularly polled in order
 	/// for the network processing to advance. From it, you can extract a `NetworkService` using
 	/// `worker.service()`. The `NetworkService` can be shared through the codebase.
-	</span><span class="kw">pub fn </span>new&lt;Client: HeaderBackend&lt;B&gt; + <span class="lifetime">&#39;static</span>&gt;(
-		<span class="kw-2">mut </span>params: Params&lt;Client&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+	</span><span class="kw">pub fn </span>new&lt;Block: BlockT&gt;(<span class="kw-2">mut </span>params: Params&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
 		<span class="comment">// Private and public keys configuration.
 		</span><span class="kw">let </span>local_identity = params.network_config.node_key.clone().into_keypair()<span class="question-mark">?</span>;
 		<span class="kw">let </span>local_public = local_identity.public();
@@ -2078,13 +2070,11 @@
 				config.discovery_limit(
 					u64::from(params.network_config.default_peers_set.out_peers) + <span class="number">15</span>,
 				);
-				<span class="kw">let </span>genesis_hash = params
-					.chain
-					.hash(Zero::zero())
-					.ok()
-					.flatten()
-					.expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>);
-				config.with_kademlia(genesis_hash, params.fork_id.as_deref(), <span class="kw-2">&amp;</span>params.protocol_id);
+				config.with_kademlia(
+					params.genesis_hash,
+					params.fork_id.as_deref(),
+					<span class="kw-2">&amp;</span>params.protocol_id,
+				);
 				config.with_dht_random_walk(params.network_config.enable_dht_random_walk);
 				config.allow_non_globals_in_dht(params.network_config.allow_non_globals_in_dht);
 				config.use_kademlia_disjoint_query_paths(

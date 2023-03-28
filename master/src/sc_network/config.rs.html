@@ -793,6 +793,7 @@
 <span class="kw">pub use </span>sc_network_common::{role::Role, sync::warp::WarpSyncProvider, ExHashT};
 <span class="kw">use </span>zeroize::Zeroize;
 
+<span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 <span class="kw">use </span>std::{
 	error::Error,
 	fmt, fs,
@@ -803,7 +804,6 @@
 	path::{Path, PathBuf},
 	pin::Pin,
 	str::{<span class="self">self</span>, FromStr},
-	sync::Arc,
 };
 
 <span class="kw">pub use </span>libp2p::{
@@ -1447,7 +1447,7 @@
 }
 
 <span class="doccomment">/// Network initialization parameters.
-</span><span class="kw">pub struct </span>Params&lt;Client&gt; {
+</span><span class="kw">pub struct </span>Params&lt;Block: BlockT&gt; {
 	<span class="doccomment">/// Assigned role for our node (full, light, ...).
 	</span><span class="kw">pub </span>role: Role,
 
@@ -1457,11 +1457,11 @@
 	<span class="doccomment">/// Network layer configuration.
 	</span><span class="kw">pub </span>network_config: NetworkConfiguration,
 
-	<span class="doccomment">/// Client that contains the blockchain.
-	</span><span class="kw">pub </span>chain: Arc&lt;Client&gt;,
-
 	<span class="doccomment">/// Legacy name of the protocol to use on the wire. Should be different for each chain.
 	</span><span class="kw">pub </span>protocol_id: ProtocolId,
+
+	<span class="doccomment">/// Genesis hash of the chain
+	</span><span class="kw">pub </span>genesis_hash: Block::Hash,
 
 	<span class="doccomment">/// Fork ID to distinguish protocols of different hard forks. Part of the standard protocol
 	/// name on the wire.

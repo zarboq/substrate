@@ -1224,6 +1224,8 @@
 <a href="#1224" id="1224">1224</a>
 <a href="#1225" id="1225">1225</a>
 <a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1309,7 +1311,7 @@
 <span class="kw">use </span>sp_runtime::{
 	codec::{Decode, Encode},
 	generic::BlockId,
-	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor},
+	traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, NumberFor, Zero},
 	Justification, Justifications,
 };
 <span class="kw">use </span>substrate_test_runtime_client::AccountKeyring;
@@ -2142,13 +2144,15 @@
 		<span class="kw">let </span>sync_service_import_queue = Box::new(sync_service.clone());
 		<span class="kw">let </span>sync_service = Arc::new(sync_service.clone());
 
-		<span class="kw">let </span>network = NetworkWorker::new(sc_network::config::Params {
+		<span class="kw">let </span>genesis_hash =
+			client.hash(Zero::zero()).ok().flatten().expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>);
+		<span class="kw">let </span>network = NetworkWorker::new::&lt;Block&gt;(sc_network::config::Params {
 			role: <span class="kw">if </span>config.is_authority { Role::Authority } <span class="kw">else </span>{ Role::Full },
 			executor: Box::new(|f| {
 				tokio::spawn(f);
 			}),
 			network_config,
-			chain: client.clone(),
+			genesis_hash,
 			protocol_id,
 			fork_id,
 			metrics_registry: <span class="prelude-val">None</span>,
