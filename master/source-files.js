@@ -254,7 +254,7 @@ var sourcesIndex = JSON.parse('{\
 "substrate_test_utils":["",[],["lib.rs"]],\
 "substrate_test_utils_derive":["",[],["lib.rs"]],\
 "substrate_test_utils_test_crate":["",[],["main.rs"]],\
-"substrate_wasm_builder":["",[],["builder.rs","lib.rs","prerequisites.rs","wasm_project.rs"]],\
+"substrate_wasm_builder":["",[],["builder.rs","lib.rs","prerequisites.rs","version.rs","wasm_project.rs"]],\
 "try_runtime_cli":["",[["commands",[],["create_snapshot.rs","execute_block.rs","fast_forward.rs","follow_chain.rs","mod.rs","offchain_worker.rs","on_runtime_upgrade.rs"]]],["block_building_info.rs","lib.rs","parse.rs"]]\
 }');
 createSourceSidebar();

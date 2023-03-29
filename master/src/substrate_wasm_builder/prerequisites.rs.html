@@ -175,6 +175,9 @@
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -212,10 +215,13 @@
 ///
 /// Returns the versioned cargo command on success.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>check() -&gt; <span class="prelude-ty">Result</span>&lt;CargoCommandVersioned, String&gt; {
-	<span class="kw">let </span>cargo_command = <span class="kw">crate</span>::get_nightly_cargo();
+	<span class="kw">let </span>cargo_command = <span class="kw">crate</span>::get_cargo_command();
 
-	<span class="kw">if </span>!cargo_command.is_nightly() {
-		<span class="kw">return </span><span class="prelude-val">Err</span>(print_error_message(<span class="string">&quot;Rust nightly not installed, please install it!&quot;</span>))
+	<span class="kw">if </span>!cargo_command.supports_substrate_wasm_env() {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(print_error_message(
+			<span class="string">&quot;Cannot compile the WASM runtime: no compatible Rust compiler found!\n\
+			 Install at least Rust 1.68.0 or a recent nightly version.&quot;</span>,
+		))
 	}
 
 	check_wasm_toolchain_installed(cargo_command)
