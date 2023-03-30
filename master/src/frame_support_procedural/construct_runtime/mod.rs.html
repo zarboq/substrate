@@ -616,6 +616,40 @@
 <a href="#616" id="616">616</a>
 <a href="#617" id="617">617</a>
 <a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -775,7 +809,7 @@
 <span class="kw">use </span>proc_macro2::TokenStream <span class="kw">as </span>TokenStream2;
 <span class="kw">use </span>quote::quote;
 <span class="kw">use </span>std::{collections::HashSet, str::FromStr};
-<span class="kw">use </span>syn::{Ident, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>syn::{spanned::Spanned, Ident, <span class="prelude-ty">Result</span>};
 
 <span class="doccomment">/// The fixed name of the system pallet.
 </span><span class="kw">const </span>SYSTEM_PALLET_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;System&quot;</span>;
@@ -788,9 +822,12 @@
 
 	<span class="kw">let </span>res = <span class="kw">match </span>definition {
 		RuntimeDeclaration::Implicit(implicit_def) =&gt;
-			construct_runtime_intermediary_expansion(input_copy.into(), implicit_def),
+			check_pallet_number(input_copy.clone().into(), implicit_def.pallets.len()).and_then(
+				|<span class="kw">_</span>| construct_runtime_intermediary_expansion(input_copy.into(), implicit_def),
+			),
 		RuntimeDeclaration::Explicit(explicit_decl) =&gt;
-			construct_runtime_final_expansion(explicit_decl),
+			check_pallet_number(input_copy.into(), explicit_decl.pallets.len())
+				.and_then(|<span class="kw">_</span>| construct_runtime_final_expansion(explicit_decl)),
 	};
 
 	res.unwrap_or_else(|e| e.to_compile_error()).into()
@@ -1233,6 +1270,37 @@
 	<span class="macro">quote! </span>{
 		#(#error_encoded_size_check)*
 	}
+}
+
+<span class="kw">fn </span>check_pallet_number(input: TokenStream2, pallet_num: usize) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+	<span class="kw">let </span>max_pallet_num = {
+		<span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;tuples-96&quot;</span>) {
+			<span class="number">96
+		</span>} <span class="kw">else if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;tuples-128&quot;</span>) {
+			<span class="number">128
+		</span>} <span class="kw">else </span>{
+			<span class="number">64
+		</span>}
+	};
+
+	<span class="kw">if </span>pallet_num &gt; max_pallet_num {
+		<span class="kw">let </span>no_feature = max_pallet_num == <span class="number">128</span>;
+		<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
+			input.span(),
+			<span class="macro">format!</span>(
+				<span class="string">&quot;{} To increase this limit, enable the tuples-{} feature of [frame_support]. {}&quot;</span>,
+				<span class="string">&quot;The number of pallets exceeds the maximum number of tuple elements.&quot;</span>,
+				max_pallet_num + <span class="number">32</span>,
+				<span class="kw">if </span>no_feature {
+					<span class="string">&quot;If the feature does not exist - it needs to be implemented.&quot;
+				</span>} <span class="kw">else </span>{
+					<span class="string">&quot;&quot;
+				</span>},
+			),
+		))
+	}
+
+	<span class="prelude-val">Ok</span>(())
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="frame_support_procedural" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
