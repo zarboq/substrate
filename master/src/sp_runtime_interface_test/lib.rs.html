@@ -278,6 +278,29 @@
 <a href="#278" id="278">278</a>
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -456,62 +479,85 @@
 	call_wasm_method::&lt;HostFunctions&gt;(wasm_binary_unwrap(), <span class="string">&quot;test_versionning_register_only_works&quot;</span>);
 }
 
+<span class="kw">fn </span>run_test_in_another_process(
+	test_name: <span class="kw-2">&amp;</span>str,
+	test_body: <span class="kw">impl </span>FnOnce(),
+) -&gt; <span class="prelude-ty">Option</span>&lt;std::process::Output&gt; {
+	<span class="kw">if </span>std::env::var(<span class="string">&quot;RUN_FORKED_TEST&quot;</span>).is_ok() {
+		test_body();
+		<span class="prelude-val">None
+	</span>} <span class="kw">else </span>{
+		<span class="kw">let </span>output = std::process::Command::new(std::env::current_exe().unwrap())
+			.arg(test_name)
+			.env(<span class="string">&quot;RUN_FORKED_TEST&quot;</span>, <span class="string">&quot;1&quot;</span>)
+			.output()
+			.unwrap();
+
+		<span class="macro">assert!</span>(output.status.success());
+		<span class="prelude-val">Some</span>(output)
+	}
+}
+
 <span class="attr">#[test]
 </span><span class="kw">fn </span>test_tracing() {
-	<span class="kw">use </span>std::fmt;
-	<span class="kw">use </span>tracing::span::Id <span class="kw">as </span>SpanId;
-	<span class="kw">use </span>tracing_core::field::{Field, Visit};
+	<span class="comment">// Run in a different process to ensure that the `Span` is registered with our local
+	// `TracingSubscriber`.
+	</span>run_test_in_another_process(<span class="string">&quot;test_tracing&quot;</span>, || {
+		<span class="kw">use </span>std::fmt;
+		<span class="kw">use </span>tracing::span::Id <span class="kw">as </span>SpanId;
+		<span class="kw">use </span>tracing_core::field::{Field, Visit};
 
-	<span class="attr">#[derive(Clone)]
-	</span><span class="kw">struct </span>TracingSubscriber(Arc&lt;Mutex&lt;Inner&gt;&gt;);
+		<span class="attr">#[derive(Clone)]
+		</span><span class="kw">struct </span>TracingSubscriber(Arc&lt;Mutex&lt;Inner&gt;&gt;);
 
-	<span class="kw">struct </span>FieldConsumer(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="prelude-ty">Option</span>&lt;String&gt;);
-	<span class="kw">impl </span>Visit <span class="kw">for </span>FieldConsumer {
-		<span class="kw">fn </span>record_debug(<span class="kw-2">&amp;mut </span><span class="self">self</span>, field: <span class="kw-2">&amp;</span>Field, value: <span class="kw-2">&amp;</span><span class="kw">dyn </span>fmt::Debug) {
-			<span class="kw">if </span>field.name() == <span class="self">self</span>.<span class="number">0 </span>{
-				<span class="self">self</span>.<span class="number">1 </span>= <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, value))
+		<span class="kw">struct </span>FieldConsumer(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="prelude-ty">Option</span>&lt;String&gt;);
+		<span class="kw">impl </span>Visit <span class="kw">for </span>FieldConsumer {
+			<span class="kw">fn </span>record_debug(<span class="kw-2">&amp;mut </span><span class="self">self</span>, field: <span class="kw-2">&amp;</span>Field, value: <span class="kw-2">&amp;</span><span class="kw">dyn </span>fmt::Debug) {
+				<span class="kw">if </span>field.name() == <span class="self">self</span>.<span class="number">0 </span>{
+					<span class="self">self</span>.<span class="number">1 </span>= <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, value))
+				}
 			}
 		}
-	}
 
-	<span class="attr">#[derive(Default)]
-	</span><span class="kw">struct </span>Inner {
-		spans: HashSet&lt;String&gt;,
-	}
-
-	<span class="kw">impl </span>tracing::subscriber::Subscriber <span class="kw">for </span>TracingSubscriber {
-		<span class="kw">fn </span>enabled(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>tracing::Metadata) -&gt; bool {
-			<span class="bool-val">true
-		</span>}
-
-		<span class="kw">fn </span>new_span(<span class="kw-2">&amp;</span><span class="self">self</span>, span: <span class="kw-2">&amp;</span>tracing::span::Attributes) -&gt; tracing::Id {
-			<span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.<span class="number">0</span>.lock().unwrap();
-			<span class="kw">let </span>id = SpanId::from_u64((inner.spans.len() + <span class="number">1</span>) <span class="kw">as _</span>);
-			<span class="kw">let </span><span class="kw-2">mut </span>f = FieldConsumer(<span class="string">&quot;name&quot;</span>, <span class="prelude-val">None</span>);
-			span.record(<span class="kw-2">&amp;mut </span>f);
-			inner.spans.insert(f.<span class="number">1</span>.unwrap_or_else(|| span.metadata().name().to_owned()));
-			id
+		<span class="attr">#[derive(Default)]
+		</span><span class="kw">struct </span>Inner {
+			spans: HashSet&lt;String&gt;,
 		}
 
-		<span class="kw">fn </span>record(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId, <span class="kw">_</span>: <span class="kw-2">&amp;</span>tracing::span::Record) {}
+		<span class="kw">impl </span>tracing::subscriber::Subscriber <span class="kw">for </span>TracingSubscriber {
+			<span class="kw">fn </span>enabled(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>tracing::Metadata) -&gt; bool {
+				<span class="bool-val">true
+			</span>}
 
-		<span class="kw">fn </span>record_follows_from(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId) {}
+			<span class="kw">fn </span>new_span(<span class="kw-2">&amp;</span><span class="self">self</span>, span: <span class="kw-2">&amp;</span>tracing::span::Attributes) -&gt; tracing::Id {
+				<span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.<span class="number">0</span>.lock().unwrap();
+				<span class="kw">let </span>id = SpanId::from_u64((inner.spans.len() + <span class="number">1</span>) <span class="kw">as _</span>);
+				<span class="kw">let </span><span class="kw-2">mut </span>f = FieldConsumer(<span class="string">&quot;name&quot;</span>, <span class="prelude-val">None</span>);
+				span.record(<span class="kw-2">&amp;mut </span>f);
+				inner.spans.insert(f.<span class="number">1</span>.unwrap_or_else(|| span.metadata().name().to_owned()));
+				id
+			}
 
-		<span class="kw">fn </span>event(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>tracing::Event) {}
+			<span class="kw">fn </span>record(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId, <span class="kw">_</span>: <span class="kw-2">&amp;</span>tracing::span::Record) {}
 
-		<span class="kw">fn </span>enter(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId) {}
+			<span class="kw">fn </span>record_follows_from(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId) {}
 
-		<span class="kw">fn </span>exit(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId) {}
-	}
+			<span class="kw">fn </span>event(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>tracing::Event) {}
 
-	<span class="kw">let </span>subscriber = TracingSubscriber(Default::default());
-	<span class="kw">let </span>_guard = tracing::subscriber::set_default(subscriber.clone());
+			<span class="kw">fn </span>enter(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId) {}
 
-	<span class="comment">// Call some method to generate a trace
-	</span>call_wasm_method::&lt;HostFunctions&gt;(wasm_binary_unwrap(), <span class="string">&quot;test_return_data&quot;</span>);
+			<span class="kw">fn </span>exit(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>SpanId) {}
+		}
 
-	<span class="kw">let </span>inner = subscriber.<span class="number">0</span>.lock().unwrap();
-	<span class="macro">assert!</span>(inner.spans.contains(<span class="string">&quot;return_input_version_1&quot;</span>));
+		<span class="kw">let </span>subscriber = TracingSubscriber(Default::default());
+		<span class="kw">let </span>_guard = tracing::subscriber::set_default(subscriber.clone());
+
+		<span class="comment">// Call some method to generate a trace
+		</span>call_wasm_method::&lt;HostFunctions&gt;(wasm_binary_unwrap(), <span class="string">&quot;test_return_data&quot;</span>);
+
+		<span class="kw">let </span>inner = subscriber.<span class="number">0</span>.lock().unwrap();
+		<span class="macro">assert!</span>(inner.spans.contains(<span class="string">&quot;return_input_version_1&quot;</span>));
+	});
 }
 
 <span class="attr">#[test]
