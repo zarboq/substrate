@@ -866,31 +866,6 @@
 <a href="#866" id="866">866</a>
 <a href="#867" id="867">867</a>
 <a href="#868" id="868">868</a>
-<a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
-<a href="#877" id="877">877</a>
-<a href="#878" id="878">878</a>
-<a href="#879" id="879">879</a>
-<a href="#880" id="880">880</a>
-<a href="#881" id="881">881</a>
-<a href="#882" id="882">882</a>
-<a href="#883" id="883">883</a>
-<a href="#884" id="884">884</a>
-<a href="#885" id="885">885</a>
-<a href="#886" id="886">886</a>
-<a href="#887" id="887">887</a>
-<a href="#888" id="888">888</a>
-<a href="#889" id="889">889</a>
-<a href="#890" id="890">890</a>
-<a href="#891" id="891">891</a>
-<a href="#892" id="892">892</a>
-<a href="#893" id="893">893</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2023 Parity Technologies (UK) Ltd.
@@ -917,8 +892,8 @@
 	ChainSync, ClientError, SyncingService,
 };
 
-<span class="kw">use </span>codec::{Decode, DecodeAll, Encode};
-<span class="kw">use </span>futures::{FutureExt, Stream, StreamExt};
+<span class="kw">use </span>codec::{Decode, Encode};
+<span class="kw">use </span>futures::{FutureExt, StreamExt};
 <span class="kw">use </span>futures_timer::Delay;
 <span class="kw">use </span>libp2p::PeerId;
 <span class="kw">use </span>lru::LruCache;
@@ -932,9 +907,8 @@
 	config::{
 		NetworkConfiguration, NonDefaultSetConfig, ProtocolId, SyncMode <span class="kw">as </span>SyncOperationMode,
 	},
-	event::Event,
 	utils::LruHashSet,
-	ProtocolName,
+	NotificationsSink, ProtocolName,
 };
 <span class="kw">use </span>sc_network_common::{
 	role::Roles,
@@ -956,7 +930,6 @@
 <span class="kw">use </span>std::{
 	collections::{HashMap, HashSet},
 	num::NonZeroUsize,
-	pin::Pin,
 	sync::{
 		atomic::{AtomicBool, AtomicUsize, Ordering},
 		Arc,
@@ -972,8 +945,6 @@
 
 </span><span class="kw">mod </span>rep {
 	<span class="kw">use </span>sc_peerset::ReputationChange <span class="kw">as </span>Rep;
-	<span class="doccomment">/// We received a message that failed to decode.
-	</span><span class="kw">pub const </span>BAD_MESSAGE: Rep = Rep::new(-(<span class="number">1 </span>&lt;&lt; <span class="number">12</span>), <span class="string">&quot;Bad message&quot;</span>);
 	<span class="doccomment">/// Peer has different genesis.
 	</span><span class="kw">pub const </span>GENESIS_MISMATCH: Rep = Rep::new_fatal(<span class="string">&quot;Genesis mismatch&quot;</span>);
 	<span class="doccomment">/// Peer send us a block announcement that failed at validation.
@@ -1055,6 +1026,8 @@
 	<span class="kw">pub </span>info: ExtendedPeerInfo&lt;B&gt;,
 	<span class="doccomment">/// Holds a set of blocks known to this peer.
 	</span><span class="kw">pub </span>known_blocks: LruHashSet&lt;B::Hash&gt;,
+	<span class="doccomment">/// Notification sink.
+	</span>sink: NotificationsSink,
 }
 
 <span class="kw">pub struct </span>SyncingEngine&lt;B: BlockT, Client&gt; {
@@ -1076,6 +1049,9 @@
 
 	<span class="doccomment">/// Channel for receiving service commands
 	</span>service_rx: TracingUnboundedReceiver&lt;ToServiceCommand&lt;B&gt;&gt;,
+
+	<span class="doccomment">/// Channel for receiving inbound connections from `Protocol`.
+	</span>rx: sc_utils::mpsc::TracingUnboundedReceiver&lt;sc_network::SyncEvent&lt;B&gt;&gt;,
 
 	<span class="doccomment">/// Assigned roles.
 	</span>roles: Roles,
@@ -1147,6 +1123,7 @@
 		block_request_protocol_name: ProtocolName,
 		state_request_protocol_name: ProtocolName,
 		warp_sync_protocol_name: <span class="prelude-ty">Option</span>&lt;ProtocolName&gt;,
+		rx: sc_utils::mpsc::TracingUnboundedReceiver&lt;sc_network::SyncEvent&lt;B&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, SyncingService&lt;B&gt;, NonDefaultSetConfig), ClientError&gt; {
 		<span class="kw">let </span>mode = <span class="kw">match </span>network_config.sync_mode {
 			SyncOperationMode::Full =&gt; SyncMode::Full,
@@ -1240,6 +1217,7 @@
 				num_connected: num_connected.clone(),
 				is_major_syncing: is_major_syncing.clone(),
 				service_rx,
+				rx,
 				genesis_hash,
 				important_peers,
 				default_peers_set_no_slot_connected_peers: HashSet::new(),
@@ -1447,11 +1425,7 @@
 					data: <span class="prelude-val">Some</span>(data.clone()),
 				};
 
-				<span class="self">self</span>.network_service.write_notification(
-					<span class="kw-2">*</span>who,
-					<span class="self">self</span>.block_announce_protocol_name.clone(),
-					message.encode(),
-				);
+				peer.sink.send_sync_notification(message.encode());
 			}
 		}
 	}
@@ -1468,17 +1442,13 @@
 		)
 	}
 
-	<span class="kw">pub async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>, <span class="kw-2">mut </span>stream: Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = Event&gt; + Send&gt;&gt;) {
+	<span class="kw">pub async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>) {
 		<span class="kw">loop </span>{
-			futures::future::poll_fn(|cx| <span class="self">self</span>.poll(cx, <span class="kw-2">&amp;mut </span>stream)).<span class="kw">await</span>;
+			futures::future::poll_fn(|cx| <span class="self">self</span>.poll(cx)).<span class="kw">await</span>;
 		}
 	}
 
-	<span class="kw">pub fn </span>poll(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		cx: <span class="kw-2">&amp;mut </span>std::task::Context,
-		event_stream: <span class="kw-2">&amp;mut </span>Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = Event&gt; + Send&gt;&gt;,
-	) -&gt; Poll&lt;()&gt; {
+	<span class="kw">pub fn </span>poll(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>std::task::Context) -&gt; Poll&lt;()&gt; {
 		<span class="self">self</span>.num_connected.store(<span class="self">self</span>.peers.len(), Ordering::Relaxed);
 		<span class="self">self</span>.is_major_syncing
 			.store(<span class="self">self</span>.chain_sync.status().state.is_major_syncing(), Ordering::Relaxed);
@@ -1486,84 +1456,6 @@
 		<span class="kw">while let </span>Poll::Ready(()) = <span class="self">self</span>.tick_timeout.poll_unpin(cx) {
 			<span class="self">self</span>.report_metrics();
 			<span class="self">self</span>.tick_timeout.reset(TICK_TIMEOUT);
-		}
-
-		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(event)) = event_stream.poll_next_unpin(cx) {
-			<span class="kw">match </span>event {
-				Event::NotificationStreamOpened {
-					remote, protocol, received_handshake, ..
-				} =&gt; {
-					<span class="kw">if </span>protocol != <span class="self">self</span>.block_announce_protocol_name {
-						<span class="kw">continue
-					</span>}
-
-					<span class="kw">match </span>&lt;BlockAnnouncesHandshake&lt;B&gt; <span class="kw">as </span>DecodeAll&gt;::decode_all(
-						<span class="kw-2">&amp;mut &amp;</span>received_handshake[..],
-					) {
-						<span class="prelude-val">Ok</span>(handshake) =&gt; {
-							<span class="kw">if </span><span class="self">self</span>.on_sync_peer_connected(remote, handshake).is_err() {
-								<span class="macro">log::debug!</span>(
-									target: <span class="string">&quot;sync&quot;</span>,
-									<span class="string">&quot;Failed to register peer {remote:?}: {received_handshake:?}&quot;</span>,
-								);
-							}
-						},
-						<span class="prelude-val">Err</span>(err) =&gt; {
-							<span class="macro">log::debug!</span>(
-								target: <span class="string">&quot;sync&quot;</span>,
-								<span class="string">&quot;Couldn&#39;t decode handshake sent by {}: {:?}: {}&quot;</span>,
-								remote,
-								received_handshake,
-								err,
-							);
-							<span class="self">self</span>.network_service.report_peer(remote, rep::BAD_MESSAGE);
-						},
-					}
-				},
-				Event::NotificationStreamClosed { remote, protocol } =&gt; {
-					<span class="kw">if </span>protocol != <span class="self">self</span>.block_announce_protocol_name {
-						<span class="kw">continue
-					</span>}
-
-					<span class="kw">if </span><span class="self">self</span>.on_sync_peer_disconnected(remote).is_err() {
-						<span class="macro">log::trace!</span>(
-							target: <span class="string">&quot;sync&quot;</span>,
-							<span class="string">&quot;Disconnected peer which had earlier been refused by on_sync_peer_connected {}&quot;</span>,
-							remote
-						);
-					}
-				},
-				Event::NotificationsReceived { remote, messages } =&gt; {
-					<span class="kw">for </span>(protocol, message) <span class="kw">in </span>messages {
-						<span class="kw">if </span>protocol != <span class="self">self</span>.block_announce_protocol_name {
-							<span class="kw">continue
-						</span>}
-
-						<span class="kw">if </span><span class="self">self</span>.peers.contains_key(<span class="kw-2">&amp;</span>remote) {
-							<span class="kw">if let </span><span class="prelude-val">Ok</span>(announce) = BlockAnnounce::decode(<span class="kw-2">&amp;mut </span>message.as_ref()) {
-								<span class="self">self</span>.push_block_announce_validation(remote, announce);
-
-								<span class="comment">// Make sure that the newly added block announce validation future
-								// was polled once to be registered in the task.
-								</span><span class="kw">if let </span>Poll::Ready(res) =
-									<span class="self">self</span>.chain_sync.poll_block_announce_validation(cx)
-								{
-									<span class="self">self</span>.process_block_announce_validation_result(res)
-								}
-							} <span class="kw">else </span>{
-								<span class="macro">log::warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Failed to decode block announce&quot;</span>);
-							}
-						} <span class="kw">else </span>{
-							<span class="macro">log::trace!</span>(
-								target: <span class="string">&quot;sync&quot;</span>,
-								<span class="string">&quot;Received sync for peer earlier refused by sync layer: {}&quot;</span>,
-								remote
-							);
-						}
-					}
-				},
-				<span class="kw">_ </span>=&gt; {},
-			}
 		}
 
 		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(event)) = <span class="self">self</span>.service_rx.poll_next_unpin(cx) {
@@ -1639,7 +1531,71 @@
 			}
 		}
 
-		<span class="kw">while let </span>Poll::Ready(result) = <span class="self">self</span>.chain_sync.poll(cx) {
+		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(event)) = <span class="self">self</span>.rx.poll_next_unpin(cx) {
+			<span class="kw">match </span>event {
+				sc_network::SyncEvent::NotificationStreamOpened {
+					remote,
+					received_handshake,
+					sink,
+					tx,
+				} =&gt; <span class="kw">match </span><span class="self">self</span>.on_sync_peer_connected(remote, <span class="kw-2">&amp;</span>received_handshake, sink) {
+					<span class="prelude-val">Ok</span>(()) =&gt; {
+						<span class="kw">let _ </span>= tx.send(<span class="bool-val">true</span>);
+					},
+					<span class="prelude-val">Err</span>(()) =&gt; {
+						<span class="macro">log::debug!</span>(
+							target: <span class="string">&quot;sync&quot;</span>,
+							<span class="string">&quot;Failed to register peer {remote:?}: {received_handshake:?}&quot;</span>,
+						);
+						<span class="kw">let _ </span>= tx.send(<span class="bool-val">false</span>);
+					},
+				},
+				sc_network::SyncEvent::NotificationStreamClosed { remote } =&gt; {
+					<span class="kw">if </span><span class="self">self</span>.on_sync_peer_disconnected(remote).is_err() {
+						<span class="macro">log::trace!</span>(
+							target: <span class="string">&quot;sync&quot;</span>,
+							<span class="string">&quot;Disconnected peer which had earlier been refused by on_sync_peer_connected {}&quot;</span>,
+							remote
+						);
+					}
+				},
+				sc_network::SyncEvent::NotificationsReceived { remote, messages } =&gt; {
+					<span class="kw">for </span>message <span class="kw">in </span>messages {
+						<span class="kw">if </span><span class="self">self</span>.peers.contains_key(<span class="kw-2">&amp;</span>remote) {
+							<span class="kw">if let </span><span class="prelude-val">Ok</span>(announce) = BlockAnnounce::decode(<span class="kw-2">&amp;mut </span>message.as_ref()) {
+								<span class="self">self</span>.push_block_announce_validation(remote, announce);
+
+								<span class="comment">// Make sure that the newly added block announce validation future
+								// was polled once to be registered in the task.
+								</span><span class="kw">if let </span>Poll::Ready(res) =
+									<span class="self">self</span>.chain_sync.poll_block_announce_validation(cx)
+								{
+									<span class="self">self</span>.process_block_announce_validation_result(res)
+								}
+							} <span class="kw">else </span>{
+								<span class="macro">log::warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Failed to decode block announce&quot;</span>);
+							}
+						} <span class="kw">else </span>{
+							<span class="macro">log::trace!</span>(
+								target: <span class="string">&quot;sync&quot;</span>,
+								<span class="string">&quot;Received sync for peer earlier refused by sync layer: {}&quot;</span>,
+								remote
+							);
+						}
+					}
+				},
+				sc_network::SyncEvent::NotificationSinkReplaced { remote, sink } =&gt; {
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(peer) = <span class="self">self</span>.peers.get_mut(<span class="kw-2">&amp;</span>remote) {
+						peer.sink = sink;
+					}
+				},
+			}
+		}
+
+		<span class="comment">// poll `ChainSync` last because of a block announcement was received through the
+		// event stream between `SyncingEngine` and `Protocol` and the validation finished
+		// right after it as queued, the resulting block request (if any) can be sent right away.
+		</span><span class="kw">while let </span>Poll::Ready(result) = <span class="self">self</span>.chain_sync.poll(cx) {
 			<span class="self">self</span>.process_block_announce_validation_result(result);
 		}
 
@@ -1650,13 +1606,13 @@
 	///
 	/// Returns a result if the handshake of this peer was indeed accepted.
 	</span><span class="kw">pub fn </span>on_sync_peer_disconnected(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer: PeerId) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
-		<span class="kw">if </span><span class="self">self</span>.important_peers.contains(<span class="kw-2">&amp;</span>peer) {
-			<span class="macro">log::warn!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Reserved peer {} disconnected&quot;</span>, peer);
-		} <span class="kw">else </span>{
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;{} disconnected&quot;</span>, peer);
-		}
-
 		<span class="kw">if </span><span class="self">self</span>.peers.remove(<span class="kw-2">&amp;</span>peer).is_some() {
+			<span class="kw">if </span><span class="self">self</span>.important_peers.contains(<span class="kw-2">&amp;</span>peer) {
+				<span class="macro">log::warn!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Reserved peer {} disconnected&quot;</span>, peer);
+			} <span class="kw">else </span>{
+				<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;{} disconnected&quot;</span>, peer);
+			}
+
 			<span class="self">self</span>.chain_sync.peer_disconnected(<span class="kw-2">&amp;</span>peer);
 			<span class="self">self</span>.default_peers_set_no_slot_connected_peers.remove(<span class="kw-2">&amp;</span>peer);
 			<span class="self">self</span>.event_streams
@@ -1675,7 +1631,8 @@
 	</span><span class="kw">pub fn </span>on_sync_peer_connected(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		who: PeerId,
-		status: BlockAnnouncesHandshake&lt;B&gt;,
+		status: <span class="kw-2">&amp;</span>BlockAnnouncesHandshake&lt;B&gt;,
+		sink: NotificationsSink,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
 		<span class="macro">log::trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;New peer {} {:?}&quot;</span>, who, status);
 
@@ -1687,8 +1644,6 @@
 
 		<span class="kw">if </span>status.genesis_hash != <span class="self">self</span>.genesis_hash {
 			<span class="self">self</span>.network_service.report_peer(who, rep::GENESIS_MISMATCH);
-			<span class="self">self</span>.network_service
-				.disconnect_peer(who, <span class="self">self</span>.block_announce_protocol_name.clone());
 
 			<span class="kw">if </span><span class="self">self</span>.important_peers.contains(<span class="kw-2">&amp;</span>who) {
 				<span class="macro">log::error!</span>(
@@ -1727,8 +1682,6 @@
 					this_peer_reserved_slot
 		{
 			<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Too many full nodes, rejecting {}&quot;</span>, who);
-			<span class="self">self</span>.network_service
-				.disconnect_peer(who, <span class="self">self</span>.block_announce_protocol_name.clone());
 			<span class="kw">return </span><span class="prelude-val">Err</span>(())
 		}
 
@@ -1737,8 +1690,6 @@
 		{
 			<span class="comment">// Make sure that not all slots are occupied by light clients.
 			</span><span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Too many light nodes, rejecting {}&quot;</span>, who);
-			<span class="self">self</span>.network_service
-				.disconnect_peer(who, <span class="self">self</span>.block_announce_protocol_name.clone());
 			<span class="kw">return </span><span class="prelude-val">Err</span>(())
 		}
 
@@ -1751,14 +1702,13 @@
 			known_blocks: LruHashSet::new(
 				NonZeroUsize::new(MAX_KNOWN_BLOCKS).expect(<span class="string">&quot;Constant is nonzero&quot;</span>),
 			),
+			sink,
 		};
 
 		<span class="kw">let </span>req = <span class="kw">if </span>peer.info.roles.is_full() {
 			<span class="kw">match </span><span class="self">self</span>.chain_sync.new_peer(who, peer.info.best_hash, peer.info.best_number) {
 				<span class="prelude-val">Ok</span>(req) =&gt; req,
 				<span class="prelude-val">Err</span>(BadPeer(id, repu)) =&gt; {
-					<span class="self">self</span>.network_service
-						.disconnect_peer(id, <span class="self">self</span>.block_announce_protocol_name.clone());
 					<span class="self">self</span>.network_service.report_peer(id, repu);
 					<span class="kw">return </span><span class="prelude-val">Err</span>(())
 				},

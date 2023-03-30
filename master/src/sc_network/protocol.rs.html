@@ -583,6 +583,78 @@
 <a href="#583" id="583">583</a>
 <a href="#584" id="584">584</a>
 <a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -609,6 +681,7 @@
 
 <span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>codec::{DecodeAll, Encode};
+<span class="kw">use </span>futures::{channel::oneshot, stream::FuturesUnordered, StreamExt};
 <span class="kw">use </span>libp2p::{
 	core::connection::ConnectionId,
 	swarm::{
@@ -620,11 +693,14 @@
 <span class="kw">use </span>log::{debug, error, warn};
 
 <span class="kw">use </span>sc_network_common::{role::Roles, sync::message::BlockAnnouncesHandshake};
+<span class="kw">use </span>sc_utils::mpsc::TracingUnboundedSender;
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
 <span class="kw">use </span>std::{
 	collections::{HashMap, HashSet, VecDeque},
+	future::Future,
 	iter,
+	pin::Pin,
 	task::Poll,
 };
 
@@ -653,6 +729,9 @@
 	</span><span class="kw">pub const </span>BAD_MESSAGE: Rep = Rep::new(-(<span class="number">1 </span>&lt;&lt; <span class="number">12</span>), <span class="string">&quot;Bad message&quot;</span>);
 }
 
+<span class="kw">type </span>PendingSyncSubstreamValidation =
+	Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(PeerId, Roles), PeerId&gt;&gt; + Send&gt;&gt;;
+
 <span class="comment">// Lock must always be taken in order declared here.
 </span><span class="kw">pub struct </span>Protocol&lt;B: BlockT&gt; {
 	<span class="doccomment">/// Pending list of messages to return from `poll` as a priority.
@@ -672,6 +751,8 @@
 	</span>bad_handshake_substreams: HashSet&lt;(PeerId, sc_peerset::SetId)&gt;,
 	<span class="doccomment">/// Connected peers.
 	</span>peers: HashMap&lt;PeerId, Roles&gt;,
+	sync_substream_validations: FuturesUnordered&lt;PendingSyncSubstreamValidation&gt;,
+	tx: TracingUnboundedSender&lt;<span class="kw">crate</span>::event::SyncEvent&lt;B&gt;&gt;,
 	_marker: std::marker::PhantomData&lt;B&gt;,
 }
 
@@ -681,6 +762,7 @@
 		roles: Roles,
 		network_config: <span class="kw-2">&amp;</span>config::NetworkConfiguration,
 		block_announces_protocol: config::NonDefaultSetConfig,
+		tx: TracingUnboundedSender&lt;<span class="kw">crate</span>::event::SyncEvent&lt;B&gt;&gt;,
 	) -&gt; error::Result&lt;(<span class="self">Self</span>, sc_peerset::PeersetHandle, Vec&lt;(PeerId, Multiaddr)&gt;)&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>known_addresses = Vec::new();
 
@@ -764,6 +846,8 @@
 				.collect(),
 			bad_handshake_substreams: Default::default(),
 			peers: HashMap::new(),
+			sync_substream_validations: FuturesUnordered::new(),
+			tx,
 			<span class="comment">// TODO: remove when `BlockAnnouncesHandshake` is moved away from `Protocol`
 			</span>_marker: Default::default(),
 		};
@@ -1003,6 +1087,23 @@
 				<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::CloseConnection { peer_id, connection }),
 		};
 
+		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(validation_result)) =
+			<span class="self">self</span>.sync_substream_validations.poll_next_unpin(cx)
+		{
+			<span class="kw">match </span>validation_result {
+				<span class="prelude-val">Ok</span>((peer, roles)) =&gt; {
+					<span class="self">self</span>.peers.insert(peer, roles);
+				},
+				<span class="prelude-val">Err</span>(peer) =&gt; {
+					<span class="macro">log::debug!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;`SyncingEngine` rejected stream&quot;
+					</span>);
+					<span class="self">self</span>.behaviour.disconnect_peer(<span class="kw-2">&amp;</span>peer, HARDCODED_PEERSETS_SYNC);
+				},
+			}
+		}
+
 		<span class="kw">let </span>outcome = <span class="kw">match </span>event {
 			NotificationsOut::CustomProtocolOpen {
 				peer_id,
@@ -1025,16 +1126,29 @@
 								best_hash: handshake.best_hash,
 								genesis_hash: handshake.genesis_hash,
 							};
-							<span class="self">self</span>.peers.insert(peer_id, roles);
 
-							CustomMessageOutcome::NotificationStreamOpened {
-								remote: peer_id,
-								protocol: <span class="self">self</span>.notification_protocols[usize::from(set_id)].clone(),
-								negotiated_fallback,
-								received_handshake: handshake.encode(),
-								roles,
-								notifications_sink,
-							}
+							<span class="kw">let </span>(tx, rx) = oneshot::channel();
+							<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(
+								<span class="kw">crate</span>::SyncEvent::NotificationStreamOpened {
+									remote: peer_id,
+									received_handshake: handshake,
+									sink: notifications_sink,
+									tx,
+								},
+							);
+							<span class="self">self</span>.sync_substream_validations.push(Box::pin(<span class="kw">async move </span>{
+								<span class="kw">match </span>rx.<span class="kw">await </span>{
+									<span class="prelude-val">Ok</span>(accepted) =&gt;
+										<span class="kw">if </span>accepted {
+											<span class="prelude-val">Ok</span>((peer_id, roles))
+										} <span class="kw">else </span>{
+											<span class="prelude-val">Err</span>(peer_id)
+										},
+									<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(peer_id),
+								}
+							}));
+
+							CustomMessageOutcome::None
 						},
 						<span class="prelude-val">Ok</span>(msg) =&gt; {
 							<span class="macro">debug!</span>(
@@ -1054,15 +1168,27 @@
 									<span class="kw">let </span>roles = handshake.roles;
 									<span class="self">self</span>.peers.insert(peer_id, roles);
 
-									CustomMessageOutcome::NotificationStreamOpened {
-										remote: peer_id,
-										protocol: <span class="self">self</span>.notification_protocols[usize::from(set_id)]
-											.clone(),
-										negotiated_fallback,
-										received_handshake,
-										roles,
-										notifications_sink,
-									}
+									<span class="kw">let </span>(tx, rx) = oneshot::channel();
+									<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(
+										<span class="kw">crate</span>::SyncEvent::NotificationStreamOpened {
+											remote: peer_id,
+											received_handshake: handshake,
+											sink: notifications_sink,
+											tx,
+										},
+									);
+									<span class="self">self</span>.sync_substream_validations.push(Box::pin(<span class="kw">async move </span>{
+										<span class="kw">match </span>rx.<span class="kw">await </span>{
+											<span class="prelude-val">Ok</span>(accepted) =&gt;
+												<span class="kw">if </span>accepted {
+													<span class="prelude-val">Ok</span>((peer_id, roles))
+												} <span class="kw">else </span>{
+													<span class="prelude-val">Err</span>(peer_id)
+												},
+											<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(peer_id),
+										}
+									}));
+									CustomMessageOutcome::None
 								},
 								<span class="prelude-val">Err</span>(err2) =&gt; {
 									<span class="macro">log::debug!</span>(
@@ -1120,6 +1246,12 @@
 			NotificationsOut::CustomProtocolReplaced { peer_id, notifications_sink, set_id } =&gt;
 				<span class="kw">if </span><span class="self">self</span>.bad_handshake_substreams.contains(<span class="kw-2">&amp;</span>(peer_id, set_id)) {
 					CustomMessageOutcome::None
+				} <span class="kw">else if </span>set_id == HARDCODED_PEERSETS_SYNC {
+					<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(<span class="kw">crate</span>::SyncEvent::NotificationSinkReplaced {
+						remote: peer_id,
+						sink: notifications_sink,
+					});
+					CustomMessageOutcome::None
 				} <span class="kw">else </span>{
 					CustomMessageOutcome::NotificationStreamReplaced {
 						remote: peer_id,
@@ -1133,6 +1265,12 @@
 					// handshake. The outer layers have never received an opening event about this
 					// substream, and consequently shouldn&#39;t receive a closing event either.
 					</span>CustomMessageOutcome::None
+				} <span class="kw">else if </span>set_id == HARDCODED_PEERSETS_SYNC {
+					<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(<span class="kw">crate</span>::SyncEvent::NotificationStreamClosed {
+						remote: peer_id,
+					});
+					<span class="self">self</span>.peers.remove(<span class="kw-2">&amp;</span>peer_id);
+					CustomMessageOutcome::None
 				} <span class="kw">else </span>{
 					CustomMessageOutcome::NotificationStreamClosed {
 						remote: peer_id,
@@ -1142,6 +1280,12 @@
 			},
 			NotificationsOut::Notification { peer_id, set_id, message } =&gt; {
 				<span class="kw">if </span><span class="self">self</span>.bad_handshake_substreams.contains(<span class="kw-2">&amp;</span>(peer_id, set_id)) {
+					CustomMessageOutcome::None
+				} <span class="kw">else if </span>set_id == HARDCODED_PEERSETS_SYNC {
+					<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(<span class="kw">crate</span>::SyncEvent::NotificationsReceived {
+						remote: peer_id,
+						messages: <span class="macro">vec!</span>[message.freeze()],
+					});
 					CustomMessageOutcome::None
 				} <span class="kw">else </span>{
 					<span class="kw">let </span>protocol_name = <span class="self">self</span>.notification_protocols[usize::from(set_id)].clone();

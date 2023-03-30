@@ -992,7 +992,6 @@
 <a href="#992" id="992">992</a>
 <a href="#993" id="993">993</a>
 <a href="#994" id="994">994</a>
-<a href="#995" id="995">995</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1033,9 +1032,7 @@
 <span class="kw">use </span>sc_consensus::import_queue::ImportQueue;
 <span class="kw">use </span>sc_executor::RuntimeVersionOf;
 <span class="kw">use </span>sc_keystore::LocalKeystore;
-<span class="kw">use </span>sc_network::{
-	config::SyncMode, NetworkEventStream, NetworkService, NetworkStateInfo, NetworkStatusProvider,
-};
+<span class="kw">use </span>sc_network::{config::SyncMode, NetworkService, NetworkStateInfo, NetworkStatusProvider};
 <span class="kw">use </span>sc_network_bitswap::BitswapRequestHandler;
 <span class="kw">use </span>sc_network_common::{role::Roles, sync::warp::WarpSyncParams};
 <span class="kw">use </span>sc_network_light::light_client_requests::handler::LightClientRequestHandler;
@@ -1820,6 +1817,7 @@
 		protocol_config
 	};
 
+	<span class="kw">let </span>(tx, rx) = sc_utils::mpsc::tracing_unbounded(<span class="string">&quot;mpsc_syncing_engine_protocol&quot;</span>, <span class="number">100_000</span>);
 	<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) = NetworkServiceProvider::new();
 	<span class="kw">let </span>(engine, sync_service, block_announce_config) = SyncingEngine::new(
 		Roles::from(<span class="kw-2">&amp;</span>config.role),
@@ -1835,6 +1833,7 @@
 		block_request_protocol_config.name.clone(),
 		state_request_protocol_config.name.clone(),
 		warp_sync_protocol_config.as_ref().map(|config| config.name.clone()),
+		rx,
 	)<span class="question-mark">?</span>;
 	<span class="kw">let </span>sync_service_import_queue = sync_service.clone();
 	<span class="kw">let </span>sync_service = Arc::new(sync_service);
@@ -1860,6 +1859,7 @@
 		fork_id: config.chain_spec.fork_id().map(ToOwned::to_owned),
 		metrics_registry: config.prometheus_config.as_ref().map(|config| config.registry.clone()),
 		block_announce_config,
+		tx,
 		request_response_protocol_configs: request_response_protocol_configs
 			.into_iter()
 			.chain([
@@ -1899,15 +1899,13 @@
 	)<span class="question-mark">?</span>;
 
 	spawn_handle.spawn(<span class="string">&quot;network-transactions-handler&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), tx_handler.run());
-	spawn_handle.spawn(
+	spawn_handle.spawn_blocking(
 		<span class="string">&quot;chain-sync-network-service-provider&quot;</span>,
 		<span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>),
 		chain_sync_network_provider.run(network.clone()),
 	);
 	spawn_handle.spawn(<span class="string">&quot;import-queue&quot;</span>, <span class="prelude-val">None</span>, import_queue.run(Box::new(sync_service_import_queue)));
-
-	<span class="kw">let </span>event_stream = network.event_stream(<span class="string">&quot;syncing&quot;</span>);
-	spawn_handle.spawn(<span class="string">&quot;syncing&quot;</span>, <span class="prelude-val">None</span>, engine.run(event_stream));
+	spawn_handle.spawn_blocking(<span class="string">&quot;syncing&quot;</span>, <span class="prelude-val">None</span>, engine.run());
 
 	<span class="kw">let </span>(system_rpc_tx, system_rpc_rx) = tracing_unbounded(<span class="string">&quot;mpsc_system_rpc&quot;</span>, <span class="number">10_000</span>);
 	spawn_handle.spawn(

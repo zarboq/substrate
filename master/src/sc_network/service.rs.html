@@ -1794,6 +1794,8 @@
 <a href="#1794" id="1794">1794</a>
 <a href="#1795" id="1795">1795</a>
 <a href="#1796" id="1796">1796</a>
+<a href="#1797" id="1797">1797</a>
+<a href="#1798" id="1798">1798</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1832,7 +1834,7 @@
 	network_state::{
 		NetworkState, NotConnectedPeer <span class="kw">as </span>NetworkStateNotConnectedPeer, Peer <span class="kw">as </span>NetworkStatePeer,
 	},
-	protocol::{<span class="self">self</span>, NotificationsSink, NotifsHandlerError, Protocol, Ready},
+	protocol::{<span class="self">self</span>, NotifsHandlerError, Protocol, Ready},
 	request_responses::{IfDisconnected, RequestFailure},
 	service::{
 		signature::{Signature, SigningError},
@@ -1887,6 +1889,7 @@
 
 <span class="kw">pub use </span>behaviour::{InboundFailure, OutboundFailure, ResponseFailure};
 <span class="kw">pub use </span>libp2p::identity::{error::DecodingError, Keypair, PublicKey};
+<span class="kw">pub use </span>protocol::NotificationsSink;
 
 <span class="kw">mod </span>metrics;
 <span class="kw">mod </span>out_events;
@@ -1942,7 +1945,7 @@
 	/// Returns a `NetworkWorker` that implements `Future` and must be regularly polled in order
 	/// for the network processing to advance. From it, you can extract a `NetworkService` using
 	/// `worker.service()`. The `NetworkService` can be shared through the codebase.
-	</span><span class="kw">pub fn </span>new&lt;Block: BlockT&gt;(<span class="kw-2">mut </span>params: Params&lt;Block&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+	</span><span class="kw">pub fn </span>new(<span class="kw-2">mut </span>params: Params&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
 		<span class="comment">// Private and public keys configuration.
 		</span><span class="kw">let </span>local_identity = params.network_config.node_key.clone().into_keypair()<span class="question-mark">?</span>;
 		<span class="kw">let </span>local_public = local_identity.public();
@@ -2023,6 +2026,7 @@
 			From::from(<span class="kw-2">&amp;</span>params.role),
 			<span class="kw-2">&amp;</span>params.network_config,
 			params.block_announce_config,
+			params.tx,
 		)<span class="question-mark">?</span>;
 
 		<span class="comment">// List of multiaddresses that we know in the network.

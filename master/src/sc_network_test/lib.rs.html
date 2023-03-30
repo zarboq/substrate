@@ -1226,6 +1226,8 @@
 <a href="#1226" id="1226">1226</a>
 <a href="#1227" id="1227">1227</a>
 <a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1283,8 +1285,8 @@
 	},
 	request_responses::ProtocolConfig <span class="kw">as </span>RequestResponseConfig,
 	types::ProtocolName,
-	Multiaddr, NetworkBlock, NetworkEventStream, NetworkService, NetworkStateInfo,
-	NetworkSyncForkRequest, NetworkWorker,
+	Multiaddr, NetworkBlock, NetworkService, NetworkStateInfo, NetworkSyncForkRequest,
+	NetworkWorker,
 };
 <span class="kw">use </span>sc_network_common::{
 	role::Roles,
@@ -2124,6 +2126,7 @@
 		<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) =
 			NetworkServiceProvider::new();
 
+		<span class="kw">let </span>(tx, rx) = sc_utils::mpsc::tracing_unbounded(<span class="string">&quot;mpsc_syncing_engine_protocol&quot;</span>, <span class="number">100_000</span>);
 		<span class="kw">let </span>(engine, sync_service, block_announce_config) =
 			sc_network_sync::engine::SyncingEngine::new(
 				Roles::from(<span class="kw">if </span>config.is_authority { <span class="kw-2">&amp;</span>Role::Authority } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>Role::Full }),
@@ -2139,6 +2142,7 @@
 				block_request_protocol_config.name.clone(),
 				state_request_protocol_config.name.clone(),
 				<span class="prelude-val">Some</span>(warp_protocol_config.name.clone()),
+				rx,
 			)
 			.unwrap();
 		<span class="kw">let </span>sync_service_import_queue = Box::new(sync_service.clone());
@@ -2146,7 +2150,7 @@
 
 		<span class="kw">let </span>genesis_hash =
 			client.hash(Zero::zero()).ok().flatten().expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>);
-		<span class="kw">let </span>network = NetworkWorker::new::&lt;Block&gt;(sc_network::config::Params {
+		<span class="kw">let </span>network = NetworkWorker::new(sc_network::config::Params {
 			role: <span class="kw">if </span>config.is_authority { Role::Authority } <span class="kw">else </span>{ Role::Full },
 			executor: Box::new(|f| {
 				tokio::spawn(f);
@@ -2157,6 +2161,7 @@
 			fork_id,
 			metrics_registry: <span class="prelude-val">None</span>,
 			block_announce_config,
+			tx,
 			request_response_protocol_configs: [
 				block_request_protocol_config,
 				state_request_protocol_config,
@@ -2178,9 +2183,8 @@
 			import_queue.run(sync_service_import_queue).<span class="kw">await</span>;
 		});
 
-		<span class="kw">let </span>service = network.service().clone();
 		tokio::spawn(<span class="kw">async move </span>{
-			engine.run(service.event_stream(<span class="string">&quot;syncing&quot;</span>)).<span class="kw">await</span>;
+			engine.run().<span class="kw">await</span>;
 		});
 
 		<span class="self">self</span>.mut_peers(<span class="kw">move </span>|peers| {

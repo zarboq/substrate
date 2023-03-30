@@ -757,6 +757,15 @@
 <a href="#757" id="757">757</a>
 <a href="#758" id="758">758</a>
 <a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -781,6 +790,7 @@
 //! See the documentation of [`Params`].
 
 </span><span class="kw">pub use crate</span>::{
+	protocol::NotificationsSink,
 	request_responses::{
 		IncomingRequest, OutgoingResponse, ProtocolConfig <span class="kw">as </span>RequestResponseConfig,
 	},
@@ -790,7 +800,12 @@
 <span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>libp2p::{identity::Keypair, multiaddr, Multiaddr, PeerId};
 <span class="kw">use </span>prometheus_endpoint::Registry;
-<span class="kw">pub use </span>sc_network_common::{role::Role, sync::warp::WarpSyncProvider, ExHashT};
+<span class="kw">pub use </span>sc_network_common::{
+	role::{Role, Roles},
+	sync::warp::WarpSyncProvider,
+	ExHashT,
+};
+<span class="kw">use </span>sc_utils::mpsc::TracingUnboundedSender;
 <span class="kw">use </span>zeroize::Zeroize;
 
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
@@ -1472,6 +1487,9 @@
 
 	<span class="doccomment">/// Block announce protocol configuration
 	</span><span class="kw">pub </span>block_announce_config: NonDefaultSetConfig,
+
+	<span class="doccomment">/// TX channel for direct communication with `SyncingEngine` and `Protocol`.
+	</span><span class="kw">pub </span>tx: TracingUnboundedSender&lt;<span class="kw">crate</span>::event::SyncEvent&lt;Block&gt;&gt;,
 
 	<span class="doccomment">/// Request response protocol configurations
 	</span><span class="kw">pub </span>request_response_protocol_configs: Vec&lt;RequestResponseConfig&gt;,
