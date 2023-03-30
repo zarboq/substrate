@@ -493,6 +493,10 @@
 <a href="#493" id="493">493</a>
 <a href="#494" id="494">494</a>
 <a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -516,7 +520,7 @@
 <span class="kw">use </span>codec::{Decode, Encode};
 <span class="kw">use </span>log::debug;
 <span class="kw">use </span>sp_consensus_beefy::{
-	crypto::{AuthorityId, Public, Signature},
+	crypto::{AuthorityId, Signature},
 	Commitment, EquivocationProof, SignedCommitment, ValidatorSet, ValidatorSetId, VoteMessage,
 };
 <span class="kw">use </span>sp_runtime::traits::{Block, NumberFor};
@@ -528,11 +532,11 @@
 /// Does not do any validation on votes or signatures, layers above need to handle that (gossip).
 </span><span class="attr">#[derive(Debug, Decode, Default, Encode, PartialEq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>RoundTracker {
-	votes: BTreeMap&lt;Public, Signature&gt;,
+	votes: BTreeMap&lt;AuthorityId, Signature&gt;,
 }
 
 <span class="kw">impl </span>RoundTracker {
-	<span class="kw">fn </span>add_vote(<span class="kw-2">&amp;mut </span><span class="self">self</span>, vote: (Public, Signature)) -&gt; bool {
+	<span class="kw">fn </span>add_vote(<span class="kw-2">&amp;mut </span><span class="self">self</span>, vote: (AuthorityId, Signature)) -&gt; bool {
 		<span class="kw">if </span><span class="self">self</span>.votes.contains_key(<span class="kw-2">&amp;</span>vote.<span class="number">0</span>) {
 			<span class="kw">return </span><span class="bool-val">false
 		</span>}
@@ -556,7 +560,7 @@
 </span><span class="kw">pub enum </span>VoteImportResult&lt;B: Block&gt; {
 	<span class="prelude-val">Ok</span>,
 	RoundConcluded(SignedCommitment&lt;NumberFor&lt;B&gt;, Signature&gt;),
-	Equivocation(EquivocationProof&lt;NumberFor&lt;B&gt;, Public, Signature&gt;),
+	Equivocation(EquivocationProof&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;),
 	Invalid,
 	Stale,
 }
@@ -568,9 +572,10 @@
 </span><span class="attr">#[derive(Debug, Decode, Encode, PartialEq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Rounds&lt;B: Block&gt; {
 	rounds: BTreeMap&lt;Commitment&lt;NumberFor&lt;B&gt;&gt;, RoundTracker&gt;,
-	previous_votes: BTreeMap&lt;(Public, NumberFor&lt;B&gt;), VoteMessage&lt;NumberFor&lt;B&gt;, Public, Signature&gt;&gt;,
+	previous_votes:
+		BTreeMap&lt;(AuthorityId, NumberFor&lt;B&gt;), VoteMessage&lt;NumberFor&lt;B&gt;, AuthorityId, Signature&gt;&gt;,
 	session_start: NumberFor&lt;B&gt;,
-	validator_set: ValidatorSet&lt;Public&gt;,
+	validator_set: ValidatorSet&lt;AuthorityId&gt;,
 	mandatory_done: bool,
 	best_done: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;B&gt;&gt;,
 }
@@ -579,7 +584,10 @@
 <span class="kw">where
 	</span>B: Block,
 {
-	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(session_start: NumberFor&lt;B&gt;, validator_set: ValidatorSet&lt;Public&gt;) -&gt; <span class="self">Self </span>{
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
+		session_start: NumberFor&lt;B&gt;,
+		validator_set: ValidatorSet&lt;AuthorityId&gt;,
+	) -&gt; <span class="self">Self </span>{
 		Rounds {
 			rounds: BTreeMap::new(),
 			previous_votes: BTreeMap::new(),
@@ -590,7 +598,7 @@
 		}
 	}
 
-	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>validator_set(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ValidatorSet&lt;Public&gt; {
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>validator_set(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ValidatorSet&lt;AuthorityId&gt; {
 		<span class="kw-2">&amp;</span><span class="self">self</span>.validator_set
 	}
 
@@ -598,7 +606,7 @@
 		<span class="self">self</span>.validator_set.id()
 	}
 
-	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>validators(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[Public] {
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>validators(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[AuthorityId] {
 		<span class="self">self</span>.validator_set.validators()
 	}
 
@@ -694,11 +702,11 @@
 	<span class="kw">use </span>sc_network_test::Block;
 
 	<span class="kw">use </span>sp_consensus_beefy::{
-		crypto::Public, known_payloads::MMR_ROOT_ID, Commitment, EquivocationProof, Keyring,
-		Payload, SignedCommitment, ValidatorSet, VoteMessage,
+		known_payloads::MMR_ROOT_ID, Commitment, EquivocationProof, Keyring, Payload,
+		SignedCommitment, ValidatorSet, VoteMessage,
 	};
 
-	<span class="kw">use super</span>::{threshold, Block <span class="kw">as </span>BlockT, RoundTracker, Rounds};
+	<span class="kw">use super</span>::{threshold, AuthorityId, Block <span class="kw">as </span>BlockT, RoundTracker, Rounds};
 	<span class="kw">use </span><span class="kw">crate</span>::round::VoteImportResult;
 
 	<span class="kw">impl</span>&lt;B&gt; Rounds&lt;B&gt;
@@ -746,7 +754,7 @@
 	</span><span class="kw">fn </span>new_rounds() {
 		sp_tracing::try_init_simple();
 
-		<span class="kw">let </span>validators = ValidatorSet::&lt;Public&gt;::new(
+		<span class="kw">let </span>validators = ValidatorSet::&lt;AuthorityId&gt;::new(
 			<span class="macro">vec!</span>[Keyring::Alice.public(), Keyring::Bob.public(), Keyring::Charlie.public()],
 			<span class="number">42</span>,
 		)
@@ -767,7 +775,7 @@
 	</span><span class="kw">fn </span>add_and_conclude_votes() {
 		sp_tracing::try_init_simple();
 
-		<span class="kw">let </span>validators = ValidatorSet::&lt;Public&gt;::new(
+		<span class="kw">let </span>validators = ValidatorSet::&lt;AuthorityId&gt;::new(
 			<span class="macro">vec!</span>[
 				Keyring::Alice.public(),
 				Keyring::Bob.public(),
@@ -833,7 +841,7 @@
 	</span><span class="kw">fn </span>old_rounds_not_accepted() {
 		sp_tracing::try_init_simple();
 
-		<span class="kw">let </span>validators = ValidatorSet::&lt;Public&gt;::new(
+		<span class="kw">let </span>validators = ValidatorSet::&lt;AuthorityId&gt;::new(
 			<span class="macro">vec!</span>[Keyring::Alice.public(), Keyring::Bob.public(), Keyring::Charlie.public()],
 			<span class="number">42</span>,
 		)
@@ -879,7 +887,7 @@
 	</span><span class="kw">fn </span>multiple_rounds() {
 		sp_tracing::try_init_simple();
 
-		<span class="kw">let </span>validators = ValidatorSet::&lt;Public&gt;::new(
+		<span class="kw">let </span>validators = ValidatorSet::&lt;AuthorityId&gt;::new(
 			<span class="macro">vec!</span>[Keyring::Alice.public(), Keyring::Bob.public(), Keyring::Charlie.public()],
 			Default::default(),
 		)
@@ -954,7 +962,7 @@
 	</span><span class="kw">fn </span>should_provide_equivocation_proof() {
 		sp_tracing::try_init_simple();
 
-		<span class="kw">let </span>validators = ValidatorSet::&lt;Public&gt;::new(
+		<span class="kw">let </span>validators = ValidatorSet::&lt;AuthorityId&gt;::new(
 			<span class="macro">vec!</span>[Keyring::Alice.public(), Keyring::Bob.public()],
 			Default::default(),
 		)

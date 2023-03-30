@@ -186,6 +186,14 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -209,13 +217,21 @@
 <span class="kw">use </span>sp_consensus::Error <span class="kw">as </span>ConsensusError;
 <span class="kw">use </span>sp_consensus_beefy::{
 	crypto::{AuthorityId, Signature},
-	ValidatorSet, VersionedFinalityProof,
+	ValidatorSet, ValidatorSetId, VersionedFinalityProof,
 };
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, NumberFor};
 
 <span class="doccomment">/// A finality proof with matching BEEFY authorities&#39; signatures.
-</span><span class="kw">pub type </span>BeefyVersionedFinalityProof&lt;Block&gt; =
-	sp_consensus_beefy::VersionedFinalityProof&lt;NumberFor&lt;Block&gt;, Signature&gt;;
+</span><span class="kw">pub type </span>BeefyVersionedFinalityProof&lt;Block&gt; = VersionedFinalityProof&lt;NumberFor&lt;Block&gt;, Signature&gt;;
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>proof_block_num_and_set_id&lt;Block: BlockT&gt;(
+	proof: <span class="kw-2">&amp;</span>BeefyVersionedFinalityProof&lt;Block&gt;,
+) -&gt; (NumberFor&lt;Block&gt;, ValidatorSetId) {
+	<span class="kw">match </span>proof {
+		VersionedFinalityProof::V1(sc) =&gt;
+			(sc.commitment.block_number, sc.commitment.validator_set_id),
+	}
+}
 
 <span class="doccomment">/// Decode and verify a Beefy FinalityProof.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>decode_and_verify_finality_proof&lt;Block: BlockT&gt;(
@@ -229,7 +245,7 @@
 }
 
 <span class="doccomment">/// Verify the Beefy finality proof against the validator set at the block it was generated.
-</span><span class="kw">fn </span>verify_with_validator_set&lt;Block: BlockT&gt;(
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>verify_with_validator_set&lt;Block: BlockT&gt;(
 	target_number: NumberFor&lt;Block&gt;,
 	validator_set: <span class="kw-2">&amp;</span>ValidatorSet&lt;AuthorityId&gt;,
 	proof: <span class="kw-2">&amp;</span>BeefyVersionedFinalityProof&lt;Block&gt;,
