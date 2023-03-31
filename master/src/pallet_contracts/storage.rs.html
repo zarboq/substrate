@@ -352,6 +352,60 @@
 <a href="#352" id="352">352</a>
 <a href="#353" id="353">353</a>
 <a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -376,15 +430,15 @@
 <span class="kw">use crate</span>::{
 	exec::{AccountIdOf, Key},
 	weights::WeightInfo,
-	AddressGenerator, BalanceOf, CodeHash, Config, ContractInfoOf, DeletionQueue, Error, Pallet,
-	TrieId, SENTINEL,
+	AddressGenerator, BalanceOf, CodeHash, Config, ContractInfoOf, DeletionQueue,
+	DeletionQueueCounter, Error, Pallet, TrieId, SENTINEL,
 };
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>frame_support::{
-	dispatch::{DispatchError, DispatchResult},
+	dispatch::DispatchError,
 	storage::child::{<span class="self">self</span>, ChildInfo},
 	weights::Weight,
-	RuntimeDebugNoBound,
+	DefaultNoBound, RuntimeDebugNoBound,
 };
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_io::KillStorageResult;
@@ -392,7 +446,7 @@
 	traits::{Hash, Saturating, Zero},
 	RuntimeDebug,
 };
-<span class="kw">use </span>sp_std::{ops::Deref, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>sp_std::{marker::PhantomData, ops::Deref, prelude::<span class="kw-2">*</span>};
 
 <span class="doccomment">/// Information for managing an account and its sub trie abstraction.
 /// This is the required info to cache for an account.
@@ -558,27 +612,21 @@
 	<span class="doccomment">/// Push a contract&#39;s trie to the deletion queue for lazy removal.
 	///
 	/// You must make sure that the contract is also removed when queuing the trie for deletion.
-	</span><span class="kw">pub fn </span>queue_trie_for_deletion(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DispatchResult {
-		&lt;DeletionQueue&lt;T&gt;&gt;::try_append(DeletedContract { trie_id: <span class="self">self</span>.trie_id.clone() })
-			.map_err(|<span class="kw">_</span>| &lt;Error&lt;T&gt;&gt;::DeletionQueueFull.into())
+	</span><span class="kw">pub fn </span>queue_trie_for_deletion(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+		DeletionQueueManager::&lt;T&gt;::load().insert(<span class="self">self</span>.trie_id.clone());
 	}
 
 	<span class="doccomment">/// Calculates the weight that is necessary to remove one key from the trie and how many
-	/// of those keys can be deleted from the deletion queue given the supplied queue length
-	/// and weight limit.
-	</span><span class="kw">pub fn </span>deletion_budget(queue_len: usize, weight_limit: Weight) -&gt; (Weight, u32) {
+	/// of those keys can be deleted from the deletion queue given the supplied weight limit.
+	</span><span class="kw">pub fn </span>deletion_budget(weight_limit: Weight) -&gt; (Weight, u32) {
 		<span class="kw">let </span>base_weight = T::WeightInfo::on_process_deletion_queue_batch();
-		<span class="kw">let </span>weight_per_queue_item = T::WeightInfo::on_initialize_per_queue_item(<span class="number">1</span>) -
-			T::WeightInfo::on_initialize_per_queue_item(<span class="number">0</span>);
 		<span class="kw">let </span>weight_per_key = T::WeightInfo::on_initialize_per_trie_key(<span class="number">1</span>) -
 			T::WeightInfo::on_initialize_per_trie_key(<span class="number">0</span>);
-		<span class="kw">let </span>decoding_weight = weight_per_queue_item.saturating_mul(queue_len <span class="kw">as </span>u64);
 
 		<span class="comment">// `weight_per_key` being zero makes no sense and would constitute a failure to
 		// benchmark properly. We opt for not removing any keys at all in this case.
 		</span><span class="kw">let </span>key_budget = weight_limit
 			.saturating_sub(base_weight)
-			.saturating_sub(decoding_weight)
 			.checked_div_per_component(<span class="kw-2">&amp;</span>weight_per_key)
 			.unwrap_or(<span class="number">0</span>) <span class="kw">as </span>u32;
 
@@ -589,13 +637,13 @@
 	///
 	/// It returns the amount of weight used for that task.
 	</span><span class="kw">pub fn </span>process_deletion_queue_batch(weight_limit: Weight) -&gt; Weight {
-		<span class="kw">let </span>queue_len = &lt;DeletionQueue&lt;T&gt;&gt;::decode_len().unwrap_or(<span class="number">0</span>);
-		<span class="kw">if </span>queue_len == <span class="number">0 </span>{
+		<span class="kw">let </span><span class="kw-2">mut </span>queue = &lt;DeletionQueueManager&lt;T&gt;&gt;::load();
+
+		<span class="kw">if </span>queue.is_empty() {
 			<span class="kw">return </span>Weight::zero()
 		}
 
-		<span class="kw">let </span>(weight_per_key, <span class="kw-2">mut </span>remaining_key_budget) =
-			<span class="self">Self</span>::deletion_budget(queue_len, weight_limit);
+		<span class="kw">let </span>(weight_per_key, <span class="kw-2">mut </span>remaining_key_budget) = <span class="self">Self</span>::deletion_budget(weight_limit);
 
 		<span class="comment">// We want to check whether we have enough weight to decode the queue before
 		// proceeding. Too little weight for decoding might happen during runtime upgrades
@@ -604,30 +652,25 @@
 			<span class="kw">return </span>weight_limit
 		}
 
-		<span class="kw">let </span><span class="kw-2">mut </span>queue = &lt;DeletionQueue&lt;T&gt;&gt;::get();
+		<span class="kw">while </span>remaining_key_budget &gt; <span class="number">0 </span>{
+			<span class="kw">let </span><span class="prelude-val">Some</span>(entry) = queue.next() <span class="kw">else </span>{ <span class="kw">break </span>};
 
-		<span class="kw">while </span>!queue.is_empty() &amp;&amp; remaining_key_budget &gt; <span class="number">0 </span>{
-			<span class="comment">// Cannot panic due to loop condition
-			</span><span class="kw">let </span>trie = <span class="kw-2">&amp;mut </span>queue[<span class="number">0</span>];
 			<span class="attr">#[allow(deprecated)]
 			</span><span class="kw">let </span>outcome = child::kill_storage(
-				<span class="kw-2">&amp;</span>ChildInfo::new_default(<span class="kw-2">&amp;</span>trie.trie_id),
+				<span class="kw-2">&amp;</span>ChildInfo::new_default(<span class="kw-2">&amp;</span>entry.trie_id),
 				<span class="prelude-val">Some</span>(remaining_key_budget),
 			);
-			<span class="kw">let </span>keys_removed = <span class="kw">match </span>outcome {
+
+			<span class="kw">match </span>outcome {
 				<span class="comment">// This happens when our budget wasn&#39;t large enough to remove all keys.
-				</span>KillStorageResult::SomeRemaining(c) =&gt; c,
-				KillStorageResult::AllRemoved(c) =&gt; {
-					<span class="comment">// We do not care to preserve order. The contract is deleted already and
-					// no one waits for the trie to be deleted.
-					</span>queue.swap_remove(<span class="number">0</span>);
-					c
+				</span>KillStorageResult::SomeRemaining(<span class="kw">_</span>) =&gt; <span class="kw">return </span>weight_limit,
+				KillStorageResult::AllRemoved(keys_removed) =&gt; {
+					entry.remove();
+					remaining_key_budget = remaining_key_budget.saturating_sub(keys_removed);
 				},
 			};
-			remaining_key_budget = remaining_key_budget.saturating_sub(keys_removed);
 		}
 
-		&lt;DeletionQueue&lt;T&gt;&gt;::put(queue);
 		weight_limit.saturating_sub(weight_per_key.saturating_mul(u64::from(remaining_key_budget)))
 	}
 
@@ -635,25 +678,9 @@
 	</span><span class="kw">pub fn </span>load_code_hash(account: <span class="kw-2">&amp;</span>AccountIdOf&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;CodeHash&lt;T&gt;&gt; {
 		&lt;ContractInfoOf&lt;T&gt;&gt;::get(account).map(|i| i.code_hash)
 	}
-
-	<span class="doccomment">/// Fill up the queue in order to exercise the limits during testing.
-	</span><span class="attr">#[cfg(test)]
-	</span><span class="kw">pub fn </span>fill_queue_with_dummies() {
-		<span class="kw">use </span>frame_support::{traits::Get, BoundedVec};
-		<span class="kw">let </span>queue: Vec&lt;DeletedContract&gt; = (<span class="number">0</span>..T::DeletionQueueDepth::get())
-			.map(|<span class="kw">_</span>| DeletedContract { trie_id: TrieId::default() })
-			.collect();
-		<span class="kw">let </span>bounded: BoundedVec&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = queue.try_into().map_err(|<span class="kw">_</span>| ()).unwrap();
-		&lt;DeletionQueue&lt;T&gt;&gt;::put(bounded);
-	}
 }
 
-<span class="attr">#[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
-</span><span class="kw">pub struct </span>DeletedContract {
-	<span class="kw">pub</span>(<span class="kw">crate</span>) trie_id: TrieId,
-}
-
-<span class="doccomment">/// Information about what happended to the pre-existing value when calling [`ContractInfo::write`].
+<span class="doccomment">/// Information about what happened to the pre-existing value when calling [`ContractInfo::write`].
 </span><span class="attr">#[cfg_attr(test, derive(Debug, PartialEq))]
 </span><span class="kw">pub enum </span>WriteOutcome {
 	<span class="doccomment">/// No value existed at the specified key.
@@ -705,6 +732,87 @@
 	<span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
 		<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
 	</span>}
+}
+
+<span class="doccomment">/// Manage the removal of contracts storage that are marked for deletion.
+///
+/// When a contract is deleted by calling `seal_terminate` it becomes inaccessible
+/// immediately, but the deletion of the storage items it has accumulated is performed
+/// later by pulling the contract from the queue in the `on_idle` hook.
+</span><span class="attr">#[derive(Encode, Decode, TypeInfo, MaxEncodedLen, DefaultNoBound, Clone)]
+#[scale_info(skip_type_params(T))]
+</span><span class="kw">pub struct </span>DeletionQueueManager&lt;T: Config&gt; {
+	<span class="doccomment">/// Counter used as a key for inserting a new deleted contract in the queue.
+	/// The counter is incremented after each insertion.
+	</span>insert_counter: u32,
+	<span class="doccomment">/// The index used to read the next element to be deleted in the queue.
+	/// The counter is incremented after each deletion.
+	</span>delete_counter: u32,
+
+	_phantom: PhantomData&lt;T&gt;,
+}
+
+<span class="doccomment">/// View on a contract that is marked for deletion.
+</span><span class="kw">struct </span>DeletionQueueEntry&lt;<span class="lifetime">&#39;a</span>, T: Config&gt; {
+	<span class="doccomment">/// the trie id of the contract to delete.
+	</span>trie_id: TrieId,
+
+	<span class="doccomment">/// A mutable reference on the queue so that the contract can be removed, and none can be added
+	/// or read in the meantime.
+	</span>queue: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>DeletionQueueManager&lt;T&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: Config&gt; DeletionQueueEntry&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+	<span class="doccomment">/// Remove the contract from the deletion queue.
+	</span><span class="kw">fn </span>remove(<span class="self">self</span>) {
+		&lt;DeletionQueue&lt;T&gt;&gt;::remove(<span class="self">self</span>.queue.delete_counter);
+		<span class="self">self</span>.queue.delete_counter = <span class="self">self</span>.queue.delete_counter.wrapping_add(<span class="number">1</span>);
+		&lt;DeletionQueueCounter&lt;T&gt;&gt;::set(<span class="self">self</span>.queue.clone());
+	}
+}
+
+<span class="kw">impl</span>&lt;T: Config&gt; DeletionQueueManager&lt;T&gt; {
+	<span class="doccomment">/// Load the `DeletionQueueCounter`, so we can perform read or write operations on the
+	/// DeletionQueue storage.
+	</span><span class="kw">fn </span>load() -&gt; <span class="self">Self </span>{
+		&lt;DeletionQueueCounter&lt;T&gt;&gt;::get()
+	}
+
+	<span class="doccomment">/// Returns `true` if the queue contains no elements.
+	</span><span class="kw">fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="self">self</span>.insert_counter.wrapping_sub(<span class="self">self</span>.delete_counter) == <span class="number">0
+	</span>}
+
+	<span class="doccomment">/// Insert a contract in the deletion queue.
+	</span><span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trie_id: TrieId) {
+		&lt;DeletionQueue&lt;T&gt;&gt;::insert(<span class="self">self</span>.insert_counter, trie_id);
+		<span class="self">self</span>.insert_counter = <span class="self">self</span>.insert_counter.wrapping_add(<span class="number">1</span>);
+		&lt;DeletionQueueCounter&lt;T&gt;&gt;::set(<span class="self">self</span>.clone());
+	}
+
+	<span class="doccomment">/// Fetch the next contract to be deleted.
+	///
+	/// Note:
+	/// we use the delete counter to get the next value to read from the queue and thus don&#39;t pay
+	/// the cost of an extra call to `sp_io::storage::next_key` to lookup the next entry in the map
+	</span><span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DeletionQueueEntry&lt;T&gt;&gt; {
+		<span class="kw">if </span><span class="self">self</span>.is_empty() {
+			<span class="kw">return </span><span class="prelude-val">None
+		</span>}
+
+		<span class="kw">let </span>entry = &lt;DeletionQueue&lt;T&gt;&gt;::get(<span class="self">self</span>.delete_counter);
+		entry.map(|trie_id| DeletionQueueEntry { trie_id, queue: <span class="self">self </span>})
+	}
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">impl</span>&lt;T: Config&gt; DeletionQueueManager&lt;T&gt; {
+	<span class="kw">pub fn </span>from_test_values(insert_counter: u32, delete_counter: u32) -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{ insert_counter, delete_counter, _phantom: Default::default() }
+	}
+	<span class="kw">pub fn </span>as_test_tuple(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (u32, u32) {
+		(<span class="self">self</span>.insert_counter, <span class="self">self</span>.delete_counter)
+	}
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="pallet_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

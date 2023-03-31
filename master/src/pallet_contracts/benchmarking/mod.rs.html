@@ -3113,22 +3113,6 @@
 <a href="#3113" id="3113">3113</a>
 <a href="#3114" id="3114">3114</a>
 <a href="#3115" id="3115">3115</a>
-<a href="#3116" id="3116">3116</a>
-<a href="#3117" id="3117">3117</a>
-<a href="#3118" id="3118">3118</a>
-<a href="#3119" id="3119">3119</a>
-<a href="#3120" id="3120">3120</a>
-<a href="#3121" id="3121">3121</a>
-<a href="#3122" id="3122">3122</a>
-<a href="#3123" id="3123">3123</a>
-<a href="#3124" id="3124">3124</a>
-<a href="#3125" id="3125">3125</a>
-<a href="#3126" id="3126">3126</a>
-<a href="#3127" id="3127">3127</a>
-<a href="#3128" id="3128">3128</a>
-<a href="#3129" id="3129">3129</a>
-<a href="#3130" id="3130">3130</a>
-<a href="#3131" id="3131">3131</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3345,19 +3329,7 @@
 	</span>on_initialize_per_trie_key {
 		<span class="kw">let </span>k <span class="kw">in </span><span class="number">0</span>..<span class="number">1024</span>;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_storage(WasmModule::dummy(), k, T::Schedule::get().limits.payload_len)<span class="question-mark">?</span>;
-		instance.info()<span class="question-mark">?</span>.queue_trie_for_deletion()<span class="question-mark">?</span>;
-	}: {
-		ContractInfo::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
-	}
-
-	<span class="attr">#[pov_mode = Measured]
-	</span>on_initialize_per_queue_item {
-		<span class="kw">let </span>q <span class="kw">in </span><span class="number">0</span>..<span class="number">1024</span>.min(T::DeletionQueueDepth::get());
-		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0 </span>.. q {
-			<span class="kw">let </span>instance = Contract::&lt;T&gt;::with_index(i, WasmModule::dummy(), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-			instance.info()<span class="question-mark">?</span>.queue_trie_for_deletion()<span class="question-mark">?</span>;
-			ContractInfoOf::&lt;T&gt;::remove(instance.account_id);
-		}
+		instance.info()<span class="question-mark">?</span>.queue_trie_for_deletion();
 	}: {
 		ContractInfo::&lt;T&gt;::process_deletion_queue_batch(Weight::MAX)
 	}
@@ -6151,16 +6123,12 @@
 	</span>print_schedule {
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span>{
-			<span class="kw">let </span>weight_limit = T::DeletionWeightLimit::get();
-			<span class="kw">let </span>max_queue_depth = T::DeletionQueueDepth::get() <span class="kw">as </span>usize;
-			<span class="kw">let </span>empty_queue_throughput = ContractInfo::&lt;T&gt;::deletion_budget(<span class="number">0</span>, weight_limit);
-			<span class="kw">let </span>full_queue_throughput = ContractInfo::&lt;T&gt;::deletion_budget(max_queue_depth, weight_limit);
+			<span class="kw">let </span>max_weight = &lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get().max_block;
+			<span class="kw">let </span>(weight_per_key, key_budget) = ContractInfo::&lt;T&gt;::deletion_budget(max_weight);
 			<span class="macro">println!</span>(<span class="string">&quot;{:#?}&quot;</span>, Schedule::&lt;T&gt;::default());
 			<span class="macro">println!</span>(<span class="string">&quot;###############################################&quot;</span>);
-			<span class="macro">println!</span>(<span class="string">&quot;Lazy deletion weight per key: {}&quot;</span>, empty_queue_throughput.<span class="number">0</span>);
-			<span class="macro">println!</span>(<span class="string">&quot;Lazy deletion throughput per block (empty queue, full queue): {}, {}&quot;</span>,
-				empty_queue_throughput.<span class="number">1</span>, full_queue_throughput.<span class="number">1</span>,
-			);
+			<span class="macro">println!</span>(<span class="string">&quot;Lazy deletion weight per key: {weight_per_key}&quot;</span>);
+			<span class="macro">println!</span>(<span class="string">&quot;Lazy deletion throughput per block: {key_budget}&quot;</span>);
 		}
 		<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
 		</span><span class="prelude-val">Err</span>(<span class="string">&quot;Run this bench with a native runtime in order to see the schedule.&quot;</span>)<span class="question-mark">?</span>;
