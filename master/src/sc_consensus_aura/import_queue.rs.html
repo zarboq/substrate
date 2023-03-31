@@ -419,12 +419,6 @@
 <a href="#419" id="419">419</a>
 <a href="#420" id="420">420</a>
 <a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -446,7 +440,7 @@
 </span><span class="doccomment">//! Module implementing the logic for verifying and importing AuRa blocks.
 
 </span><span class="kw">use crate</span>::{
-	aura_err, authorities, find_pre_digest, slot_author, AuthorityId, CompatibilityMode, Error,
+	authorities, standalone::SealVerificationError, AuthorityId, CompatibilityMode, Error,
 	LOG_TARGET,
 };
 <span class="kw">use </span>codec::{Codec, Decode, Encode};
@@ -463,7 +457,7 @@
 <span class="kw">use </span>sp_block_builder::BlockBuilder <span class="kw">as </span>BlockBuilderApi;
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_consensus::Error <span class="kw">as </span>ConsensusError;
-<span class="kw">use </span>sp_consensus_aura::{digests::CompatibleDigestItem, inherents::AuraInherentData, AuraApi};
+<span class="kw">use </span>sp_consensus_aura::{inherents::AuraInherentData, AuraApi};
 <span class="kw">use </span>sp_consensus_slots::Slot;
 <span class="kw">use </span>sp_core::{crypto::Pair, ExecutionContext};
 <span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentDataProvider <span class="kw">as _</span>};
@@ -481,7 +475,7 @@
 </span><span class="kw">fn </span>check_header&lt;C, B: BlockT, P: Pair&gt;(
 	client: <span class="kw-2">&amp;</span>C,
 	slot_now: Slot,
-	<span class="kw-2">mut </span>header: B::Header,
+	header: B::Header,
 	hash: B::Hash,
 	authorities: <span class="kw-2">&amp;</span>[AuthorityId&lt;P&gt;],
 	check_for_equivocation: CheckForEquivocation,
@@ -491,27 +485,16 @@
 	C: sc_client_api::backend::AuxStore,
 	P::Public: Encode + Decode + PartialEq + Clone,
 {
-	<span class="kw">let </span>seal = header.digest_mut().pop().ok_or(Error::HeaderUnsealed(hash))<span class="question-mark">?</span>;
+	<span class="kw">let </span>check_result =
+		<span class="kw">crate</span>::standalone::check_header_slot_and_seal::&lt;B, P&gt;(slot_now, header, authorities);
 
-	<span class="kw">let </span>sig = seal.as_aura_seal().ok_or_else(|| aura_err(Error::HeaderBadSeal(hash)))<span class="question-mark">?</span>;
-
-	<span class="kw">let </span>slot = find_pre_digest::&lt;B, P::Signature&gt;(<span class="kw-2">&amp;</span>header)<span class="question-mark">?</span>;
-
-	<span class="kw">if </span>slot &gt; slot_now {
-		header.digest_mut().push(seal);
-		<span class="prelude-val">Ok</span>(CheckedHeader::Deferred(header, slot))
-	} <span class="kw">else </span>{
-		<span class="comment">// check the signature is valid under the expected authority and
-		// chain state.
-		</span><span class="kw">let </span>expected_author =
-			slot_author::&lt;P&gt;(slot, authorities).ok_or(Error::SlotAuthorNotFound)<span class="question-mark">?</span>;
-
-		<span class="kw">let </span>pre_hash = header.hash();
-
-		<span class="kw">if </span>P::verify(<span class="kw-2">&amp;</span>sig, pre_hash.as_ref(), expected_author) {
-			<span class="kw">if </span>check_for_equivocation.check_for_equivocation() {
+	<span class="kw">match </span>check_result {
+		<span class="prelude-val">Ok</span>((header, slot, seal)) =&gt; {
+			<span class="kw">let </span>expected_author = <span class="kw">crate</span>::standalone::slot_author::&lt;P&gt;(slot, <span class="kw-2">&amp;</span>authorities);
+			<span class="kw">let </span>should_equiv_check = check_for_equivocation.check_for_equivocation();
+			<span class="kw">if let </span>(<span class="bool-val">true</span>, <span class="prelude-val">Some</span>(expected)) = (should_equiv_check, expected_author) {
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(equivocation_proof) =
-					check_equivocation(client, slot_now, slot, <span class="kw-2">&amp;</span>header, expected_author)
+					check_equivocation(client, slot_now, slot, <span class="kw-2">&amp;</span>header, expected)
 						.map_err(Error::Client)<span class="question-mark">?
 				</span>{
 					<span class="macro">info!</span>(
@@ -525,9 +508,14 @@
 			}
 
 			<span class="prelude-val">Ok</span>(CheckedHeader::Checked(header, (slot, seal)))
-		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(Error::BadSignature(hash))
-		}
+		},
+		<span class="prelude-val">Err</span>(SealVerificationError::Deferred(header, slot)) =&gt;
+			<span class="prelude-val">Ok</span>(CheckedHeader::Deferred(header, slot)),
+		<span class="prelude-val">Err</span>(SealVerificationError::Unsealed) =&gt; <span class="prelude-val">Err</span>(Error::HeaderUnsealed(hash)),
+		<span class="prelude-val">Err</span>(SealVerificationError::BadSeal) =&gt; <span class="prelude-val">Err</span>(Error::HeaderBadSeal(hash)),
+		<span class="prelude-val">Err</span>(SealVerificationError::BadSignature) =&gt; <span class="prelude-val">Err</span>(Error::BadSignature(hash)),
+		<span class="prelude-val">Err</span>(SealVerificationError::SlotAuthorNotFound) =&gt; <span class="prelude-val">Err</span>(Error::SlotAuthorNotFound),
+		<span class="prelude-val">Err</span>(SealVerificationError::InvalidPreDigest(e)) =&gt; <span class="prelude-val">Err</span>(Error::from(e)),
 	}
 }
 

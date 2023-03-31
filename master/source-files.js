@@ -139,7 +139,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_client_api":["",[["notifications",[],["registry.rs"]]],["backend.rs","call_executor.rs","client.rs","execution_extensions.rs","in_mem.rs","leaves.rs","lib.rs","notifications.rs","proof_provider.rs"]],\
 "sc_client_db":["",[],["bench.rs","children.rs","lib.rs","offchain.rs","parity_db.rs","pinned_blocks_cache.rs","record_stats_state.rs","stats.rs","upgrade.rs","utils.rs"]],\
 "sc_consensus":["",[["import_queue",[],["basic_queue.rs","buffered_link.rs","mock.rs"]]],["block_import.rs","import_queue.rs","lib.rs","longest_chain.rs","metrics.rs","shared_data.rs"]],\
-"sc_consensus_aura":["",[],["import_queue.rs","lib.rs"]],\
+"sc_consensus_aura":["",[],["import_queue.rs","lib.rs","standalone.rs"]],\
 "sc_consensus_babe":["",[],["authorship.rs","aux_schema.rs","lib.rs","migration.rs","verification.rs"]],\
 "sc_consensus_babe_rpc":["",[],["lib.rs"]],\
 "sc_consensus_beefy":["",[["communication",[["request_response",[],["incoming_requests_handler.rs","mod.rs","outgoing_requests_engine.rs"]]],["gossip.rs","mod.rs","notification.rs","peers.rs"]]],["aux_schema.rs","error.rs","import.rs","justification.rs","keystore.rs","lib.rs","metrics.rs","round.rs","worker.rs"]],\
