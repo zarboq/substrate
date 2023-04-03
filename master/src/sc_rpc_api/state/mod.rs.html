@@ -286,6 +286,10 @@
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -321,7 +325,7 @@
 <span class="doccomment">/// Substrate state API
 </span><span class="attr">#[rpc(client, server)]
 </span><span class="kw">pub trait </span>StateApi&lt;Hash&gt; {
-	<span class="doccomment">/// Call a contract at a block&#39;s state.
+	<span class="doccomment">/// Call a method from the runtime API at a block&#39;s state.
 	</span><span class="attr">#[method(name = <span class="string">&quot;state_call&quot;</span>, aliases = [<span class="string">&quot;state_callAt&quot;</span>]</span>, blocking)]
 	<span class="kw">fn </span>call(<span class="kw-2">&amp;</span><span class="self">self</span>, name: String, bytes: Bytes, hash: <span class="prelude-ty">Option</span>&lt;Hash&gt;) -&gt; RpcResult&lt;Bytes&gt;;
 
@@ -373,8 +377,10 @@
 	<span class="doccomment">/// Query historical storage entries (by key) starting from a block given as the second
 	/// parameter.
 	///
-	/// NOTE This first returned result contains the initial state of storage for all keys.
+	/// NOTE: The first returned result contains the initial state of storage for all keys.
 	/// Subsequent values in the vector represent changes to the previous state (diffs).
+	/// WARNING: The time complexity of this query is O(|keys|*dist(block, hash)), and the
+	/// memory complexity is O(dist(block, hash)) -- use with caution.
 	</span><span class="attr">#[method(name = <span class="string">&quot;state_queryStorage&quot;</span>, blocking)]
 	</span><span class="kw">fn </span>query_storage(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -383,7 +389,9 @@
 		hash: <span class="prelude-ty">Option</span>&lt;Hash&gt;,
 	) -&gt; RpcResult&lt;Vec&lt;StorageChangeSet&lt;Hash&gt;&gt;&gt;;
 
-	<span class="doccomment">/// Query storage entries (by key) starting at block hash given as the second parameter.
+	<span class="doccomment">/// Query storage entries (by key) at a block hash given as the second parameter.
+	/// NOTE: Each StorageChangeSet in the result corresponds to exactly one element --
+	/// the storage value under an input key at the input block hash.
 	</span><span class="attr">#[method(name = <span class="string">&quot;state_queryStorageAt&quot;</span>, blocking)]
 	</span><span class="kw">fn </span>query_storage_at(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
