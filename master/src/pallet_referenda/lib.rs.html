@@ -1271,7 +1271,6 @@
 <a href="#1271" id="1271">1271</a>
 <a href="#1272" id="1272">1272</a>
 <a href="#1273" id="1273">1273</a>
-<a href="#1274" id="1274">1274</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2148,22 +2147,21 @@
 		</span><span class="kw">let </span>when = (when.saturating_add(alarm_interval.saturating_sub(One::one())) /
 			alarm_interval)
 			.saturating_mul(alarm_interval);
-		<span class="kw">let </span>maybe_result = T::Scheduler::schedule(
+		<span class="kw">let </span>result = T::Scheduler::schedule(
 			DispatchTime::At(when),
 			<span class="prelude-val">None</span>,
 			<span class="number">128u8</span>,
 			frame_system::RawOrigin::Root.into(),
 			call,
-		)
-		.ok()
-		.map(|x| (when, x));
-		<span class="macro">debug_assert!</span>(
-			maybe_result.is_some(),
-			<span class="string">&quot;Unable to schedule a new alarm at #{:?} (now: #{:?})?!&quot;</span>,
-			when,
-			frame_system::Pallet::&lt;T&gt;::block_number()
 		);
-		maybe_result
+		<span class="macro">debug_assert!</span>(
+			result.is_ok(),
+			<span class="string">&quot;Unable to schedule a new alarm at #{:?} (now: #{:?}), scheduler error: `{:?}`&quot;</span>,
+			when,
+			frame_system::Pallet::&lt;T&gt;::block_number(),
+			result.unwrap_err(),
+		);
+		result.ok().map(|x| (when, x))
 	}
 
 	<span class="doccomment">/// Mutate a referendum&#39;s `status` into the correct deciding state.
