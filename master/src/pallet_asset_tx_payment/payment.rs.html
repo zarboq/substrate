@@ -171,6 +171,7 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -195,7 +196,8 @@
 	traits::{
 		fungibles::{Balanced, Credit, Inspect},
 		tokens::{
-			Balance, BalanceConversion, Fortitude::Polite, Precision::Exact, Preservation::Protect,
+			Balance, ConversionToAssetBalance, Fortitude::Polite, Precision::Exact,
+			Preservation::Protect,
 		},
 	},
 	unsigned::TransactionValidityError,
@@ -260,7 +262,7 @@
 }
 
 <span class="doccomment">/// Implements the asset transaction for a balance to asset converter (implementing
-/// [`BalanceConversion`]) and a credit handler (implementing [`HandleCredit`]).
+/// [`ConversionToAssetBalance`]) and a credit handler (implementing [`HandleCredit`]).
 ///
 /// The credit handler is given the complete fee in terms of the asset used for the transaction.
 </span><span class="kw">pub struct </span>FungiblesAdapter&lt;CON, HC&gt;(PhantomData&lt;(CON, HC)&gt;);
@@ -270,7 +272,7 @@
 </span><span class="kw">impl</span>&lt;T, CON, HC&gt; OnChargeAssetTransaction&lt;T&gt; <span class="kw">for </span>FungiblesAdapter&lt;CON, HC&gt;
 <span class="kw">where
 	</span>T: Config,
-	CON: BalanceConversion&lt;BalanceOf&lt;T&gt;, AssetIdOf&lt;T&gt;, AssetBalanceOf&lt;T&gt;&gt;,
+	CON: ConversionToAssetBalance&lt;BalanceOf&lt;T&gt;, AssetIdOf&lt;T&gt;, AssetBalanceOf&lt;T&gt;&gt;,
 	HC: HandleCredit&lt;T::AccountId, T::Fungibles&gt;,
 	AssetIdOf&lt;T&gt;: FullCodec + Copy + MaybeSerializeDeserialize + Debug + Default + Eq + TypeInfo,
 {
