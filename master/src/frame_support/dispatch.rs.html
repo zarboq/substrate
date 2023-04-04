@@ -3895,6 +3895,11 @@
 <a href="#3895" id="3895">3895</a>
 <a href="#3896" id="3896">3896</a>
 <a href="#3897" id="3897">3897</a>
+<a href="#3898" id="3898">3898</a>
+<a href="#3899" id="3899">3899</a>
+<a href="#3900" id="3900">3900</a>
+<a href="#3901" id="3901">3901</a>
+<a href="#3902" id="3902">3902</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4447,28 +4452,7 @@
 
 <span class="comment">// TODO: Eventually remove these
 
-</span><span class="kw">impl </span>From&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt; <span class="kw">for </span>PostDispatchInfo {
-	<span class="kw">fn </span>from(maybe_actual_computation: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; <span class="self">Self </span>{
-		<span class="kw">let </span>actual_weight = <span class="kw">match </span>maybe_actual_computation {
-			<span class="prelude-val">Some</span>(actual_computation) =&gt; <span class="prelude-val">Some</span>(Weight::from_parts(actual_computation, <span class="number">0</span>)),
-			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-		};
-		<span class="self">Self </span>{ actual_weight, pays_fee: Default::default() }
-	}
-}
-
-<span class="kw">impl </span>From&lt;(<span class="prelude-ty">Option</span>&lt;u64&gt;, Pays)&gt; <span class="kw">for </span>PostDispatchInfo {
-	<span class="kw">fn </span>from(post_weight_info: (<span class="prelude-ty">Option</span>&lt;u64&gt;, Pays)) -&gt; <span class="self">Self </span>{
-		<span class="kw">let </span>(maybe_actual_time, pays_fee) = post_weight_info;
-		<span class="kw">let </span>actual_weight = <span class="kw">match </span>maybe_actual_time {
-			<span class="prelude-val">Some</span>(actual_time) =&gt; <span class="prelude-val">Some</span>(Weight::from_parts(actual_time, <span class="number">0</span>)),
-			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-		};
-		<span class="self">Self </span>{ actual_weight, pays_fee }
-	}
-}
-
-<span class="kw">impl</span>&lt;T&gt; ClassifyDispatch&lt;T&gt; <span class="kw">for </span>u64 {
+</span><span class="kw">impl</span>&lt;T&gt; ClassifyDispatch&lt;T&gt; <span class="kw">for </span>u64 {
 	<span class="kw">fn </span>classify_dispatch(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: T) -&gt; DispatchClass {
 		DispatchClass::Normal
 	}
@@ -4627,7 +4611,7 @@
 /// ```
 /// # #[macro_use]
 /// # extern crate frame_support;
-/// # use frame_support::{weights::Weight, dispatch::{DispatchResultWithPostInfo, WithPostDispatchInfo}};
+/// # use frame_support::{weights::Weight, dispatch::{DispatchResultWithPostInfo, WithPostDispatchInfo, PostDispatchInfo}};
 /// # use frame_system::{Config, ensure_signed};
 /// decl_module! {
 /// 	pub struct Module&lt;T: Config&gt; for enum Call where origin: T::RuntimeOrigin {
@@ -4641,7 +4625,7 @@
 /// 				return Ok(None::&lt;Weight&gt;.into());
 /// 			}
 /// 			// expensive calculation not executed: use only a portion of the weight
-/// 			Ok(Some(100_000).into())
+/// 			Ok(PostDispatchInfo { actual_weight: Some(Weight::from_parts(100_000, 0)), ..Default::default() })
 /// 		}
 /// 	}
 /// }
@@ -7111,7 +7095,7 @@
 			OnInitialize, OnRuntimeUpgrade, PalletInfo,
 		},
 	};
-	<span class="kw">use </span>sp_weights::RuntimeDbWeight;
+	<span class="kw">use </span>sp_weights::{RuntimeDbWeight, Weight};
 
 	<span class="kw">pub trait </span>Config: system::Config + Sized
 	<span class="kw">where
@@ -7432,13 +7416,24 @@
 	</span><span class="kw">fn </span>test_new_call_variant() {
 		Call::&lt;TraitImpl&gt;::new_call_variant_aux_0();
 	}
+
+	<span class="kw">pub fn </span>from_actual_ref_time(ref_time: <span class="prelude-ty">Option</span>&lt;u64&gt;) -&gt; PostDispatchInfo {
+		PostDispatchInfo {
+			actual_weight: ref_time.map(|t| Weight::from_all(t)),
+			pays_fee: Default::default(),
+		}
+	}
+
+	<span class="kw">pub fn </span>from_post_weight_info(ref_time: <span class="prelude-ty">Option</span>&lt;u64&gt;, pays_fee: Pays) -&gt; PostDispatchInfo {
+		PostDispatchInfo { actual_weight: ref_time.map(|t| Weight::from_all(t)), pays_fee }
+	}
 }
 
 <span class="attr">#[cfg(test)]
 </span><span class="comment">// Do not complain about unused `dispatch` and `dispatch_aux`.
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">mod </span>weight_tests {
-	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+	<span class="kw">use super</span>::{tests::<span class="kw-2">*</span>, <span class="kw-2">*</span>};
 	<span class="kw">use </span>sp_core::{parameter_types, Get};
 	<span class="kw">use </span>sp_weights::RuntimeDbWeight;
 
@@ -7552,9 +7547,12 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>extract_actual_weight_works() {
 		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>), ..Default::default() };
-		<span class="macro">assert_eq!</span>(extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">7</span>).into()), <span class="kw-2">&amp;</span>pre), Weight::from_parts(<span class="number">7</span>, <span class="number">0</span>));
 		<span class="macro">assert_eq!</span>(
-			extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">1000</span>).into()), <span class="kw-2">&amp;</span>pre),
+			extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_actual_ref_time(<span class="prelude-val">Some</span>(<span class="number">7</span>))), <span class="kw-2">&amp;</span>pre),
+			Weight::from_parts(<span class="number">7</span>, <span class="number">0</span>)
+		);
+		<span class="macro">assert_eq!</span>(
+			extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_actual_ref_time(<span class="prelude-val">Some</span>(<span class="number">1000</span>))), <span class="kw-2">&amp;</span>pre),
 			Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>)
 		);
 		<span class="macro">assert_eq!</span>(
@@ -7570,7 +7568,7 @@
 	</span><span class="kw">fn </span>extract_actual_weight_caps_at_pre_weight() {
 		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>), ..Default::default() };
 		<span class="macro">assert_eq!</span>(
-			extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">1250</span>).into()), <span class="kw-2">&amp;</span>pre),
+			extract_actual_weight(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_actual_ref_time(<span class="prelude-val">Some</span>(<span class="number">1250</span>))), <span class="kw-2">&amp;</span>pre),
 			Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>)
 		);
 		<span class="macro">assert_eq!</span>(
@@ -7585,10 +7583,19 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>extract_actual_pays_fee_works() {
 		<span class="kw">let </span>pre = DispatchInfo { weight: Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>), ..Default::default() };
-		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">7</span>).into()), <span class="kw-2">&amp;</span>pre), Pays::Yes);
-		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">1000</span>).into()), <span class="kw-2">&amp;</span>pre), Pays::Yes);
-		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>((<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::Yes).into()), <span class="kw-2">&amp;</span>pre), Pays::Yes);
-		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>((<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::No).into()), <span class="kw-2">&amp;</span>pre), Pays::No);
+		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_actual_ref_time(<span class="prelude-val">Some</span>(<span class="number">7</span>))), <span class="kw-2">&amp;</span>pre), Pays::Yes);
+		<span class="macro">assert_eq!</span>(
+			extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_actual_ref_time(<span class="prelude-val">Some</span>(<span class="number">1000</span>)).into()), <span class="kw-2">&amp;</span>pre),
+			Pays::Yes
+		);
+		<span class="macro">assert_eq!</span>(
+			extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_post_weight_info(<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::Yes)), <span class="kw-2">&amp;</span>pre),
+			Pays::Yes
+		);
+		<span class="macro">assert_eq!</span>(
+			extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_post_weight_info(<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::No)), <span class="kw-2">&amp;</span>pre),
+			Pays::No
+		);
 		<span class="macro">assert_eq!</span>(
 			extract_actual_pays_fee(
 				<span class="kw-2">&amp;</span><span class="prelude-val">Err</span>(DispatchError::BadOrigin.with_weight(Weight::from_parts(<span class="number">9</span>, <span class="number">0</span>))),
@@ -7612,9 +7619,12 @@
 			pays_fee: Pays::No,
 			..Default::default()
 		};
-		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">7</span>).into()), <span class="kw-2">&amp;</span>pre), Pays::No);
-		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="number">1000</span>).into()), <span class="kw-2">&amp;</span>pre), Pays::No);
-		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>((<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::Yes).into()), <span class="kw-2">&amp;</span>pre), Pays::No);
+		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_actual_ref_time(<span class="prelude-val">Some</span>(<span class="number">7</span>))), <span class="kw-2">&amp;</span>pre), Pays::No);
+		<span class="macro">assert_eq!</span>(extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_actual_ref_time(<span class="prelude-val">Some</span>(<span class="number">1000</span>))), <span class="kw-2">&amp;</span>pre), Pays::No);
+		<span class="macro">assert_eq!</span>(
+			extract_actual_pays_fee(<span class="kw-2">&amp;</span><span class="prelude-val">Ok</span>(from_post_weight_info(<span class="prelude-val">Some</span>(<span class="number">1000</span>), Pays::Yes)), <span class="kw-2">&amp;</span>pre),
+			Pays::No
+		);
 	}
 }
 

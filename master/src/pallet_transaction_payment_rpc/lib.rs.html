@@ -175,23 +175,6 @@
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -220,7 +203,7 @@
 	types::error::{CallError, ErrorCode, ErrorObject},
 };
 <span class="kw">use </span>pallet_transaction_payment_rpc_runtime_api::{FeeDetails, InclusionFee, RuntimeDispatchInfo};
-<span class="kw">use </span>sp_api::{ApiExt, ProvideRuntimeApi};
+<span class="kw">use </span>sp_api::ProvideRuntimeApi;
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_core::Bytes;
 <span class="kw">use </span>sp_rpc::number::NumberOrHex;
@@ -275,7 +258,7 @@
 <span class="kw">impl</span>&lt;C, Block, Balance&gt;
 	TransactionPaymentApiServer&lt;
 		&lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
-		RuntimeDispatchInfo&lt;Balance, sp_weights::OldWeight&gt;,
+		RuntimeDispatchInfo&lt;Balance, sp_weights::Weight&gt;,
 	&gt; <span class="kw">for </span>TransactionPayment&lt;C, Block&gt;
 <span class="kw">where
 	</span>Block: BlockT,
@@ -287,7 +270,7 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		encoded_xt: Bytes,
 		at: <span class="prelude-ty">Option</span>&lt;Block::Hash&gt;,
-	) -&gt; RpcResult&lt;RuntimeDispatchInfo&lt;Balance, sp_weights::OldWeight&gt;&gt; {
+	) -&gt; RpcResult&lt;RuntimeDispatchInfo&lt;Balance, sp_weights::Weight&gt;&gt; {
 		<span class="kw">let </span>api = <span class="self">self</span>.client.runtime_api();
 		<span class="kw">let </span>at_hash = at.unwrap_or_else(|| <span class="self">self</span>.client.info().best_hash);
 
@@ -309,32 +292,15 @@
 			))
 		}
 
-		<span class="kw">let </span>api_version = api
-			.api_version::&lt;<span class="kw">dyn </span>TransactionPaymentRuntimeApi&lt;Block, Balance&gt;&gt;(at_hash)
-			.map_err(|e| map_err(e, <span class="string">&quot;Failed to get transaction payment runtime api version&quot;</span>))<span class="question-mark">?
-			</span>.ok_or_else(|| {
-				CallError::Custom(ErrorObject::owned(
-					Error::RuntimeError.into(),
-					<span class="string">&quot;Transaction payment runtime api wasn&#39;t found in the runtime&quot;</span>,
-					<span class="prelude-val">None</span>::&lt;String&gt;,
-				))
-			})<span class="question-mark">?</span>;
+		<span class="kw">let </span>res = api
+			.query_info(at_hash, uxt, encoded_len)
+			.map_err(|e| map_err(e, <span class="string">&quot;Unable to query dispatch info.&quot;</span>))<span class="question-mark">?</span>;
 
-		<span class="kw">if </span>api_version &lt; <span class="number">2 </span>{
-			<span class="attr">#[allow(deprecated)]
-			</span>api.query_info_before_version_2(at_hash, uxt, encoded_len)
-				.map_err(|e| map_err(e, <span class="string">&quot;Unable to query dispatch info.&quot;</span>).into())
-		} <span class="kw">else </span>{
-			<span class="kw">let </span>res = api
-				.query_info(at_hash, uxt, encoded_len)
-				.map_err(|e| map_err(e, <span class="string">&quot;Unable to query dispatch info.&quot;</span>))<span class="question-mark">?</span>;
-
-			<span class="prelude-val">Ok</span>(RuntimeDispatchInfo {
-				weight: sp_weights::OldWeight(res.weight.ref_time()),
-				class: res.class,
-				partial_fee: res.partial_fee,
-			})
-		}
+		<span class="prelude-val">Ok</span>(RuntimeDispatchInfo {
+			weight: res.weight,
+			class: res.class,
+			partial_fee: res.partial_fee,
+		})
 	}
 
 	<span class="kw">fn </span>query_fee_details(

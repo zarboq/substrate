@@ -1094,58 +1094,6 @@
 <a href="#1094" id="1094">1094</a>
 <a href="#1095" id="1095">1095</a>
 <a href="#1096" id="1096">1096</a>
-<a href="#1097" id="1097">1097</a>
-<a href="#1098" id="1098">1098</a>
-<a href="#1099" id="1099">1099</a>
-<a href="#1100" id="1100">1100</a>
-<a href="#1101" id="1101">1101</a>
-<a href="#1102" id="1102">1102</a>
-<a href="#1103" id="1103">1103</a>
-<a href="#1104" id="1104">1104</a>
-<a href="#1105" id="1105">1105</a>
-<a href="#1106" id="1106">1106</a>
-<a href="#1107" id="1107">1107</a>
-<a href="#1108" id="1108">1108</a>
-<a href="#1109" id="1109">1109</a>
-<a href="#1110" id="1110">1110</a>
-<a href="#1111" id="1111">1111</a>
-<a href="#1112" id="1112">1112</a>
-<a href="#1113" id="1113">1113</a>
-<a href="#1114" id="1114">1114</a>
-<a href="#1115" id="1115">1115</a>
-<a href="#1116" id="1116">1116</a>
-<a href="#1117" id="1117">1117</a>
-<a href="#1118" id="1118">1118</a>
-<a href="#1119" id="1119">1119</a>
-<a href="#1120" id="1120">1120</a>
-<a href="#1121" id="1121">1121</a>
-<a href="#1122" id="1122">1122</a>
-<a href="#1123" id="1123">1123</a>
-<a href="#1124" id="1124">1124</a>
-<a href="#1125" id="1125">1125</a>
-<a href="#1126" id="1126">1126</a>
-<a href="#1127" id="1127">1127</a>
-<a href="#1128" id="1128">1128</a>
-<a href="#1129" id="1129">1129</a>
-<a href="#1130" id="1130">1130</a>
-<a href="#1131" id="1131">1131</a>
-<a href="#1132" id="1132">1132</a>
-<a href="#1133" id="1133">1133</a>
-<a href="#1134" id="1134">1134</a>
-<a href="#1135" id="1135">1135</a>
-<a href="#1136" id="1136">1136</a>
-<a href="#1137" id="1137">1137</a>
-<a href="#1138" id="1138">1138</a>
-<a href="#1139" id="1139">1139</a>
-<a href="#1140" id="1140">1140</a>
-<a href="#1141" id="1141">1141</a>
-<a href="#1142" id="1142">1142</a>
-<a href="#1143" id="1143">1143</a>
-<a href="#1144" id="1144">1144</a>
-<a href="#1145" id="1145">1145</a>
-<a href="#1146" id="1146">1146</a>
-<a href="#1147" id="1147">1147</a>
-<a href="#1148" id="1148">1148</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1205,7 +1153,7 @@
 	traits::{
 		Backing, ChangeMembers, EnsureOrigin, Get, GetBacking, InitializeMembers, StorageVersion,
 	},
-	weights::{OldWeight, Weight},
+	weights::Weight,
 };
 
 <span class="attr">#[cfg(test)]
@@ -1705,61 +1653,9 @@
 			}
 		}
 
-		<span class="doccomment">/// Close a vote that is either approved, disapproved or whose voting period has ended.
-		///
-		/// May be called by any signed account in order to finish voting and close the proposal.
-		///
-		/// If called before the end of the voting period it will only close the vote if it is
-		/// has enough votes to be approved or disapproved.
-		///
-		/// If called after the end of the voting period abstentions are counted as rejections
-		/// unless there is a prime member set and the prime member cast an approval.
-		///
-		/// If the close operation completes successfully with disapproval, the transaction fee will
-		/// be waived. Otherwise execution of the approved operation will be charged to the caller.
-		///
-		/// + `proposal_weight_bound`: The maximum amount of weight consumed by executing the closed
-		/// proposal.
-		/// + `length_bound`: The upper bound for the length of the proposal in storage. Checked via
-		/// `storage::read` so it is `size_of::&lt;u32&gt;() == 4` larger than the pure length.
-		///
-		/// ## Complexity
-		/// - `O(B + M + P1 + P2)` where:
-		///   - `B` is `proposal` size in bytes (length-fee-bounded)
-		///   - `M` is members-count (code- and governance-bounded)
-		///   - `P1` is the complexity of `proposal` preimage.
-		///   - `P2` is proposal-count (code-bounded)
-		</span><span class="attr">#[pallet::call_index(<span class="number">4</span>)]
-		#[pallet::weight((
-			{
-				<span class="kw">let </span>b = <span class="kw-2">*</span>length_bound;
-				<span class="kw">let </span>m = T::MaxMembers::get();
-				<span class="kw">let </span>p1 = <span class="kw-2">*</span>proposal_weight_bound;
-				<span class="kw">let </span>p2 = T::MaxProposals::get();
-				T::WeightInfo::close_early_approved(b, m, p2)
-					.max(T::WeightInfo::close_early_disapproved(m, p2))
-					.max(T::WeightInfo::close_approved(b, m, p2))
-					.max(T::WeightInfo::close_disapproved(m, p2))
-					.saturating_add(p1.into())
-			},
-			DispatchClass::Operational
-		))]
-		#[allow(deprecated)]
-		#[deprecated(note = <span class="string">&quot;1D weight is used in this extrinsic, please migrate to `close`&quot;</span>)]
-		</span><span class="kw">pub fn </span>close_old_weight(
-			origin: OriginFor&lt;T&gt;,
-			proposal_hash: T::Hash,
-			<span class="attr">#[pallet::compact] </span>index: ProposalIndex,
-			<span class="attr">#[pallet::compact] </span>proposal_weight_bound: OldWeight,
-			<span class="attr">#[pallet::compact] </span>length_bound: u32,
-		) -&gt; DispatchResultWithPostInfo {
-			<span class="kw">let </span>proposal_weight_bound: Weight = proposal_weight_bound.into();
-			<span class="kw">let _ </span>= ensure_signed(origin)<span class="question-mark">?</span>;
+		<span class="comment">// Index 4 was `close_old_weight`; it was removed due to weights v1 deprecation.
 
-			<span class="self">Self</span>::do_close(proposal_hash, index, proposal_weight_bound, length_bound)
-		}
-
-		<span class="doccomment">/// Disapprove a proposal, close, and remove it from the system, regardless of its current
+		</span><span class="doccomment">/// Disapprove a proposal, close, and remove it from the system, regardless of its current
 		/// state.
 		///
 		/// Must be called by the Root origin.

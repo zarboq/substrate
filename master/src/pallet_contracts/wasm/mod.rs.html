@@ -3158,6 +3158,15 @@
 <a href="#3158" id="3158">3158</a>
 <a href="#3159" id="3159">3159</a>
 <a href="#3160" id="3160">3160</a>
+<a href="#3161" id="3161">3161</a>
+<a href="#3162" id="3162">3162</a>
+<a href="#3163" id="3163">3163</a>
+<a href="#3164" id="3164">3164</a>
+<a href="#3165" id="3165">3165</a>
+<a href="#3166" id="3166">3166</a>
+<a href="#3167" id="3167">3167</a>
+<a href="#3168" id="3168">3168</a>
+<a href="#3169" id="3169">3169</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3530,13 +3539,11 @@
 		gas::GasMeter,
 		storage::WriteOutcome,
 		tests::{RuntimeCall, Test, ALICE, BOB},
-		BalanceOf, CodeHash, Error, Pallet <span class="kw">as </span>Contracts,
+		BalanceOf, CodeHash, Error, OldWeight, Pallet <span class="kw">as </span>Contracts,
 	};
 	<span class="kw">use </span>assert_matches::assert_matches;
 	<span class="kw">use </span>frame_support::{
-		assert_err, assert_ok,
-		dispatch::DispatchResultWithPostInfo,
-		weights::{OldWeight, Weight},
+		assert_err, assert_ok, dispatch::DispatchResultWithPostInfo, weights::Weight,
 	};
 	<span class="kw">use </span>pallet_contracts_primitives::{ExecReturnValue, ReturnFlags};
 	<span class="kw">use </span>pretty_assertions::assert_eq;
@@ -4792,11 +4799,22 @@
 
 		<span class="kw">let </span>output = execute(CODE_GAS_LEFT, <span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>ext).unwrap();
 
-		<span class="kw">let </span>OldWeight(gas_left) = OldWeight::decode(<span class="kw-2">&amp;mut &amp;*</span>output.data).unwrap();
+		<span class="kw">let </span>gas_left = OldWeight::decode(<span class="kw-2">&amp;mut &amp;*</span>output.data).unwrap();
 		<span class="kw">let </span>actual_left = ext.gas_meter.gas_left();
 		<span class="comment">// TODO: account for proof size weight
 		</span><span class="macro">assert!</span>(gas_left &lt; gas_limit.ref_time(), <span class="string">&quot;gas_left must be less than initial&quot;</span>);
 		<span class="macro">assert!</span>(gas_left &gt; actual_left.ref_time(), <span class="string">&quot;gas_left must be greater than final&quot;</span>);
+	}
+
+	<span class="doccomment">/// Test that [`frame_support::weights::OldWeight`] en/decodes the same as our
+	/// [`crate::OldWeight`].
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>old_weight_decode() {
+		<span class="attr">#![allow(deprecated)]
+		</span><span class="kw">let </span>sp = frame_support::weights::OldWeight(<span class="number">42</span>).encode();
+		<span class="kw">let </span>our = <span class="kw">crate</span>::OldWeight::decode(<span class="kw-2">&amp;mut &amp;*</span>sp).unwrap();
+
+		<span class="macro">assert_eq!</span>(our, <span class="number">42</span>);
 	}
 
 	<span class="kw">const </span>CODE_VALUE_TRANSFERRED: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
