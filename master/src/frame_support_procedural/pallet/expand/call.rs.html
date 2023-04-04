@@ -383,6 +383,24 @@
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -439,30 +457,47 @@
 		.map(|fn_name| <span class="macro">format!</span>(<span class="string">&quot;Create a call with the variant `{}`.&quot;</span>, fn_name))
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-	<span class="kw">let </span><span class="kw-2">mut </span>warning_structs = Vec::new();
-	<span class="kw">let </span><span class="kw-2">mut </span>warning_names = Vec::new();
+	<span class="kw">let </span><span class="kw-2">mut </span>call_index_warnings = Vec::new();
 	<span class="comment">// Emit a warning for each call that is missing `call_index` when not in dev-mode.
 	</span><span class="kw">for </span>method <span class="kw">in </span><span class="kw-2">&amp;</span>methods {
 		<span class="kw">if </span>method.explicit_call_index || def.dev_mode {
 			<span class="kw">continue
 		</span>}
 
-		<span class="kw">let </span>name = syn::Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, method.name), method.name.span());
-		<span class="kw">let </span>warning: syn::ItemStruct = <span class="macro">syn::parse_quote!</span>(
-			<span class="attr">#[deprecated(note = <span class="string">r&quot;
-			Implicit call indices are deprecated in favour of explicit ones.
-			Please ensure that all calls have the `pallet::call_index` attribute or that the
-			`dev-mode` of the pallet is enabled. For more info see:
-			&lt;https://github.com/paritytech/substrate/pull/12891&gt; and
-			&lt;https://github.com/paritytech/substrate/pull/11381&gt;.&quot;</span>)]
-			#[allow(non_camel_case_types)]
-			</span><span class="kw">struct </span>#name;
-		);
-		warning_names.push(name);
-		warning_structs.push(warning);
+		<span class="kw">let </span>warning = proc_macro_warning::Warning::new_deprecated(<span class="string">&quot;ImplicitCallIndex&quot;</span>)
+			.index(call_index_warnings.len())
+			.old(<span class="string">&quot;use implicit call indices&quot;</span>)
+			.new(<span class="string">&quot;ensure that all calls have a `pallet::call_index` attribute or put the pallet into `dev` mode&quot;</span>)
+			.help_links(<span class="kw-2">&amp;</span>[
+				<span class="string">&quot;https://github.com/paritytech/substrate/pull/12891&quot;</span>,
+				<span class="string">&quot;https://github.com/paritytech/substrate/pull/11381&quot;
+			</span>])
+			.span(method.name.span())
+			.build();
+		call_index_warnings.push(warning);
 	}
 
 	<span class="kw">let </span>fn_weight = methods.iter().map(|method| <span class="kw-2">&amp;</span>method.weight);
+	<span class="kw">let </span><span class="kw-2">mut </span>weight_warnings = Vec::new();
+	<span class="kw">for </span>weight <span class="kw">in </span>fn_weight.clone() {
+		<span class="kw">if </span>def.dev_mode {
+			<span class="kw">continue
+		</span>}
+
+		<span class="kw">match </span>weight {
+			syn::Expr::Lit(lit) =&gt; {
+				<span class="kw">let </span>warning = proc_macro_warning::Warning::new_deprecated(<span class="string">&quot;ConstantWeight&quot;</span>)
+					.index(weight_warnings.len())
+					.old(<span class="string">&quot;use hard-coded constant as call weight&quot;</span>)
+					.new(<span class="string">&quot;benchmark all calls or put the pallet into `dev` mode&quot;</span>)
+					.help_link(<span class="string">&quot;https://github.com/paritytech/substrate/pull/13798&quot;</span>)
+					.span(lit.span())
+					.build();
+				weight_warnings.push(warning);
+			},
+			<span class="kw">_ </span>=&gt; {},
+		}
+	}
 
 	<span class="kw">let </span>fn_doc = methods.iter().map(|method| <span class="kw-2">&amp;</span>method.docs).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
@@ -588,9 +623,10 @@
 	<span class="macro">quote::quote_spanned!</span>(span =&gt;
 		<span class="kw">mod </span>warnings {
 			#(
-				#warning_structs
-				<span class="comment">// This triggers each deprecated warning once.
-				</span><span class="kw">const _</span>: <span class="prelude-ty">Option</span>&lt;#warning_names&gt; = <span class="prelude-val">None</span>;
+				#call_index_warnings
+			)*
+			#(
+				#weight_warnings
 			)*
 		}
 
