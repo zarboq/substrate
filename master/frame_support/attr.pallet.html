@@ -49,6 +49,7 @@ order in which they are mentioned in this document:</p>
 <li><a href="#inherent-palletinherent-optional"><code>pallet::inherent</code></a></li>
 <li><a href="#validate-unsigned-palletvalidate_unsigned-optional"><code>pallet::validate_unsigned</code></a></li>
 <li><a href="#origin-palletorigin-optional"><code>pallet::origin</code></a></li>
+<li><a href="#composable-enum-palletcomposable_enum-optional"><code>pallet::composable_enum</code></a></li>
 </ul>
 <p>Note that at compile-time, the <code>#[pallet]</code> macro will analyze and expand all of these
 attributes, ultimately removing their AST nodes before they can be parsed as real
@@ -569,6 +570,22 @@ can be stored on-chain (e.g. in <code>pallet-scheduler</code>), thus any change 
 as it might require some migration.</p>
 <p>NOTE: for instantiable pallets, the origin must be generic over <code>T</code> and <code>I</code>.</p>
 <p>Also see <a href="pallet_macros/attr.origin.html"><code>pallet::origin</code></a></p>
+<h2 id="composable-enum-palletcomposable_enum-optional"><a href="#composable-enum-palletcomposable_enum-optional">Composable enum <code>#[pallet::composable_enum]</code> (optional)</a></h2>
+<p>The <code>#[pallet::composable_enum]</code> attribute allows you to define an enum on the pallet which
+will then instruct <code>construct_runtime</code> to amalgamate all similarly-named enums from other
+pallets into an aggregate enum. This is similar in principle with how the aggregate enum is
+generated for <code>#[pallet::event]</code> or <code>#[pallet::error]</code>.</p>
+<p>The item tagged with <code>#[pallet::composable_enum]</code> MUST be an enum declaration, and can ONLY
+be the following identifiers: <code>FreezeReason</code>, <code>HoldReason</code>, <code>LockId</code> or <code>SlashReason</code>.
+Custom identifiers are not supported.</p>
+<p>NOTE: For ease of usage, when no <code>#[derive]</code> attributes are detected, the
+<code>#[pallet::composable_enum]</code> attribute will automatically derive the following traits for
+the enum:</p>
+
+<div class="example-wrap ignore"><div class='tooltip'>ⓘ</div><pre class="rust rust-example-rendered"><code>Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, MaxEncodedLen, TypeInfo,
+RuntimeDebug</code></pre></div>
+<p>The inverse is also true: if there are any #<a href="https://doc.rust-lang.org/nightly/core/macros/builtin/attr.derive.html" title="derive">derive</a> attributes present for the enum, then
+the attribute will not automatically derive any of the traits described above.</p>
 <h2 id="general-notes-on-instantiable-pallets"><a href="#general-notes-on-instantiable-pallets">General notes on instantiable pallets</a></h2>
 <p>An instantiable pallet is one where Config is generic, i.e. <code>Config&lt;I&gt;</code>. This allows
 runtime to implement multiple instances of the pallet, by using different types for the
