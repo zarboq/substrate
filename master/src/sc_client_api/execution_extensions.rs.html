@@ -310,12 +310,6 @@
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -345,6 +339,7 @@
 <span class="kw">use </span>sc_transaction_pool_api::OffchainSubmitTransaction;
 <span class="kw">use </span>sp_core::{
 	offchain::{<span class="self">self</span>, OffchainDbExt, OffchainWorkerExt, TransactionPoolExt},
+	traits::{ReadRuntimeVersion, ReadRuntimeVersionExt},
 	ExecutionContext,
 };
 <span class="kw">use </span>sp_externalities::{Extension, Extensions};
@@ -491,18 +486,7 @@
 	// during initialization.
 	</span>transaction_pool: RwLock&lt;<span class="prelude-ty">Option</span>&lt;Weak&lt;<span class="kw">dyn </span>OffchainSubmitTransaction&lt;Block&gt;&gt;&gt;&gt;,
 	extensions_factory: RwLock&lt;Box&lt;<span class="kw">dyn </span>ExtensionsFactory&lt;Block&gt;&gt;&gt;,
-}
-
-<span class="kw">impl</span>&lt;Block: BlockT&gt; Default <span class="kw">for </span>ExecutionExtensions&lt;Block&gt; {
-	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{
-			strategies: Default::default(),
-			keystore: <span class="prelude-val">None</span>,
-			offchain_db: <span class="prelude-val">None</span>,
-			transaction_pool: RwLock::new(<span class="prelude-val">None</span>),
-			extensions_factory: RwLock::new(Box::new(())),
-		}
-	}
+	read_runtime_version: Arc&lt;<span class="kw">dyn </span>ReadRuntimeVersion&gt;,
 }
 
 <span class="kw">impl</span>&lt;Block: BlockT&gt; ExecutionExtensions&lt;Block&gt; {
@@ -511,6 +495,7 @@
 		strategies: ExecutionStrategies,
 		keystore: <span class="prelude-ty">Option</span>&lt;KeystorePtr&gt;,
 		offchain_db: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>DbExternalitiesFactory&gt;&gt;,
+		read_runtime_version: Arc&lt;<span class="kw">dyn </span>ReadRuntimeVersion&gt;,
 	) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>transaction_pool = RwLock::new(<span class="prelude-val">None</span>);
 		<span class="kw">let </span>extensions_factory = Box::new(());
@@ -520,6 +505,7 @@
 			offchain_db,
 			extensions_factory: RwLock::new(extensions_factory),
 			transaction_pool,
+			read_runtime_version,
 		}
 	}
 
@@ -588,6 +574,8 @@
 				ext.<span class="number">0</span>,
 			)));
 		}
+
+		extensions.register(ReadRuntimeVersionExt::new(<span class="self">self</span>.read_runtime_version.clone()));
 
 		extensions
 	}
