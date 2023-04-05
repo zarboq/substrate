@@ -1437,6 +1437,16 @@
 <a href="#1437" id="1437">1437</a>
 <a href="#1438" id="1438">1438</a>
 <a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1603,13 +1613,21 @@
 	OffchainIndexSet(Vec&lt;u8&gt;, Vec&lt;u8&gt;),
 	OffchainIndexClear(Vec&lt;u8&gt;),
 	Store(Vec&lt;u8&gt;),
+	<span class="doccomment">/// Read X times from the state some data and then panic!
+	///
+	/// Returns `Ok` if it didn&#39;t read anything.
+	</span>ReadAndPanic(u32),
+	<span class="doccomment">/// Read X times from the state some data.
+	///
+	/// Panics if it can not read `X` times.
+	</span>Read(u32),
 }
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">impl </span>serde::Serialize <span class="kw">for </span>Extrinsic {
 	<span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, seq: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
 	<span class="kw">where
-		</span>S: ::serde::Serializer,
+		</span>S: serde::Serializer,
 	{
 		<span class="self">self</span>.using_encoded(|bytes| seq.serialize_bytes(bytes))
 	}
@@ -1649,6 +1667,8 @@
 			Extrinsic::OffchainIndexSet(key, value) =&gt; <span class="prelude-val">Ok</span>(Extrinsic::OffchainIndexSet(key, value)),
 			Extrinsic::OffchainIndexClear(key) =&gt; <span class="prelude-val">Ok</span>(Extrinsic::OffchainIndexClear(key)),
 			Extrinsic::Store(data) =&gt; <span class="prelude-val">Ok</span>(Extrinsic::Store(data)),
+			Extrinsic::ReadAndPanic(i) =&gt; <span class="prelude-val">Ok</span>(Extrinsic::ReadAndPanic(i)),
+			Extrinsic::Read(i) =&gt; <span class="prelude-val">Ok</span>(Extrinsic::Read(i)),
 		}
 	}
 }

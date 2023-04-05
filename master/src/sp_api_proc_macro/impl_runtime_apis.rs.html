@@ -738,6 +738,36 @@
 <a href="#738" id="738">738</a>
 <a href="#739" id="739">739</a>
 <a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -983,7 +1013,8 @@
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
 				call: F,
 			) -&gt; R <span class="kw">where </span><span class="self">Self</span>: Sized {
-				#crate_::OverlayedChanges::start_transaction(<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes));
+				<span class="self">self</span>.start_transaction();
+
 				<span class="kw-2">*</span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) = <span class="bool-val">false</span>;
 				<span class="kw">let </span>res = call(<span class="self">self</span>);
 				<span class="kw-2">*</span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) = <span class="bool-val">true</span>;
@@ -1087,16 +1118,49 @@
 					transactions; qed&quot;</span>;
 				<span class="kw">if </span><span class="kw-2">*</span>std::cell::RefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) {
 					<span class="kw">let </span>res = <span class="kw">if </span>commit {
-						#crate_::OverlayedChanges::commit_transaction(
+						<span class="kw">let </span>res = <span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
+							#crate_::ProofRecorder::&lt;Block&gt;::commit_transaction(<span class="kw-2">&amp;</span>recorder)
+						} <span class="kw">else </span>{
+							<span class="prelude-val">Ok</span>(())
+						};
+
+						<span class="kw">let </span>res2 = #crate_::OverlayedChanges::commit_transaction(
 							<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
-						)
+						);
+
+						<span class="comment">// Will panic on an `Err` below, however we should call commit
+						// on the recorder and the changes together.
+						</span>std::result::Result::and(res, std::result::Result::map_err(res2, drop))
 					} <span class="kw">else </span>{
-						#crate_::OverlayedChanges::rollback_transaction(
+						<span class="kw">let </span>res = <span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
+							#crate_::ProofRecorder::&lt;Block&gt;::rollback_transaction(<span class="kw-2">&amp;</span>recorder)
+						} <span class="kw">else </span>{
+							<span class="prelude-val">Ok</span>(())
+						};
+
+						<span class="kw">let </span>res2 = #crate_::OverlayedChanges::rollback_transaction(
 							<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
-						)
+						);
+
+						<span class="comment">// Will panic on an `Err` below, however we should call commit
+						// on the recorder and the changes together.
+						</span>std::result::Result::and(res, std::result::Result::map_err(res2, drop))
 					};
 
 					std::result::Result::expect(res, proof);
+				}
+			}
+
+			<span class="kw">fn </span>start_transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+				<span class="kw">if </span>!<span class="kw-2">*</span>std::cell::RefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) {
+					<span class="kw">return
+				</span>}
+
+				#crate_::OverlayedChanges::start_transaction(
+					<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
+				);
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
+					#crate_::ProofRecorder::&lt;Block&gt;::start_transaction(<span class="kw-2">&amp;</span>recorder);
 				}
 			}
 		}
@@ -1190,11 +1254,7 @@
 				params: std::vec::Vec&lt;u8&gt;,
 				fn_name: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(#crate_::RuntimeVersion) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 			) -&gt; std::result::Result&lt;std::vec::Vec&lt;u8&gt;, #crate_::ApiError&gt; {
-				<span class="kw">if </span><span class="kw-2">*</span>std::cell::RefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) {
-					#crate_::OverlayedChanges::start_transaction(
-						<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
-					);
-				}
+				<span class="self">self</span>.start_transaction();
 
 				<span class="kw">let </span>res = (|| {
 					<span class="kw">let </span>version = #crate_::CallApiAt::&lt;__SrApiBlock__&gt;::runtime_version_at(
