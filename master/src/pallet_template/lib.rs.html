@@ -101,6 +101,11 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre><pre class="rust"><code><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 
 </span><span class="doccomment">/// Edit this file to define custom logic or remove it if it is not needed.
@@ -116,9 +121,12 @@
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 </span><span class="kw">mod </span>benchmarking;
+<span class="kw">pub mod </span>weights;
+<span class="kw">pub use </span>weights::<span class="kw-2">*</span>;
 
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>frame_support::pallet_prelude::<span class="kw-2">*</span>;
 	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
 
@@ -130,6 +138,8 @@
 	</span><span class="kw">pub trait </span>Config: frame_system::Config {
 		<span class="doccomment">/// Because this pallet emits events, it depends on the runtime&#39;s definition of an event.
 		</span><span class="kw">type </span>RuntimeEvent: From&lt;Event&lt;<span class="self">Self</span>&gt;&gt; + IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
+		<span class="doccomment">/// Type representing the weight of this pallet
+		</span><span class="kw">type </span>WeightInfo: WeightInfo;
 	}
 
 	<span class="comment">// The pallet&#39;s runtime storage items.
@@ -167,7 +177,7 @@
 		<span class="doccomment">/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
-		#[pallet::weight(<span class="number">10_000 </span>+ T::DbWeight::get().writes(<span class="number">1</span>).ref_time())]
+		#[pallet::weight(T::WeightInfo::do_something())]
 		</span><span class="kw">pub fn </span>do_something(origin: OriginFor&lt;T&gt;, something: u32) -&gt; DispatchResult {
 			<span class="comment">// Check that the extrinsic was signed and get the signer.
 			// This function will return an error if the extrinsic is not signed.
@@ -185,7 +195,7 @@
 
 		<span class="doccomment">/// An example dispatchable that may throw a custom error.
 		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
-		#[pallet::weight(<span class="number">10_000 </span>+ T::DbWeight::get().reads_writes(<span class="number">1</span>,<span class="number">1</span>).ref_time())]
+		#[pallet::weight(T::WeightInfo::cause_error())]
 		</span><span class="kw">pub fn </span>cause_error(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>_who = ensure_signed(origin)<span class="question-mark">?</span>;
 

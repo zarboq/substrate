@@ -111,7 +111,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_staking_runtime_api":["",[],["lib.rs"]],\
 "pallet_state_trie_migration":["",[],["lib.rs","weights.rs"]],\
 "pallet_sudo":["",[],["extension.rs","lib.rs"]],\
-"pallet_template":["",[],["benchmarking.rs","lib.rs"]],\
+"pallet_template":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_timestamp":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_tips":["",[["migrations",[],["mod.rs","v4.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_transaction_payment":["",[],["lib.rs","payment.rs","types.rs"]],\
