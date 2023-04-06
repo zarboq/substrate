@@ -199,6 +199,10 @@
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -309,10 +313,12 @@
 				</span>.or_else(|e| {
 					<span class="kw">if </span><span class="macro">matches!</span>(e, substrate_rpc_client::Error::ParseError(<span class="kw">_</span>)) {
 						<span class="macro">log::error!</span>(
+							target: LOG_TARGET,
 							<span class="string">&quot;failed to parse the block format of remote against the local \
-						codebase. The block format has changed, and follow-chain cannot run in \
-						this case. Try running this command in a branch of your codebase that has \
-						the same block format as the remote chain. For now, we replace the block with an empty one&quot;
+							codebase. The block format has changed, and follow-chain cannot run in \
+							this case. Try running this command in a branch of your codebase that
+							has the same block format as the remote chain. For now, we replace the \
+							block with an empty one.&quot;
 						</span>);
 					}
 					<span class="prelude-val">Err</span>(rpc_err_handler(e))
@@ -349,7 +355,9 @@
 			state_ext,
 			<span class="kw-2">&amp;</span>executor,
 			<span class="string">&quot;TryRuntime_execute_block&quot;</span>,
-			(block, command.state_root_check, command.try_state.clone()).encode().as_ref(),
+			(block, command.state_root_check, <span class="bool-val">true</span>, command.try_state.clone())
+				.encode()
+				.as_ref(),
 			full_extensions(executor.clone()),
 			shared
 				.export_proof

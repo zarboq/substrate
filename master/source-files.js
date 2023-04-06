@@ -241,6 +241,7 @@ var sourcesIndex = JSON.parse('{\
 "subkey":["",[],["lib.rs"]],\
 "substrate":["",[],["main.rs"]],\
 "substrate_build_script_utils":["",[],["git.rs","lib.rs","version.rs"]],\
+"substrate_cli_test_utils":["",[],["lib.rs"]],\
 "substrate_frame_cli":["",[],["lib.rs","pallet_id.rs"]],\
 "substrate_frame_rpc_support":["",[],["lib.rs"]],\
 "substrate_frame_rpc_system":["",[],["lib.rs"]],\
