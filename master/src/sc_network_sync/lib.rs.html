@@ -4093,6 +4093,30 @@
 <a href="#4093" id="4093">4093</a>
 <a href="#4094" id="4094">4094</a>
 <a href="#4095" id="4095">4095</a>
+<a href="#4096" id="4096">4096</a>
+<a href="#4097" id="4097">4097</a>
+<a href="#4098" id="4098">4098</a>
+<a href="#4099" id="4099">4099</a>
+<a href="#4100" id="4100">4100</a>
+<a href="#4101" id="4101">4101</a>
+<a href="#4102" id="4102">4102</a>
+<a href="#4103" id="4103">4103</a>
+<a href="#4104" id="4104">4104</a>
+<a href="#4105" id="4105">4105</a>
+<a href="#4106" id="4106">4106</a>
+<a href="#4107" id="4107">4107</a>
+<a href="#4108" id="4108">4108</a>
+<a href="#4109" id="4109">4109</a>
+<a href="#4110" id="4110">4110</a>
+<a href="#4111" id="4111">4111</a>
+<a href="#4112" id="4112">4112</a>
+<a href="#4113" id="4113">4113</a>
+<a href="#4114" id="4114">4114</a>
+<a href="#4115" id="4115">4115</a>
+<a href="#4116" id="4116">4116</a>
+<a href="#4117" id="4117">4117</a>
+<a href="#4118" id="4118">4118</a>
+<a href="#4119" id="4119">4119</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4202,9 +4226,6 @@
 <span class="kw">pub mod </span>warp;
 <span class="kw">pub mod </span>warp_request_handler;
 
-<span class="doccomment">/// Maximum blocks to request in a single packet.
-</span><span class="kw">const </span>MAX_BLOCKS_TO_REQUEST: usize = <span class="number">64</span>;
-
 <span class="doccomment">/// Maximum blocks to store in the import queue.
 </span><span class="kw">const </span>MAX_IMPORTING_BLOCKS: usize = <span class="number">2048</span>;
 
@@ -4241,6 +4262,9 @@
 
 <span class="doccomment">/// Maximum allowed size for a block announce.
 </span><span class="kw">const </span>MAX_BLOCK_ANNOUNCE_SIZE: u64 = <span class="number">1024 </span>* <span class="number">1024</span>;
+
+<span class="doccomment">/// Maximum blocks per response.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>MAX_BLOCKS_IN_RESPONSE: usize = <span class="number">128</span>;
 
 <span class="kw">mod </span>rep {
 	<span class="kw">use </span>sc_peerset::ReputationChange <span class="kw">as </span>Rep;
@@ -4406,6 +4430,8 @@
 	</span>block_announce_validator: Box&lt;<span class="kw">dyn </span>BlockAnnounceValidator&lt;B&gt; + Send&gt;,
 	<span class="doccomment">/// Maximum number of peers to ask the same blocks in parallel.
 	</span>max_parallel_downloads: u32,
+	<span class="doccomment">/// Maximum blocks per request.
+	</span>max_blocks_per_request: u32,
 	<span class="doccomment">/// Total number of downloaded blocks.
 	</span>downloaded_blocks: usize,
 	<span class="doccomment">/// All block announcement that are currently being validated.
@@ -5498,6 +5524,7 @@
 		roles: Roles,
 		block_announce_validator: Box&lt;<span class="kw">dyn </span>BlockAnnounceValidator&lt;B&gt; + Send&gt;,
 		max_parallel_downloads: u32,
+		max_blocks_per_request: u32,
 		warp_sync_params: <span class="prelude-ty">Option</span>&lt;WarpSyncParams&lt;B&gt;&gt;,
 		metrics_registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Registry&gt;,
 		network_service: service::network::NetworkServiceHandle,
@@ -5532,6 +5559,7 @@
 			allowed_requests: Default::default(),
 			block_announce_validator,
 			max_parallel_downloads,
+			max_blocks_per_request,
 			downloaded_blocks: <span class="number">0</span>,
 			block_announce_validation: Default::default(),
 			block_announce_validation_per_peer_stats: Default::default(),
@@ -6460,6 +6488,7 @@
 		<span class="kw">let </span>queue = <span class="kw-2">&amp;</span><span class="self">self</span>.queue_blocks;
 		<span class="kw">let </span>allowed_requests = <span class="self">self</span>.allowed_requests.take();
 		<span class="kw">let </span>max_parallel = <span class="kw">if </span>is_major_syncing { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="self">self</span>.max_parallel_downloads };
+		<span class="kw">let </span>max_blocks_per_request = <span class="self">self</span>.max_blocks_per_request;
 		<span class="kw">let </span>gap_sync = <span class="kw-2">&amp;mut </span><span class="self">self</span>.gap_sync;
 		<span class="self">self</span>.peers
 			.iter_mut()
@@ -6499,6 +6528,7 @@
 					blocks,
 					attrs,
 					max_parallel,
+					max_blocks_per_request,
 					last_finalized,
 					best_queued,
 				) {
@@ -6525,6 +6555,7 @@
 							client.block_status(<span class="kw-2">*</span>hash).unwrap_or(BlockStatus::Unknown)
 						}
 					},
+					max_blocks_per_request,
 				) {
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Downloading fork {:?} from {}&quot;</span>, hash, id);
 					peer.state = PeerSyncState::DownloadingStale(hash);
@@ -6537,6 +6568,7 @@
 						attrs,
 						sync.target,
 						sync.best_queued_number,
+						max_blocks_per_request,
 					)
 				}) {
 					peer.state = PeerSyncState::DownloadingGap(range.start);
@@ -7005,6 +7037,7 @@
 	blocks: <span class="kw-2">&amp;mut </span>BlockCollection&lt;B&gt;,
 	attrs: BlockAttributes,
 	max_parallel_downloads: u32,
+	max_blocks_per_request: u32,
 	finalized: NumberFor&lt;B&gt;,
 	best_num: NumberFor&lt;B&gt;,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(Range&lt;NumberFor&lt;B&gt;&gt;, BlockRequest&lt;B&gt;)&gt; {
@@ -7020,7 +7053,7 @@
 	}
 	<span class="kw">let </span>range = blocks.needed_blocks(
 		<span class="kw-2">*</span>id,
-		MAX_BLOCKS_TO_REQUEST,
+		max_blocks_per_request,
 		peer.best_number,
 		peer.common_number,
 		max_parallel_downloads,
@@ -7055,10 +7088,11 @@
 	attrs: BlockAttributes,
 	target: NumberFor&lt;B&gt;,
 	common_number: NumberFor&lt;B&gt;,
+	max_blocks_per_request: u32,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(Range&lt;NumberFor&lt;B&gt;&gt;, BlockRequest&lt;B&gt;)&gt; {
 	<span class="kw">let </span>range = blocks.needed_blocks(
 		<span class="kw-2">*</span>id,
-		MAX_BLOCKS_TO_REQUEST,
+		max_blocks_per_request,
 		std::cmp::min(peer.best_number, target),
 		common_number,
 		<span class="number">1</span>,
@@ -7087,6 +7121,7 @@
 	finalized: NumberFor&lt;B&gt;,
 	attributes: BlockAttributes,
 	check_block: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span>B::Hash) -&gt; BlockStatus,
+	max_blocks_per_request: u32,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;(B::Hash, BlockRequest&lt;B&gt;)&gt; {
 	targets.retain(|hash, r| {
 		<span class="kw">if </span>r.number &lt;= finalized {
@@ -7106,7 +7141,7 @@
 		<span class="comment">// Download the fork only if it is behind or not too far ahead our tip of the chain
 		// Otherwise it should be downloaded in full sync mode.
 		</span><span class="kw">if </span>r.number &lt;= best_num ||
-			(r.number - best_num).saturated_into::&lt;u32&gt;() &lt; MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32
+			(r.number - best_num).saturated_into::&lt;u32&gt;() &lt; max_blocks_per_request <span class="kw">as </span>u32
 		{
 			<span class="kw">let </span>parent_status = r.parent_hash.as_ref().map_or(BlockStatus::Unknown, check_block);
 			<span class="kw">let </span>count = <span class="kw">if </span>parent_status == BlockStatus::Unknown {
@@ -7294,6 +7329,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			block_announce_validator,
 			<span class="number">1</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
@@ -7360,6 +7396,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			Box::new(DefaultBlockAnnounceValidator),
 			<span class="number">1</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
@@ -7541,6 +7578,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			Box::new(DefaultBlockAnnounceValidator),
 			<span class="number">5</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
@@ -7667,6 +7705,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			Box::new(DefaultBlockAnnounceValidator),
 			<span class="number">5</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
@@ -7681,6 +7720,7 @@
 		<span class="kw">let </span>peer_id2 = PeerId::random();
 
 		<span class="kw">let </span>best_block = blocks.last().unwrap().clone();
+		<span class="kw">let </span>max_blocks_to_request = sync.max_blocks_per_request;
 		<span class="comment">// Connect the node we will sync from
 		</span>sync.new_peer(peer_id1, best_block.hash(), <span class="kw-2">*</span>best_block.header().number())
 			.unwrap();
@@ -7690,8 +7730,8 @@
 		<span class="kw">while </span>best_block_num &lt; MAX_DOWNLOAD_AHEAD {
 			<span class="kw">let </span>request = get_block_request(
 				<span class="kw-2">&amp;mut </span>sync,
-				FromBlock::Number(MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32,
+				FromBlock::Number(max_blocks_to_request <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
+				max_blocks_to_request <span class="kw">as </span>u32,
 				<span class="kw-2">&amp;</span>peer_id1,
 			);
 
@@ -7705,14 +7745,14 @@
 			<span class="kw">let </span>res = sync.on_block_data(<span class="kw-2">&amp;</span>peer_id1, <span class="prelude-val">Some</span>(request), response).unwrap();
 			<span class="macro">assert!</span>(<span class="macro">matches!</span>(
 				res,
-				OnBlockData::Import(<span class="kw">_</span>, blocks) <span class="kw">if </span>blocks.len() == MAX_BLOCKS_TO_REQUEST
+				OnBlockData::Import(<span class="kw">_</span>, blocks) <span class="kw">if </span>blocks.len() == max_blocks_to_request <span class="kw">as </span>usize
 			),);
 
-			best_block_num += MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32;
+			best_block_num += max_blocks_to_request <span class="kw">as </span>u32;
 
 			<span class="kw">let _ </span>= sync.on_blocks_processed(
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
 				resp_blocks
 					.iter()
 					.rev()
@@ -7770,8 +7810,8 @@
 		// peer 2 as well.
 		</span>get_block_request(
 			<span class="kw-2">&amp;mut </span>sync,
-			FromBlock::Number(peer1_from + MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u64),
-			MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32,
+			FromBlock::Number(peer1_from + max_blocks_to_request <span class="kw">as </span>u64),
+			max_blocks_to_request <span class="kw">as </span>u32,
 			<span class="kw-2">&amp;</span>peer_id2,
 		);
 	}
@@ -7823,6 +7863,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			Box::new(DefaultBlockAnnounceValidator),
 			<span class="number">5</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
@@ -7868,11 +7909,12 @@
 
 		<span class="comment">// Now request and import the fork.
 		</span><span class="kw">let </span><span class="kw-2">mut </span>best_block_num = <span class="kw-2">*</span>finalized_block.header().number() <span class="kw">as </span>u32;
+		<span class="kw">let </span>max_blocks_to_request = sync.max_blocks_per_request;
 		<span class="kw">while </span>best_block_num &lt; <span class="kw-2">*</span>fork_blocks.last().unwrap().header().number() <span class="kw">as </span>u32 - <span class="number">1 </span>{
 			<span class="kw">let </span>request = get_block_request(
 				<span class="kw-2">&amp;mut </span>sync,
-				FromBlock::Number(MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32,
+				FromBlock::Number(max_blocks_to_request <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
+				max_blocks_to_request <span class="kw">as </span>u32,
 				<span class="kw-2">&amp;</span>peer_id1,
 			);
 
@@ -7886,14 +7928,14 @@
 			<span class="kw">let </span>res = sync.on_block_data(<span class="kw-2">&amp;</span>peer_id1, <span class="prelude-val">Some</span>(request), response).unwrap();
 			<span class="macro">assert!</span>(<span class="macro">matches!</span>(
 				res,
-				OnBlockData::Import(<span class="kw">_</span>, blocks) <span class="kw">if </span>blocks.len() == MAX_BLOCKS_TO_REQUEST
+				OnBlockData::Import(<span class="kw">_</span>, blocks) <span class="kw">if </span>blocks.len() == sync.max_blocks_per_request <span class="kw">as </span>usize
 			),);
 
-			best_block_num += MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32;
+			best_block_num += sync.max_blocks_per_request <span class="kw">as </span>u32;
 
 			<span class="kw">let _ </span>= sync.on_blocks_processed(
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
 				resp_blocks
 					.iter()
 					.rev()
@@ -7964,6 +8006,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			Box::new(DefaultBlockAnnounceValidator),
 			<span class="number">5</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
@@ -8009,10 +8052,12 @@
 
 		<span class="comment">// Now request and import the fork.
 		</span><span class="kw">let </span><span class="kw-2">mut </span>best_block_num = <span class="kw-2">*</span>finalized_block.header().number() <span class="kw">as </span>u32;
+		<span class="kw">let </span>max_blocks_to_request = sync.max_blocks_per_request;
+
 		<span class="kw">let </span><span class="kw-2">mut </span>request = get_block_request(
 			<span class="kw-2">&amp;mut </span>sync,
-			FromBlock::Number(MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
-			MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32,
+			FromBlock::Number(max_blocks_to_request <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
+			max_blocks_to_request <span class="kw">as </span>u32,
 			<span class="kw-2">&amp;</span>peer_id1,
 		);
 		<span class="kw">let </span>last_block_num = <span class="kw-2">*</span>fork_blocks.last().unwrap().header().number() <span class="kw">as </span>u32 - <span class="number">1</span>;
@@ -8027,18 +8072,18 @@
 			<span class="kw">let </span>res = sync.on_block_data(<span class="kw-2">&amp;</span>peer_id1, <span class="prelude-val">Some</span>(request.clone()), response).unwrap();
 			<span class="macro">assert!</span>(<span class="macro">matches!</span>(
 				res,
-				OnBlockData::Import(<span class="kw">_</span>, blocks) <span class="kw">if </span>blocks.len() == MAX_BLOCKS_TO_REQUEST
+				OnBlockData::Import(<span class="kw">_</span>, blocks) <span class="kw">if </span>blocks.len() == max_blocks_to_request <span class="kw">as </span>usize
 			),);
 
-			best_block_num += MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32;
+			best_block_num += max_blocks_to_request <span class="kw">as </span>u32;
 
 			<span class="kw">if </span>best_block_num &lt; last_block_num {
 				<span class="comment">// make sure we&#39;re not getting a duplicate request in the time before the blocks are
 				// processed
 				</span>request = get_block_request(
 					<span class="kw-2">&amp;mut </span>sync,
-					FromBlock::Number(MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
-					MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>u32,
+					FromBlock::Number(max_blocks_to_request <span class="kw">as </span>u64 + best_block_num <span class="kw">as </span>u64),
+					max_blocks_to_request <span class="kw">as </span>u32,
 					<span class="kw-2">&amp;</span>peer_id1,
 				);
 			}
@@ -8060,16 +8105,17 @@
 
 			<span class="comment">// The import queue may send notifications in batches of varying size. So we simulate
 			// this here by splitting the batch into 2 notifications.
-			</span><span class="kw">let </span>second_batch = notify_imported.split_off(notify_imported.len() / <span class="number">2</span>);
+			</span><span class="kw">let </span>max_blocks_to_request = sync.max_blocks_per_request;
+			<span class="kw">let </span>second_batch = notify_imported.split_off(notify_imported.len() / <span class="number">2</span>);
 			<span class="kw">let _ </span>= sync.on_blocks_processed(
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
 				notify_imported,
 			);
 
 			<span class="kw">let _ </span>= sync.on_blocks_processed(
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
-				MAX_BLOCKS_TO_REQUEST <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
+				max_blocks_to_request <span class="kw">as </span>usize,
 				second_batch,
 			);
 
@@ -8105,6 +8151,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			Box::new(DefaultBlockAnnounceValidator),
 			<span class="number">1</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,
@@ -8150,6 +8197,7 @@
 			Roles::from(<span class="kw-2">&amp;</span>Role::Full),
 			Box::new(DefaultBlockAnnounceValidator),
 			<span class="number">1</span>,
+			<span class="number">64</span>,
 			<span class="prelude-val">None</span>,
 			<span class="prelude-val">None</span>,
 			chain_sync_network_handle,

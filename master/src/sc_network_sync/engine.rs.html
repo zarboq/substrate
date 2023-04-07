@@ -866,6 +866,15 @@
 <a href="#866" id="866">866</a>
 <a href="#867" id="867">867</a>
 <a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2023 Parity Technologies (UK) Ltd.
@@ -1132,6 +1141,14 @@
 			SyncOperationMode::Warp =&gt; SyncMode::Warp,
 		};
 		<span class="kw">let </span>max_parallel_downloads = network_config.max_parallel_downloads;
+		<span class="kw">let </span>max_blocks_per_request = <span class="kw">if </span>network_config.max_blocks_per_request &gt;
+			<span class="kw">crate</span>::MAX_BLOCKS_IN_RESPONSE <span class="kw">as </span>u32
+		{
+			<span class="macro">log::info!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;clamping maximum blocks per request to {}&quot;</span>, <span class="kw">crate</span>::MAX_BLOCKS_IN_RESPONSE);
+			<span class="kw">crate</span>::MAX_BLOCKS_IN_RESPONSE <span class="kw">as </span>u32
+		} <span class="kw">else </span>{
+			network_config.max_blocks_per_request
+		};
 		<span class="kw">let </span>cache_capacity = NonZeroUsize::new(
 			(network_config.default_peers_set.in_peers <span class="kw">as </span>usize +
 				network_config.default_peers_set.out_peers <span class="kw">as </span>usize)
@@ -1186,6 +1203,7 @@
 			roles,
 			block_announce_validator,
 			max_parallel_downloads,
+			max_blocks_per_request,
 			warp_sync_params,
 			metrics_registry,
 			network_service.clone(),
