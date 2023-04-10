@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `client/executor/src/native_executor.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>native_executor.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-3dd8914bdd6e2ce5.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-1469fca9efc07bcb.css"><link rel="stylesheet" disabled href="../../static.files/dark-e9b7e5d8ba0dc980.css"><link rel="stylesheet" disabled href="../../static.files/ayu-0c1cf144240c9f40.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-799a64abec831f72.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../sc_executor/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `client/executor/src/executor.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>executor.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-3dd8914bdd6e2ce5.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-1469fca9efc07bcb.css"><link rel="stylesheet" disabled href="../../static.files/dark-e9b7e5d8ba0dc980.css"><link rel="stylesheet" disabled href="../../static.files/ayu-0c1cf144240c9f40.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-799a64abec831f72.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../sc_executor/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -740,6 +740,15 @@
 <a href="#740" id="740">740</a>
 <a href="#741" id="741">741</a>
 <a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -774,15 +783,13 @@
 <span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>sc_executor_common::{
 	runtime_blob::RuntimeBlob,
-	wasm_runtime::{AllocationStats, HeapAllocStrategy, WasmInstance, WasmModule},
+	wasm_runtime::{
+		AllocationStats, HeapAllocStrategy, WasmInstance, WasmModule, DEFAULT_HEAP_ALLOC_STRATEGY,
+	},
 };
 <span class="kw">use </span>sp_core::traits::{CallContext, CodeExecutor, Externalities, RuntimeCode};
 <span class="kw">use </span>sp_version::{GetNativeVersion, NativeVersion, RuntimeVersion};
 <span class="kw">use </span>sp_wasm_interface::{ExtendedHostFunctions, HostFunctions};
-
-<span class="doccomment">/// Default heap allocation strategy.
-</span><span class="kw">const </span>DEFAULT_HEAP_ALLOC_STRATEGY: HeapAllocStrategy =
-	HeapAllocStrategy::Static { extra_pages: <span class="number">2048 </span>};
 
 <span class="doccomment">/// Set up the externalities and safe calling environment to execute runtime calls.
 ///
@@ -842,10 +849,10 @@
 	<span class="doccomment">/// Create a new instance of `Self`
 	///
 	/// - `method`: The wasm execution method that should be used by the executor.
-	</span><span class="kw">pub fn </span>new(method: WasmExecutionMethod) -&gt; <span class="self">Self </span>{
+	</span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{
 			_phantom: PhantomData,
-			method,
+			method: WasmExecutionMethod::default(),
 			onchain_heap_alloc_strategy: <span class="prelude-val">None</span>,
 			offchain_heap_alloc_strategy: <span class="prelude-val">None</span>,
 			max_runtime_instances: <span class="number">2</span>,
@@ -854,6 +861,12 @@
 			cache_path: <span class="prelude-val">None</span>,
 		}
 	}
+
+	<span class="doccomment">/// Create the wasm executor with execution method that should be used by the executor.
+	</span><span class="kw">pub fn </span>with_execution_method(<span class="kw-2">mut </span><span class="self">self</span>, method: WasmExecutionMethod) -&gt; <span class="self">Self </span>{
+		<span class="self">self</span>.method = method;
+		<span class="self">self
+	</span>}
 
 	<span class="doccomment">/// Create the wasm executor with the given number of `heap_alloc_strategy` for onchain runtime
 	/// calls.
@@ -998,6 +1011,7 @@
 	///   compiled execution method is used.
 	///
 	/// `runtime_cache_size` - The capacity of runtime cache.
+	</span><span class="attr">#[deprecated(note = <span class="string">&quot;use `Self::builder` method instead of it&quot;</span>)]
 	</span><span class="kw">pub fn </span>new(
 		method: WasmExecutionMethod,
 		default_heap_pages: <span class="prelude-ty">Option</span>&lt;u64&gt;,
@@ -1025,11 +1039,12 @@
 	}
 
 	<span class="doccomment">/// Instantiate a builder for creating an instance of `Self`.
-	</span><span class="kw">pub fn </span>builder(method: WasmExecutionMethod) -&gt; WasmExecutorBuilder&lt;H&gt; {
-		WasmExecutorBuilder::new(method)
+	</span><span class="kw">pub fn </span>builder() -&gt; WasmExecutorBuilder&lt;H&gt; {
+		WasmExecutorBuilder::new()
 	}
 
 	<span class="doccomment">/// Ignore missing function imports if set true.
+	</span><span class="attr">#[deprecated(note = <span class="string">&quot;use `Self::builder` method instead of it&quot;</span>)]
 	</span><span class="kw">pub fn </span>allow_missing_host_functions(<span class="kw-2">&amp;mut </span><span class="self">self</span>, allow_missing_host_functions: bool) {
 		<span class="self">self</span>.allow_missing_host_functions = allow_missing_host_functions
 	}
@@ -1281,7 +1296,8 @@
 }
 
 <span class="kw">impl</span>&lt;D: NativeExecutionDispatch&gt; NativeElseWasmExecutor&lt;D&gt; {
-	<span class="doccomment">/// Create new instance.
+	<span class="doccomment">///
+	/// Create new instance.
 	///
 	/// # Parameters
 	///
@@ -1295,19 +1311,23 @@
 	/// `max_runtime_instances` - The number of runtime instances to keep in memory ready for reuse.
 	///
 	/// `runtime_cache_size` - The capacity of runtime cache.
+	</span><span class="attr">#[deprecated(note = <span class="string">&quot;use `Self::new_with_wasm_executor` method instead of it&quot;</span>)]
 	</span><span class="kw">pub fn </span>new(
 		fallback_method: WasmExecutionMethod,
 		default_heap_pages: <span class="prelude-ty">Option</span>&lt;u64&gt;,
 		max_runtime_instances: usize,
 		runtime_cache_size: u8,
 	) -&gt; <span class="self">Self </span>{
-		<span class="kw">let </span>wasm = WasmExecutor::new(
-			fallback_method,
-			default_heap_pages,
-			max_runtime_instances,
-			<span class="prelude-val">None</span>,
-			runtime_cache_size,
-		);
+		<span class="kw">let </span>heap_pages = default_heap_pages.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h| {
+			HeapAllocStrategy::Static { extra_pages: h <span class="kw">as _ </span>}
+		});
+		<span class="kw">let </span>wasm = WasmExecutor::builder()
+			.with_execution_method(fallback_method)
+			.with_onchain_heap_alloc_strategy(heap_pages)
+			.with_offchain_heap_alloc_strategy(heap_pages)
+			.with_max_runtime_instances(max_runtime_instances)
+			.with_runtime_cache_size(runtime_cache_size)
+			.build();
 
 		NativeElseWasmExecutor { native_version: D::native_version(), wasm }
 	}
@@ -1322,6 +1342,7 @@
 	}
 
 	<span class="doccomment">/// Ignore missing function imports if set true.
+	</span><span class="attr">#[deprecated(note = <span class="string">&quot;use `Self::new_with_wasm_executor` method instead of it&quot;</span>)]
 	</span><span class="kw">pub fn </span>allow_missing_host_functions(<span class="kw-2">&amp;mut </span><span class="self">self</span>, allow_missing_host_functions: bool) {
 		<span class="self">self</span>.wasm.allow_missing_host_functions = allow_missing_host_functions
 	}
@@ -1456,11 +1477,8 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>native_executor_registers_custom_interface() {
-		<span class="kw">let </span>executor = NativeElseWasmExecutor::&lt;MyExecutorDispatch&gt;::new(
-			WasmExecutionMethod::Interpreted,
-			<span class="prelude-val">None</span>,
-			<span class="number">8</span>,
-			<span class="number">2</span>,
+		<span class="kw">let </span>executor = NativeElseWasmExecutor::&lt;MyExecutorDispatch&gt;::new_with_wasm_executor(
+			WasmExecutor::builder().build(),
 		);
 
 		<span class="kw">fn </span>extract_host_functions&lt;H&gt;(

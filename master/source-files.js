@@ -150,7 +150,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_consensus_manual_seal":["",[["consensus",[],["aura.rs","babe.rs","timestamp.rs"]]],["consensus.rs","error.rs","finalize_block.rs","lib.rs","rpc.rs","seal_block.rs"]],\
 "sc_consensus_pow":["",[],["lib.rs","worker.rs"]],\
 "sc_consensus_slots":["",[],["aux_schema.rs","lib.rs","slots.rs"]],\
-"sc_executor":["",[],["lib.rs","native_executor.rs","wasm_runtime.rs"]],\
+"sc_executor":["",[],["executor.rs","lib.rs","wasm_runtime.rs"]],\
 "sc_executor_common":["",[["runtime_blob",[],["data_segments_snapshot.rs","globals_snapshot.rs","mod.rs","runtime_blob.rs"]]],["error.rs","lib.rs","util.rs","wasm_runtime.rs"]],\
 "sc_executor_wasmi":["",[],["lib.rs"]],\
 "sc_executor_wasmtime":["",[],["host.rs","imports.rs","instance_wrapper.rs","lib.rs","runtime.rs","util.rs"]],\

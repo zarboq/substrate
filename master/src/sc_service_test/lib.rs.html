@@ -581,8 +581,6 @@
 <a href="#581" id="581">581</a>
 <a href="#582" id="582">582</a>
 <a href="#583" id="583">583</a>
-<a href="#584" id="584">584</a>
-<a href="#585" id="585">585</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -650,9 +648,7 @@
 	}
 }
 
-<span class="kw">pub trait </span>TestNetNode:
-	Clone + Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), sc_service::Error&gt;&gt; + Send + <span class="lifetime">&#39;static
-</span>{
+<span class="kw">pub trait </span>TestNetNode: Clone + Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt; + Send + <span class="lifetime">&#39;static </span>{
 	<span class="kw">type </span>Block: BlockT;
 	<span class="kw">type </span>Backend: Backend&lt;<span class="self">Self</span>::Block&gt;;
 	<span class="kw">type </span>Executor: CallExecutor&lt;<span class="self">Self</span>::Block&gt; + Send + Sync;
@@ -713,7 +709,7 @@
 <span class="kw">impl</span>&lt;TBl: BlockT, TBackend, TExec, TRtApi, TExPool&gt; Future
 	<span class="kw">for </span>TestNetComponents&lt;TBl, TBackend, TExec, TRtApi, TExPool&gt;
 {
-	<span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;(), sc_service::Error&gt;;
+	<span class="kw">type </span>Output = <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
 	<span class="kw">fn </span>poll(<span class="self">self</span>: Pin&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt;, cx: <span class="kw-2">&amp;mut </span>Context) -&gt; Poll&lt;<span class="self">Self</span>::Output&gt; {
 		Pin::new(<span class="kw-2">&amp;mut </span><span class="self">self</span>.task_manager.lock().future()).poll(cx)
@@ -833,7 +829,7 @@
 		state_pruning: Default::default(),
 		blocks_pruning: BlocksPruning::KeepFinalized,
 		chain_spec: Box::new((<span class="kw-2">*</span>spec).clone()),
-		wasm_method: sc_service::config::WasmExecutionMethod::Interpreted,
+		wasm_method: Default::default(),
 		wasm_runtime_overrides: Default::default(),
 		execution_strategies: Default::default(),
 		rpc_http: <span class="prelude-val">None</span>,

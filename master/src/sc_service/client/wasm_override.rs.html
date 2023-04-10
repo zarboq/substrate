@@ -614,21 +614,26 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>sc_executor::{NativeElseWasmExecutor, WasmExecutionMethod};
+	<span class="kw">use </span>sc_executor::{HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor};
 	<span class="kw">use </span>std::fs::{<span class="self">self</span>, File};
 	<span class="kw">use </span>substrate_test_runtime_client::LocalExecutorDispatch;
+
+	<span class="kw">fn </span>executor() -&gt; NativeElseWasmExecutor&lt;substrate_test_runtime_client::LocalExecutorDispatch&gt; {
+		NativeElseWasmExecutor::&lt;substrate_test_runtime_client::LocalExecutorDispatch&gt;::new_with_wasm_executor(
+			WasmExecutor::builder()
+				.with_onchain_heap_alloc_strategy(HeapAllocStrategy::Static {extra_pages: <span class="number">128</span>})
+				.with_offchain_heap_alloc_strategy(HeapAllocStrategy::Static {extra_pages: <span class="number">128</span>})
+				.with_max_runtime_instances(<span class="number">1</span>)
+				.with_runtime_cache_size(<span class="number">2</span>)
+				.build()
+		)
+	}
 
 	<span class="kw">fn </span>wasm_test&lt;F&gt;(fun: F)
 	<span class="kw">where
 		</span>F: Fn(<span class="kw-2">&amp;</span>Path, <span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>NativeElseWasmExecutor&lt;LocalExecutorDispatch&gt;),
 	{
-		<span class="kw">let </span>exec =
-			NativeElseWasmExecutor::&lt;substrate_test_runtime_client::LocalExecutorDispatch&gt;::new(
-				WasmExecutionMethod::Interpreted,
-				<span class="prelude-val">Some</span>(<span class="number">128</span>),
-				<span class="number">1</span>,
-				<span class="number">2</span>,
-			);
+		<span class="kw">let </span>exec = executor();
 		<span class="kw">let </span>bytes = substrate_test_runtime::wasm_binary_unwrap();
 		<span class="kw">let </span>dir = tempfile::tempdir().expect(<span class="string">&quot;Create a temporary directory&quot;</span>);
 		fun(dir.path(), bytes, <span class="kw-2">&amp;</span>exec);
@@ -637,12 +642,7 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>should_get_runtime_version() {
-		<span class="kw">let </span>executor = NativeElseWasmExecutor::&lt;LocalExecutorDispatch&gt;::new(
-			WasmExecutionMethod::Interpreted,
-			<span class="prelude-val">Some</span>(<span class="number">128</span>),
-			<span class="number">1</span>,
-			<span class="number">2</span>,
-		);
+		<span class="kw">let </span>executor = executor();
 
 		<span class="kw">let </span>version = WasmOverride::runtime_version(
 			<span class="kw-2">&amp;</span>executor,

@@ -92,7 +92,6 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -127,24 +126,29 @@
 #![recursion_limit = <span class="string">&quot;128&quot;</span>]
 
 #[macro_use]
-</span><span class="kw">mod </span>native_executor;
+</span><span class="kw">mod </span>executor;
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>integration_tests;
 <span class="kw">mod </span>wasm_runtime;
 
-<span class="kw">pub use </span>codec::Codec;
-<span class="kw">pub use </span>native_executor::{
-	with_externalities_safe, NativeElseWasmExecutor, NativeExecutionDispatch, WasmExecutor,
+<span class="kw">pub use </span><span class="self">self</span>::{
+	executor::{
+		with_externalities_safe, NativeElseWasmExecutor, NativeExecutionDispatch, WasmExecutor,
+	},
+	wasm_runtime::{read_embedded_version, WasmExecutionMethod},
 };
+<span class="kw">pub use </span>codec::Codec;
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub use </span>sp_core::traits::Externalities;
 <span class="kw">pub use </span>sp_version::{NativeVersion, RuntimeVersion};
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub use </span>sp_wasm_interface;
-<span class="kw">pub use </span>wasm_runtime::{read_embedded_version, WasmExecutionMethod};
 <span class="kw">pub use </span>wasmi;
 
-<span class="kw">pub use </span>sc_executor_common::error;
+<span class="kw">pub use </span>sc_executor_common::{
+	error,
+	wasm_runtime::{HeapAllocStrategy, DEFAULT_HEAP_ALLOC_PAGES, DEFAULT_HEAP_ALLOC_STRATEGY},
+};
 <span class="kw">pub use </span>sc_executor_wasmtime::InstantiationStrategy <span class="kw">as </span>WasmtimeInstantiationStrategy;
 
 <span class="doccomment">/// Extracts the runtime version of a given runtime code.
@@ -169,13 +173,7 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = TestExternalities::default();
 		<span class="kw">let </span><span class="kw-2">mut </span>ext = ext.ext();
 
-		<span class="kw">let </span>executor = WasmExecutor::&lt;sp_io::SubstrateHostFunctions&gt;::new(
-			WasmExecutionMethod::Interpreted,
-			<span class="prelude-val">Some</span>(<span class="number">8</span>),
-			<span class="number">8</span>,
-			<span class="prelude-val">None</span>,
-			<span class="number">2</span>,
-		);
+		<span class="kw">let </span>executor = WasmExecutor::&lt;sp_io::SubstrateHostFunctions&gt;::builder().build();
 		<span class="kw">let </span>res = executor
 			.uncached_call(
 				RuntimeBlob::uncompress_if_needed(wasm_binary_unwrap()).unwrap(),

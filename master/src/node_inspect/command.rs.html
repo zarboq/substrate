@@ -66,13 +66,6 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -98,41 +91,34 @@
 	Inspector,
 };
 <span class="kw">use </span>sc_cli::{CliConfiguration, ImportParams, <span class="prelude-ty">Result</span>, SharedParams};
-<span class="kw">use </span>sc_executor::NativeElseWasmExecutor;
-<span class="kw">use </span>sc_service::{new_full_client, Configuration, NativeExecutionDispatch};
+<span class="kw">use </span>sc_service::{Configuration, NativeExecutionDispatch};
 <span class="kw">use </span>sp_runtime::traits::Block;
 <span class="kw">use </span>std::str::FromStr;
 
 <span class="kw">impl </span>InspectCmd {
 	<span class="doccomment">/// Run the inspect command, passing the inspector.
-	</span><span class="kw">pub fn </span>run&lt;B, RA, EX&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Configuration) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
+	</span><span class="kw">pub fn </span>run&lt;B, RA, D&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Configuration) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
 	<span class="kw">where
 		</span>B: Block,
 		B::Hash: FromStr,
 		RA: Send + Sync + <span class="lifetime">&#39;static</span>,
-		EX: NativeExecutionDispatch + <span class="lifetime">&#39;static</span>,
+		D: NativeExecutionDispatch + <span class="lifetime">&#39;static</span>,
 	{
-		<span class="kw">let </span>executor = NativeElseWasmExecutor::&lt;EX&gt;::new(
-			config.wasm_method,
-			config.default_heap_pages,
-			config.max_runtime_instances,
-			config.runtime_cache_size,
-		);
-
-		<span class="kw">let </span>client = new_full_client::&lt;B, RA, <span class="kw">_</span>&gt;(<span class="kw-2">&amp;</span>config, <span class="prelude-val">None</span>, executor)<span class="question-mark">?</span>;
+		<span class="kw">let </span>executor = sc_service::new_native_or_wasm_executor::&lt;D&gt;(<span class="kw-2">&amp;</span>config);
+		<span class="kw">let </span>client = sc_service::new_full_client::&lt;B, RA, <span class="kw">_</span>&gt;(<span class="kw-2">&amp;</span>config, <span class="prelude-val">None</span>, executor)<span class="question-mark">?</span>;
 		<span class="kw">let </span>inspect = Inspector::&lt;B&gt;::new(client);
 
 		<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.command {
 			InspectSubCmd::Block { input } =&gt; {
 				<span class="kw">let </span>input = input.parse()<span class="question-mark">?</span>;
-				<span class="kw">let </span>res = inspect.block(input).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, e))<span class="question-mark">?</span>;
-				<span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, res);
+				<span class="kw">let </span>res = inspect.block(input).map_err(|e| e.to_string())<span class="question-mark">?</span>;
+				<span class="macro">println!</span>(<span class="string">&quot;{res}&quot;</span>);
 				<span class="prelude-val">Ok</span>(())
 			},
 			InspectSubCmd::Extrinsic { input } =&gt; {
 				<span class="kw">let </span>input = input.parse()<span class="question-mark">?</span>;
-				<span class="kw">let </span>res = inspect.extrinsic(input).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, e))<span class="question-mark">?</span>;
-				<span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, res);
+				<span class="kw">let </span>res = inspect.extrinsic(input).map_err(|e| e.to_string())<span class="question-mark">?</span>;
+				<span class="macro">println!</span>(<span class="string">&quot;{res}&quot;</span>);
 				<span class="prelude-val">Ok</span>(())
 			},
 		}

@@ -753,6 +753,11 @@
 <a href="#753" id="753">753</a>
 <a href="#754" id="754">754</a>
 <a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -782,7 +787,7 @@
 	execution_method_from_cli, CliConfiguration, ExecutionStrategy, <span class="prelude-ty">Result</span>, SharedParams,
 };
 <span class="kw">use </span>sc_client_db::BenchmarkingState;
-<span class="kw">use </span>sc_executor::NativeElseWasmExecutor;
+<span class="kw">use </span>sc_executor::{NativeElseWasmExecutor, WasmExecutor};
 <span class="kw">use </span>sc_service::{Configuration, NativeExecutionDispatch};
 <span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>sp_core::{
@@ -964,12 +969,17 @@ not created by a node that was compiled with the flag&quot;</span>;
 			<span class="comment">// Do not enable storage tracking
 			</span><span class="bool-val">false</span>,
 		)<span class="question-mark">?</span>;
-		<span class="kw">let </span>executor = NativeElseWasmExecutor::&lt;ExecDispatch&gt;::new(
-			execution_method_from_cli(<span class="self">self</span>.wasm_method, <span class="self">self</span>.wasmtime_instantiation_strategy),
-			<span class="self">self</span>.heap_pages,
-			<span class="number">2</span>, <span class="comment">// The runtime instances cache size.
-			</span><span class="number">2</span>, <span class="comment">// The runtime cache size
-		</span>);
+
+		<span class="kw">let </span>method =
+			execution_method_from_cli(<span class="self">self</span>.wasm_method, <span class="self">self</span>.wasmtime_instantiation_strategy);
+
+		<span class="kw">let </span>executor = NativeElseWasmExecutor::&lt;ExecDispatch&gt;::new_with_wasm_executor(
+			WasmExecutor::builder()
+				.with_execution_method(method)
+				.with_max_runtime_instances(<span class="number">2</span>)
+				.with_runtime_cache_size(<span class="number">2</span>)
+				.build(),
+		);
 
 		<span class="kw">let </span>extensions = || -&gt; Extensions {
 			<span class="kw">let </span><span class="kw-2">mut </span>extensions = Extensions::default();

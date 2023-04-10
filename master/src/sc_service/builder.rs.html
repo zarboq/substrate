@@ -992,6 +992,29 @@
 <a href="#992" id="992">992</a>
 <a href="#993" id="993">993</a>
 <a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1030,7 +1053,10 @@
 };
 <span class="kw">use </span>sc_client_db::{Backend, DatabaseSettings};
 <span class="kw">use </span>sc_consensus::import_queue::ImportQueue;
-<span class="kw">use </span>sc_executor::RuntimeVersionOf;
+<span class="kw">use </span>sc_executor::{
+	sp_wasm_interface::HostFunctions, HeapAllocStrategy, NativeElseWasmExecutor,
+	NativeExecutionDispatch, RuntimeVersionOf, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
+};
 <span class="kw">use </span>sc_keystore::LocalKeystore;
 <span class="kw">use </span>sc_network::{config::SyncMode, NetworkService, NetworkStateInfo, NetworkStatusProvider};
 <span class="kw">use </span>sc_network_bitswap::BitswapRequestHandler;
@@ -1068,11 +1094,10 @@
 	Client&lt;TFullBackend&lt;TBl&gt;, TFullCallExecutor&lt;TBl, TExec&gt;, TBl, TRtApi&gt;;
 
 <span class="doccomment">/// Full client backend type.
-</span><span class="kw">pub type </span>TFullBackend&lt;TBl&gt; = sc_client_db::Backend&lt;TBl&gt;;
+</span><span class="kw">pub type </span>TFullBackend&lt;TBl&gt; = Backend&lt;TBl&gt;;
 
 <span class="doccomment">/// Full client call executor type.
-</span><span class="kw">pub type </span>TFullCallExecutor&lt;TBl, TExec&gt; =
-	<span class="kw">crate</span>::client::LocalCallExecutor&lt;TBl, sc_client_db::Backend&lt;TBl&gt;, TExec&gt;;
+</span><span class="kw">pub type </span>TFullCallExecutor&lt;TBl, TExec&gt; = <span class="kw">crate</span>::client::LocalCallExecutor&lt;TBl, Backend&lt;TBl&gt;, TExec&gt;;
 
 <span class="kw">type </span>TFullParts&lt;TBl, TRtApi, TExec&gt; =
 	(TFullClient&lt;TBl, TRtApi, TExec&gt;, Arc&lt;TFullBackend&lt;TBl&gt;&gt;, KeystoreContainer, TaskManager);
@@ -1223,6 +1248,27 @@
 	<span class="prelude-val">Ok</span>((client, backend, keystore_container, task_manager))
 }
 
+<span class="doccomment">/// Creates a [`NativeElseWasmExecutor`] according to [`Configuration`].
+</span><span class="kw">pub fn </span>new_native_or_wasm_executor&lt;D: NativeExecutionDispatch&gt;(
+	config: <span class="kw-2">&amp;</span>Configuration,
+) -&gt; NativeElseWasmExecutor&lt;D&gt; {
+	NativeElseWasmExecutor::new_with_wasm_executor(new_wasm_executor(config))
+}
+
+<span class="doccomment">/// Creates a [`WasmExecutor`] according to [`Configuration`].
+</span><span class="kw">pub fn </span>new_wasm_executor&lt;H: HostFunctions&gt;(config: <span class="kw-2">&amp;</span>Configuration) -&gt; WasmExecutor&lt;H&gt; {
+	<span class="kw">let </span>strategy = config
+		.default_heap_pages
+		.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |p| HeapAllocStrategy::Static { extra_pages: p <span class="kw">as _ </span>});
+	WasmExecutor::&lt;H&gt;::builder()
+		.with_execution_method(config.wasm_method)
+		.with_onchain_heap_alloc_strategy(strategy)
+		.with_offchain_heap_alloc_strategy(strategy)
+		.with_max_runtime_instances(config.max_runtime_instances)
+		.with_runtime_cache_size(config.runtime_cache_size)
+		.build()
+}
+
 <span class="doccomment">/// Create an instance of default DB-backend backend.
 </span><span class="kw">pub fn </span>new_db_backend&lt;Block&gt;(
 	settings: DatabaseSettings,
@@ -1248,7 +1294,7 @@
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
 	config: ClientConfig&lt;Block&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;
-	<span class="kw">crate</span>::client::Client&lt;
+	Client&lt;
 		Backend&lt;Block&gt;,
 		<span class="kw">crate</span>::client::LocalCallExecutor&lt;Block, Backend&lt;Block&gt;, E&gt;,
 		Block,
@@ -1271,7 +1317,7 @@
 		execution_extensions,
 	)<span class="question-mark">?</span>;
 
-	<span class="kw">crate</span>::client::Client::new(
+	Client::new(
 		backend,
 		executor,
 		spawn_handle,
