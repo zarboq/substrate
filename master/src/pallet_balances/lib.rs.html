@@ -1957,8 +1957,8 @@
 			</span>}
 			a.flags.set_new_logic();
 			<span class="kw">if </span>!a.reserved.is_zero() || !a.frozen.is_zero() {
-				<span class="kw">if </span>!system::Pallet::&lt;T&gt;::can_inc_consumer(who) {
-					<span class="comment">// Gah!! We have a non-zero reserve balance but no provider refs :(
+				<span class="kw">if </span>system::Pallet::&lt;T&gt;::providers(who) == <span class="number">0 </span>{
+					<span class="comment">// Gah!! We have no provider refs :(
 					// This shouldn&#39;t practically happen, but we need a failsafe anyway: let&#39;s give
 					// them enough for an ED.
 					</span><span class="macro">log::warn!</span>(
@@ -1969,7 +1969,7 @@
 					a.free = a.free.max(<span class="self">Self</span>::ed());
 					system::Pallet::&lt;T&gt;::inc_providers(who);
 				}
-				<span class="kw">let _ </span>= system::Pallet::&lt;T&gt;::inc_consumers(who).defensive();
+				<span class="kw">let _ </span>= system::Pallet::&lt;T&gt;::inc_consumers_without_limit(who).defensive();
 			}
 			<span class="comment">// Should never fail - we&#39;re only setting a bit.
 			</span><span class="kw">let _ </span>= T::AccountStore::try_mutate_exists(who, |account| -&gt; DispatchResult {
