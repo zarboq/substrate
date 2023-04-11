@@ -257,6 +257,73 @@
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -512,9 +579,76 @@
 	version.base10_parse()
 }
 
-<span class="comment">// Each versioned trait is named &#39;ApiNameVN&#39; where N is the specific version. E.g. ParachainHostV2
+<span class="doccomment">/// Each versioned trait is named &#39;ApiNameVN&#39; where N is the specific version. E.g. ParachainHostV2
 </span><span class="kw">pub fn </span>versioned_trait_name(trait_ident: <span class="kw-2">&amp;</span>Ident, version: u64) -&gt; Ident {
 	<span class="macro">format_ident!</span>(<span class="string">&quot;{}V{}&quot;</span>, trait_ident, version)
+}
+
+<span class="doccomment">/// Extract the documentation from the provided attributes.
+</span><span class="kw">pub fn </span>get_doc_literals(attrs: <span class="kw-2">&amp;</span>[syn::Attribute]) -&gt; Vec&lt;syn::Lit&gt; {
+	attrs
+		.iter()
+		.filter_map(|attr| {
+			<span class="kw">let </span><span class="prelude-val">Ok</span>(syn::Meta::NameValue(meta)) = attr.parse_meta() <span class="kw">else </span>{
+				<span class="kw">return </span><span class="prelude-val">None
+			</span>};
+
+			meta.path.get_ident().filter(|ident| <span class="kw-2">*</span>ident == <span class="string">&quot;doc&quot;</span>).map(|<span class="kw">_</span>| meta.lit)
+		})
+		.collect()
+}
+
+<span class="doccomment">/// Filters all attributes except the cfg ones.
+</span><span class="kw">pub fn </span>filter_cfg_attributes(attrs: <span class="kw-2">&amp;</span>[syn::Attribute]) -&gt; Vec&lt;syn::Attribute&gt; {
+	attrs.iter().filter(|a| a.path.is_ident(<span class="string">&quot;cfg&quot;</span>)).cloned().collect()
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+	<span class="kw">use </span>assert_matches::assert_matches;
+
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>check_get_doc_literals() {
+		<span class="kw">const </span>FIRST: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;hello&quot;</span>;
+		<span class="kw">const </span>SECOND: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;WORLD&quot;</span>;
+
+		<span class="kw">let </span>doc: Attribute = <span class="macro">parse_quote!</span>(<span class="attr">#[doc = #FIRST]</span>);
+		<span class="kw">let </span>doc_world: Attribute = <span class="macro">parse_quote!</span>(<span class="attr">#[doc = #SECOND]</span>);
+
+		<span class="kw">let </span>attrs = <span class="macro">vec!</span>[
+			doc.clone(),
+			<span class="macro">parse_quote!</span>(<span class="attr">#[derive(Debug)]</span>),
+			<span class="macro">parse_quote!</span>(<span class="attr">#[test]</span>),
+			<span class="macro">parse_quote!</span>(<span class="attr">#[allow(non_camel_case_types)]</span>),
+			doc_world.clone(),
+		];
+
+		<span class="kw">let </span>docs = get_doc_literals(<span class="kw-2">&amp;</span>attrs);
+		<span class="macro">assert_eq!</span>(docs.len(), <span class="number">2</span>);
+		<span class="macro">assert_matches!</span>(<span class="kw-2">&amp;</span>docs[<span class="number">0</span>], syn::Lit::Str(val) <span class="kw">if </span>val.value() == FIRST);
+		<span class="macro">assert_matches!</span>(<span class="kw-2">&amp;</span>docs[<span class="number">1</span>], syn::Lit::Str(val) <span class="kw">if </span>val.value() == SECOND);
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>check_filter_cfg_attributes() {
+		<span class="kw">let </span>cfg_std: Attribute = <span class="macro">parse_quote!</span>(<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]</span>);
+		<span class="kw">let </span>cfg_benchmarks: Attribute = <span class="macro">parse_quote!</span>(<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]</span>);
+
+		<span class="kw">let </span>attrs = <span class="macro">vec!</span>[
+			cfg_std.clone(),
+			<span class="macro">parse_quote!</span>(<span class="attr">#[derive(Debug)]</span>),
+			<span class="macro">parse_quote!</span>(<span class="attr">#[test]</span>),
+			cfg_benchmarks.clone(),
+			<span class="macro">parse_quote!</span>(<span class="attr">#[allow(non_camel_case_types)]</span>),
+		];
+
+		<span class="kw">let </span>filtered = filter_cfg_attributes(<span class="kw-2">&amp;</span>attrs);
+		<span class="macro">assert_eq!</span>(filtered.len(), <span class="number">2</span>);
+		<span class="macro">assert_eq!</span>(cfg_std, filtered[<span class="number">0</span>]);
+		<span class="macro">assert_eq!</span>(cfg_benchmarks, filtered[<span class="number">1</span>]);
+	}
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sp_api_proc_macro" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (a00f8ba7f 2022-11-15)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7873449fa8c00e11.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

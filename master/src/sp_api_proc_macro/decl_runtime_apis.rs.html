@@ -794,6 +794,11 @@
 <a href="#794" id="794">794</a>
 <a href="#795" id="795">795</a>
 <a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -811,16 +816,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::utils::{
-	extract_parameter_names_types_and_borrows, fold_fn_decl_for_client_side, generate_crate_access,
-	generate_runtime_mod_name_for_trait, parse_runtime_api_version, prefix_function_with_trait,
-	replace_wild_card_parameter_names, return_type_extract_type, versioned_trait_name,
-	AllowSelfRefInParameters,
-};
-
-<span class="kw">use </span><span class="kw">crate</span>::common::{
-	API_VERSION_ATTRIBUTE, BLOCK_GENERIC_IDENT, CHANGED_IN_ATTRIBUTE, CORE_TRAIT_ATTRIBUTE,
-	RENAMED_ATTRIBUTE, SUPPORTED_ATTRIBUTE_NAMES,
+</span><span class="kw">use crate</span>::{
+	common::{
+		API_VERSION_ATTRIBUTE, BLOCK_GENERIC_IDENT, CHANGED_IN_ATTRIBUTE, CORE_TRAIT_ATTRIBUTE,
+		RENAMED_ATTRIBUTE, SUPPORTED_ATTRIBUTE_NAMES,
+	},
+	runtime_metadata::generate_decl_runtime_metadata,
+	utils::{
+		extract_parameter_names_types_and_borrows, fold_fn_decl_for_client_side,
+		generate_crate_access, generate_runtime_mod_name_for_trait, parse_runtime_api_version,
+		prefix_function_with_trait, replace_wild_card_parameter_names, return_type_extract_type,
+		versioned_trait_name, AllowSelfRefInParameters,
+	},
 };
 
 <span class="kw">use </span>proc_macro2::{Span, TokenStream};
@@ -1015,6 +1022,7 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>decl = decl.clone();
 		<span class="kw">let </span>decl_span = decl.span();
 		extend_generics_with_block(<span class="kw-2">&amp;mut </span>decl.generics);
+		<span class="kw">let </span>metadata = generate_decl_runtime_metadata(<span class="kw-2">&amp;</span>decl);
 		<span class="kw">let </span>mod_name = generate_runtime_mod_name_for_trait(<span class="kw-2">&amp;</span>decl.ident);
 		<span class="kw">let </span>found_attributes = remove_supported_attributes(<span class="kw-2">&amp;mut </span>decl.attrs);
 		<span class="kw">let </span>api_version =
@@ -1099,6 +1107,8 @@
 				#( #versioned_api_traits )*
 
 				<span class="kw">pub use </span>#versioned_ident <span class="kw">as </span>#main_api_ident;
+
+				#metadata
 
 				<span class="kw">pub </span>#api_version
 

@@ -768,6 +768,11 @@
 <a href="#768" id="768">768</a>
 <a href="#769" id="769">769</a>
 <a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -785,14 +790,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::utils::{
-	extract_all_signature_types, extract_block_type_from_trait_path, extract_impl_trait,
-	extract_parameter_names_types_and_borrows, generate_crate_access,
-	generate_runtime_mod_name_for_trait, parse_runtime_api_version, prefix_function_with_trait,
-	versioned_trait_name, AllowSelfRefInParameters, RequireQualifiedTraitPath,
+</span><span class="kw">use crate</span>::{
+	common::API_VERSION_ATTRIBUTE,
+	runtime_metadata::generate_impl_runtime_metadata,
+	utils::{
+		extract_all_signature_types, extract_block_type_from_trait_path, extract_impl_trait,
+		extract_parameter_names_types_and_borrows, generate_crate_access,
+		generate_runtime_mod_name_for_trait, parse_runtime_api_version, prefix_function_with_trait,
+		versioned_trait_name, AllowSelfRefInParameters, RequireQualifiedTraitPath,
+	},
 };
-
-<span class="kw">use </span><span class="kw">crate</span>::common::API_VERSION_ATTRIBUTE;
 
 <span class="kw">use </span>proc_macro2::{Span, TokenStream};
 
@@ -1455,6 +1462,7 @@
 	<span class="kw">let </span>runtime_api_versions = generate_runtime_api_versions(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>wasm_interface = generate_wasm_interface(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>api_impls_for_runtime_api = generate_api_impl_for_runtime_api(api_impls)<span class="question-mark">?</span>;
+	<span class="kw">let </span>runtime_metadata = generate_impl_runtime_metadata(api_impls)<span class="question-mark">?</span>;
 
 	<span class="kw">let </span>impl_ = <span class="macro">quote!</span>(
 		#base_runtime_api
@@ -1464,6 +1472,8 @@
 		#api_impls_for_runtime_api
 
 		#runtime_api_versions
+
+		#runtime_metadata
 
 		<span class="kw">pub mod </span>api {
 			<span class="kw">use super</span>::<span class="kw-2">*</span>;
