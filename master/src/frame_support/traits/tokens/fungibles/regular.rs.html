@@ -568,7 +568,6 @@
 <a href="#568" id="568">568</a>
 <a href="#569" id="569">569</a>
 <a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -936,10 +935,9 @@
 	</span><span class="kw">fn </span>set_balance(asset: <span class="self">Self</span>::AssetId, who: <span class="kw-2">&amp;</span>AccountId, amount: <span class="self">Self</span>::Balance) -&gt; <span class="self">Self</span>::Balance {
 		<span class="kw">let </span>b = <span class="self">Self</span>::balance(asset, who);
 		<span class="kw">if </span>b &gt; amount {
-			<span class="self">Self</span>::burn_from(asset, who, b - amount, BestEffort, Force)
-				.map(|d| amount.saturating_sub(d))
+			<span class="self">Self</span>::burn_from(asset, who, b - amount, BestEffort, Force).map(|d| b.saturating_sub(d))
 		} <span class="kw">else </span>{
-			<span class="self">Self</span>::mint_into(asset, who, amount - b).map(|d| amount.saturating_add(d))
+			<span class="self">Self</span>::mint_into(asset, who, amount - b).map(|d| b.saturating_add(d))
 		}
 		.unwrap_or(b)
 	}
