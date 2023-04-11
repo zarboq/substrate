@@ -644,14 +644,14 @@
 <span class="doccomment">/// A Wasm runtime object along with its cached runtime version.
 </span><span class="kw">struct </span>VersionedRuntime {
 	<span class="doccomment">/// Shared runtime that can spawn instances.
-	</span>module: Arc&lt;<span class="kw">dyn </span>WasmModule&gt;,
+	</span>module: Box&lt;<span class="kw">dyn </span>WasmModule&gt;,
 	<span class="doccomment">/// Runtime version according to `Core_version` if any.
 	</span>version: <span class="prelude-ty">Option</span>&lt;RuntimeVersion&gt;,
 
 	<span class="comment">// TODO: Remove this once the legacy instance reuse instantiation strategy
 	//       for `wasmtime` is gone, as this only makes sense with that particular strategy.
 	</span><span class="doccomment">/// Cached instance pool.
-	</span>instances: Arc&lt;Vec&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>WasmInstance&gt;&gt;&gt;&gt;&gt;,
+	</span>instances: Vec&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>WasmInstance&gt;&gt;&gt;&gt;,
 }
 
 <span class="kw">impl </span>VersionedRuntime {
@@ -659,7 +659,7 @@
 	</span><span class="kw">fn </span>with_instance&lt;R, F&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ext: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Externalities, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;R, Error&gt;
 	<span class="kw">where
 		</span>F: FnOnce(
-			<span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>WasmModule&gt;,
+			<span class="kw-2">&amp;</span><span class="kw">dyn </span>WasmModule,
 			<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>WasmInstance,
 			<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RuntimeVersion&gt;,
 			<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Externalities,
@@ -679,7 +679,7 @@
 					.map(|r| <span class="prelude-val">Ok</span>((r, <span class="bool-val">false</span>)))
 					.unwrap_or_else(|| <span class="self">self</span>.module.new_instance().map(|i| (i, <span class="bool-val">true</span>)))<span class="question-mark">?</span>;
 
-				<span class="kw">let </span>result = f(<span class="kw-2">&amp;</span><span class="self">self</span>.module, <span class="kw-2">&amp;mut *</span>instance, <span class="self">self</span>.version.as_ref(), ext);
+				<span class="kw">let </span>result = f(<span class="kw-2">&amp;*</span><span class="self">self</span>.module, <span class="kw-2">&amp;mut *</span>instance, <span class="self">self</span>.version.as_ref(), ext);
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="kw-2">&amp;</span>result {
 					<span class="kw">if </span>new_inst {
 						<span class="macro">tracing::warn!</span>(
@@ -715,7 +715,7 @@
 				<span class="comment">// Allocate a new instance
 				</span><span class="kw">let </span><span class="kw-2">mut </span>instance = <span class="self">self</span>.module.new_instance()<span class="question-mark">?</span>;
 
-				f(<span class="kw-2">&amp;</span><span class="self">self</span>.module, <span class="kw-2">&amp;mut *</span>instance, <span class="self">self</span>.version.as_ref(), ext)
+				f(<span class="kw-2">&amp;*</span><span class="self">self</span>.module, <span class="kw-2">&amp;mut *</span>instance, <span class="self">self</span>.version.as_ref(), ext)
 			},
 		}
 	}
@@ -801,7 +801,7 @@
 	<span class="kw">where
 		</span>H: HostFunctions,
 		F: FnOnce(
-			<span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>WasmModule&gt;,
+			<span class="kw-2">&amp;</span><span class="kw">dyn </span>WasmModule,
 			<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>WasmInstance,
 			<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RuntimeVersion&gt;,
 			<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Externalities,
@@ -867,7 +867,7 @@
 	blob: RuntimeBlob,
 	allow_missing_func_imports: bool,
 	cache_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Path&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;<span class="kw">dyn </span>WasmModule&gt;, WasmError&gt;
+) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>WasmModule&gt;, WasmError&gt;
 <span class="kw">where
 	</span>H: HostFunctions,
 {
@@ -885,7 +885,7 @@
 				H::host_functions(),
 				allow_missing_func_imports,
 			)
-			.map(|runtime| -&gt; Arc&lt;<span class="kw">dyn </span>WasmModule&gt; { Arc::new(runtime) })
+			.map(|runtime| -&gt; Box&lt;<span class="kw">dyn </span>WasmModule&gt; { Box::new(runtime) })
 		},
 		WasmExecutionMethod::Compiled { instantiation_strategy } =&gt;
 			sc_executor_wasmtime::create_runtime::&lt;H&gt;(
@@ -906,7 +906,7 @@
 					},
 				},
 			)
-			.map(|runtime| -&gt; Arc&lt;<span class="kw">dyn </span>WasmModule&gt; { Arc::new(runtime) }),
+			.map(|runtime| -&gt; Box&lt;<span class="kw">dyn </span>WasmModule&gt; { Box::new(runtime) }),
 	}
 }
 
@@ -1021,7 +1021,7 @@
 	<span class="kw">let </span><span class="kw-2">mut </span>instances = Vec::with_capacity(max_instances);
 	instances.resize_with(max_instances, || Mutex::new(<span class="prelude-val">None</span>));
 
-	<span class="prelude-val">Ok</span>(VersionedRuntime { module: runtime, version, instances: Arc::new(instances) })
+	<span class="prelude-val">Ok</span>(VersionedRuntime { module: runtime, version, instances })
 }
 
 <span class="attr">#[cfg(test)]
