@@ -943,7 +943,7 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>registry = scale_info::Registry::new();
 		<span class="kw">let </span>type_id = registry.register_type(<span class="kw-2">&amp;</span>scale_info::meta_type::&lt;Data&gt;());
 		<span class="kw">let </span>registry: scale_info::PortableRegistry = registry.into();
-		<span class="kw">let </span>type_info = registry.resolve(type_id.id()).unwrap();
+		<span class="kw">let </span>type_info = registry.resolve(type_id.id).unwrap();
 
 		<span class="kw">let </span>check_type_info = |data: <span class="kw-2">&amp;</span>Data| {
 			<span class="kw">let </span>variant_name = <span class="kw">match </span>data {
@@ -954,20 +954,20 @@
 				Data::ShaThree256(<span class="kw">_</span>) =&gt; <span class="string">&quot;ShaThree256&quot;</span>.to_string(),
 				Data::Raw(bytes) =&gt; <span class="macro">format!</span>(<span class="string">&quot;Raw{}&quot;</span>, bytes.len()),
 			};
-			<span class="kw">if let </span>scale_info::TypeDef::Variant(variant) = type_info.type_def() {
+			<span class="kw">if let </span>scale_info::TypeDef::Variant(variant) = <span class="kw-2">&amp;</span>type_info.type_def {
 				<span class="kw">let </span>variant = variant
-					.variants()
+					.variants
 					.iter()
-					.find(|v| v.name() == <span class="kw-2">&amp;</span>variant_name)
+					.find(|v| v.name == variant_name)
 					.expect(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Expected to find variant {}&quot;</span>, variant_name));
 
 				<span class="kw">let </span>field_arr_len = variant
-					.fields()
+					.fields
 					.first()
-					.and_then(|f| registry.resolve(f.ty().id()))
+					.and_then(|f| registry.resolve(f.ty.id))
 					.map(|ty| {
-						<span class="kw">if let </span>scale_info::TypeDef::Array(arr) = ty.type_def() {
-							arr.len()
+						<span class="kw">if let </span>scale_info::TypeDef::Array(arr) = <span class="kw-2">&amp;</span>ty.type_def {
+							arr.len
 						} <span class="kw">else </span>{
 							<span class="macro">panic!</span>(<span class="string">&quot;Should be an array type&quot;</span>)
 						}
@@ -975,7 +975,7 @@
 					.unwrap_or(<span class="number">0</span>);
 
 				<span class="kw">let </span>encoded = data.encode();
-				<span class="macro">assert_eq!</span>(encoded[<span class="number">0</span>], variant.index());
+				<span class="macro">assert_eq!</span>(encoded[<span class="number">0</span>], variant.index);
 				<span class="macro">assert_eq!</span>(encoded.len() <span class="kw">as </span>u32 - <span class="number">1</span>, field_arr_len);
 			} <span class="kw">else </span>{
 				<span class="macro">panic!</span>(<span class="string">&quot;Should be a variant type&quot;</span>)
