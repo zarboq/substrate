@@ -510,6 +510,11 @@
 <a href="#510" id="510">510</a>
 <a href="#511" id="511">511</a>
 <a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -564,7 +569,11 @@
 <span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_mmr_primitives::MmrApi;
 <span class="kw">use </span>sp_runtime::traits::{Block, Zero};
-<span class="kw">use </span>std::{collections::VecDeque, marker::PhantomData, sync::Arc};
+<span class="kw">use </span>std::{
+	collections::{BTreeMap, VecDeque},
+	marker::PhantomData,
+	sync::Arc,
+};
 
 <span class="kw">mod </span>aux_schema;
 <span class="kw">mod </span>error;
@@ -761,9 +770,10 @@
 	<span class="kw">let </span>known_peers = Arc::new(Mutex::new(KnownPeers::new()));
 	<span class="comment">// Default votes filter is to discard everything.
 	// Validator is updated later with correct starting round and set id.
-	</span><span class="kw">let </span>gossip_validator =
-		Arc::new(communication::gossip::GossipValidator::new(known_peers.clone()));
-	<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = sc_network_gossip::GossipEngine::new(
+	</span><span class="kw">let </span>(gossip_validator, gossip_report_stream) =
+		communication::gossip::GossipValidator::new(known_peers.clone());
+	<span class="kw">let </span>gossip_validator = Arc::new(gossip_validator);
+	<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = GossipEngine::new(
 		network.clone(),
 		sync.clone(),
 		gossip_protocol_name,
@@ -807,7 +817,7 @@
 		<span class="kw">return
 	</span>}
 
-	<span class="kw">let </span>worker_params = worker::WorkerParams {
+	<span class="kw">let </span>worker = worker::BeefyWorker {
 		backend,
 		payload_provider,
 		runtime,
@@ -815,13 +825,13 @@
 		key_store: key_store.into(),
 		gossip_engine,
 		gossip_validator,
+		gossip_report_stream,
 		on_demand_justifications,
 		links,
 		metrics,
+		pending_justifications: BTreeMap::new(),
 		persisted_state,
 	};
-
-	<span class="kw">let </span>worker = worker::BeefyWorker::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(worker_params);
 
 	futures::future::join(
 		worker.run(block_import_justif, finality_notifications),

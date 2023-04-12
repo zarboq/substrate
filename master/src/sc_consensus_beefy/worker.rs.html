@@ -1621,36 +1621,6 @@
 <a href="#1621" id="1621">1621</a>
 <a href="#1622" id="1622">1622</a>
 <a href="#1623" id="1623">1623</a>
-<a href="#1624" id="1624">1624</a>
-<a href="#1625" id="1625">1625</a>
-<a href="#1626" id="1626">1626</a>
-<a href="#1627" id="1627">1627</a>
-<a href="#1628" id="1628">1628</a>
-<a href="#1629" id="1629">1629</a>
-<a href="#1630" id="1630">1630</a>
-<a href="#1631" id="1631">1631</a>
-<a href="#1632" id="1632">1632</a>
-<a href="#1633" id="1633">1633</a>
-<a href="#1634" id="1634">1634</a>
-<a href="#1635" id="1635">1635</a>
-<a href="#1636" id="1636">1636</a>
-<a href="#1637" id="1637">1637</a>
-<a href="#1638" id="1638">1638</a>
-<a href="#1639" id="1639">1639</a>
-<a href="#1640" id="1640">1640</a>
-<a href="#1641" id="1641">1641</a>
-<a href="#1642" id="1642">1642</a>
-<a href="#1643" id="1643">1643</a>
-<a href="#1644" id="1644">1644</a>
-<a href="#1645" id="1645">1645</a>
-<a href="#1646" id="1646">1646</a>
-<a href="#1647" id="1647">1647</a>
-<a href="#1648" id="1648">1648</a>
-<a href="#1649" id="1649">1649</a>
-<a href="#1650" id="1650">1650</a>
-<a href="#1651" id="1651">1651</a>
-<a href="#1652" id="1652">1652</a>
-<a href="#1653" id="1653">1653</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1672,7 +1642,8 @@
 </span><span class="kw">use crate</span>::{
 	communication::{
 		gossip::{proofs_topic, votes_topic, GossipFilterCfg, GossipMessage, GossipValidator},
-		request_response::outgoing_requests_engine::OnDemandJustificationsEngine,
+		peers::PeerReport,
+		request_response::outgoing_requests_engine::{OnDemandJustificationsEngine, ResponseInfo},
 	},
 	error::Error,
 	justification::BeefyVersionedFinalityProof,
@@ -1687,7 +1658,7 @@
 <span class="kw">use </span>log::{debug, error, info, log_enabled, trace, warn};
 <span class="kw">use </span>sc_client_api::{Backend, FinalityNotification, FinalityNotifications, HeaderBackend};
 <span class="kw">use </span>sc_network_gossip::GossipEngine;
-<span class="kw">use </span>sc_utils::notification::NotificationReceiver;
+<span class="kw">use </span>sc_utils::{mpsc::TracingUnboundedReceiver, notification::NotificationReceiver};
 <span class="kw">use </span>sp_api::{BlockId, ProvideRuntimeApi};
 <span class="kw">use </span>sp_arithmetic::traits::{AtLeast32Bit, Saturating};
 <span class="kw">use </span>sp_consensus::SyncOracle;
@@ -1908,20 +1879,6 @@
 	}
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>WorkerParams&lt;B: Block, BE, P, R, S&gt; {
-	<span class="kw">pub </span>backend: Arc&lt;BE&gt;,
-	<span class="kw">pub </span>payload_provider: P,
-	<span class="kw">pub </span>runtime: Arc&lt;R&gt;,
-	<span class="kw">pub </span>sync: Arc&lt;S&gt;,
-	<span class="kw">pub </span>key_store: BeefyKeystore,
-	<span class="kw">pub </span>gossip_engine: GossipEngine&lt;B&gt;,
-	<span class="kw">pub </span>gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
-	<span class="kw">pub </span>on_demand_justifications: OnDemandJustificationsEngine&lt;B&gt;,
-	<span class="kw">pub </span>links: BeefyVoterLinks&lt;B&gt;,
-	<span class="kw">pub </span>metrics: <span class="prelude-ty">Option</span>&lt;VoterMetrics&gt;,
-	<span class="kw">pub </span>persisted_state: PersistedState&lt;B&gt;,
-}
-
 <span class="attr">#[derive(Debug, Decode, Encode, PartialEq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PersistedState&lt;B: Block&gt; {
 	<span class="doccomment">/// Best block we voted on.
@@ -1964,28 +1921,29 @@
 <span class="doccomment">/// A BEEFY worker plays the BEEFY protocol
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BeefyWorker&lt;B: Block, BE, P, RuntimeApi, S&gt; {
 	<span class="comment">// utilities
-	</span>backend: Arc&lt;BE&gt;,
-	payload_provider: P,
-	runtime: Arc&lt;RuntimeApi&gt;,
-	sync: Arc&lt;S&gt;,
-	key_store: BeefyKeystore,
+	</span><span class="kw">pub </span>backend: Arc&lt;BE&gt;,
+	<span class="kw">pub </span>payload_provider: P,
+	<span class="kw">pub </span>runtime: Arc&lt;RuntimeApi&gt;,
+	<span class="kw">pub </span>sync: Arc&lt;S&gt;,
+	<span class="kw">pub </span>key_store: BeefyKeystore,
 
 	<span class="comment">// communication
-	</span>gossip_engine: GossipEngine&lt;B&gt;,
-	gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
-	on_demand_justifications: OnDemandJustificationsEngine&lt;B&gt;,
+	</span><span class="kw">pub </span>gossip_engine: GossipEngine&lt;B&gt;,
+	<span class="kw">pub </span>gossip_validator: Arc&lt;GossipValidator&lt;B&gt;&gt;,
+	<span class="kw">pub </span>gossip_report_stream: TracingUnboundedReceiver&lt;PeerReport&gt;,
+	<span class="kw">pub </span>on_demand_justifications: OnDemandJustificationsEngine&lt;B&gt;,
 
 	<span class="comment">// channels
 	</span><span class="doccomment">/// Links between the block importer, the background voter and the RPC layer.
-	</span>links: BeefyVoterLinks&lt;B&gt;,
+	</span><span class="kw">pub </span>links: BeefyVoterLinks&lt;B&gt;,
 
 	<span class="comment">// voter state
 	</span><span class="doccomment">/// BEEFY client metrics.
-	</span>metrics: <span class="prelude-ty">Option</span>&lt;VoterMetrics&gt;,
+	</span><span class="kw">pub </span>metrics: <span class="prelude-ty">Option</span>&lt;VoterMetrics&gt;,
 	<span class="doccomment">/// Buffer holding justifications for future processing.
-	</span>pending_justifications: BTreeMap&lt;NumberFor&lt;B&gt;, BeefyVersionedFinalityProof&lt;B&gt;&gt;,
+	</span><span class="kw">pub </span>pending_justifications: BTreeMap&lt;NumberFor&lt;B&gt;, BeefyVersionedFinalityProof&lt;B&gt;&gt;,
 	<span class="doccomment">/// Persisted voter state.
-	</span>persisted_state: PersistedState&lt;B&gt;,
+	</span><span class="kw">pub </span>persisted_state: PersistedState&lt;B&gt;,
 }
 
 <span class="kw">impl</span>&lt;B, BE, P, R, S&gt; BeefyWorker&lt;B, BE, P, R, S&gt;
@@ -1997,43 +1955,6 @@
 	R: ProvideRuntimeApi&lt;B&gt;,
 	R::Api: BeefyApi&lt;B&gt;,
 {
-	<span class="doccomment">/// Return a new BEEFY worker instance.
-	///
-	/// Note that a BEEFY worker is only fully functional if a corresponding
-	/// BEEFY pallet has been deployed on-chain.
-	///
-	/// The BEEFY pallet is needed in order to keep track of the BEEFY authority set.
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(worker_params: WorkerParams&lt;B, BE, P, R, S&gt;) -&gt; <span class="self">Self </span>{
-		<span class="kw">let </span>WorkerParams {
-			backend,
-			payload_provider,
-			runtime,
-			key_store,
-			sync,
-			gossip_engine,
-			gossip_validator,
-			on_demand_justifications,
-			links,
-			metrics,
-			persisted_state,
-		} = worker_params;
-
-		BeefyWorker {
-			backend,
-			payload_provider,
-			runtime,
-			sync,
-			key_store,
-			gossip_engine,
-			gossip_validator,
-			on_demand_justifications,
-			links,
-			metrics,
-			pending_justifications: BTreeMap::new(),
-			persisted_state,
-		}
-	}
-
 	<span class="kw">fn </span>best_grandpa_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NumberFor&lt;B&gt; {
 		<span class="kw-2">*</span><span class="self">self</span>.persisted_state.voting_oracle.best_grandpa_block_header.number()
 	}
@@ -2502,7 +2423,12 @@
 			<span class="comment">// Act on changed &#39;state&#39;.
 			</span><span class="self">self</span>.process_new_state();
 
-			<span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = <span class="kw-2">&amp;mut </span><span class="self">self</span>.gossip_engine;
+			<span class="comment">// Mutable reference used to drive the gossip engine.
+			</span><span class="kw">let </span><span class="kw-2">mut </span>gossip_engine = <span class="kw-2">&amp;mut </span><span class="self">self</span>.gossip_engine;
+			<span class="comment">// Use temp val and report after async section,
+			// to avoid having to Mutex-wrap `gossip_engine`.
+			</span><span class="kw">let </span><span class="kw-2">mut </span>gossip_report: <span class="prelude-ty">Option</span>&lt;PeerReport&gt; = <span class="prelude-val">None</span>;
+
 			<span class="comment">// Wait for, and handle external events.
 			// The branches below only change &#39;state&#39;, actual voting happens afterwards,
 			// based on the new resulting &#39;state&#39;.
@@ -2523,11 +2449,16 @@
 					<span class="kw">return</span>;
 				},
 				<span class="comment">// Process incoming justifications as these can make some in-flight votes obsolete.
-				</span>justif = <span class="self">self</span>.on_demand_justifications.next().fuse() =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(justif) = justif {
-						<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.triage_incoming_justif(justif) {
-							<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
-						}
+				</span>response_info = <span class="self">self</span>.on_demand_justifications.next().fuse() =&gt; {
+					<span class="kw">match </span>response_info {
+						ResponseInfo::ValidProof(justif, peer_report) =&gt; {
+							<span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="self">self</span>.triage_incoming_justif(justif) {
+								<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 {}&quot;</span>, err);
+							}
+							gossip_report = <span class="prelude-val">Some</span>(peer_report);
+						},
+						ResponseInfo::PeerReport(peer_report) =&gt; gossip_report = <span class="prelude-val">Some</span>(peer_report),
+						ResponseInfo::Pending =&gt; (),
 					}
 				},
 				justif = block_import_justif.next() =&gt; {
@@ -2571,6 +2502,13 @@
 						<span class="kw">return</span>;
 					}
 				},
+				<span class="comment">// Process peer reports.
+				</span>report = <span class="self">self</span>.gossip_report_stream.next() =&gt; {
+					gossip_report = report;
+				},
+			}
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(PeerReport { who, cost_benefit }) = gossip_report {
+				<span class="self">self</span>.gossip_engine.report(who, cost_benefit);
 			}
 		}
 	}
@@ -2775,7 +2713,8 @@
 		<span class="kw">let </span>network = peer.network_service().clone();
 		<span class="kw">let </span>sync = peer.sync_service().clone();
 		<span class="kw">let </span>known_peers = Arc::new(Mutex::new(KnownPeers::new()));
-		<span class="kw">let </span>gossip_validator = Arc::new(GossipValidator::new(known_peers.clone()));
+		<span class="kw">let </span>(gossip_validator, gossip_report_stream) = GossipValidator::new(known_peers.clone());
+		<span class="kw">let </span>gossip_validator = Arc::new(gossip_validator);
 		<span class="kw">let </span>gossip_engine = GossipEngine::new(
 			network.clone(),
 			sync.clone(),
@@ -2805,7 +2744,7 @@
 		)
 		.unwrap();
 		<span class="kw">let </span>payload_provider = MmrRootProvider::new(api.clone());
-		<span class="kw">let </span>worker_params = <span class="kw">crate</span>::worker::WorkerParams {
+		BeefyWorker {
 			backend,
 			payload_provider,
 			runtime: api,
@@ -2813,12 +2752,13 @@
 			links,
 			gossip_engine,
 			gossip_validator,
+			gossip_report_stream,
 			metrics,
 			sync: Arc::new(sync),
 			on_demand_justifications,
+			pending_justifications: BTreeMap::new(),
 			persisted_state,
-		};
-		BeefyWorker::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;::new(worker_params)
+		}
 	}
 
 	<span class="attr">#[test]

@@ -194,6 +194,10 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -238,9 +242,9 @@
 	encoded: <span class="kw-2">&amp;</span>[u8],
 	target_number: NumberFor&lt;Block&gt;,
 	validator_set: <span class="kw-2">&amp;</span>ValidatorSet&lt;AuthorityId&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;BeefyVersionedFinalityProof&lt;Block&gt;, ConsensusError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;BeefyVersionedFinalityProof&lt;Block&gt;, (ConsensusError, u32)&gt; {
 	<span class="kw">let </span>proof = &lt;BeefyVersionedFinalityProof&lt;Block&gt;&gt;::decode(<span class="kw-2">&amp;mut &amp;*</span>encoded)
-		.map_err(|<span class="kw">_</span>| ConsensusError::InvalidJustification)<span class="question-mark">?</span>;
+		.map_err(|<span class="kw">_</span>| (ConsensusError::InvalidJustification, <span class="number">0</span>))<span class="question-mark">?</span>;
 	verify_with_validator_set::&lt;Block&gt;(target_number, validator_set, <span class="kw-2">&amp;</span>proof).map(|<span class="kw">_</span>| proof)
 }
 
@@ -249,14 +253,15 @@
 	target_number: NumberFor&lt;Block&gt;,
 	validator_set: <span class="kw-2">&amp;</span>ValidatorSet&lt;AuthorityId&gt;,
 	proof: <span class="kw-2">&amp;</span>BeefyVersionedFinalityProof&lt;Block&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), ConsensusError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), (ConsensusError, u32)&gt; {
+	<span class="kw">let </span><span class="kw-2">mut </span>signatures_checked = <span class="number">0u32</span>;
 	<span class="kw">match </span>proof {
 		VersionedFinalityProof::V1(signed_commitment) =&gt; {
 			<span class="kw">if </span>signed_commitment.signatures.len() != validator_set.len() ||
 				signed_commitment.commitment.validator_set_id != validator_set.id() ||
 				signed_commitment.commitment.block_number != target_number
 			{
-				<span class="kw">return </span><span class="prelude-val">Err</span>(ConsensusError::InvalidJustification)
+				<span class="kw">return </span><span class="prelude-val">Err</span>((ConsensusError::InvalidJustification, <span class="number">0</span>))
 			}
 
 			<span class="comment">// Arrangement of signatures in the commitment should be in the same order
@@ -269,14 +274,17 @@
 				.filter(|(id, signature)| {
 					signature
 						.as_ref()
-						.map(|sig| BeefyKeystore::verify(id, sig, <span class="kw-2">&amp;</span>message[..]))
+						.map(|sig| {
+							signatures_checked += <span class="number">1</span>;
+							BeefyKeystore::verify(id, sig, <span class="kw-2">&amp;</span>message[..])
+						})
 						.unwrap_or(<span class="bool-val">false</span>)
 				})
 				.count();
 			<span class="kw">if </span>valid_signatures &gt;= <span class="kw">crate</span>::round::threshold(validator_set.len()) {
 				<span class="prelude-val">Ok</span>(())
 			} <span class="kw">else </span>{
-				<span class="prelude-val">Err</span>(ConsensusError::InvalidJustification)
+				<span class="prelude-val">Err</span>((ConsensusError::InvalidJustification, signatures_checked))
 			}
 		},
 	}
@@ -323,16 +331,16 @@
 		<span class="comment">// wrong block number -&gt; should fail verification
 		</span><span class="kw">let </span>good_proof = proof.clone().into();
 		<span class="kw">match </span>verify_with_validator_set::&lt;Block&gt;(block_num + <span class="number">1</span>, <span class="kw-2">&amp;</span>validator_set, <span class="kw-2">&amp;</span>good_proof) {
-			<span class="prelude-val">Err</span>(ConsensusError::InvalidJustification) =&gt; (),
-			<span class="kw">_ </span>=&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Expected Err(ConsensusError::InvalidJustification)&quot;</span>),
+			<span class="prelude-val">Err</span>((ConsensusError::InvalidJustification, <span class="number">0</span>)) =&gt; (),
+			e =&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Got unexpected {:?}&quot;</span>, e),
 		};
 
 		<span class="comment">// wrong validator set id -&gt; should fail verification
 		</span><span class="kw">let </span>good_proof = proof.clone().into();
 		<span class="kw">let </span>other = ValidatorSet::new(make_beefy_ids(keys), <span class="number">1</span>).unwrap();
 		<span class="kw">match </span>verify_with_validator_set::&lt;Block&gt;(block_num, <span class="kw-2">&amp;</span>other, <span class="kw-2">&amp;</span>good_proof) {
-			<span class="prelude-val">Err</span>(ConsensusError::InvalidJustification) =&gt; (),
-			<span class="kw">_ </span>=&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Expected Err(ConsensusError::InvalidJustification)&quot;</span>),
+			<span class="prelude-val">Err</span>((ConsensusError::InvalidJustification, <span class="number">0</span>)) =&gt; (),
+			e =&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Got unexpected {:?}&quot;</span>, e),
 		};
 
 		<span class="comment">// wrong signatures length -&gt; should fail verification
@@ -343,8 +351,8 @@
 		};
 		bad_signed_commitment.signatures.pop().flatten().unwrap();
 		<span class="kw">match </span>verify_with_validator_set::&lt;Block&gt;(block_num + <span class="number">1</span>, <span class="kw-2">&amp;</span>validator_set, <span class="kw-2">&amp;</span>bad_proof.into()) {
-			<span class="prelude-val">Err</span>(ConsensusError::InvalidJustification) =&gt; (),
-			<span class="kw">_ </span>=&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Expected Err(ConsensusError::InvalidJustification)&quot;</span>),
+			<span class="prelude-val">Err</span>((ConsensusError::InvalidJustification, <span class="number">0</span>)) =&gt; (),
+			e =&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Got unexpected {:?}&quot;</span>, e),
 		};
 
 		<span class="comment">// not enough signatures -&gt; should fail verification
@@ -354,9 +362,9 @@
 		};
 		<span class="comment">// remove a signature (but same length)
 		</span><span class="kw-2">*</span>bad_signed_commitment.signatures.first_mut().unwrap() = <span class="prelude-val">None</span>;
-		<span class="kw">match </span>verify_with_validator_set::&lt;Block&gt;(block_num + <span class="number">1</span>, <span class="kw-2">&amp;</span>validator_set, <span class="kw-2">&amp;</span>bad_proof.into()) {
-			<span class="prelude-val">Err</span>(ConsensusError::InvalidJustification) =&gt; (),
-			<span class="kw">_ </span>=&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Expected Err(ConsensusError::InvalidJustification)&quot;</span>),
+		<span class="kw">match </span>verify_with_validator_set::&lt;Block&gt;(block_num, <span class="kw-2">&amp;</span>validator_set, <span class="kw-2">&amp;</span>bad_proof.into()) {
+			<span class="prelude-val">Err</span>((ConsensusError::InvalidJustification, <span class="number">2</span>)) =&gt; (),
+			e =&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Got unexpected {:?}&quot;</span>, e),
 		};
 
 		<span class="comment">// not enough _correct_ signatures -&gt; should fail verification
@@ -367,9 +375,9 @@
 		<span class="comment">// change a signature to a different key
 		</span><span class="kw-2">*</span>bad_signed_commitment.signatures.first_mut().unwrap() =
 			<span class="prelude-val">Some</span>(Keyring::Dave.sign(<span class="kw-2">&amp;</span>bad_signed_commitment.commitment.encode()));
-		<span class="kw">match </span>verify_with_validator_set::&lt;Block&gt;(block_num + <span class="number">1</span>, <span class="kw-2">&amp;</span>validator_set, <span class="kw-2">&amp;</span>bad_proof.into()) {
-			<span class="prelude-val">Err</span>(ConsensusError::InvalidJustification) =&gt; (),
-			<span class="kw">_ </span>=&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Expected Err(ConsensusError::InvalidJustification)&quot;</span>),
+		<span class="kw">match </span>verify_with_validator_set::&lt;Block&gt;(block_num, <span class="kw-2">&amp;</span>validator_set, <span class="kw-2">&amp;</span>bad_proof.into()) {
+			<span class="prelude-val">Err</span>((ConsensusError::InvalidJustification, <span class="number">3</span>)) =&gt; (),
+			e =&gt; <span class="macro">assert!</span>(<span class="bool-val">false</span>, <span class="string">&quot;Got unexpected {:?}&quot;</span>, e),
 		};
 	}
 

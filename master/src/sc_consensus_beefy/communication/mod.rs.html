@@ -110,6 +110,39 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -183,6 +216,39 @@
 	<span class="kw">let </span><span class="kw-2">mut </span>cfg = sc_network::config::NonDefaultSetConfig::new(gossip_protocol_name, <span class="number">1024 </span>* <span class="number">1024</span>);
 	cfg.allow_non_reserved(<span class="number">25</span>, <span class="number">25</span>);
 	cfg
+}
+
+<span class="comment">// cost scalars for reporting peers.
+</span><span class="kw">mod </span>cost {
+	<span class="kw">use </span>sc_network::ReputationChange <span class="kw">as </span>Rep;
+	<span class="comment">// Message that&#39;s for an outdated round.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>OUTDATED_MESSAGE: Rep = Rep::new(-<span class="number">50</span>, <span class="string">&quot;BEEFY: Past message&quot;</span>);
+	<span class="comment">// Message that&#39;s from the future relative to our current set-id.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>FUTURE_MESSAGE: Rep = Rep::new(-<span class="number">100</span>, <span class="string">&quot;BEEFY: Future message&quot;</span>);
+	<span class="comment">// Vote message containing bad signature.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>BAD_SIGNATURE: Rep = Rep::new(-<span class="number">100</span>, <span class="string">&quot;BEEFY: Bad signature&quot;</span>);
+	<span class="comment">// Message received with vote from voter not in validator set.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>UNKNOWN_VOTER: Rep = Rep::new(-<span class="number">150</span>, <span class="string">&quot;BEEFY: Unknown voter&quot;</span>);
+	<span class="comment">// A message received that cannot be evaluated relative to our current state.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>OUT_OF_SCOPE_MESSAGE: Rep = Rep::new(-<span class="number">500</span>, <span class="string">&quot;BEEFY: Out-of-scope message&quot;</span>);
+	<span class="comment">// Message containing invalid proof.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>INVALID_PROOF: Rep = Rep::new(-<span class="number">5000</span>, <span class="string">&quot;BEEFY: Invalid commit&quot;</span>);
+	<span class="comment">// Reputation cost per signature checked for invalid proof.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>PER_SIGNATURE_CHECKED: i32 = -<span class="number">25</span>;
+	<span class="comment">// Reputation cost per byte for un-decodable message.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>PER_UNDECODABLE_BYTE: i32 = -<span class="number">5</span>;
+	<span class="comment">// On-demand request was refused by peer.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>REFUSAL_RESPONSE: Rep = Rep::new(-<span class="number">100</span>, <span class="string">&quot;BEEFY: Proof request refused&quot;</span>);
+	<span class="comment">// On-demand request for a proof that can&#39;t be found in the backend.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>UNKOWN_PROOF_REQUEST: Rep = Rep::new(-<span class="number">150</span>, <span class="string">&quot;BEEFY: Unknown proof request&quot;</span>);
+}
+
+<span class="comment">// benefit scalars for reporting peers.
+</span><span class="kw">mod </span>benefit {
+	<span class="kw">use </span>sc_network::ReputationChange <span class="kw">as </span>Rep;
+	<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>VOTE_MESSAGE: Rep = Rep::new(<span class="number">100</span>, <span class="string">&quot;BEEFY: Round vote message&quot;</span>);
+	<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>KNOWN_VOTE_MESSAGE: Rep = Rep::new(<span class="number">50</span>, <span class="string">&quot;BEEFY: Known vote&quot;</span>);
+	<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">const </span>VALIDATED_PROOF: Rep = Rep::new(<span class="number">100</span>, <span class="string">&quot;BEEFY: Justification&quot;</span>);
 }
 
 <span class="attr">#[cfg(test)]

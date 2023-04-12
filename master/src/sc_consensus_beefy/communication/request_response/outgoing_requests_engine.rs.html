@@ -243,6 +243,34 @@
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -276,7 +304,11 @@
 <span class="kw">use </span>std::{collections::VecDeque, result::Result, sync::Arc};
 
 <span class="kw">use crate</span>::{
-	communication::request_response::{Error, JustificationRequest, BEEFY_SYNC_LOG_TARGET},
+	communication::{
+		benefit, cost,
+		peers::PeerReport,
+		request_response::{Error, JustificationRequest, BEEFY_SYNC_LOG_TARGET},
+	},
 	justification::{decode_and_verify_finality_proof, BeefyVersionedFinalityProof},
 	metric_inc,
 	metrics::{register_metrics, OnDemandOutgoingRequestsMetrics},
@@ -297,6 +329,16 @@
 <span class="kw">enum </span>State&lt;B: Block&gt; {
 	Idle,
 	AwaitingResponse(PeerId, RequestInfo&lt;B&gt;, ResponseReceiver),
+}
+
+<span class="doccomment">/// Possible engine responses.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>ResponseInfo&lt;B: Block&gt; {
+	<span class="doccomment">/// No peer response available yet.
+	</span>Pending,
+	<span class="doccomment">/// Valid justification provided alongside peer reputation changes.
+	</span>ValidProof(BeefyVersionedFinalityProof&lt;B&gt;, PeerReport),
+	<span class="doccomment">/// No justification yet, only peer reputation changes.
+	</span>PeerReport(PeerReport),
 }
 
 <span class="kw">pub struct </span>OnDemandJustificationsEngine&lt;B: Block&gt; {
@@ -329,13 +371,11 @@
 	}
 
 	<span class="kw">fn </span>reset_peers_cache_for_block(<span class="kw-2">&amp;mut </span><span class="self">self</span>, block: NumberFor&lt;B&gt;) {
-		<span class="comment">// TODO (issue #12296): replace peer selection with generic one that involves all protocols.
-		</span><span class="self">self</span>.peers_cache = <span class="self">self</span>.live_peers.lock().further_than(block);
+		<span class="self">self</span>.peers_cache = <span class="self">self</span>.live_peers.lock().further_than(block);
 	}
 
 	<span class="kw">fn </span>try_next_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PeerId&gt; {
-		<span class="comment">// TODO (issue #12296): replace peer selection with generic one that involves all protocols.
-		</span><span class="kw">let </span>live = <span class="self">self</span>.live_peers.lock();
+		<span class="kw">let </span>live = <span class="self">self</span>.live_peers.lock();
 		<span class="kw">while let </span><span class="prelude-val">Some</span>(peer) = <span class="self">self</span>.peers_cache.pop_front() {
 			<span class="kw">if </span>live.contains(<span class="kw-2">&amp;</span>peer) {
 				<span class="kw">return </span><span class="prelude-val">Some</span>(peer)
@@ -404,24 +444,19 @@
 
 	<span class="kw">fn </span>process_response(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		peer: PeerId,
+		peer: <span class="kw-2">&amp;</span>PeerId,
 		req_info: <span class="kw-2">&amp;</span>RequestInfo&lt;B&gt;,
 		response: <span class="prelude-ty">Result</span>&lt;Response, Canceled&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;BeefyVersionedFinalityProof&lt;B&gt;, Error&gt; {
 		response
 			.map_err(|e| {
-				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_peer_hang_up);
 				<span class="macro">debug!</span>(
 					target: BEEFY_SYNC_LOG_TARGET,
-					<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} hung up: {:?}&quot;</span>,
-					req_info.block,
-					peer,
-					e
+					<span class="string">&quot;🥩 on-demand sc-network channel sender closed, err: {:?}&quot;</span>, e
 				);
-				Error::InvalidResponse
+				Error::ResponseError
 			})<span class="question-mark">?
 			</span>.map_err(|e| {
-				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_peer_error);
 				<span class="macro">debug!</span>(
 					target: BEEFY_SYNC_LOG_TARGET,
 					<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} error: {:?}&quot;</span>,
@@ -429,7 +464,18 @@
 					peer,
 					e
 				);
-				Error::InvalidResponse
+				<span class="kw">match </span>e {
+					RequestFailure::Refused =&gt; {
+						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_peer_refused);
+						<span class="kw">let </span>peer_report =
+							PeerReport { who: <span class="kw-2">*</span>peer, cost_benefit: cost::REFUSAL_RESPONSE };
+						Error::InvalidResponse(peer_report)
+					},
+					<span class="kw">_ </span>=&gt; {
+						<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_peer_error);
+						Error::ResponseError
+					},
+				}
 			})
 			.and_then(|encoded| {
 				decode_and_verify_finality_proof::&lt;B&gt;(
@@ -437,24 +483,27 @@
 					req_info.block,
 					<span class="kw-2">&amp;</span>req_info.active_set,
 				)
-				.map_err(|e| {
+				.map_err(|(err, signatures_checked)| {
 					<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_invalid_proof);
 					<span class="macro">debug!</span>(
 						target: BEEFY_SYNC_LOG_TARGET,
 						<span class="string">&quot;🥩 for on demand justification #{:?}, peer {:?} responded with invalid proof: {:?}&quot;</span>,
-						req_info.block, peer, e
+						req_info.block, peer, err
 					);
-					Error::InvalidResponse
+					<span class="kw">let </span><span class="kw-2">mut </span>cost = cost::INVALID_PROOF;
+					cost.value +=
+						cost::PER_SIGNATURE_CHECKED.saturating_mul(signatures_checked <span class="kw">as </span>i32);
+					Error::InvalidResponse(PeerReport { who: <span class="kw-2">*</span>peer, cost_benefit: cost })
 				})
 			})
 	}
 
-	<span class="kw">pub async fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;BeefyVersionedFinalityProof&lt;B&gt;&gt; {
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ResponseInfo&lt;B&gt; {
 		<span class="kw">let </span>(peer, req_info, resp) = <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.state {
 			State::Idle =&gt; {
 				futures::future::pending::&lt;()&gt;().<span class="kw">await</span>;
-				<span class="kw">return </span><span class="prelude-val">None
-			</span>},
+				<span class="kw">return </span>ResponseInfo::Pending
+			},
 			State::AwaitingResponse(peer, req_info, receiver) =&gt; {
 				<span class="kw">let </span>resp = receiver.<span class="kw">await</span>;
 				(<span class="kw-2">*</span>peer, req_info.clone(), resp)
@@ -465,8 +514,8 @@
 		</span><span class="self">self</span>.state = State::Idle;
 
 		<span class="kw">let </span>block = req_info.block;
-		<span class="self">self</span>.process_response(peer, <span class="kw-2">&amp;</span>req_info, resp)
-			.map_err(|<span class="kw">_</span>| {
+		<span class="kw">match </span><span class="self">self</span>.process_response(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>req_info, resp) {
+			<span class="prelude-val">Err</span>(err) =&gt; {
 				<span class="comment">// No valid justification received, try next peer in our set.
 				</span><span class="kw">if let </span><span class="prelude-val">Some</span>(peer) = <span class="self">self</span>.try_next_peer() {
 					<span class="self">self</span>.request_from_peer(peer, req_info);
@@ -476,16 +525,23 @@
 						<span class="string">&quot;🥩 ran out of peers to request justif #{:?} from&quot;</span>, block
 					);
 				}
-			})
-			.map(|proof| {
+				<span class="comment">// Report peer based on error type.
+				</span><span class="kw">if let </span>Error::InvalidResponse(peer_report) = err {
+					ResponseInfo::PeerReport(peer_report)
+				} <span class="kw">else </span>{
+					ResponseInfo::Pending
+				}
+			},
+			<span class="prelude-val">Ok</span>(proof) =&gt; {
 				<span class="macro">metric_inc!</span>(<span class="self">self</span>, beefy_on_demand_justification_good_proof);
 				<span class="macro">debug!</span>(
 					target: BEEFY_SYNC_LOG_TARGET,
 					<span class="string">&quot;🥩 received valid on-demand justif #{:?} from {:?}&quot;</span>, block, peer
 				);
-				proof
-			})
-			.ok()
+				<span class="kw">let </span>peer_report = PeerReport { who: peer, cost_benefit: benefit::VALIDATED_PROOF };
+				ResponseInfo::ValidProof(proof, peer_report)
+			},
+		}
 	}
 }
 </code></pre></div>
