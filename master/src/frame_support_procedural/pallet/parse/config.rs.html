@@ -398,6 +398,18 @@
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -461,7 +473,7 @@
 	<span class="doccomment">/// The type in Get, e.g. `u32` in `type Foo: Get&lt;u32&gt;;`, but `Self` is replaced by `T`
 	</span><span class="kw">pub </span>type_: syn::Type,
 	<span class="doccomment">/// The doc associated
-	</span><span class="kw">pub </span>doc: Vec&lt;syn::Lit&gt;,
+	</span><span class="kw">pub </span>doc: Vec&lt;syn::Expr&gt;,
 }
 
 <span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>syn::TraitItemType&gt; <span class="kw">for </span>ConstMetadataDef {
@@ -524,23 +536,35 @@
 }
 
 <span class="doccomment">/// Parse for `#[pallet::constant]`
-</span><span class="kw">pub struct </span>TypeAttrConst(proc_macro2::Span);
-
-<span class="kw">impl </span>Spanned <span class="kw">for </span>TypeAttrConst {
-	<span class="kw">fn </span>span(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; proc_macro2::Span {
-		<span class="self">self</span>.<span class="number">0
-	</span>}
+</span><span class="kw">pub struct </span>TypeAttrConst {
+	pound_token: <span class="macro">syn::Token!</span>[#],
+	bracket_token: syn::token::Bracket,
+	pallet_ident: syn::Ident,
+	path_sep_token: syn::token::PathSep,
+	constant_keyword: keyword::constant,
 }
 
 <span class="kw">impl </span>syn::parse::Parse <span class="kw">for </span>TypeAttrConst {
 	<span class="kw">fn </span>parse(input: syn::parse::ParseStream) -&gt; syn::Result&lt;<span class="self">Self</span>&gt; {
-		input.parse::&lt;<span class="macro">syn::Token!</span>[#]&gt;()<span class="question-mark">?</span>;
+		<span class="kw">let </span>pound_token = input.parse::&lt;<span class="macro">syn::Token!</span>[#]&gt;()<span class="question-mark">?</span>;
 		<span class="kw">let </span>content;
-		<span class="macro">syn::bracketed!</span>(content <span class="kw">in </span>input);
-		content.parse::&lt;syn::Ident&gt;()<span class="question-mark">?</span>;
-		content.parse::&lt;<span class="macro">syn::Token!</span>[::]&gt;()<span class="question-mark">?</span>;
+		<span class="kw">let </span>bracket_token = <span class="macro">syn::bracketed!</span>(content <span class="kw">in </span>input);
+		<span class="kw">let </span>pallet_ident = content.parse::&lt;syn::Ident&gt;()<span class="question-mark">?</span>;
+		<span class="kw">let </span>path_sep_token = content.parse::&lt;<span class="macro">syn::Token!</span>[::]&gt;()<span class="question-mark">?</span>;
+		<span class="kw">let </span>constant_keyword = content.parse::&lt;keyword::constant&gt;()<span class="question-mark">?</span>;
 
-		<span class="prelude-val">Ok</span>(TypeAttrConst(content.parse::&lt;keyword::constant&gt;()<span class="question-mark">?</span>.span()))
+		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ pound_token, bracket_token, pallet_ident, path_sep_token, constant_keyword })
+	}
+}
+
+<span class="kw">impl </span>ToTokens <span class="kw">for </span>TypeAttrConst {
+	<span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>proc_macro2::TokenStream) {
+		<span class="self">self</span>.pound_token.to_tokens(tokens);
+		<span class="self">self</span>.bracket_token.surround(tokens, |tokens| {
+			<span class="self">self</span>.pallet_ident.to_tokens(tokens);
+			<span class="self">self</span>.path_sep_token.to_tokens(tokens);
+			<span class="self">self</span>.constant_keyword.to_tokens(tokens);
+		})
 	}
 }
 

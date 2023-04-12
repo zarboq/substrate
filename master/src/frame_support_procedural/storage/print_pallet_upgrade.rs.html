@@ -383,8 +383,6 @@
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::StorageLineTypeDef;
 <span class="kw">use </span>frame_support_procedural_tools::clean_type_string;
 <span class="kw">use </span>quote::ToTokens;
@@ -660,14 +658,12 @@
 			doc = line.doc_attrs.iter().fold(String::new(), |<span class="kw-2">mut </span>res, attr| {
 				<span class="kw">if let </span>syn::Meta::NameValue(name_value) = attr {
 					<span class="kw">if </span>name_value.path.is_ident(<span class="string">&quot;doc&quot;</span>) {
-						<span class="kw">if let </span>syn::Lit::Str(string) = <span class="kw-2">&amp;</span>name_value.lit {
-							res = <span class="macro">format!</span>(
-								<span class="string">&quot;{}
-	///{}&quot;</span>,
-								res,
-								string.value(),
-							);
-						}
+						res = <span class="macro">format!</span>(
+							<span class="string">&quot;{}
+							///{}&quot;</span>,
+							res,
+							name_value.value.to_token_stream(),
+						);
 					}
 				}
 				res

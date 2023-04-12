@@ -255,7 +255,6 @@
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -294,8 +293,7 @@
 };
 
 <span class="kw">use </span>syn::{
-	parse_quote, spanned::Spanned, FnArg, Ident, ItemTrait, <span class="prelude-ty">Result</span>, Signature, Token,
-	TraitItemMethod,
+	parse_quote, spanned::Spanned, FnArg, Ident, ItemTrait, <span class="prelude-ty">Result</span>, Signature, Token, TraitItemFn,
 };
 
 <span class="kw">use </span>proc_macro2::{Span, TokenStream};
@@ -374,7 +372,7 @@
 		<span class="macro">quote! </span>{}
 	};
 
-	<span class="kw">let </span>attrs = method.attrs.iter().filter(|a| !a.path.is_ident(<span class="string">&quot;version&quot;</span>));
+	<span class="kw">let </span>attrs = method.attrs.iter().filter(|a| !a.path().is_ident(<span class="string">&quot;version&quot;</span>));
 
 	<span class="kw">let </span>cfg_wasm_only = <span class="kw">if </span>is_wasm_only {
 		<span class="macro">quote! </span>{ <span class="attr">#[cfg(target_arch = <span class="string">&quot;wasm32&quot;</span>)] </span>}
@@ -397,12 +395,12 @@
 <span class="doccomment">/// Generate call to latest function version for `cfg((feature = &quot;std&quot;)`
 ///
 /// This should generate simple `fn func(..) { func_version_&lt;latest_version&gt;(..) }`.
-</span><span class="kw">fn </span>function_std_latest_impl(method: <span class="kw-2">&amp;</span>TraitItemMethod, latest_version: u32) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream&gt; {
+</span><span class="kw">fn </span>function_std_latest_impl(method: <span class="kw-2">&amp;</span>TraitItemFn, latest_version: u32) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream&gt; {
 	<span class="kw">let </span>function_name = <span class="kw-2">&amp;</span>method.sig.ident;
 	<span class="kw">let </span>args = get_function_arguments(<span class="kw-2">&amp;</span>method.sig).map(FnArg::Typed);
 	<span class="kw">let </span>arg_names = get_function_argument_names(<span class="kw-2">&amp;</span>method.sig).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 	<span class="kw">let </span>return_value = <span class="kw-2">&amp;</span>method.sig.output;
-	<span class="kw">let </span>attrs = method.attrs.iter().filter(|a| !a.path.is_ident(<span class="string">&quot;version&quot;</span>));
+	<span class="kw">let </span>attrs = method.attrs.iter().filter(|a| !a.path().is_ident(<span class="string">&quot;version&quot;</span>));
 	<span class="kw">let </span>latest_function_name =
 		create_function_ident_with_version(<span class="kw-2">&amp;</span>method.sig.ident, latest_version);
 
@@ -420,7 +418,7 @@
 <span class="doccomment">/// Generates the bare function implementation for `cfg(feature = &quot;std&quot;)`.
 </span><span class="kw">fn </span>function_std_impl(
 	trait_name: <span class="kw-2">&amp;</span>Ident,
-	method: <span class="kw-2">&amp;</span>TraitItemMethod,
+	method: <span class="kw-2">&amp;</span>TraitItemFn,
 	version: u32,
 	is_wasm_only: bool,
 	tracing: bool,
@@ -443,7 +441,7 @@
 		.take(<span class="number">1</span>),
 	);
 	<span class="kw">let </span>return_value = <span class="kw-2">&amp;</span>method.sig.output;
-	<span class="kw">let </span>attrs = method.attrs.iter().filter(|a| !a.path.is_ident(<span class="string">&quot;version&quot;</span>));
+	<span class="kw">let </span>attrs = method.attrs.iter().filter(|a| !a.path().is_ident(<span class="string">&quot;version&quot;</span>));
 	<span class="comment">// Don&#39;t make the function public accessible when this is a wasm only interface.
 	</span><span class="kw">let </span>call_to_trait = generate_call_to_trait(trait_name, method, version, is_wasm_only);
 	<span class="kw">let </span>call_to_trait = <span class="kw">if </span>!tracing {
@@ -468,7 +466,7 @@
 <span class="doccomment">/// Generate the call to the interface trait.
 </span><span class="kw">fn </span>generate_call_to_trait(
 	trait_name: <span class="kw-2">&amp;</span>Ident,
-	method: <span class="kw-2">&amp;</span>TraitItemMethod,
+	method: <span class="kw-2">&amp;</span>TraitItemFn,
 	version: u32,
 	is_wasm_only: bool,
 ) -&gt; TokenStream {

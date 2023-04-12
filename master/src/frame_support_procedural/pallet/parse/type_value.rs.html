@@ -162,7 +162,7 @@
 	<span class="doccomment">/// The span of the pallet::type_value attribute.
 	</span><span class="kw">pub </span>attr_span: proc_macro2::Span,
 	<span class="doccomment">/// Docs on the item.
-	</span><span class="kw">pub </span>docs: Vec&lt;syn::Lit&gt;,
+	</span><span class="kw">pub </span>docs: Vec&lt;syn::Expr&gt;,
 }
 
 <span class="kw">impl </span>TypeValueDef {
@@ -180,9 +180,9 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>docs = <span class="macro">vec!</span>[];
 		<span class="kw">for </span>attr <span class="kw">in </span><span class="kw-2">&amp;</span>item.attrs {
-			<span class="kw">if let </span><span class="prelude-val">Ok</span>(syn::Meta::NameValue(meta)) = attr.parse_meta() {
+			<span class="kw">if let </span>syn::Meta::NameValue(meta) = <span class="kw-2">&amp;</span>attr.meta {
 				<span class="kw">if </span>meta.path.get_ident().map_or(<span class="bool-val">false</span>, |ident| ident == <span class="string">&quot;doc&quot;</span>) {
-					docs.push(meta.lit);
+					docs.push(meta.value.clone());
 					<span class="kw">continue
 				</span>}
 			}

@@ -1024,7 +1024,7 @@
 	<span class="doccomment">/// The keys and value metadata of the storage.
 	</span><span class="kw">pub </span>metadata: Metadata,
 	<span class="doccomment">/// The doc associated to the storage.
-	</span><span class="kw">pub </span>docs: Vec&lt;syn::Lit&gt;,
+	</span><span class="kw">pub </span>docs: Vec&lt;syn::Expr&gt;,
 	<span class="doccomment">/// A set of usage of instance, must be check for consistency with config.
 	</span><span class="kw">pub </span>instances: Vec&lt;helper::InstanceUsage&gt;,
 	<span class="doccomment">/// Optional getter to generate. If some then query_kind is ensured to be some as well.
@@ -1135,7 +1135,7 @@
 <span class="doccomment">/// Check the generics in the `map` contains the generics in `gen` may contains generics in
 /// `optional_gen`, and doesn&#39;t contains any other.
 </span><span class="kw">fn </span>check_generics(
-	map: <span class="kw-2">&amp;</span>HashMap&lt;String, syn::Binding&gt;,
+	map: <span class="kw-2">&amp;</span>HashMap&lt;String, syn::AssocType&gt;,
 	mandatory_generics: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str],
 	optional_generics: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str],
 	storage_type_name: <span class="kw-2">&amp;</span>str,
@@ -1196,9 +1196,9 @@
 </span><span class="kw">fn </span>process_named_generics(
 	storage: <span class="kw-2">&amp;</span>StorageKind,
 	args_span: proc_macro2::Span,
-	args: <span class="kw-2">&amp;</span>[syn::Binding],
+	args: <span class="kw-2">&amp;</span>[syn::AssocType],
 ) -&gt; syn::Result&lt;(<span class="prelude-ty">Option</span>&lt;StorageGenerics&gt;, Metadata, <span class="prelude-ty">Option</span>&lt;syn::Type&gt;, bool)&gt; {
-	<span class="kw">let </span><span class="kw-2">mut </span>parsed = HashMap::&lt;String, syn::Binding&gt;::new();
+	<span class="kw">let </span><span class="kw-2">mut </span>parsed = HashMap::&lt;String, syn::AssocType&gt;::new();
 
 	<span class="comment">// Ensure no duplicate.
 	</span><span class="kw">for </span>arg <span class="kw">in </span>args {
@@ -1475,12 +1475,12 @@
 			})
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		process_unnamed_generics(<span class="kw-2">&amp;</span>storage_kind, args_span, <span class="kw-2">&amp;</span>args, dev_mode)
-	} <span class="kw">else if </span>args.args.iter().all(|gen| <span class="macro">matches!</span>(gen, syn::GenericArgument::Binding(<span class="kw">_</span>))) {
+	} <span class="kw">else if </span>args.args.iter().all(|gen| <span class="macro">matches!</span>(gen, syn::GenericArgument::AssocType(<span class="kw">_</span>))) {
 		<span class="kw">let </span>args = args
 			.args
 			.iter()
 			.map(|gen| <span class="kw">match </span>gen {
-				syn::GenericArgument::Binding(gen) =&gt; gen.clone(),
+				syn::GenericArgument::AssocType(gen) =&gt; gen.clone(),
 				<span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;It is asserted above that all generics are bindings&quot;</span>),
 			})
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();

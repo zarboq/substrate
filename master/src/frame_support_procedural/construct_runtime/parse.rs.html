@@ -710,6 +710,7 @@
 <a href="#710" id="710">710</a>
 <a href="#711" id="711">711</a>
 <a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -729,6 +730,7 @@
 
 </span><span class="kw">use </span>frame_support_procedural_tools::syn_ext <span class="kw">as </span>ext;
 <span class="kw">use </span>proc_macro2::{Span, TokenStream};
+<span class="kw">use </span>quote::ToTokens;
 <span class="kw">use </span>std::collections::{HashMap, HashSet};
 <span class="kw">use </span>syn::{
 	ext::IdentExt,
@@ -1156,21 +1158,21 @@
 	}
 }
 
-<span class="kw">impl </span>Spanned <span class="kw">for </span>PalletPartKeyword {
-	<span class="kw">fn </span>span(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Span {
+<span class="kw">impl </span>ToTokens <span class="kw">for </span>PalletPartKeyword {
+	<span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>TokenStream) {
 		<span class="kw">match </span><span class="self">self </span>{
-			<span class="self">Self</span>::Pallet(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::Call(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::Storage(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::Event(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::Config(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::Origin(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::Inherent(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::ValidateUnsigned(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::FreezeReason(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::HoldReason(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::LockId(inner) =&gt; inner.span(),
-			<span class="self">Self</span>::SlashReason(inner) =&gt; inner.span(),
+			<span class="self">Self</span>::Pallet(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::Call(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::Storage(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::Event(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::Config(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::Origin(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::Inherent(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::ValidateUnsigned(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::FreezeReason(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::HoldReason(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::LockId(inner) =&gt; inner.to_tokens(tokens),
+			<span class="self">Self</span>::SlashReason(inner) =&gt; inner.to_tokens(tokens),
 		}
 	}
 }
@@ -1393,7 +1395,7 @@
 				.attrs
 				.iter()
 				.map(|attr| {
-					<span class="kw">if </span>attr.path.segments.len() != <span class="number">1 </span>|| attr.path.segments[<span class="number">0</span>].ident != <span class="string">&quot;cfg&quot; </span>{
+					<span class="kw">if </span>attr.path().segments.first().map_or(<span class="bool-val">false</span>, |s| s.ident != <span class="string">&quot;cfg&quot;</span>) {
 						<span class="kw">let </span>msg = <span class="string">&quot;Unsupported attribute, only #[cfg] is supported on pallet \
 						declarations in `construct_runtime`&quot;</span>;
 						<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(attr.span(), msg))

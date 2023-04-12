@@ -200,7 +200,7 @@
 <span class="kw">use </span>syn::{
 	fold::{<span class="self">self</span>, Fold},
 	spanned::Spanned,
-	Error, Generics, ItemTrait, Receiver, <span class="prelude-ty">Result</span>, TraitItemMethod, Type, Visibility,
+	Error, Generics, ItemTrait, Receiver, <span class="prelude-ty">Result</span>, TraitItemFn, Type, Visibility,
 };
 
 <span class="kw">use </span>proc_macro2::TokenStream;
@@ -225,7 +225,7 @@
 </span><span class="kw">struct </span>ToEssentialTraitDef {
 	<span class="doccomment">/// All errors found while doing the conversion.
 	</span>errors: Vec&lt;Error&gt;,
-	methods: Vec&lt;TraitItemMethod&gt;,
+	methods: Vec&lt;TraitItemFn&gt;,
 }
 
 <span class="kw">impl </span>ToEssentialTraitDef {
@@ -233,7 +233,7 @@
 		ToEssentialTraitDef { errors: <span class="macro">vec!</span>[], methods: <span class="macro">vec!</span>[] }
 	}
 
-	<span class="kw">fn </span>into_methods(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;TraitItemMethod&gt;&gt; {
+	<span class="kw">fn </span>into_methods(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;TraitItemFn&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>errors = <span class="self">self</span>.errors;
 		<span class="kw">let </span>methods = <span class="self">self</span>.methods;
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(first_error) = errors.pop() {
@@ -246,8 +246,8 @@
 		}
 	}
 
-	<span class="kw">fn </span>process(<span class="kw-2">&amp;mut </span><span class="self">self</span>, method: <span class="kw-2">&amp;</span>TraitItemMethod, version: u32) {
-		<span class="kw">let </span><span class="kw-2">mut </span>folded = <span class="self">self</span>.fold_trait_item_method(method.clone());
+	<span class="kw">fn </span>process(<span class="kw-2">&amp;mut </span><span class="self">self</span>, method: <span class="kw-2">&amp;</span>TraitItemFn, version: u32) {
+		<span class="kw">let </span><span class="kw-2">mut </span>folded = <span class="self">self</span>.fold_trait_item_fn(method.clone());
 		folded.sig.ident = create_function_ident_with_version(<span class="kw-2">&amp;</span>folded.sig.ident, version);
 		<span class="self">self</span>.methods.push(folded);
 	}
@@ -264,7 +264,7 @@
 }
 
 <span class="kw">impl </span>Fold <span class="kw">for </span>ToEssentialTraitDef {
-	<span class="kw">fn </span>fold_trait_item_method(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>method: TraitItemMethod) -&gt; TraitItemMethod {
+	<span class="kw">fn </span>fold_trait_item_fn(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>method: TraitItemFn) -&gt; TraitItemFn {
 		<span class="kw">if </span>method.default.take().is_none() {
 			<span class="self">self</span>.push_error(<span class="kw-2">&amp;</span>method, <span class="string">&quot;Methods need to have an implementation.&quot;</span>);
 		}
@@ -279,9 +279,9 @@
 
 		<span class="self">self</span>.error_on_generic_parameters(<span class="kw-2">&amp;</span>method.sig.generics);
 
-		method.attrs.retain(|a| !a.path.is_ident(<span class="string">&quot;version&quot;</span>));
+		method.attrs.retain(|a| !a.path().is_ident(<span class="string">&quot;version&quot;</span>));
 
-		fold::fold_trait_item_method(<span class="self">self</span>, method)
+		fold::fold_trait_item_fn(<span class="self">self</span>, method)
 	}
 
 	<span class="kw">fn </span>fold_item_trait(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>trait_def: ItemTrait) -&gt; ItemTrait {
@@ -328,7 +328,7 @@
 	<span class="kw">let </span>interface = get_runtime_interface(trait_def)<span class="question-mark">?</span>;
 	<span class="kw">let </span>methods = interface.all_versions().map(|(version, method)| {
 		<span class="kw">let </span><span class="kw-2">mut </span>cloned = (<span class="kw-2">*</span>method).clone();
-		cloned.attrs.retain(|a| !a.path.is_ident(<span class="string">&quot;version&quot;</span>));
+		cloned.attrs.retain(|a| !a.path().is_ident(<span class="string">&quot;version&quot;</span>));
 		cloned.sig.ident = create_function_ident_with_version(<span class="kw-2">&amp;</span>cloned.sig.ident, version);
 		cloned
 	});

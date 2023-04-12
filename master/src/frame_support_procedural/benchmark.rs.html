@@ -1021,18 +1021,6 @@
 <a href="#1021" id="1021">1021</a>
 <a href="#1022" id="1022">1022</a>
 <a href="#1023" id="1023">1023</a>
-<a href="#1024" id="1024">1024</a>
-<a href="#1025" id="1025">1025</a>
-<a href="#1026" id="1026">1026</a>
-<a href="#1027" id="1027">1027</a>
-<a href="#1028" id="1028">1028</a>
-<a href="#1029" id="1029">1029</a>
-<a href="#1030" id="1030">1030</a>
-<a href="#1031" id="1031">1031</a>
-<a href="#1032" id="1032">1032</a>
-<a href="#1033" id="1033">1033</a>
-<a href="#1034" id="1034">1034</a>
-<a href="#1035" id="1035">1035</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1056,14 +1044,13 @@
 <span class="kw">use </span>frame_support_procedural_tools::generate_crate_access_2018;
 <span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::{Ident, Span, TokenStream <span class="kw">as </span>TokenStream2};
-<span class="kw">use </span>quote::{quote, quote_spanned, ToTokens};
+<span class="kw">use </span>quote::{quote, ToTokens};
 <span class="kw">use </span>syn::{
-	parenthesized,
 	parse::{Nothing, ParseStream},
 	parse_quote,
 	punctuated::Punctuated,
 	spanned::Spanned,
-	token::{Colon2, Comma, Gt, Lt, Paren},
+	token::{Comma, Gt, Lt, PathSep},
 	Attribute, Error, Expr, ExprBlock, ExprCall, ExprPath, FnArg, Item, ItemFn, ItemMod, LitInt,
 	Pat, Path, PathArguments, PathSegment, <span class="prelude-ty">Result</span>, ReturnType, Signature, Stmt, Token, Type,
 	TypePath, Visibility, WhereClause,
@@ -1080,6 +1067,9 @@
 	<span class="macro">custom_keyword!</span>(skip_meta);
 	<span class="macro">custom_keyword!</span>(BenchmarkError);
 	<span class="macro">custom_keyword!</span>(<span class="prelude-ty">Result</span>);
+
+	<span class="kw">pub const </span>BENCHMARK_TOKEN: <span class="kw-2">&amp;</span>str = <span class="macro">stringify!</span>(benchmark);
+	<span class="kw">pub const </span>BENCHMARKS_TOKEN: <span class="kw-2">&amp;</span>str = <span class="macro">stringify!</span>(benchmarks);
 }
 
 <span class="doccomment">/// This represents the raw parsed data for a param definition such as `x: Linear&lt;10, 20&gt;`.
@@ -1130,27 +1120,20 @@
 
 <span class="kw">impl </span>syn::parse::Parse <span class="kw">for </span>BenchmarkAttrs {
 	<span class="kw">fn </span>parse(input: ParseStream) -&gt; syn::Result&lt;<span class="self">Self</span>&gt; {
-		<span class="kw">let </span>lookahead = input.lookahead1();
-		<span class="kw">if </span>!lookahead.peek(Paren) {
-			<span class="kw">let </span>_nothing: Nothing = input.parse()<span class="question-mark">?</span>;
-			<span class="kw">return </span><span class="prelude-val">Ok</span>(BenchmarkAttrs { skip_meta: <span class="bool-val">false</span>, extra: <span class="bool-val">false </span>})
-		}
-		<span class="kw">let </span>content;
-		<span class="kw">let </span>_paren: Paren = <span class="macro">parenthesized!</span>(content <span class="kw">in </span>input);
 		<span class="kw">let </span><span class="kw-2">mut </span>extra = <span class="bool-val">false</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>skip_meta = <span class="bool-val">false</span>;
-		<span class="kw">let </span>args = Punctuated::&lt;BenchmarkAttrKeyword, <span class="macro">Token!</span>[,]&gt;::parse_terminated(<span class="kw-2">&amp;</span>content)<span class="question-mark">?</span>;
+		<span class="kw">let </span>args = Punctuated::&lt;BenchmarkAttrKeyword, <span class="macro">Token!</span>[,]&gt;::parse_terminated(<span class="kw-2">&amp;</span>input)<span class="question-mark">?</span>;
 		<span class="kw">for </span>arg <span class="kw">in </span>args.into_iter() {
 			<span class="kw">match </span>arg {
 				BenchmarkAttrKeyword::Extra =&gt; {
 					<span class="kw">if </span>extra {
-						<span class="kw">return </span><span class="prelude-val">Err</span>(content.error(<span class="string">&quot;`extra` can only be specified once&quot;</span>))
+						<span class="kw">return </span><span class="prelude-val">Err</span>(input.error(<span class="string">&quot;`extra` can only be specified once&quot;</span>))
 					}
 					extra = <span class="bool-val">true</span>;
 				},
 				BenchmarkAttrKeyword::SkipMeta =&gt; {
 					<span class="kw">if </span>skip_meta {
-						<span class="kw">return </span><span class="prelude-val">Err</span>(content.error(<span class="string">&quot;`skip_meta` can only be specified once&quot;</span>))
+						<span class="kw">return </span><span class="prelude-val">Err</span>(input.error(<span class="string">&quot;`skip_meta` can only be specified once&quot;</span>))
 					}
 					skip_meta = <span class="bool-val">true</span>;
 				},
@@ -1185,8 +1168,6 @@
 	call_def: BenchmarkCallDef,
 	verify_stmts: Vec&lt;Stmt&gt;,
 	last_stmt: <span class="prelude-ty">Option</span>&lt;Stmt&gt;,
-	extra: bool,
-	skip_meta: bool,
 	fn_sig: Signature,
 	fn_vis: Visibility,
 	fn_attrs: Vec&lt;Attribute&gt;,
@@ -1253,7 +1234,7 @@
 			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(
 					var_span,
 					<span class="string">&quot;Benchmark parameter names must consist of a single lowercase letter (a-z) and no other characters.&quot;</span>,
-				))
+				));
 		};
 		<span class="kw">let </span>name = ident.ident.to_token_stream().to_string();
 		<span class="kw">if </span>name.len() &gt; <span class="number">1 </span>{
@@ -1288,9 +1269,9 @@
 <span class="doccomment">/// Used in several places where the `#[extrinsic_call]` or `#[body]` annotation is missing
 </span><span class="kw">fn </span>missing_call&lt;T&gt;(item_fn: <span class="kw-2">&amp;</span>ItemFn) -&gt; <span class="prelude-ty">Result</span>&lt;T&gt; {
 	<span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(
-		item_fn.block.brace_token.span,
+		item_fn.block.brace_token.span.join(),
 		<span class="string">&quot;No valid #[extrinsic_call] or #[block] annotation could be found in benchmark function body.&quot;
-	</span>))
+	</span>));
 }
 
 <span class="doccomment">/// Finds the `BenchmarkCallDef` and its index (within the list of stmts for the fn) and
@@ -1299,10 +1280,10 @@
 </span><span class="kw">fn </span>parse_call_def(item_fn: <span class="kw-2">&amp;</span>ItemFn) -&gt; <span class="prelude-ty">Result</span>&lt;(usize, BenchmarkCallDef)&gt; {
 	<span class="comment">// #[extrinsic_call] / #[block] handling
 	</span><span class="kw">let </span>call_defs = item_fn.block.stmts.iter().enumerate().filter_map(|(i, child)| {
-			<span class="kw">if let </span>Stmt::Semi(Expr::Call(expr_call), _semi) = child {
+			<span class="kw">if let </span>Stmt::Expr(Expr::Call(expr_call), _semi) = child {
 				<span class="comment">// #[extrinsic_call] case
 				</span>expr_call.attrs.iter().enumerate().find_map(|(k, attr)| {
-					<span class="kw">let </span>segment = attr.path.segments.last()<span class="question-mark">?</span>;
+					<span class="kw">let </span>segment = attr.path().segments.last()<span class="question-mark">?</span>;
 					<span class="kw">let _</span>: keywords::extrinsic_call = syn::parse(segment.ident.to_token_stream().into()).ok()<span class="question-mark">?</span>;
 					<span class="kw">let </span><span class="kw-2">mut </span>expr_call = expr_call.clone();
 
@@ -1316,10 +1297,10 @@
 
 					<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>((i, BenchmarkCallDef::ExtrinsicCall { origin, expr_call, attr_span: attr.span() })))
 				})
-			} <span class="kw">else if let </span>Stmt::Expr(Expr::Block(block)) = child {
+			} <span class="kw">else if let </span>Stmt::Expr(Expr::Block(block), <span class="kw">_</span>) = child {
 				<span class="comment">// #[block] case
 				</span>block.attrs.iter().enumerate().find_map(|(k, attr)| {
-					<span class="kw">let </span>segment = attr.path.segments.last()<span class="question-mark">?</span>;
+					<span class="kw">let </span>segment = attr.path().segments.last()<span class="question-mark">?</span>;
 					<span class="kw">let _</span>: keywords::block = syn::parse(segment.ident.to_token_stream().into()).ok()<span class="question-mark">?</span>;
 					<span class="kw">let </span><span class="kw-2">mut </span>block = block.clone();
 
@@ -1345,7 +1326,7 @@
 
 <span class="kw">impl </span>BenchmarkDef {
 	<span class="doccomment">/// Constructs a [`BenchmarkDef`] by traversing an existing [`ItemFn`] node.
-	</span><span class="kw">pub fn </span>from(item_fn: <span class="kw-2">&amp;</span>ItemFn, extra: bool, skip_meta: bool) -&gt; <span class="prelude-ty">Result</span>&lt;BenchmarkDef&gt; {
+	</span><span class="kw">pub fn </span>from(item_fn: <span class="kw-2">&amp;</span>ItemFn) -&gt; <span class="prelude-ty">Result</span>&lt;BenchmarkDef&gt; {
 		<span class="kw">let </span>params = parse_params(item_fn)<span class="question-mark">?</span>;
 		ensure_valid_return_type(item_fn)<span class="question-mark">?</span>;
 		<span class="kw">let </span>(i, call_def) = parse_call_def(<span class="kw-2">&amp;</span>item_fn)<span class="question-mark">?</span>;
@@ -1381,8 +1362,6 @@
 			call_def,
 			verify_stmts,
 			last_stmt,
-			extra,
-			skip_meta,
 			fn_sig: item_fn.sig.clone(),
 			fn_vis: item_fn.vis.clone(),
 			fn_attrs: item_fn.attrs.clone(),
@@ -1410,7 +1389,7 @@
 	</span><span class="kw">let </span>mod_attrs: Vec&lt;<span class="kw-2">&amp;</span>Attribute&gt; = module
 		.attrs
 		.iter()
-		.filter(|attr| syn::parse2::&lt;keywords::benchmarks&gt;(attr.to_token_stream()).is_err())
+		.filter(|attr| !attr.path().is_ident(keywords::BENCHMARKS_TOKEN))
 		.collect();
 
 	<span class="kw">let </span><span class="kw-2">mut </span>benchmark_names: Vec&lt;Ident&gt; = Vec::new();
@@ -1426,35 +1405,32 @@
 		</span><span class="kw">let </span>Item::Fn(func) = stmt <span class="kw">else </span>{ <span class="kw">return </span><span class="prelude-val">None </span>};
 
 		<span class="comment">// find #[benchmark] attribute on function def
-		</span><span class="kw">let </span>benchmark_attr = func.attrs.iter().find_map(|attr| {
-			<span class="kw">let </span>seg = attr.path.segments.last()<span class="question-mark">?</span>;
-			syn::parse::&lt;keywords::benchmark&gt;(seg.ident.to_token_stream().into()).ok()<span class="question-mark">?</span>;
-			<span class="prelude-val">Some</span>(attr)
-		})<span class="question-mark">?</span>;
+		</span><span class="kw">let </span>benchmark_attr =
+			func.attrs.iter().find(|attr| attr.path().is_ident(keywords::BENCHMARK_TOKEN))<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Some</span>((benchmark_attr.clone(), func.clone(), stmt))
 	});
 
 	<span class="comment">// parse individual benchmark defs and args
 	</span><span class="kw">for </span>(benchmark_attr, func, stmt) <span class="kw">in </span>benchmark_fn_metas {
-		<span class="comment">// parse any args provided to #[benchmark]
-		</span><span class="kw">let </span>attr_tokens = benchmark_attr.tokens.to_token_stream().into();
-		<span class="kw">let </span>benchmark_args: BenchmarkAttrs = syn::parse(attr_tokens)<span class="question-mark">?</span>;
-
 		<span class="comment">// parse benchmark def
-		</span><span class="kw">let </span>benchmark_def =
-			BenchmarkDef::from(<span class="kw-2">&amp;</span>func, benchmark_args.extra, benchmark_args.skip_meta)<span class="question-mark">?</span>;
+		</span><span class="kw">let </span>benchmark_def = BenchmarkDef::from(<span class="kw-2">&amp;</span>func)<span class="question-mark">?</span>;
 
 		<span class="comment">// record benchmark name
 		</span><span class="kw">let </span>name = <span class="kw-2">&amp;</span>func.sig.ident;
 		benchmark_names.push(name.clone());
 
-		<span class="comment">// record name sets
-		</span><span class="kw">if </span>benchmark_def.extra {
-			extra_benchmark_names.push(name.clone());
-		}
-		<span class="kw">if </span>benchmark_def.skip_meta {
-			skip_meta_benchmark_names.push(name.clone())
+		<span class="comment">// Check if we need to parse any args
+		</span><span class="kw">if </span>benchmark_attr.meta.require_path_only().is_err() {
+			<span class="comment">// parse any args provided to #[benchmark]
+			</span><span class="kw">let </span>benchmark_attrs: BenchmarkAttrs = benchmark_attr.parse_args()<span class="question-mark">?</span>;
+
+			<span class="comment">// record name sets
+			</span><span class="kw">if </span>benchmark_attrs.extra {
+				extra_benchmark_names.push(name.clone());
+			} <span class="kw">else if </span>benchmark_attrs.skip_meta {
+				skip_meta_benchmark_names.push(name.clone());
+			}
 		}
 
 		<span class="comment">// expand benchmark
@@ -1822,7 +1798,8 @@
 			<span class="comment">// determine call name (handles `_` and normal call syntax)
 			</span><span class="kw">let </span>expr_span = expr_call.span();
 			<span class="kw">let </span>call_err = || {
-				<span class="macro">quote_spanned!</span>(expr_span=&gt; <span class="string">&quot;Extrinsic call must be a function call or `_`&quot;</span>.to_compile_error()).into()
+				syn::Error::new(expr_span, <span class="string">&quot;Extrinsic call must be a function call or `_`&quot;</span>)
+					.to_compile_error()
 			};
 			<span class="kw">let </span>call_name = <span class="kw">match </span><span class="kw-2">*</span>expr_call.func {
 				Expr::Path(expr_path) =&gt; {
@@ -1830,18 +1807,17 @@
 					</span><span class="kw">let </span><span class="prelude-val">Some</span>(segment) = expr_path.path.segments.last() <span class="kw">else </span>{ <span class="kw">return </span>call_err(); };
 					segment.ident.to_string()
 				},
-				Expr::Verbatim(tokens) =&gt; {
+				Expr::Infer(<span class="kw">_</span>) =&gt; {
 					<span class="comment">// `_` style
 					// replace `_` with fn name
-					</span><span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="kw">_</span>) = syn::parse::&lt;<span class="macro">Token!</span>[<span class="kw">_</span>]&gt;(tokens.to_token_stream().into()) <span class="kw">else </span>{ <span class="kw">return </span>call_err(); };
-					name.to_string()
+					</span>name.to_string()
 				},
 				<span class="kw">_ </span>=&gt; <span class="kw">return </span>call_err(),
 			};
 
 			<span class="comment">// modify extrinsic call to be prefixed with &quot;new_call_variant&quot;
 			</span><span class="kw">let </span>call_name = <span class="macro">format!</span>(<span class="string">&quot;new_call_variant_{}&quot;</span>, call_name);
-			<span class="kw">let </span><span class="kw-2">mut </span>punct: Punctuated&lt;PathSegment, Colon2&gt; = Punctuated::new();
+			<span class="kw">let </span><span class="kw-2">mut </span>punct: Punctuated&lt;PathSegment, PathSep&gt; = Punctuated::new();
 			punct.push(PathSegment {
 				arguments: PathArguments::None,
 				ident: Ident::new(call_name.as_str(), Span::call_site()),
@@ -1882,11 +1858,10 @@
 	<span class="kw">let </span>vis = benchmark_def.fn_vis;
 
 	<span class="comment">// remove #[benchmark] attribute
-	</span><span class="kw">let </span>fn_attrs: Vec&lt;<span class="kw-2">&amp;</span>Attribute&gt; = benchmark_def
+	</span><span class="kw">let </span>fn_attrs = benchmark_def
 		.fn_attrs
 		.iter()
-		.filter(|attr| !syn::parse2::&lt;keywords::benchmark&gt;(attr.path.to_token_stream()).is_ok())
-		.collect();
+		.filter(|attr| !attr.path().is_ident(keywords::BENCHMARK_TOKEN));
 
 	<span class="comment">// modify signature generics, ident, and inputs, e.g:
 	// before: `fn bench(u: Linear&lt;1, 100&gt;) -&gt; Result&lt;(), BenchmarkError&gt;`
@@ -1909,10 +1884,11 @@
 		<span class="prelude-val">Some</span>(stmt) =&gt; <span class="macro">quote!</span>(#stmt),
 		<span class="prelude-val">None </span>=&gt; <span class="macro">quote!</span>(<span class="prelude-val">Ok</span>(())),
 	};
+	<span class="kw">let </span>fn_attrs_clone = fn_attrs.clone();
 
 	<span class="kw">let </span>fn_def = <span class="macro">quote! </span>{
 		#(
-			#fn_attrs
+			#fn_attrs_clone
 		)*
 		#vis #sig {
 			#(

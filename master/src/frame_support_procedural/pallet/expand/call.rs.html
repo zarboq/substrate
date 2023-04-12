@@ -395,12 +395,6 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -591,7 +585,7 @@
 		.map(|c| <span class="kw-2">&amp;mut </span>def.item.content.as_mut().expect(<span class="string">&quot;Checked by def parser&quot;</span>).<span class="number">1</span>[c.index])
 	{
 		item_impl.items.iter_mut().for_each(|i| {
-			<span class="kw">if let </span>syn::ImplItem::Method(method) = i {
+			<span class="kw">if let </span>syn::ImplItem::Fn(method) = i {
 				<span class="kw">let </span>block = <span class="kw-2">&amp;</span>method.block;
 				method.block = <span class="macro">syn::parse_quote! </span>{{
 					<span class="comment">// We execute all dispatchable in a new storage layer, allowing them
@@ -609,13 +603,7 @@
 			method
 				.attrs
 				.iter()
-				.find(|attr| {
-					<span class="kw">if let </span><span class="prelude-val">Ok</span>(syn::Meta::List(syn::MetaList { path, .. })) = attr.parse_meta() {
-						path.segments.last().map(|seg| seg.ident == <span class="string">&quot;allow&quot;</span>).unwrap_or(<span class="bool-val">false</span>)
-					} <span class="kw">else </span>{
-						<span class="bool-val">false
-					</span>}
-				})
+				.find(|attr| attr.path().is_ident(<span class="string">&quot;allow&quot;</span>))
 				.map_or(proc_macro2::TokenStream::new(), |attr| attr.to_token_stream())
 		})
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();

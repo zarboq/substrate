@@ -788,17 +788,6 @@
 <a href="#788" id="788">788</a>
 <a href="#789" id="789">789</a>
 <a href="#790" id="790">790</a>
-<a href="#791" id="791">791</a>
-<a href="#792" id="792">792</a>
-<a href="#793" id="793">793</a>
-<a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
-<a href="#796" id="796">796</a>
-<a href="#797" id="797">797</a>
-<a href="#798" id="798">798</a>
-<a href="#799" id="799">799</a>
-<a href="#800" id="800">800</a>
-<a href="#801" id="801">801</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -839,9 +828,10 @@
 	parse::{Error, Parse, ParseStream, <span class="prelude-ty">Result</span>},
 	parse_macro_input, parse_quote,
 	spanned::Spanned,
+	token::Comma,
 	visit::{<span class="self">self</span>, Visit},
-	Attribute, FnArg, GenericParam, Generics, Ident, ItemTrait, Lit, Meta, NestedMeta, TraitBound,
-	TraitItem, TraitItemMethod,
+	Attribute, FnArg, GenericParam, Generics, Ident, ItemTrait, LitInt, LitStr, TraitBound,
+	TraitItem, TraitItemFn,
 };
 
 <span class="kw">use </span>std::collections::{BTreeMap, HashMap};
@@ -877,7 +867,7 @@
 /// attribute body as `TokenStream`.
 </span><span class="kw">fn </span>remove_supported_attributes(attrs: <span class="kw-2">&amp;mut </span>Vec&lt;Attribute&gt;) -&gt; HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Attribute&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>result = HashMap::new();
-	attrs.retain(|v| <span class="kw">match </span>SUPPORTED_ATTRIBUTE_NAMES.iter().find(|a| v.path.is_ident(a)) {
+	attrs.retain(|v| <span class="kw">match </span>SUPPORTED_ATTRIBUTE_NAMES.iter().find(|a| v.path().is_ident(a)) {
 		<span class="prelude-val">Some</span>(attribute) =&gt; {
 			result.insert(<span class="kw-2">*</span>attribute, v.clone());
 			<span class="bool-val">false
@@ -960,7 +950,7 @@
 /// ```
 </span><span class="kw">fn </span>generate_versioned_api_traits(
 	api: ItemTrait,
-	methods: BTreeMap&lt;u64, Vec&lt;TraitItemMethod&gt;&gt;,
+	methods: BTreeMap&lt;u64, Vec&lt;TraitItemFn&gt;&gt;,
 ) -&gt; Vec&lt;ItemTrait&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>result = Vec::&lt;ItemTrait&gt;::new();
 	<span class="kw">for </span>(version, <span class="kw">_</span>) <span class="kw">in </span><span class="kw-2">&amp;</span>methods {
@@ -970,7 +960,7 @@
 		<span class="comment">// Add the methods from the current version and all previous one. Versions are sorted so
 		// it&#39;s safe to stop early.
 		</span><span class="kw">for </span>(<span class="kw">_</span>, m) <span class="kw">in </span>methods.iter().take_while(|(v, <span class="kw">_</span>)| v &lt;= <span class="kw-2">&amp;</span>version) {
-			versioned_trait.items.extend(m.iter().cloned().map(|m| TraitItem::Method(m)));
+			versioned_trait.items.extend(m.iter().cloned().map(|m| TraitItem::Fn(m)));
 		}
 
 		result.push(versioned_trait);
@@ -981,37 +971,29 @@
 
 <span class="doccomment">/// Try to parse the given `Attribute` as `renamed` attribute.
 </span><span class="kw">fn </span>parse_renamed_attribute(renamed: <span class="kw-2">&amp;</span>Attribute) -&gt; <span class="prelude-ty">Result</span>&lt;(String, u32)&gt; {
-	<span class="kw">let </span>meta = renamed.parse_meta()<span class="question-mark">?</span>;
-
-	<span class="kw">let </span>err = <span class="prelude-val">Err</span>(Error::new(
-			meta.span(),
+	<span class="kw">let </span>err = || {
+		Error::new(
+			renamed.span(),
 			<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-				<span class="string">&quot;Unexpected `{renamed}` attribute. The supported format is `{renamed}(\&quot;old_name\&quot;, version_it_was_renamed)`&quot;</span>,
-				renamed = RENAMED_ATTRIBUTE,
-			)
+				<span class="string">&quot;Unexpected `{RENAMED_ATTRIBUTE}` attribute. \
+				 The supported format is `{RENAMED_ATTRIBUTE}(\&quot;old_name\&quot;, version_it_was_renamed)`&quot;</span>,
+			),
 		)
-	);
+	};
 
-	<span class="kw">match </span>meta {
-		Meta::List(list) =&gt;
-			<span class="kw">if </span>list.nested.len() &gt; <span class="number">2 </span>&amp;&amp; list.nested.is_empty() {
-				err
-			} <span class="kw">else </span>{
-				<span class="kw">let </span><span class="kw-2">mut </span>itr = list.nested.iter();
-				<span class="kw">let </span>old_name = <span class="kw">match </span>itr.next() {
-					<span class="prelude-val">Some</span>(NestedMeta::Lit(Lit::Str(i))) =&gt; i.value(),
-					<span class="kw">_ </span>=&gt; <span class="kw">return </span>err,
-				};
+	renamed
+		.parse_args_with(|input: ParseStream| {
+			<span class="kw">let </span>old_name: LitStr = input.parse()<span class="question-mark">?</span>;
+			<span class="kw">let </span>_comma: Comma = input.parse()<span class="question-mark">?</span>;
+			<span class="kw">let </span>version: LitInt = input.parse()<span class="question-mark">?</span>;
 
-				<span class="kw">let </span>version = <span class="kw">match </span>itr.next() {
-					<span class="prelude-val">Some</span>(NestedMeta::Lit(Lit::Int(i))) =&gt; i.base10_parse()<span class="question-mark">?</span>,
-					<span class="kw">_ </span>=&gt; <span class="kw">return </span>err,
-				};
+			<span class="kw">if </span>!input.is_empty() {
+				<span class="kw">return </span><span class="prelude-val">Err</span>(input.error(<span class="string">&quot;No more arguments expected&quot;</span>))
+			}
 
-				<span class="prelude-val">Ok</span>((old_name, version))
-			},
-		<span class="kw">_ </span>=&gt; err,
-	}
+			<span class="prelude-val">Ok</span>((old_name.value(), version.base10_parse()<span class="question-mark">?</span>))
+		})
+		.map_err(|<span class="kw">_</span>| err())
 }
 
 <span class="doccomment">/// Generate the declaration of the trait for the runtime.
@@ -1031,12 +1013,12 @@
 
 		<span class="kw">let </span>trait_api_version = get_api_version(<span class="kw-2">&amp;</span>found_attributes)<span class="question-mark">?</span>;
 
-		<span class="kw">let </span><span class="kw-2">mut </span>methods_by_version: BTreeMap&lt;u64, Vec&lt;TraitItemMethod&gt;&gt; = BTreeMap::new();
+		<span class="kw">let </span><span class="kw-2">mut </span>methods_by_version: BTreeMap&lt;u64, Vec&lt;TraitItemFn&gt;&gt; = BTreeMap::new();
 
 		<span class="comment">// Process the items in the declaration. The filter_map function below does a lot of stuff
 		// because the method attributes are stripped at this point
 		</span>decl.items.iter_mut().for_each(|i| <span class="kw">match </span>i {
-			TraitItem::Method(<span class="kw-2">ref mut </span>method) =&gt; {
+			TraitItem::Fn(<span class="kw-2">ref mut </span>method) =&gt; {
 				<span class="kw">let </span>method_attrs = remove_supported_attributes(<span class="kw-2">&amp;mut </span>method.attrs);
 				<span class="kw">let </span><span class="kw-2">mut </span>method_version = trait_api_version;
 				<span class="comment">// validate the api version for the method (if any) and generate default
@@ -1165,9 +1147,8 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
 
 		items.into_iter().for_each(|i| <span class="kw">match </span>i {
-			TraitItem::Method(method) =&gt; {
-				<span class="kw">let </span>(fn_decl, fn_decl_ctx) =
-					<span class="self">self</span>.fold_trait_item_method(method, trait_generics_num);
+			TraitItem::Fn(method) =&gt; {
+				<span class="kw">let </span>(fn_decl, fn_decl_ctx) = <span class="self">self</span>.fold_trait_item_fn(method, trait_generics_num);
 				result.push(fn_decl.into());
 				result.push(fn_decl_ctx.into());
 			},
@@ -1177,11 +1158,11 @@
 		result
 	}
 
-	<span class="kw">fn </span>fold_trait_item_method(
+	<span class="kw">fn </span>fold_trait_item_fn(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		method: TraitItemMethod,
+		method: TraitItemFn,
 		trait_generics_num: usize,
-	) -&gt; (TraitItemMethod, TraitItemMethod) {
+	) -&gt; (TraitItemFn, TraitItemFn) {
 		<span class="kw">let </span>crate_ = <span class="self">self</span>.crate_;
 		<span class="kw">let </span>context = <span class="macro">quote!</span>( #crate_::ExecutionContext::OffchainCall(<span class="prelude-val">None</span>) );
 		<span class="kw">let </span>fn_decl = <span class="self">self</span>.create_method_decl(method.clone(), context, trait_generics_num);
@@ -1192,9 +1173,9 @@
 
 	<span class="kw">fn </span>create_method_decl_with_context(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		method: TraitItemMethod,
+		method: TraitItemFn,
 		trait_generics_num: usize,
-	) -&gt; TraitItemMethod {
+	) -&gt; TraitItemFn {
 		<span class="kw">let </span>crate_ = <span class="self">self</span>.crate_;
 		<span class="kw">let </span>context_arg: syn::FnArg = <span class="macro">parse_quote!</span>( context: #crate_::ExecutionContext );
 		<span class="kw">let </span><span class="kw-2">mut </span>fn_decl_ctx = <span class="self">self</span>.create_method_decl(method, <span class="macro">quote!</span>(context), trait_generics_num);
@@ -1210,10 +1191,10 @@
 	/// the actual call into the runtime.
 	</span><span class="kw">fn </span>create_method_decl(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		<span class="kw-2">mut </span>method: TraitItemMethod,
+		<span class="kw-2">mut </span>method: TraitItemFn,
 		context: TokenStream,
 		trait_generics_num: usize,
-	) -&gt; TraitItemMethod {
+	) -&gt; TraitItemFn {
 		<span class="kw">let </span>params = <span class="kw">match </span>extract_parameter_names_types_and_borrows(
 			<span class="kw-2">&amp;</span>method.sig,
 			AllowSelfRefInParameters::No,
@@ -1462,7 +1443,7 @@
 	/// All errors will be collected in `self.errors`.
 	</span><span class="kw">fn </span>check(<span class="kw-2">&amp;mut </span><span class="self">self</span>, trait_: <span class="kw-2">&amp;</span>ItemTrait) {
 		<span class="self">self</span>.check_method_declarations(trait_.items.iter().filter_map(|i| <span class="kw">match </span>i {
-			TraitItem::Method(method) =&gt; <span class="prelude-val">Some</span>(method),
+			TraitItem::Fn(method) =&gt; <span class="prelude-val">Some</span>(method),
 			<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 		}));
 
@@ -1472,10 +1453,7 @@
 	<span class="doccomment">/// Check that the given method declarations are correct.
 	///
 	/// Any error is stored in `self.errors`.
-	</span><span class="kw">fn </span>check_method_declarations&lt;<span class="lifetime">&#39;a</span>&gt;(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		methods: <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>TraitItemMethod&gt;,
-	) {
+	</span><span class="kw">fn </span>check_method_declarations&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, methods: <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>TraitItemFn&gt;) {
 		<span class="kw">let </span><span class="kw-2">mut </span>method_to_signature_changed = HashMap::&lt;Ident, Vec&lt;<span class="prelude-ty">Option</span>&lt;u64&gt;&gt;&gt;::new();
 
 		methods.into_iter().for_each(|method| {

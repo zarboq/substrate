@@ -370,10 +370,6 @@
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -397,7 +393,7 @@
 
 <span class="kw">use </span>syn::{
 	parse::Parse, parse_quote, spanned::Spanned, token, Error, FnArg, Ident, ItemTrait, LitInt,
-	Pat, PatType, <span class="prelude-ty">Result</span>, Signature, TraitItem, TraitItemMethod, Type,
+	Pat, PatType, <span class="prelude-ty">Result</span>, Signature, TraitItem, TraitItemFn, Type,
 };
 
 <span class="kw">use </span>proc_macro_crate::{crate_name, FoundCrate};
@@ -417,23 +413,23 @@
 
 <span class="doccomment">/// A concrete, specific version of a runtime interface function.
 </span><span class="kw">pub struct </span>RuntimeInterfaceFunction {
-	item: TraitItemMethod,
+	item: TraitItemFn,
 	should_trap_on_return: bool,
 }
 
 <span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>RuntimeInterfaceFunction {
-	<span class="kw">type </span>Target = TraitItemMethod;
+	<span class="kw">type </span>Target = TraitItemFn;
 	<span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
 		<span class="kw-2">&amp;</span><span class="self">self</span>.item
 	}
 }
 
 <span class="kw">impl </span>RuntimeInterfaceFunction {
-	<span class="kw">fn </span>new(item: <span class="kw-2">&amp;</span>TraitItemMethod) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+	<span class="kw">fn </span>new(item: <span class="kw-2">&amp;</span>TraitItemFn) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>item = item.clone();
 		<span class="kw">let </span><span class="kw-2">mut </span>should_trap_on_return = <span class="bool-val">false</span>;
 		item.attrs.retain(|attr| {
-			<span class="kw">if </span>attr.path.is_ident(<span class="string">&quot;trap_on_return&quot;</span>) {
+			<span class="kw">if </span>attr.path().is_ident(<span class="string">&quot;trap_on_return&quot;</span>) {
 				should_trap_on_return = <span class="bool-val">true</span>;
 				<span class="bool-val">false
 			</span>} <span class="kw">else </span>{
@@ -463,7 +459,7 @@
 }
 
 <span class="kw">impl </span>RuntimeInterfaceFunctionSet {
-	<span class="kw">fn </span>new(version: VersionAttribute, trait_item: <span class="kw-2">&amp;</span>TraitItemMethod) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+	<span class="kw">fn </span>new(version: VersionAttribute, trait_item: <span class="kw-2">&amp;</span>TraitItemFn) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
 		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{
 			latest_version_to_call: version.is_callable().then(|| version.version),
 			versions: BTreeMap::from([(
@@ -491,11 +487,7 @@
 	}
 
 	<span class="doccomment">/// Add a different version of the function.
-	</span><span class="kw">fn </span>add_version(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		version: VersionAttribute,
-		trait_item: <span class="kw-2">&amp;</span>TraitItemMethod,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+	</span><span class="kw">fn </span>add_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>, version: VersionAttribute, trait_item: <span class="kw-2">&amp;</span>TraitItemFn) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(existing_item) = <span class="self">self</span>.versions.get(<span class="kw-2">&amp;</span>version.version) {
 			<span class="kw">let </span><span class="kw-2">mut </span>err = Error::new(trait_item.span(), <span class="string">&quot;Duplicated version attribute&quot;</span>);
 			err.combine(Error::new(
@@ -651,9 +643,9 @@
 }
 
 <span class="doccomment">/// Returns an iterator over all trait methods for the given trait definition.
-</span><span class="kw">fn </span>get_trait_methods(trait_def: <span class="kw-2">&amp;</span>ItemTrait) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>TraitItemMethod&gt; {
+</span><span class="kw">fn </span>get_trait_methods(trait_def: <span class="kw-2">&amp;</span>ItemTrait) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>TraitItemFn&gt; {
 	trait_def.items.iter().filter_map(|i| <span class="kw">match </span>i {
-		TraitItem::Method(<span class="kw-2">ref </span>method) =&gt; <span class="prelude-val">Some</span>(method),
+		TraitItem::Fn(<span class="kw-2">ref </span>method) =&gt; <span class="prelude-val">Some</span>(method),
 		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 	})
 }
@@ -702,10 +694,10 @@
 }
 
 <span class="doccomment">/// Return [`VersionAttribute`], if present.
-</span><span class="kw">fn </span>get_item_version(item: <span class="kw-2">&amp;</span>TraitItemMethod) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;VersionAttribute&gt;&gt; {
+</span><span class="kw">fn </span>get_item_version(item: <span class="kw-2">&amp;</span>TraitItemFn) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;VersionAttribute&gt;&gt; {
 	item.attrs
 		.iter()
-		.find(|attr| attr.path.is_ident(<span class="string">&quot;version&quot;</span>))
+		.find(|attr| attr.path().is_ident(<span class="string">&quot;version&quot;</span>))
 		.map(|attr| attr.parse_args())
 		.transpose()
 }

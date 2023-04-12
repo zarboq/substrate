@@ -134,9 +134,6 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -171,14 +168,14 @@
 		SlashReason(SlashReason),
 	}
 
-	<span class="kw">impl </span>Spanned <span class="kw">for </span>CompositeKeyword {
-		<span class="kw">fn </span>span(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; proc_macro2::Span {
+	<span class="kw">impl </span>ToTokens <span class="kw">for </span>CompositeKeyword {
+		<span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>proc_macro2::TokenStream) {
 			<span class="kw">use </span>CompositeKeyword::<span class="kw-2">*</span>;
 			<span class="kw">match </span><span class="self">self </span>{
-				FreezeReason(inner) =&gt; inner.span(),
-				HoldReason(inner) =&gt; inner.span(),
-				LockId(inner) =&gt; inner.span(),
-				SlashReason(inner) =&gt; inner.span(),
+				FreezeReason(inner) =&gt; inner.to_tokens(tokens),
+				HoldReason(inner) =&gt; inner.to_tokens(tokens),
+				LockId(inner) =&gt; inner.to_tokens(tokens),
+				SlashReason(inner) =&gt; inner.to_tokens(tokens),
 			}
 		}
 	}
@@ -248,14 +245,11 @@
 		}
 
 		<span class="kw">let </span>has_derive_attr = item.attrs.iter().any(|attr| {
-			attr.parse_meta()
-				.ok()
-				.map(|meta| <span class="kw">match </span>meta {
-					syn::Meta::List(syn::MetaList { path, .. }) =&gt;
-						path.get_ident().map(|ident| ident == <span class="string">&quot;derive&quot;</span>).unwrap_or(<span class="bool-val">false</span>),
-					<span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-				})
-				.unwrap_or(<span class="bool-val">false</span>)
+			<span class="kw">if let </span>syn::Meta::List(syn::MetaList { path, .. }) = <span class="kw-2">&amp;</span>attr.meta {
+				path.get_ident().map(|ident| ident == <span class="string">&quot;derive&quot;</span>).unwrap_or(<span class="bool-val">false</span>)
+			} <span class="kw">else </span>{
+				<span class="bool-val">false
+			</span>}
 		});
 
 		<span class="kw">if </span>!has_derive_attr {

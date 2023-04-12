@@ -176,25 +176,6 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -214,7 +195,6 @@
 
 </span><span class="kw">use </span>frame_support_procedural_tools::generate_crate_access_2018;
 <span class="kw">use </span>quote::ToTokens;
-<span class="kw">use </span>std::str::FromStr;
 
 <span class="comment">// Derive `PalletError`
 </span><span class="kw">pub fn </span>derive_pallet_error(input: proc_macro::TokenStream) -&gt; proc_macro::TokenStream {
@@ -314,38 +294,24 @@
 	<span class="kw">let </span>attrs = <span class="kw-2">&amp;</span>field.attrs;
 
 	<span class="kw">for </span>attr <span class="kw">in </span>attrs {
-		<span class="kw">if </span>attr.path.is_ident(<span class="string">&quot;codec&quot;</span>) {
-			<span class="kw">match </span>attr.parse_meta()<span class="question-mark">? </span>{
-				syn::Meta::List(<span class="kw-2">ref </span>meta_list) <span class="kw">if </span>meta_list.nested.len() == <span class="number">1 </span>=&gt; {
-					<span class="kw">match </span>meta_list
-						.nested
-						.first()
-						.expect(<span class="string">&quot;Just checked that there is one item; qed&quot;</span>)
-					{
-						syn::NestedMeta::Meta(syn::Meta::Path(path))
-							<span class="kw">if </span>path.get_ident().map_or(<span class="bool-val">false</span>, |i| i == <span class="string">&quot;skip&quot;</span>) =&gt;
-							<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+		<span class="kw">if </span>attr.path().is_ident(<span class="string">&quot;codec&quot;</span>) {
+			<span class="kw">let </span><span class="kw-2">mut </span>res = <span class="prelude-val">None</span>;
 
-						syn::NestedMeta::Meta(syn::Meta::Path(path))
-							<span class="kw">if </span>path.get_ident().map_or(<span class="bool-val">false</span>, |i| i == <span class="string">&quot;compact&quot;</span>) =&gt;
-						{
-							<span class="kw">let </span>field_ty = <span class="kw-2">&amp;</span>field.ty;
-							<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">quote::quote!</span>(#scrate::codec::Compact&lt;#field_ty&gt;)))
-						},
+			attr.parse_nested_meta(|meta| {
+				<span class="kw">if </span>meta.path.is_ident(<span class="string">&quot;skip&quot;</span>) {
+					res = <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>);
+				} <span class="kw">else if </span>meta.path.is_ident(<span class="string">&quot;compact&quot;</span>) {
+					<span class="kw">let </span>field_ty = <span class="kw-2">&amp;</span>field.ty;
+					res = <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="macro">quote::quote!</span>(#scrate::codec::Compact&lt;#field_ty&gt;)));
+				} <span class="kw">else if </span>meta.path.is_ident(<span class="string">&quot;compact&quot;</span>) {
+					res = <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(meta.value()<span class="question-mark">?</span>.parse()<span class="question-mark">?</span>));
+				}
 
-						syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-							path,
-							lit: syn::Lit::Str(lit_str),
-							..
-						})) <span class="kw">if </span>path.get_ident().map_or(<span class="bool-val">false</span>, |i| i == <span class="string">&quot;encoded_as&quot;</span>) =&gt; {
-							<span class="kw">let </span>ty = proc_macro2::TokenStream::from_str(<span class="kw-2">&amp;</span>lit_str.value())<span class="question-mark">?</span>;
-							<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ty))
-						},
+				<span class="prelude-val">Ok</span>(())
+			})<span class="question-mark">?</span>;
 
-						<span class="kw">_ </span>=&gt; (),
-					}
-				},
-				<span class="kw">_ </span>=&gt; (),
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(v) = res {
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(v)
 			}
 		}
 	}
@@ -360,22 +326,18 @@
 	<span class="kw">let </span>attrs = <span class="kw-2">&amp;</span>variant.attrs;
 
 	<span class="kw">for </span>attr <span class="kw">in </span>attrs {
-		<span class="kw">if </span>attr.path.is_ident(<span class="string">&quot;codec&quot;</span>) {
-			<span class="kw">match </span>attr.parse_meta()<span class="question-mark">? </span>{
-				syn::Meta::List(<span class="kw-2">ref </span>meta_list) <span class="kw">if </span>meta_list.nested.len() == <span class="number">1 </span>=&gt; {
-					<span class="kw">match </span>meta_list
-						.nested
-						.first()
-						.expect(<span class="string">&quot;Just checked that there is one item; qed&quot;</span>)
-					{
-						syn::NestedMeta::Meta(syn::Meta::Path(path))
-							<span class="kw">if </span>path.get_ident().map_or(<span class="bool-val">false</span>, |i| i == <span class="string">&quot;skip&quot;</span>) =&gt;
-							<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+		<span class="kw">if </span>attr.path().is_ident(<span class="string">&quot;codec&quot;</span>) {
+			<span class="kw">let </span><span class="kw-2">mut </span>skip = <span class="bool-val">false</span>;
 
-						<span class="kw">_ </span>=&gt; (),
-					}
-				},
-				<span class="kw">_ </span>=&gt; (),
+			<span class="comment">// We ignore the error intentionally as this isn&#39;t `codec(skip)` when
+			// `parse_nested_meta` fails.
+			</span><span class="kw">let _ </span>= attr.parse_nested_meta(|meta| {
+				skip = meta.path.is_ident(<span class="string">&quot;skip&quot;</span>);
+				<span class="prelude-val">Ok</span>(())
+			});
+
+			<span class="kw">if </span>skip {
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 			}
 		}
 	}

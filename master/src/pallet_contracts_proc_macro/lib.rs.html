@@ -1037,13 +1037,13 @@
 			<span class="string">&quot;only #[version(&lt;u8&gt;)], #[unstable], #[prefixed_alias] and #[deprecated] attributes are allowed.&quot;</span>;
 		<span class="kw">let </span>span = item.span();
 		<span class="kw">let </span><span class="kw-2">mut </span>attrs = item.attrs.clone();
-		attrs.retain(|a| !a.path.is_ident(<span class="string">&quot;doc&quot;</span>));
+		attrs.retain(|a| !a.path().is_ident(<span class="string">&quot;doc&quot;</span>));
 		<span class="kw">let </span><span class="kw-2">mut </span>maybe_version = <span class="prelude-val">None</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>is_stable = <span class="bool-val">true</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>alias_to = <span class="prelude-val">None</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>not_deprecated = <span class="bool-val">true</span>;
 		<span class="kw">while let </span><span class="prelude-val">Some</span>(attr) = attrs.pop() {
-			<span class="kw">let </span>ident = attr.path.get_ident().ok_or(err(span, msg))<span class="question-mark">?</span>.to_string();
+			<span class="kw">let </span>ident = attr.path().get_ident().ok_or(err(span, msg))<span class="question-mark">?</span>.to_string();
 			<span class="kw">match </span>ident.as_str() {
 				<span class="string">&quot;version&quot; </span>=&gt; {
 					<span class="kw">if </span>maybe_version.is_some() {
@@ -1205,7 +1205,7 @@
 			<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 		};
 
-		<span class="kw">let </span>selector = |a: <span class="kw-2">&amp;</span>syn::Attribute| a.path.is_ident(<span class="string">&quot;prefixed_alias&quot;</span>);
+		<span class="kw">let </span>selector = |a: <span class="kw-2">&amp;</span>syn::Attribute| a.path().is_ident(<span class="string">&quot;prefixed_alias&quot;</span>);
 
 		<span class="kw">let </span>aliases = items
 			.iter()
@@ -1229,7 +1229,7 @@
 }
 
 <span class="kw">fn </span>is_valid_special_arg(idx: usize, arg: <span class="kw-2">&amp;</span>FnArg) -&gt; bool {
-	<span class="kw">let </span>pat = <span class="kw">if let </span>FnArg::Typed(pat) = arg { pat } <span class="kw">else </span>{ <span class="kw">return </span><span class="bool-val">false </span>};
+	<span class="kw">let </span>FnArg::Typed(pat) = arg <span class="kw">else </span>{ <span class="kw">return </span><span class="bool-val">false </span>};
 	<span class="kw">let </span>ident = <span class="kw">if let </span>syn::Pat::Ident(<span class="kw-2">ref </span>ident) = <span class="kw-2">*</span>pat.pat { <span class="kw-2">&amp;</span>ident.ident } <span class="kw">else </span>{ <span class="kw">return </span><span class="bool-val">false </span>};
 	<span class="kw">let </span>name_ok = <span class="kw">match </span>idx {
 		<span class="number">0 </span>=&gt; ident == <span class="string">&quot;ctx&quot; </span>|| ident == <span class="string">&quot;_ctx&quot;</span>,
@@ -1262,7 +1262,7 @@
 			);
 			<span class="macro">quote! </span>{ <span class="attr">#[doc = #alias_doc] </span>}
 		} <span class="kw">else </span>{
-			<span class="kw">let </span>docs = func.item.attrs.iter().filter(|a| a.path.is_ident(<span class="string">&quot;doc&quot;</span>)).map(|d| {
+			<span class="kw">let </span>docs = func.item.attrs.iter().filter(|a| a.path().is_ident(<span class="string">&quot;doc&quot;</span>)).map(|d| {
 				<span class="kw">let </span>docs = d.to_token_stream();
 				<span class="macro">quote! </span>{ #docs }
 			});

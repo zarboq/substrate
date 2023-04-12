@@ -670,7 +670,7 @@
 </span><span class="kw">fn </span>has_advanced_attribute(attributes: <span class="kw-2">&amp;mut </span>Vec&lt;Attribute&gt;) -&gt; bool {
 	<span class="kw">let </span><span class="kw-2">mut </span>found = <span class="bool-val">false</span>;
 	attributes.retain(|attr| {
-		<span class="kw">if </span>attr.path.is_ident(ADVANCED_ATTRIBUTE) {
+		<span class="kw">if </span>attr.path().is_ident(ADVANCED_ATTRIBUTE) {
 			found = <span class="bool-val">true</span>;
 			<span class="bool-val">false
 		</span>} <span class="kw">else </span>{
@@ -736,7 +736,7 @@
 		<span class="comment">// We also need to overwrite all the `_with_context` methods. To do this,
 		// we clone all methods and add them again with the new name plus one more argument.
 		</span>impl_item.items.extend(impl_item.items.clone().into_iter().filter_map(|i| {
-			<span class="kw">if let </span>syn::ImplItem::Method(<span class="kw-2">mut </span>m) = i {
+			<span class="kw">if let </span>syn::ImplItem::Fn(<span class="kw-2">mut </span>m) = i {
 				m.sig.ident = <span class="macro">quote::format_ident!</span>(<span class="string">&quot;{}_with_context&quot;</span>, m.sig.ident);
 				m.sig.inputs.insert(<span class="number">2</span>, <span class="macro">parse_quote!</span>( <span class="kw">_</span>: #crate_::ExecutionContext ));
 
@@ -768,7 +768,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Fold <span class="kw">for </span>FoldRuntimeApiImpl&lt;<span class="lifetime">&#39;a</span>&gt; {
-	<span class="kw">fn </span>fold_impl_item_method(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>input: syn::ImplItemMethod) -&gt; syn::ImplItemMethod {
+	<span class="kw">fn </span>fold_impl_item_fn(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>input: syn::ImplItemFn) -&gt; syn::ImplItemFn {
 		<span class="kw">let </span>block = {
 			<span class="kw">let </span>crate_ = generate_crate_access();
 			<span class="kw">let </span>is_advanced = has_advanced_attribute(<span class="kw-2">&amp;mut </span>input.attrs);
@@ -855,7 +855,7 @@
 			)
 		};
 
-		<span class="kw">let </span><span class="kw-2">mut </span>input = fold::fold_impl_item_method(<span class="self">self</span>, input);
+		<span class="kw">let </span><span class="kw-2">mut </span>input = fold::fold_impl_item_fn(<span class="self">self</span>, input);
 		<span class="comment">// We need to set the block, after we modified the rest of the ast, otherwise we would
 		// modify our generated block as well.
 		</span>input.block = block;
