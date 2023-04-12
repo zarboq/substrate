@@ -3167,6 +3167,55 @@
 <a href="#3167" id="3167">3167</a>
 <a href="#3168" id="3168">3168</a>
 <a href="#3169" id="3169">3169</a>
+<a href="#3170" id="3170">3170</a>
+<a href="#3171" id="3171">3171</a>
+<a href="#3172" id="3172">3172</a>
+<a href="#3173" id="3173">3173</a>
+<a href="#3174" id="3174">3174</a>
+<a href="#3175" id="3175">3175</a>
+<a href="#3176" id="3176">3176</a>
+<a href="#3177" id="3177">3177</a>
+<a href="#3178" id="3178">3178</a>
+<a href="#3179" id="3179">3179</a>
+<a href="#3180" id="3180">3180</a>
+<a href="#3181" id="3181">3181</a>
+<a href="#3182" id="3182">3182</a>
+<a href="#3183" id="3183">3183</a>
+<a href="#3184" id="3184">3184</a>
+<a href="#3185" id="3185">3185</a>
+<a href="#3186" id="3186">3186</a>
+<a href="#3187" id="3187">3187</a>
+<a href="#3188" id="3188">3188</a>
+<a href="#3189" id="3189">3189</a>
+<a href="#3190" id="3190">3190</a>
+<a href="#3191" id="3191">3191</a>
+<a href="#3192" id="3192">3192</a>
+<a href="#3193" id="3193">3193</a>
+<a href="#3194" id="3194">3194</a>
+<a href="#3195" id="3195">3195</a>
+<a href="#3196" id="3196">3196</a>
+<a href="#3197" id="3197">3197</a>
+<a href="#3198" id="3198">3198</a>
+<a href="#3199" id="3199">3199</a>
+<a href="#3200" id="3200">3200</a>
+<a href="#3201" id="3201">3201</a>
+<a href="#3202" id="3202">3202</a>
+<a href="#3203" id="3203">3203</a>
+<a href="#3204" id="3204">3204</a>
+<a href="#3205" id="3205">3205</a>
+<a href="#3206" id="3206">3206</a>
+<a href="#3207" id="3207">3207</a>
+<a href="#3208" id="3208">3208</a>
+<a href="#3209" id="3209">3209</a>
+<a href="#3210" id="3210">3210</a>
+<a href="#3211" id="3211">3211</a>
+<a href="#3212" id="3212">3212</a>
+<a href="#3213" id="3213">3213</a>
+<a href="#3214" id="3214">3214</a>
+<a href="#3215" id="3215">3215</a>
+<a href="#3216" id="3216">3216</a>
+<a href="#3217" id="3217">3217</a>
+<a href="#3218" id="3218">3218</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3603,6 +3652,7 @@
 		gas_meter: GasMeter&lt;Test&gt;,
 		debug_buffer: Vec&lt;u8&gt;,
 		ecdsa_recover: RefCell&lt;Vec&lt;([u8; <span class="number">65</span>], [u8; <span class="number">32</span>])&gt;&gt;,
+		sr25519_verify: RefCell&lt;Vec&lt;([u8; <span class="number">64</span>], Vec&lt;u8&gt;, [u8; <span class="number">32</span>])&gt;&gt;,
 		code_hashes: Vec&lt;CodeHash&lt;Test&gt;&gt;,
 	}
 
@@ -3627,6 +3677,7 @@
 				gas_meter: GasMeter::new(Weight::from_parts(<span class="number">10_000_000_000</span>, <span class="number">10 </span>* <span class="number">1024 </span>* <span class="number">1024</span>)),
 				debug_buffer: Default::default(),
 				ecdsa_recover: Default::default(),
+				sr25519_verify: Default::default(),
 			}
 		}
 	}
@@ -3781,6 +3832,10 @@
 			<span class="self">self</span>.ecdsa_recover.borrow_mut().push((<span class="kw-2">*</span>signature, <span class="kw-2">*</span>message_hash));
 			<span class="prelude-val">Ok</span>([<span class="number">3</span>; <span class="number">33</span>])
 		}
+		<span class="kw">fn </span>sr25519_verify(<span class="kw-2">&amp;</span><span class="self">self</span>, signature: <span class="kw-2">&amp;</span>[u8; <span class="number">64</span>], message: <span class="kw-2">&amp;</span>[u8], pub_key: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>]) -&gt; bool {
+			<span class="self">self</span>.sr25519_verify.borrow_mut().push((<span class="kw-2">*</span>signature, message.to_vec(), <span class="kw-2">*</span>pub_key));
+			<span class="bool-val">true
+		</span>}
 		<span class="kw">fn </span>contract_info(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::ContractInfo&lt;<span class="self">Self</span>::T&gt; {
 			<span class="macro">unimplemented!</span>()
 		}
@@ -4486,6 +4541,49 @@
 			output,
 			ExecReturnValue { flags: ReturnFlags::empty(), data: [<span class="number">0x02</span>; <span class="number">20</span>].to_vec() }
 		);
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>contract_sr25519() {
+		<span class="kw">const </span>CODE_SR25519: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
+(module
+	(import &quot;seal0&quot; &quot;sr25519_verify&quot; (func $sr25519_verify (param i32 i32 i32 i32) (result i32)))
+	(import &quot;env&quot; &quot;memory&quot; (memory 1 1))
+	(func (export &quot;call&quot;)
+		(drop
+			(call $sr25519_verify
+				(i32.const 0) ;; Pointer to signature.
+				(i32.const 64) ;; Pointer to public key.
+				(i32.const 16) ;; message length.
+				(i32.const 96) ;; Pointer to message.
+			)
+		)
+	)
+	(func (export &quot;deploy&quot;))
+
+	;; Signature (64 bytes)
+	(data (i32.const 0)
+		&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+		&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+		&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+		&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+	)
+
+	;;  public key (32 bytes)
+	(data (i32.const 64)
+		&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+		&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+	)
+
+	;;  message. (16 bytes)
+	(data (i32.const 96)
+		&quot;\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01\01&quot;
+	)
+)
+&quot;#</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>mock_ext = MockExt::default();
+		<span class="macro">assert_ok!</span>(execute(<span class="kw-2">&amp;</span>CODE_SR25519, <span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>mock_ext));
+		<span class="macro">assert_eq!</span>(mock_ext.sr25519_verify.into_inner(), [([<span class="number">1</span>; <span class="number">64</span>], [<span class="number">1</span>; <span class="number">16</span>].to_vec(), [<span class="number">1</span>; <span class="number">32</span>])]);
 	}
 
 	<span class="kw">const </span>CODE_GET_STORAGE: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;

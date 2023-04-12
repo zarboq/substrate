@@ -3438,6 +3438,20 @@
 <a href="#3438" id="3438">3438</a>
 <a href="#3439" id="3439">3439</a>
 <a href="#3440" id="3440">3440</a>
+<a href="#3441" id="3441">3441</a>
+<a href="#3442" id="3442">3442</a>
+<a href="#3443" id="3443">3443</a>
+<a href="#3444" id="3444">3444</a>
+<a href="#3445" id="3445">3445</a>
+<a href="#3446" id="3446">3446</a>
+<a href="#3447" id="3447">3447</a>
+<a href="#3448" id="3448">3448</a>
+<a href="#3449" id="3449">3449</a>
+<a href="#3450" id="3450">3450</a>
+<a href="#3451" id="3451">3451</a>
+<a href="#3452" id="3452">3452</a>
+<a href="#3453" id="3453">3453</a>
+<a href="#3454" id="3454">3454</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3475,7 +3489,10 @@
 <span class="kw">use </span>frame_system::RawOrigin;
 <span class="kw">use </span>pallet_contracts_primitives::ExecReturnValue;
 <span class="kw">use </span>smallvec::{Array, SmallVec};
-<span class="kw">use </span>sp_core::ecdsa::Public <span class="kw">as </span>ECDSAPublic;
+<span class="kw">use </span>sp_core::{
+	ecdsa::Public <span class="kw">as </span>ECDSAPublic,
+	sr25519::{Public <span class="kw">as </span>SR25519Public, Signature <span class="kw">as </span>SR25519Signature},
+};
 <span class="kw">use </span>sp_io::{crypto::secp256k1_ecdsa_recover_compressed, hashing::blake2_256};
 <span class="kw">use </span>sp_runtime::traits::{Convert, Hash};
 <span class="kw">use </span>sp_std::{marker::PhantomData, mem, prelude::<span class="kw-2">*</span>, vec::Vec};
@@ -3711,6 +3728,9 @@
 
 	<span class="doccomment">/// Recovers ECDSA compressed public key based on signature and message hash.
 	</span><span class="kw">fn </span>ecdsa_recover(<span class="kw-2">&amp;</span><span class="self">self</span>, signature: <span class="kw-2">&amp;</span>[u8; <span class="number">65</span>], message_hash: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>]) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; <span class="number">33</span>], ()&gt;;
+
+	<span class="doccomment">/// Verify a sr25519 signature.
+	</span><span class="kw">fn </span>sr25519_verify(<span class="kw-2">&amp;</span><span class="self">self</span>, signature: <span class="kw-2">&amp;</span>[u8; <span class="number">64</span>], message: <span class="kw-2">&amp;</span>[u8], pub_key: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>]) -&gt; bool;
 
 	<span class="doccomment">/// Returns Ethereum address from the ECDSA compressed public key.
 	</span><span class="kw">fn </span>ecdsa_to_eth_address(<span class="kw-2">&amp;</span><span class="self">self</span>, pk: <span class="kw-2">&amp;</span>[u8; <span class="number">33</span>]) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; <span class="number">20</span>], ()&gt;;
@@ -4785,6 +4805,14 @@
 
 	<span class="kw">fn </span>ecdsa_recover(<span class="kw-2">&amp;</span><span class="self">self</span>, signature: <span class="kw-2">&amp;</span>[u8; <span class="number">65</span>], message_hash: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>]) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; <span class="number">33</span>], ()&gt; {
 		secp256k1_ecdsa_recover_compressed(signature, message_hash).map_err(|<span class="kw">_</span>| ())
+	}
+
+	<span class="kw">fn </span>sr25519_verify(<span class="kw-2">&amp;</span><span class="self">self</span>, signature: <span class="kw-2">&amp;</span>[u8; <span class="number">64</span>], message: <span class="kw-2">&amp;</span>[u8], pub_key: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>]) -&gt; bool {
+		sp_io::crypto::sr25519_verify(
+			<span class="kw-2">&amp;</span>SR25519Signature(<span class="kw-2">*</span>signature),
+			message,
+			<span class="kw-2">&amp;</span>SR25519Public(<span class="kw-2">*</span>pub_key),
+		)
 	}
 
 	<span class="kw">fn </span>ecdsa_to_eth_address(<span class="kw-2">&amp;</span><span class="self">self</span>, pk: <span class="kw-2">&amp;</span>[u8; <span class="number">33</span>]) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; <span class="number">20</span>], ()&gt; {
