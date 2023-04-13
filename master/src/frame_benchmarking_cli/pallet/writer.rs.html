@@ -1342,6 +1342,8 @@
 <a href="#1342" id="1342">1342</a>
 <a href="#1343" id="1343">1343</a>
 <a href="#1344" id="1344">1344</a>
+<a href="#1345" id="1345">1345</a>
+<a href="#1346" id="1346">1346</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1622,6 +1624,7 @@
 				</span>used_recorded_proof_size.push(ComponentSlope { name: name.clone(), slope, error });
 			}
 		});
+	used_recorded_proof_size.sort_by(|a, b| a.name.cmp(<span class="kw-2">&amp;</span>b.name));
 
 	<span class="comment">// We add additional comments showing which storage items were touched.
 	// We find the worst case proof size, and use that as the final proof size result.
@@ -1659,12 +1662,12 @@
 	<span class="kw">let </span><span class="kw-2">mut </span>base_calculated_proof_size = <span class="number">0</span>;
 	<span class="comment">// Sum up the proof sizes per component
 	</span><span class="kw">for </span>(<span class="kw">_</span>, slope, base) <span class="kw">in </span>proof_size_per_components.iter() {
-		base_calculated_proof_size += base;
+		base_calculated_proof_size = base_calculated_proof_size.max(<span class="kw-2">*</span>base);
 		<span class="kw">for </span>component <span class="kw">in </span>slope.iter() {
 			<span class="kw">let </span><span class="kw-2">mut </span>found = <span class="bool-val">false</span>;
 			<span class="kw">for </span>used_component <span class="kw">in </span>used_calculated_proof_size.iter_mut() {
 				<span class="kw">if </span>used_component.name == component.name {
-					used_component.slope += component.slope;
+					used_component.slope = used_component.slope.max(component.slope);
 					found = <span class="bool-val">true</span>;
 					<span class="kw">break
 				</span>}
@@ -1681,6 +1684,7 @@
 			}
 		}
 	}
+	used_calculated_proof_size.sort_by(|a, b| a.name.cmp(<span class="kw-2">&amp;</span>b.name));
 
 	<span class="comment">// This puts a marker on any component which is entirely unused in the weight formula.
 	</span><span class="kw">let </span>components = batch.time_results[<span class="number">0</span>]
@@ -1970,7 +1974,7 @@
 				},
 			};
 			<span class="comment">// Add the additional trie layer overhead for every new prefix.
-			</span><span class="kw">if </span><span class="kw-2">*</span>reads &gt; <span class="number">0 </span>{
+			</span><span class="kw">if </span><span class="kw-2">*</span>reads &gt; <span class="number">0 </span>&amp;&amp; !is_all_ignored {
 				prefix_result.proof_size += <span class="number">15 </span>* <span class="number">33 </span>* additional_trie_layers <span class="kw">as </span>u32;
 			}
 			storage_per_prefix.entry(prefix.clone()).or_default().push(prefix_result);
