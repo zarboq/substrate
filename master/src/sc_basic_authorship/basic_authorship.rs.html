@@ -1057,11 +1057,6 @@
 <a href="#1057" id="1057">1057</a>
 <a href="#1058" id="1058">1058</a>
 <a href="#1059" id="1059">1059</a>
-<a href="#1060" id="1060">1060</a>
-<a href="#1061" id="1061">1061</a>
-<a href="#1062" id="1062">1062</a>
-<a href="#1063" id="1063">1063</a>
-<a href="#1064" id="1064">1064</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1538,14 +1533,6 @@
 						<span class="kw">break </span>EndProposingReason::HitBlockWeightLimit
 					}
 				},
-				<span class="prelude-val">Err</span>(e) <span class="kw">if </span>skipped &gt; <span class="number">0 </span>=&gt; {
-					pending_iterator.report_invalid(<span class="kw-2">&amp;</span>pending_tx);
-					<span class="macro">trace!</span>(
-						<span class="string">&quot;[{:?}] Ignoring invalid transaction when skipping: {}&quot;</span>,
-						pending_tx_hash,
-						e
-					);
-				},
 				<span class="prelude-val">Err</span>(e) =&gt; {
 					pending_iterator.report_invalid(<span class="kw-2">&amp;</span>pending_tx);
 					<span class="macro">debug!</span>(<span class="string">&quot;[{:?}] Invalid transaction: {}&quot;</span>, pending_tx_hash, e);
@@ -1804,8 +1791,11 @@
 		);
 	}
 
-	<span class="attr">#[test]
-	</span><span class="kw">fn </span>should_not_remove_invalid_transactions_when_skipping() {
+	<span class="comment">// This test ensures that if one transaction of a user was rejected, because for example
+	// the weight limit was hit, we don&#39;t mark the other transactions of the user as invalid because
+	// the nonce is not matching.
+	</span><span class="attr">#[test]
+	</span><span class="kw">fn </span>should_not_remove_invalid_transactions_from_the_same_sender_after_one_was_invalid() {
 		<span class="comment">// given
 		</span><span class="kw">let </span><span class="kw-2">mut </span>client = Arc::new(substrate_test_runtime_client::new());
 		<span class="kw">let </span>spawner = sp_core::testing::TaskExecutor::new();
