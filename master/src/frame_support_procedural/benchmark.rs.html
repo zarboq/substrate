@@ -1015,12 +1015,6 @@
 <a href="#1015" id="1015">1015</a>
 <a href="#1016" id="1016">1016</a>
 <a href="#1017" id="1017">1017</a>
-<a href="#1018" id="1018">1018</a>
-<a href="#1019" id="1019">1019</a>
-<a href="#1020" id="1020">1020</a>
-<a href="#1021" id="1021">1021</a>
-<a href="#1022" id="1022">1022</a>
-<a href="#1023" id="1023">1023</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1051,9 +1045,9 @@
 	punctuated::Punctuated,
 	spanned::Spanned,
 	token::{Comma, Gt, Lt, PathSep},
-	Attribute, Error, Expr, ExprBlock, ExprCall, ExprPath, FnArg, Item, ItemFn, ItemMod, LitInt,
-	Pat, Path, PathArguments, PathSegment, <span class="prelude-ty">Result</span>, ReturnType, Signature, Stmt, Token, Type,
-	TypePath, Visibility, WhereClause,
+	Attribute, Error, Expr, ExprBlock, ExprCall, ExprPath, FnArg, Item, ItemFn, ItemMod, Pat, Path,
+	PathArguments, PathSegment, <span class="prelude-ty">Result</span>, ReturnType, Signature, Stmt, Token, Type, TypePath,
+	Visibility, WhereClause,
 };
 
 <span class="kw">mod </span>keywords {
@@ -1077,17 +1071,17 @@
 </span><span class="kw">struct </span>ParamDef {
 	name: String,
 	typ: Type,
-	start: u32,
-	end: u32,
+	start: syn::GenericArgument,
+	end: syn::GenericArgument,
 }
 
 <span class="doccomment">/// Allows easy parsing of the `&lt;10, 20&gt;` component of `x: Linear&lt;10, 20&gt;`.
 </span><span class="attr">#[derive(Parse)]
 </span><span class="kw">struct </span>RangeArgs {
 	_lt_token: Lt,
-	start: LitInt,
+	start: syn::GenericArgument,
 	_comma: Comma,
-	end: LitInt,
+	end: syn::GenericArgument,
 	_gt_token: Gt,
 }
 
@@ -1251,17 +1245,8 @@
 		<span class="kw">let </span><span class="prelude-val">Some</span>(segment) = tpath.path.segments.last() <span class="kw">else </span>{ <span class="kw">return </span>invalid_param(typ.span()) };
 		<span class="kw">let </span>args = segment.arguments.to_token_stream().into();
 		<span class="kw">let </span><span class="prelude-val">Ok</span>(args) = syn::parse::&lt;RangeArgs&gt;(args) <span class="kw">else </span>{ <span class="kw">return </span>invalid_param(typ.span()) };
-		<span class="kw">let </span><span class="prelude-val">Ok</span>(start) = args.start.base10_parse::&lt;u32&gt;() <span class="kw">else </span>{ <span class="kw">return </span>invalid_param(args.start.span()) };
-		<span class="kw">let </span><span class="prelude-val">Ok</span>(end) = args.end.base10_parse::&lt;u32&gt;() <span class="kw">else </span>{ <span class="kw">return </span>invalid_param(args.end.span()) };
 
-		<span class="kw">if </span>end &lt; start {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(
-				args.start.span(),
-				<span class="string">&quot;The start of a `ParamRange` must be less than or equal to the end&quot;</span>,
-			))
-		}
-
-		params.push(ParamDef { name, typ: typ.clone(), start, end });
+		params.push(ParamDef { name, typ: typ.clone(), start: args.start, end: args.end });
 	}
 	<span class="prelude-val">Ok</span>(params)
 }
@@ -1723,8 +1708,8 @@
 			.iter()
 			.map(|p| {
 				<span class="kw">let </span>name = Ident::new(<span class="kw-2">&amp;</span>p.name, Span::call_site());
-				<span class="kw">let </span>start = p.start;
-				<span class="kw">let </span>end = p.end;
+				<span class="kw">let </span>start = <span class="kw-2">&amp;</span>p.start;
+				<span class="kw">let </span>end = <span class="kw-2">&amp;</span>p.end;
 				<span class="macro">quote!</span>(#name, #start, #end)
 			})
 			.collect();
@@ -2010,8 +1995,11 @@
 						<span class="comment">// Test the lowest, highest (if its different from the lowest)
 						// and up to num_values-2 more equidistant values in between.
 						// For 0..10 and num_values=6 this would mean: [0, 2, 4, 6, 8, 10]
+						</span><span class="kw">if </span>high &lt; low {
+							<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;The start of a `ParamRange` must be less than or equal to the end&quot;</span>.into());
+						}
 
-						</span><span class="kw">let </span><span class="kw-2">mut </span>values = #<span class="macro">krate::vec!</span>[low];
+						<span class="kw">let </span><span class="kw-2">mut </span>values = #<span class="macro">krate::vec!</span>[low];
 						<span class="kw">let </span>diff = (high - low).min(num_values - <span class="number">1</span>);
 						<span class="kw">let </span>slope = (high - low) <span class="kw">as </span>f32 / diff <span class="kw">as </span>f32;
 
