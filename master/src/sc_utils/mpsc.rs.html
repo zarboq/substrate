@@ -177,6 +177,30 @@
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -320,7 +344,8 @@
 
 <span class="kw">impl</span>&lt;T&gt; Drop <span class="kw">for </span>TracingUnboundedReceiver&lt;T&gt; {
 	<span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-		<span class="self">self</span>.close();
+		<span class="comment">// Close the channel to prevent any further messages to be sent into the channel
+		</span><span class="self">self</span>.close();
 		<span class="comment">// the number of messages about to be dropped
 		</span><span class="kw">let </span>count = <span class="self">self</span>.inner.len();
 		<span class="comment">// discount the messages
@@ -329,6 +354,10 @@
 				.with_label_values(<span class="kw-2">&amp;</span>[<span class="self">self</span>.name, <span class="string">&quot;dropped&quot;</span>])
 				.inc_by(count.saturated_into());
 		}
+		<span class="comment">// Drain all the pending messages in the channel since they can never be accessed,
+		// this can be removed once https://github.com/smol-rs/async-channel/issues/23 is
+		// resolved
+		</span><span class="kw">while let </span><span class="prelude-val">Ok</span>(<span class="kw">_</span>) = <span class="self">self</span>.inner.try_recv() {}
 	}
 }
 
@@ -354,6 +383,25 @@
 <span class="kw">impl</span>&lt;T&gt; FusedStream <span class="kw">for </span>TracingUnboundedReceiver&lt;T&gt; {
 	<span class="kw">fn </span>is_terminated(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
 		<span class="self">self</span>.inner.is_terminated()
+	}
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+	<span class="kw">use </span><span class="kw">super</span>::tracing_unbounded;
+	<span class="kw">use </span>async_channel::{<span class="self">self</span>, RecvError, TryRecvError};
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>test_tracing_unbounded_receiver_drop() {
+		<span class="kw">let </span>(tracing_unbounded_sender, tracing_unbounded_receiver) =
+			tracing_unbounded(<span class="string">&quot;test-receiver-drop&quot;</span>, <span class="number">10</span>);
+		<span class="kw">let </span>(tx, rx) = async_channel::unbounded::&lt;usize&gt;();
+
+		tracing_unbounded_sender.unbounded_send(tx).unwrap();
+		drop(tracing_unbounded_receiver);
+
+		<span class="macro">assert_eq!</span>(rx.try_recv(), <span class="prelude-val">Err</span>(TryRecvError::Closed));
+		<span class="macro">assert_eq!</span>(rx.recv_blocking(), <span class="prelude-val">Err</span>(RecvError));
 	}
 }
 </code></pre></div>
