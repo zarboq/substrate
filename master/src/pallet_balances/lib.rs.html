@@ -1173,6 +1173,8 @@
 <a href="#1173" id="1173">1173</a>
 <a href="#1174" id="1174">1174</a>
 <a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1380,7 +1382,10 @@
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, traits::fungible::Credit};
+	<span class="kw">use </span>frame_support::{
+		pallet_prelude::<span class="kw-2">*</span>,
+		traits::{fungible::Credit, tokens::Precision},
+	};
 	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
 
 	<span class="kw">pub type </span>CreditOf&lt;T, I&gt; = Credit&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId, Pallet&lt;T, I&gt;&gt;;
@@ -2275,59 +2280,58 @@
 		}
 
 		<span class="doccomment">/// Move the reserved balance of one account into the balance of another, according to
-		/// `status`.
+		/// `status`. This will respect freezes/locks only if `fortitude` is `Polite`.
 		///
-		/// Is a no-op if:
-		/// - the value to be moved is zero; or
-		/// - the `slashed` id equal to `beneficiary` and the `status` is `Reserved`.
+		/// Is a no-op if the value to be moved is zero.
 		///
 		/// NOTE: returns actual amount of transferred value in `Ok` case.
 		</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_transfer_reserved(
 			slashed: <span class="kw-2">&amp;</span>T::AccountId,
 			beneficiary: <span class="kw-2">&amp;</span>T::AccountId,
 			value: T::Balance,
-			best_effort: bool,
+			precision: Precision,
+			fortitude: Fortitude,
 			status: Status,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;T::Balance, DispatchError&gt; {
 			<span class="kw">if </span>value.is_zero() {
 				<span class="kw">return </span><span class="prelude-val">Ok</span>(Zero::zero())
 			}
 
+			<span class="kw">let </span>max = &lt;<span class="self">Self </span><span class="kw">as </span>fungible::InspectHold&lt;<span class="kw">_</span>&gt;&gt;::reducible_total_balance_on_hold(
+				slashed, fortitude,
+			);
+			<span class="kw">let </span>actual = <span class="kw">match </span>precision {
+				Precision::BestEffort =&gt; value.min(max),
+				Precision::Exact =&gt; value,
+			};
+			<span class="macro">ensure!</span>(actual &lt;= max, TokenError::FundsUnavailable);
 			<span class="kw">if </span>slashed == beneficiary {
 				<span class="kw">return match </span>status {
-					Status::Free =&gt; <span class="prelude-val">Ok</span>(value.saturating_sub(<span class="self">Self</span>::unreserve(slashed, value))),
-					Status::Reserved =&gt; <span class="prelude-val">Ok</span>(value.saturating_sub(<span class="self">Self</span>::reserved_balance(slashed))),
+					Status::Free =&gt; <span class="prelude-val">Ok</span>(actual.saturating_sub(<span class="self">Self</span>::unreserve(slashed, actual))),
+					Status::Reserved =&gt; <span class="prelude-val">Ok</span>(actual),
 				}
 			}
 
-			<span class="kw">let </span>((actual, maybe_dust_1), maybe_dust_2) = <span class="self">Self</span>::try_mutate_account(
+			<span class="kw">let </span>((<span class="kw">_</span>, maybe_dust_1), maybe_dust_2) = <span class="self">Self</span>::try_mutate_account(
 				beneficiary,
-				|to_account, is_new| -&gt; <span class="prelude-ty">Result</span>&lt;(T::Balance, <span class="prelude-ty">Option</span>&lt;T::Balance&gt;), DispatchError&gt; {
+				|to_account, is_new| -&gt; <span class="prelude-ty">Result</span>&lt;((), <span class="prelude-ty">Option</span>&lt;T::Balance&gt;), DispatchError&gt; {
 					<span class="macro">ensure!</span>(!is_new, Error::&lt;T, I&gt;::DeadAccount);
-					<span class="self">Self</span>::try_mutate_account(
-						slashed,
-						|from_account, <span class="kw">_</span>| -&gt; <span class="prelude-ty">Result</span>&lt;T::Balance, DispatchError&gt; {
-							<span class="kw">let </span>actual = cmp::min(from_account.reserved, value);
-							<span class="macro">ensure!</span>(
-								best_effort || actual == value,
-								Error::&lt;T, I&gt;::InsufficientBalance
-							);
-							<span class="kw">match </span>status {
-								Status::Free =&gt;
-									to_account.free = to_account
-										.free
-										.checked_add(<span class="kw-2">&amp;</span>actual)
-										.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>,
-								Status::Reserved =&gt;
-									to_account.reserved = to_account
-										.reserved
-										.checked_add(<span class="kw-2">&amp;</span>actual)
-										.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>,
-							}
-							from_account.reserved -= actual;
-							<span class="prelude-val">Ok</span>(actual)
-						},
-					)
+					<span class="self">Self</span>::try_mutate_account(slashed, |from_account, <span class="kw">_</span>| -&gt; DispatchResult {
+						<span class="kw">match </span>status {
+							Status::Free =&gt;
+								to_account.free = to_account
+									.free
+									.checked_add(<span class="kw-2">&amp;</span>actual)
+									.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>,
+							Status::Reserved =&gt;
+								to_account.reserved = to_account
+									.reserved
+									.checked_add(<span class="kw-2">&amp;</span>actual)
+									.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>,
+						}
+						from_account.reserved.saturating_reduce(actual);
+						<span class="prelude-val">Ok</span>(())
+					})
 				},
 			)<span class="question-mark">?</span>;
 
