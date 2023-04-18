@@ -264,9 +264,6 @@
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
 <a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -287,28 +284,29 @@
 
 </span><span class="doccomment">//! RPC api for babe.
 
-</span><span class="kw">use </span>futures::TryFutureExt;
+</span><span class="kw">use </span>std::{collections::HashMap, sync::Arc};
+
+<span class="kw">use </span>futures::TryFutureExt;
 <span class="kw">use </span>jsonrpsee::{
 	core::{async_trait, Error <span class="kw">as </span>JsonRpseeError, RpcResult},
 	proc_macros::rpc,
 	types::{error::CallError, ErrorObject},
 };
-
-<span class="kw">use </span>sc_consensus_babe::{authorship, Epoch};
-<span class="kw">use </span>sc_consensus_epochs::{descendent_query, Epoch <span class="kw">as </span>EpochT, SharedEpochChanges};
-<span class="kw">use </span>sc_rpc_api::DenyUnsafe;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
+
+<span class="kw">use </span>sc_consensus_babe::{authorship, BabeWorkerHandle};
+<span class="kw">use </span>sc_consensus_epochs::Epoch <span class="kw">as </span>EpochT;
+<span class="kw">use </span>sc_rpc_api::DenyUnsafe;
 <span class="kw">use </span>sp_api::ProvideRuntimeApi;
 <span class="kw">use </span>sp_application_crypto::AppCrypto;
 <span class="kw">use </span>sp_blockchain::{Error <span class="kw">as </span>BlockChainError, HeaderBackend, HeaderMetadata};
 <span class="kw">use </span>sp_consensus::{Error <span class="kw">as </span>ConsensusError, SelectChain};
-<span class="kw">use </span>sp_consensus_babe::{
-	digests::PreDigest, AuthorityId, BabeApi <span class="kw">as </span>BabeRuntimeApi, BabeConfiguration,
-};
+<span class="kw">use </span>sp_consensus_babe::{digests::PreDigest, AuthorityId, BabeApi <span class="kw">as </span>BabeRuntimeApi};
 <span class="kw">use </span>sp_core::crypto::ByteArray;
 <span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Header <span class="kw">as _</span>};
-<span class="kw">use </span>std::{collections::HashMap, sync::Arc};
+
+<span class="kw">const </span>BABE_ERROR: i32 = <span class="number">9000</span>;
 
 <span class="doccomment">/// Provides rpc methods for interacting with Babe.
 </span><span class="attr">#[rpc(client, server)]
@@ -323,12 +321,10 @@
 </span><span class="kw">pub struct </span>Babe&lt;B: BlockT, C, SC&gt; {
 	<span class="doccomment">/// shared reference to the client.
 	</span>client: Arc&lt;C&gt;,
-	<span class="doccomment">/// shared reference to EpochChanges
-	</span>shared_epoch_changes: SharedEpochChanges&lt;B, Epoch&gt;,
+	<span class="doccomment">/// A handle to the BABE worker for issuing requests.
+	</span>babe_worker_handle: BabeWorkerHandle&lt;B&gt;,
 	<span class="doccomment">/// shared reference to the Keystore
 	</span>keystore: KeystorePtr,
-	<span class="doccomment">/// config (actually holds the slot duration)
-	</span>babe_config: BabeConfiguration,
 	<span class="doccomment">/// The SelectChain strategy
 	</span>select_chain: SC,
 	<span class="doccomment">/// Whether to deny unsafe calls
@@ -339,13 +335,12 @@
 	<span class="doccomment">/// Creates a new instance of the Babe Rpc handler.
 	</span><span class="kw">pub fn </span>new(
 		client: Arc&lt;C&gt;,
-		shared_epoch_changes: SharedEpochChanges&lt;B, Epoch&gt;,
+		babe_worker_handle: BabeWorkerHandle&lt;B&gt;,
 		keystore: KeystorePtr,
-		babe_config: BabeConfiguration,
 		select_chain: SC,
 		deny_unsafe: DenyUnsafe,
 	) -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{ client, shared_epoch_changes, keystore, babe_config, select_chain, deny_unsafe }
+		<span class="self">Self </span>{ client, babe_worker_handle, keystore, select_chain, deny_unsafe }
 	}
 }
 
@@ -362,21 +357,21 @@
 {
 	<span class="kw">async fn </span>epoch_authorship(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RpcResult&lt;HashMap&lt;AuthorityId, EpochAuthorship&gt;&gt; {
 		<span class="self">self</span>.deny_unsafe.check_if_safe()<span class="question-mark">?</span>;
-		<span class="kw">let </span>header = <span class="self">self</span>.select_chain.best_chain().map_err(Error::Consensus).<span class="kw">await</span><span class="question-mark">?</span>;
+
+		<span class="kw">let </span>best_header = <span class="self">self</span>.select_chain.best_chain().map_err(Error::SelectChain).<span class="kw">await</span><span class="question-mark">?</span>;
+
 		<span class="kw">let </span>epoch_start = <span class="self">self
 			</span>.client
 			.runtime_api()
-			.current_epoch_start(header.hash())
-			.map_err(|err| Error::StringError(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err)))<span class="question-mark">?</span>;
+			.current_epoch_start(best_header.hash())
+			.map_err(|<span class="kw">_</span>| Error::FetchEpoch)<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>epoch = epoch_data(
-			<span class="kw-2">&amp;</span><span class="self">self</span>.shared_epoch_changes,
-			<span class="kw-2">&amp;</span><span class="self">self</span>.client,
-			<span class="kw-2">&amp;</span><span class="self">self</span>.babe_config,
-			<span class="kw-2">*</span>epoch_start,
-			<span class="kw-2">&amp;</span><span class="self">self</span>.select_chain,
-		)
-		.<span class="kw">await</span><span class="question-mark">?</span>;
+		<span class="kw">let </span>epoch = <span class="self">self
+			</span>.babe_worker_handle
+			.epoch_data_for_child_of(best_header.hash(), <span class="kw-2">*</span>best_header.number(), epoch_start)
+			.<span class="kw">await
+			</span>.map_err(|<span class="kw">_</span>| Error::FetchEpoch)<span class="question-mark">?</span>;
+
 		<span class="kw">let </span>(epoch_start, epoch_end) = (epoch.start_slot(), epoch.end_slot());
 		<span class="kw">let </span><span class="kw-2">mut </span>claims: HashMap&lt;AuthorityId, EpochAuthorship&gt; = HashMap::new();
 
@@ -428,59 +423,37 @@
 	</span>secondary_vrf: Vec&lt;u64&gt;,
 }
 
-<span class="doccomment">/// Errors encountered by the RPC
+<span class="doccomment">/// Top-level error type for the RPC handler.
 </span><span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error {
-	<span class="doccomment">/// Consensus error
-	</span><span class="attr">#[error(transparent)]
-	</span>Consensus(<span class="attr">#[from] </span>ConsensusError),
-	<span class="doccomment">/// Errors that can be formatted as a String
-	</span><span class="attr">#[error(<span class="string">&quot;{0}&quot;</span>)]
-	</span>StringError(String),
+	<span class="doccomment">/// Failed to fetch the current best header.
+	</span><span class="attr">#[error(<span class="string">&quot;Failed to fetch the current best header: {0}&quot;</span>)]
+	</span>SelectChain(ConsensusError),
+	<span class="doccomment">/// Failed to fetch epoch data.
+	</span><span class="attr">#[error(<span class="string">&quot;Failed to fetch epoch data&quot;</span>)]
+	</span>FetchEpoch,
 }
 
 <span class="kw">impl </span>From&lt;Error&gt; <span class="kw">for </span>JsonRpseeError {
 	<span class="kw">fn </span>from(error: Error) -&gt; <span class="self">Self </span>{
+		<span class="kw">let </span>error_code = <span class="kw">match </span>error {
+			Error::SelectChain(<span class="kw">_</span>) =&gt; <span class="number">1</span>,
+			Error::FetchEpoch =&gt; <span class="number">2</span>,
+		};
+
 		JsonRpseeError::Call(CallError::Custom(ErrorObject::owned(
-			<span class="number">1234</span>,
+			BABE_ERROR + error_code,
 			error.to_string(),
-			<span class="prelude-val">None</span>::&lt;()&gt;,
+			<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, error)),
 		)))
 	}
-}
-
-<span class="doccomment">/// Fetches the epoch data for a given slot.
-</span><span class="kw">async fn </span>epoch_data&lt;B, C, SC&gt;(
-	epoch_changes: <span class="kw-2">&amp;</span>SharedEpochChanges&lt;B, Epoch&gt;,
-	client: <span class="kw-2">&amp;</span>Arc&lt;C&gt;,
-	babe_config: <span class="kw-2">&amp;</span>BabeConfiguration,
-	slot: u64,
-	select_chain: <span class="kw-2">&amp;</span>SC,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Epoch, Error&gt;
-<span class="kw">where
-	</span>B: BlockT,
-	C: HeaderBackend&lt;B&gt; + HeaderMetadata&lt;B, Error = BlockChainError&gt; + <span class="lifetime">&#39;static</span>,
-	SC: SelectChain&lt;B&gt;,
-{
-	<span class="kw">let </span>parent = select_chain.best_chain().<span class="kw">await</span><span class="question-mark">?</span>;
-	epoch_changes
-		.shared_data()
-		.epoch_data_for_child_of(
-			descendent_query(<span class="kw-2">&amp;**</span>client),
-			<span class="kw-2">&amp;</span>parent.hash(),
-			<span class="kw-2">*</span>parent.number(),
-			slot.into(),
-			|slot| Epoch::genesis(babe_config, slot),
-		)
-		.map_err(|e| Error::Consensus(ConsensusError::ChainLookup(e.to_string())))<span class="question-mark">?
-		</span>.ok_or(Error::Consensus(ConsensusError::InvalidAuthoritiesSet))
 }
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>sc_consensus_babe::block_import;
-	<span class="kw">use </span>sp_core::crypto::key_types::BABE;
+	<span class="kw">use </span>sp_consensus_babe::inherents::InherentDataProvider;
+	<span class="kw">use </span>sp_core::{crypto::key_types::BABE, testing::TaskExecutor};
 	<span class="kw">use </span>sp_keyring::Sr25519Keyring;
 	<span class="kw">use </span>sp_keystore::{testing::MemoryKeystore, Keystore};
 	<span class="kw">use </span>substrate_test_runtime_client::{
@@ -502,14 +475,35 @@
 		<span class="kw">let </span>builder = TestClientBuilder::new();
 		<span class="kw">let </span>(client, longest_chain) = builder.build_with_longest_chain();
 		<span class="kw">let </span>client = Arc::new(client);
-		<span class="kw">let </span>config = sc_consensus_babe::configuration(<span class="kw-2">&amp;*</span>client).expect(<span class="string">&quot;config available&quot;</span>);
-		<span class="kw">let </span>(<span class="kw">_</span>, link) = block_import(config.clone(), client.clone(), client.clone())
-			.expect(<span class="string">&quot;can initialize block-import&quot;</span>);
-
-		<span class="kw">let </span>epoch_changes = link.epoch_changes().clone();
+		<span class="kw">let </span>task_executor = TaskExecutor::new();
 		<span class="kw">let </span>keystore = create_keystore(Sr25519Keyring::Alice);
 
-		Babe::new(client.clone(), epoch_changes, keystore, config, longest_chain, deny_unsafe)
+		<span class="kw">let </span>config = sc_consensus_babe::configuration(<span class="kw-2">&amp;*</span>client).expect(<span class="string">&quot;config available&quot;</span>);
+		<span class="kw">let </span>slot_duration = config.slot_duration();
+
+		<span class="kw">let </span>(block_import, link) =
+			sc_consensus_babe::block_import(config.clone(), client.clone(), client.clone())
+				.expect(<span class="string">&quot;can initialize block-import&quot;</span>);
+
+		<span class="kw">let </span>(<span class="kw">_</span>, babe_worker_handle) = sc_consensus_babe::import_queue(
+			link.clone(),
+			block_import.clone(),
+			<span class="prelude-val">None</span>,
+			client.clone(),
+			longest_chain.clone(),
+			<span class="kw">move </span>|<span class="kw">_</span>, <span class="kw">_</span>| <span class="kw">async move </span>{
+				<span class="prelude-val">Ok</span>((InherentDataProvider::from_timestamp_and_slot_duration(
+					<span class="number">0</span>.into(),
+					slot_duration,
+				),))
+			},
+			<span class="kw-2">&amp;</span>task_executor,
+			<span class="prelude-val">None</span>,
+			<span class="prelude-val">None</span>,
+		)
+		.unwrap();
+
+		Babe::new(client.clone(), babe_worker_handle, keystore, longest_chain, deny_unsafe)
 	}
 
 	<span class="attr">#[tokio::test]

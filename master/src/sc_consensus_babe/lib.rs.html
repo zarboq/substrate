@@ -1899,6 +1899,10 @@
 <a href="#1899" id="1899">1899</a>
 <a href="#1900" id="1900">1900</a>
 <a href="#1901" id="1901">1901</a>
+<a href="#1902" id="1902">1902</a>
+<a href="#1903" id="1903">1903</a>
+<a href="#1904" id="1904">1904</a>
+<a href="#1905" id="1905">1905</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1990,8 +1994,8 @@
 <span class="kw">use </span>schnorrkel::SignatureError;
 
 <span class="kw">use </span>sc_client_api::{
-	backend::AuxStore, AuxDataOperations, Backend <span class="kw">as </span>BackendT, BlockchainEvents,
-	FinalityNotification, PreCommitActions, ProvideUncles, UsageProvider,
+	backend::AuxStore, AuxDataOperations, Backend <span class="kw">as </span>BackendT, FinalityNotification,
+	PreCommitActions, UsageProvider,
 };
 <span class="kw">use </span>sc_consensus::{
 	block_import::{
@@ -2239,6 +2243,9 @@
 	<span class="doccomment">/// Create inherents error.
 	</span><span class="attr">#[error(<span class="string">&quot;Creating inherents failed: {0}&quot;</span>)]
 	</span>CreateInherents(sp_inherents::Error),
+	<span class="doccomment">/// Background worker is not running and therefore requests cannot be answered.
+	</span><span class="attr">#[error(<span class="string">&quot;Background worker is not running&quot;</span>)]
+	</span>BackgroundWorkerTerminated,
 	<span class="doccomment">/// Client error
 	</span><span class="attr">#[error(transparent)]
 	</span>Client(sp_blockchain::Error),
@@ -2376,9 +2383,6 @@
 <span class="kw">where
 	</span>B: BlockT,
 	C: ProvideRuntimeApi&lt;B&gt;
-		+ ProvideUncles&lt;B&gt;
-		+ BlockchainEvents&lt;B&gt;
-		+ PreCommitActions&lt;B&gt;
 		+ HeaderBackend&lt;B&gt;
 		+ HeaderMetadata&lt;B, Error = ClientError&gt;
 		+ Send
@@ -2399,8 +2403,6 @@
 	BS: BackoffAuthoringBlocksStrategy&lt;NumberFor&lt;B&gt;&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
 	Error: std::error::Error + Send + From&lt;ConsensusError&gt; + From&lt;I::Error&gt; + <span class="lifetime">&#39;static</span>,
 {
-	<span class="kw">const </span>HANDLE_BUFFER_SIZE: usize = <span class="number">1024</span>;
-
 	<span class="kw">let </span>slot_notification_sinks = Arc::new(Mutex::new(Vec::new()));
 
 	<span class="kw">let </span>worker = BabeSlotWorker {
@@ -2430,17 +2432,7 @@
 		create_inherent_data_providers,
 	);
 
-	<span class="kw">let </span>(worker_tx, worker_rx) = channel(HANDLE_BUFFER_SIZE);
-
-	<span class="kw">let </span>answer_requests =
-		answer_requests(worker_rx, babe_link.config, client, babe_link.epoch_changes);
-
-	<span class="kw">let </span>inner = future::select(Box::pin(slot_worker), Box::pin(answer_requests));
-	<span class="prelude-val">Ok</span>(BabeWorker {
-		inner: Box::pin(inner.map(|<span class="kw">_</span>| ())),
-		slot_notification_sinks,
-		handle: BabeWorkerHandle(worker_tx),
-	})
+	<span class="prelude-val">Ok</span>(BabeWorker { inner: Box::pin(slot_worker), slot_notification_sinks })
 }
 
 <span class="comment">// Remove obsolete block&#39;s weight data by leveraging finality notifications.
@@ -2494,42 +2486,26 @@
 	client: Arc&lt;C&gt;,
 	epoch_changes: SharedEpochChanges&lt;B, Epoch&gt;,
 ) <span class="kw">where
-	</span>C: ProvideRuntimeApi&lt;B&gt;
-		+ ProvideUncles&lt;B&gt;
-		+ BlockchainEvents&lt;B&gt;
-		+ HeaderBackend&lt;B&gt;
-		+ HeaderMetadata&lt;B, Error = ClientError&gt;
-		+ Send
-		+ Sync
-		+ <span class="lifetime">&#39;static</span>,
+	</span>C: HeaderBackend&lt;B&gt; + HeaderMetadata&lt;B, Error = ClientError&gt;,
 {
 	<span class="kw">while let </span><span class="prelude-val">Some</span>(request) = request_rx.next().<span class="kw">await </span>{
 		<span class="kw">match </span>request {
-			BabeRequest::EpochForChild(parent_hash, parent_number, slot_number, response) =&gt; {
+			BabeRequest::EpochData(response) =&gt; {
+				<span class="kw">let _ </span>= response.send(epoch_changes.shared_data().clone());
+			},
+			BabeRequest::EpochDataForChildOf(parent_hash, parent_number, slot, response) =&gt; {
 				<span class="kw">let </span>lookup = || {
 					<span class="kw">let </span>epoch_changes = epoch_changes.shared_data();
-					<span class="kw">let </span>epoch_descriptor = epoch_changes
-						.epoch_descriptor_for_child_of(
+					epoch_changes
+						.epoch_data_for_child_of(
 							descendent_query(<span class="kw-2">&amp;*</span>client),
 							<span class="kw-2">&amp;</span>parent_hash,
 							parent_number,
-							slot_number,
+							slot,
+							|slot| Epoch::genesis(<span class="kw-2">&amp;</span>config, slot),
 						)
 						.map_err(|e| Error::&lt;B&gt;::ForkTree(Box::new(e)))<span class="question-mark">?
-						</span>.ok_or(Error::&lt;B&gt;::FetchEpoch(parent_hash))<span class="question-mark">?</span>;
-
-					<span class="kw">let </span>viable_epoch = epoch_changes
-						.viable_epoch(<span class="kw-2">&amp;</span>epoch_descriptor, |slot| Epoch::genesis(<span class="kw-2">&amp;</span>config, slot))
-						.ok_or(Error::&lt;B&gt;::FetchEpoch(parent_hash))<span class="question-mark">?</span>;
-
-					<span class="prelude-val">Ok</span>(sp_consensus_babe::Epoch {
-						epoch_index: viable_epoch.as_ref().epoch_index,
-						start_slot: viable_epoch.as_ref().start_slot,
-						duration: viable_epoch.as_ref().duration,
-						authorities: viable_epoch.as_ref().authorities.clone(),
-						randomness: viable_epoch.as_ref().randomness,
-						config: viable_epoch.as_ref().config.clone(),
-					})
+						</span>.ok_or(Error::&lt;B&gt;::FetchEpoch(parent_hash))
 				};
 
 				<span class="kw">let _ </span>= response.send(lookup());
@@ -2539,17 +2515,13 @@
 }
 
 <span class="doccomment">/// Requests to the BABE service.
-</span><span class="attr">#[non_exhaustive]
-</span><span class="kw">pub enum </span>BabeRequest&lt;B: BlockT&gt; {
+</span><span class="kw">enum </span>BabeRequest&lt;B: BlockT&gt; {
+	<span class="doccomment">/// Request all available epoch data.
+	</span>EpochData(oneshot::Sender&lt;EpochChangesFor&lt;B, Epoch&gt;&gt;),
 	<span class="doccomment">/// Request the epoch that a child of the given block, with the given slot number would have.
 	///
 	/// The parent block is identified by its hash and number.
-	</span>EpochForChild(
-		B::Hash,
-		NumberFor&lt;B&gt;,
-		Slot,
-		oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;sp_consensus_babe::Epoch, Error&lt;B&gt;&gt;&gt;,
-	),
+	</span>EpochDataForChildOf(B::Hash, NumberFor&lt;B&gt;, Slot, oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;Epoch, Error&lt;B&gt;&gt;&gt;),
 }
 
 <span class="doccomment">/// A handle to the BABE worker for issuing requests.
@@ -2557,12 +2529,42 @@
 </span><span class="kw">pub struct </span>BabeWorkerHandle&lt;B: BlockT&gt;(Sender&lt;BabeRequest&lt;B&gt;&gt;);
 
 <span class="kw">impl</span>&lt;B: BlockT&gt; BabeWorkerHandle&lt;B&gt; {
-	<span class="doccomment">/// Send a request to the BABE service.
-	</span><span class="kw">pub async fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: BabeRequest&lt;B&gt;) {
-		<span class="comment">// Failure to send means that the service is down.
-		// This will manifest as the receiver of the request being dropped.
-		</span><span class="kw">let _ </span>= <span class="self">self</span>.<span class="number">0</span>.send(request).<span class="kw">await</span>;
+	<span class="kw">async fn </span>send_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: BabeRequest&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&lt;B&gt;&gt; {
+		<span class="kw">match </span><span class="self">self</span>.<span class="number">0</span>.clone().send(request).<span class="kw">await </span>{
+			<span class="prelude-val">Err</span>(err) <span class="kw">if </span>err.is_disconnected() =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::BackgroundWorkerTerminated),
+			<span class="prelude-val">Err</span>(err) =&gt; <span class="macro">warn!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;Unhandled error when sending request to worker: {:?}&quot;</span>, err
+			),
+			<span class="kw">_ </span>=&gt; {},
+		}
+
+		<span class="prelude-val">Ok</span>(())
 	}
+
+	<span class="doccomment">/// Fetch all available epoch data.
+	</span><span class="kw">pub async fn </span>epoch_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EpochChangesFor&lt;B, Epoch&gt;, Error&lt;B&gt;&gt; {
+		<span class="kw">let </span>(tx, rx) = oneshot::channel();
+		<span class="self">self</span>.send_request(BabeRequest::EpochData(tx)).<span class="kw">await</span><span class="question-mark">?</span>;
+
+		rx.<span class="kw">await</span>.or(<span class="prelude-val">Err</span>(Error::BackgroundWorkerTerminated))
+	}
+
+	<span class="doccomment">/// Fetch the epoch that a child of the given block, with the given slot number would have.
+	///
+	/// The parent block is identified by its hash and number.
+	</span><span class="kw">pub async fn </span>epoch_data_for_child_of(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		parent_hash: B::Hash,
+		parent_number: NumberFor&lt;B&gt;,
+		slot: Slot,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Epoch, Error&lt;B&gt;&gt; {
+		<span class="kw">let </span>(tx, rx) = oneshot::channel();
+		<span class="self">self</span>.send_request(BabeRequest::EpochDataForChildOf(parent_hash, parent_number, slot, tx))
+			.<span class="kw">await</span><span class="question-mark">?</span>;
+
+		rx.<span class="kw">await</span>.or(<span class="prelude-val">Err</span>(Error::BackgroundWorkerTerminated))<span class="question-mark">?
+	</span>}
 }
 
 <span class="doccomment">/// Worker for Babe which implements `Future&lt;Output=()&gt;`. This must be polled.
@@ -2570,7 +2572,6 @@
 </span><span class="kw">pub struct </span>BabeWorker&lt;B: BlockT&gt; {
 	inner: Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send + <span class="lifetime">&#39;static</span>&gt;&gt;,
 	slot_notification_sinks: SlotNotificationSinks&lt;B&gt;,
-	handle: BabeWorkerHandle&lt;B&gt;,
 }
 
 <span class="kw">impl</span>&lt;B: BlockT&gt; BabeWorker&lt;B&gt; {
@@ -2584,11 +2585,6 @@
 		<span class="kw">let </span>(sink, stream) = channel(CHANNEL_BUFFER_SIZE);
 		<span class="self">self</span>.slot_notification_sinks.lock().push(sink);
 		stream
-	}
-
-	<span class="doccomment">/// Get a handle to the worker.
-	</span><span class="kw">pub fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BabeWorkerHandle&lt;B&gt; {
-		<span class="self">self</span>.handle.clone()
 	}
 }
 
@@ -3691,7 +3687,7 @@
 	spawner: <span class="kw-2">&amp;</span><span class="kw">impl </span>sp_core::traits::SpawnEssentialNamed,
 	registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Registry&gt;,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
-) -&gt; ClientResult&lt;DefaultImportQueue&lt;Block, Client&gt;&gt;
+) -&gt; ClientResult&lt;(DefaultImportQueue&lt;Block, Client&gt;, BabeWorkerHandle&lt;Block&gt;)&gt;
 <span class="kw">where
 	</span>Inner: BlockImport&lt;
 			Block,
@@ -3712,16 +3708,28 @@
 	CIDP: CreateInherentDataProviders&lt;Block, ()&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
 	CIDP::InherentDataProviders: InherentDataProviderExt + Send + Sync,
 {
+	<span class="kw">const </span>HANDLE_BUFFER_SIZE: usize = <span class="number">1024</span>;
+
 	<span class="kw">let </span>verifier = BabeVerifier {
 		select_chain,
 		create_inherent_data_providers,
-		config: babe_link.config,
-		epoch_changes: babe_link.epoch_changes,
+		config: babe_link.config.clone(),
+		epoch_changes: babe_link.epoch_changes.clone(),
 		telemetry,
-		client,
+		client: client.clone(),
 	};
 
-	<span class="prelude-val">Ok</span>(BasicQueue::new(verifier, Box::new(block_import), justification_import, spawner, registry))
+	<span class="kw">let </span>(worker_tx, worker_rx) = channel(HANDLE_BUFFER_SIZE);
+
+	<span class="kw">let </span>answer_requests =
+		answer_requests(worker_rx, babe_link.config, client, babe_link.epoch_changes);
+
+	spawner.spawn_essential(<span class="string">&quot;babe-worker&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;babe&quot;</span>), answer_requests.boxed());
+
+	<span class="prelude-val">Ok</span>((
+		BasicQueue::new(verifier, Box::new(block_import), justification_import, spawner, registry),
+		BabeWorkerHandle(worker_tx),
+	))
 }
 
 <span class="doccomment">/// Reverts protocol aux data to at most the last finalized block.

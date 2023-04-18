@@ -172,16 +172,6 @@
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -220,8 +210,7 @@
 <span class="kw">use </span>jsonrpsee::RpcModule;
 <span class="kw">use </span>node_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Index};
 <span class="kw">use </span>sc_client_api::AuxStore;
-<span class="kw">use </span>sc_consensus_babe::{BabeConfiguration, Epoch};
-<span class="kw">use </span>sc_consensus_epochs::SharedEpochChanges;
+<span class="kw">use </span>sc_consensus_babe::BabeWorkerHandle;
 <span class="kw">use </span>sc_consensus_grandpa::{
 	FinalityProofProvider, GrandpaJustificationStream, SharedAuthoritySet, SharedVoterState,
 };
@@ -237,10 +226,8 @@
 
 <span class="doccomment">/// Extra dependencies for BABE.
 </span><span class="kw">pub struct </span>BabeDeps {
-	<span class="doccomment">/// BABE protocol config.
-	</span><span class="kw">pub </span>babe_config: BabeConfiguration,
-	<span class="doccomment">/// BABE pending epoch changes.
-	</span><span class="kw">pub </span>shared_epoch_changes: SharedEpochChanges&lt;Block, Epoch&gt;,
+	<span class="doccomment">/// A handle to the BABE worker for issuing requests.
+	</span><span class="kw">pub </span>babe_worker_handle: BabeWorkerHandle&lt;Block&gt;,
 	<span class="doccomment">/// The keystore that manages the keys of the node.
 	</span><span class="kw">pub </span>keystore: KeystorePtr,
 }
@@ -314,7 +301,7 @@
 	<span class="kw">let </span><span class="kw-2">mut </span>io = RpcModule::new(());
 	<span class="kw">let </span>FullDeps { client, pool, select_chain, chain_spec, deny_unsafe, babe, grandpa } = deps;
 
-	<span class="kw">let </span>BabeDeps { keystore, babe_config, shared_epoch_changes } = babe;
+	<span class="kw">let </span>BabeDeps { keystore, babe_worker_handle } = babe;
 	<span class="kw">let </span>GrandpaDeps {
 		shared_voter_state,
 		shared_authority_set,
@@ -335,15 +322,8 @@
 	</span>io.merge(Mmr::new(client.clone()).into_rpc())<span class="question-mark">?</span>;
 	io.merge(TransactionPayment::new(client.clone()).into_rpc())<span class="question-mark">?</span>;
 	io.merge(
-		Babe::new(
-			client.clone(),
-			shared_epoch_changes.clone(),
-			keystore,
-			babe_config,
-			select_chain,
-			deny_unsafe,
-		)
-		.into_rpc(),
+		Babe::new(client.clone(), babe_worker_handle.clone(), keystore, select_chain, deny_unsafe)
+			.into_rpc(),
 	)<span class="question-mark">?</span>;
 	io.merge(
 		Grandpa::new(
@@ -357,7 +337,7 @@
 	)<span class="question-mark">?</span>;
 
 	io.merge(
-		SyncState::new(chain_spec, client.clone(), shared_authority_set, shared_epoch_changes)<span class="question-mark">?
+		SyncState::new(chain_spec, client.clone(), shared_authority_set, babe_worker_handle)<span class="question-mark">?
 			</span>.into_rpc(),
 	)<span class="question-mark">?</span>;
 
