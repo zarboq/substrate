@@ -643,18 +643,6 @@
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
 <a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
-<a href="#650" id="650">650</a>
-<a href="#651" id="651">651</a>
-<a href="#652" id="652">652</a>
-<a href="#653" id="653">653</a>
-<a href="#654" id="654">654</a>
-<a href="#655" id="655">655</a>
-<a href="#656" id="656">656</a>
-<a href="#657" id="657">657</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -697,7 +685,7 @@
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
 <span class="kw">use </span>std::{
-	collections::{HashMap, HashSet, VecDeque},
+	collections::{HashMap, HashSet},
 	future::Future,
 	iter,
 	pin::Pin,
@@ -734,8 +722,6 @@
 
 <span class="comment">// Lock must always be taken in order declared here.
 </span><span class="kw">pub struct </span>Protocol&lt;B: BlockT&gt; {
-	<span class="doccomment">/// Pending list of messages to return from `poll` as a priority.
-	</span>pending_messages: VecDeque&lt;CustomMessageOutcome&gt;,
 	<span class="doccomment">/// Used to report reputation changes.
 	</span>peerset_handle: sc_peerset::PeersetHandle,
 	<span class="doccomment">/// Handles opening the unique substream and sending and receiving raw messages.
@@ -838,7 +824,6 @@
 		};
 
 		<span class="kw">let </span>protocol = <span class="self">Self </span>{
-			pending_messages: VecDeque::new(),
 			peerset_handle: peerset_handle.clone(),
 			behaviour,
 			notification_protocols: iter::once(block_announces_protocol.notifications_protocol)
@@ -1066,8 +1051,21 @@
 		cx: <span class="kw-2">&amp;mut </span>std::task::Context,
 		params: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>PollParameters,
 	) -&gt; Poll&lt;NetworkBehaviourAction&lt;<span class="self">Self</span>::OutEvent, <span class="self">Self</span>::ConnectionHandler&gt;&gt; {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(message) = <span class="self">self</span>.pending_messages.pop_front() {
-			<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(message))
+		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(validation_result)) =
+			<span class="self">self</span>.sync_substream_validations.poll_next_unpin(cx)
+		{
+			<span class="kw">match </span>validation_result {
+				<span class="prelude-val">Ok</span>((peer, roles)) =&gt; {
+					<span class="self">self</span>.peers.insert(peer, roles);
+				},
+				<span class="prelude-val">Err</span>(peer) =&gt; {
+					<span class="macro">log::debug!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;`SyncingEngine` rejected stream&quot;
+					</span>);
+					<span class="self">self</span>.behaviour.disconnect_peer(<span class="kw-2">&amp;</span>peer, HARDCODED_PEERSETS_SYNC);
+				},
+			}
 		}
 
 		<span class="kw">let </span>event = <span class="kw">match </span><span class="self">self</span>.behaviour.poll(cx, params) {
@@ -1086,23 +1084,6 @@
 			Poll::Ready(NetworkBehaviourAction::CloseConnection { peer_id, connection }) =&gt;
 				<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::CloseConnection { peer_id, connection }),
 		};
-
-		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(validation_result)) =
-			<span class="self">self</span>.sync_substream_validations.poll_next_unpin(cx)
-		{
-			<span class="kw">match </span>validation_result {
-				<span class="prelude-val">Ok</span>((peer, roles)) =&gt; {
-					<span class="self">self</span>.peers.insert(peer, roles);
-				},
-				<span class="prelude-val">Err</span>(peer) =&gt; {
-					<span class="macro">log::debug!</span>(
-						target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;`SyncingEngine` rejected stream&quot;
-					</span>);
-					<span class="self">self</span>.behaviour.disconnect_peer(<span class="kw-2">&amp;</span>peer, HARDCODED_PEERSETS_SYNC);
-				},
-			}
-		}
 
 		<span class="kw">let </span>outcome = <span class="kw">match </span>event {
 			NotificationsOut::CustomProtocolOpen {
@@ -1166,7 +1147,6 @@
 							) {
 								<span class="prelude-val">Ok</span>(handshake) =&gt; {
 									<span class="kw">let </span>roles = handshake.roles;
-									<span class="self">self</span>.peers.insert(peer_id, roles);
 
 									<span class="kw">let </span>(tx, rx) = oneshot::channel();
 									<span class="kw">let _ </span>= <span class="self">self</span>.tx.unbounded_send(
@@ -1299,10 +1279,6 @@
 
 		<span class="kw">if </span>!<span class="macro">matches!</span>(outcome, CustomMessageOutcome::None) {
 			<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(outcome))
-		}
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(message) = <span class="self">self</span>.pending_messages.pop_front() {
-			<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(message))
 		}
 
 		<span class="comment">// This block can only be reached if an event was pulled from the behaviour and that
