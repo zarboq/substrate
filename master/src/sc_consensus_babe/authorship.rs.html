@@ -308,11 +308,6 @@
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -333,17 +328,19 @@
 
 </span><span class="doccomment">//! BABE authority selection and slot claiming.
 
-</span><span class="kw">use </span><span class="kw">super</span>::Epoch;
+</span><span class="kw">use super</span>::{Epoch, AUTHORING_SCORE_LENGTH, AUTHORING_SCORE_VRF_CONTEXT};
 <span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>sc_consensus_epochs::Epoch <span class="kw">as </span>EpochT;
-<span class="kw">use </span>schnorrkel::{keys::PublicKey, vrf::VRFInOut};
 <span class="kw">use </span>sp_application_crypto::AppCrypto;
 <span class="kw">use </span>sp_consensus_babe::{
 	digests::{PreDigest, PrimaryPreDigest, SecondaryPlainPreDigest, SecondaryVRFPreDigest},
-	make_transcript, make_transcript_data, AuthorityId, BabeAuthorityWeight, Slot, BABE_VRF_PREFIX,
+	make_transcript, AuthorityId, BabeAuthorityWeight, Randomness, Slot,
 };
-<span class="kw">use </span>sp_consensus_vrf::schnorrkel::{VRFOutput, VRFProof};
-<span class="kw">use </span>sp_core::{blake2_256, crypto::ByteArray, U256};
+<span class="kw">use </span>sp_core::{
+	blake2_256,
+	crypto::{ByteArray, Wraps},
+	U256,
+};
 <span class="kw">use </span>sp_keystore::KeystorePtr;
 
 <span class="doccomment">/// Calculates the primary selection threshold for a given authority, taking
@@ -410,19 +407,13 @@
 	)
 }
 
-<span class="doccomment">/// Returns true if the given VRF output is lower than the given threshold,
-/// false otherwise.
-</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>check_primary_threshold(inout: <span class="kw-2">&amp;</span>VRFInOut, threshold: u128) -&gt; bool {
-	u128::from_le_bytes(inout.make_bytes::&lt;[u8; <span class="number">16</span>]&gt;(BABE_VRF_PREFIX)) &lt; threshold
-}
-
 <span class="doccomment">/// Get the expected secondary author for the given slot and with given
 /// authorities. This should always assign the slot to some authority unless the
 /// authorities list is empty.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>secondary_slot_author(
 	slot: Slot,
 	authorities: <span class="kw-2">&amp;</span>[(AuthorityId, BabeAuthorityWeight)],
-	randomness: [u8; <span class="number">32</span>],
+	randomness: Randomness,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>AuthorityId&gt; {
 	<span class="kw">if </span>authorities.is_empty() {
 		<span class="kw">return </span><span class="prelude-val">None
@@ -467,18 +458,14 @@
 	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
 		<span class="kw">if </span>authority_id == expected_author {
 			<span class="kw">let </span>pre_digest = <span class="kw">if </span>author_secondary_vrf {
-				<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, epoch_index);
-				<span class="kw">let </span>result = keystore.sr25519_vrf_sign(
-					AuthorityId::ID,
-					authority_id.as_ref(),
-					transcript_data,
-				);
-				<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(signature)) = result {
+				<span class="kw">let </span>transcript = make_transcript(randomness, slot, epoch_index);
+				<span class="kw">let </span>result =
+					keystore.sr25519_vrf_sign(AuthorityId::ID, authority_id.as_ref(), <span class="kw-2">&amp;</span>transcript);
+				<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(vrf_signature)) = result {
 					<span class="prelude-val">Some</span>(PreDigest::SecondaryVRF(SecondaryVRFPreDigest {
 						slot,
-						vrf_output: VRFOutput(signature.output),
-						vrf_proof: VRFProof(signature.proof),
 						authority_index: <span class="kw-2">*</span>authority_index <span class="kw">as </span>u32,
+						vrf_signature,
 					}))
 				} <span class="kw">else </span>{
 					<span class="prelude-val">None
@@ -562,25 +549,28 @@
 		</span>epoch_index = epoch.clone_for_slot(slot).epoch_index;
 	}
 
-	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
-		<span class="kw">let </span>transcript = make_transcript(randomness, slot, epoch_index);
-		<span class="kw">let </span>transcript_data = make_transcript_data(randomness, slot, epoch_index);
-		<span class="kw">let </span>result =
-			keystore.sr25519_vrf_sign(AuthorityId::ID, authority_id.as_ref(), transcript_data);
-		<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(signature)) = result {
-			<span class="kw">let </span>public = PublicKey::from_bytes(<span class="kw-2">&amp;</span>authority_id.to_raw_vec()).ok()<span class="question-mark">?</span>;
-			<span class="kw">let </span>inout = <span class="kw">match </span>signature.output.attach_input_hash(<span class="kw-2">&amp;</span>public, transcript) {
-				<span class="prelude-val">Ok</span>(inout) =&gt; inout,
-				<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">continue</span>,
-			};
+	<span class="kw">let </span>transcript = make_transcript(randomness, slot, epoch_index);
 
+	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
+		<span class="kw">let </span>result = keystore.sr25519_vrf_sign(AuthorityId::ID, authority_id.as_ref(), <span class="kw-2">&amp;</span>transcript);
+		<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(vrf_signature)) = result {
 			<span class="kw">let </span>threshold = calculate_primary_threshold(c, authorities, <span class="kw-2">*</span>authority_index);
-			<span class="kw">if </span>check_primary_threshold(<span class="kw-2">&amp;</span>inout, threshold) {
+
+			<span class="kw">let </span>can_claim = authority_id
+				.as_inner_ref()
+				.make_bytes::&lt;[u8; AUTHORING_SCORE_LENGTH]&gt;(
+					AUTHORING_SCORE_VRF_CONTEXT,
+					<span class="kw-2">&amp;</span>transcript,
+					<span class="kw-2">&amp;</span>vrf_signature.output,
+				)
+				.map(|bytes| u128::from_le_bytes(bytes) &lt; threshold)
+				.unwrap_or_default();
+
+			<span class="kw">if </span>can_claim {
 				<span class="kw">let </span>pre_digest = PreDigest::Primary(PrimaryPreDigest {
 					slot,
-					vrf_output: VRFOutput(signature.output),
-					vrf_proof: VRFProof(signature.proof),
 					authority_index: <span class="kw-2">*</span>authority_index <span class="kw">as </span>u32,
+					vrf_signature,
 				});
 
 				<span class="kw">return </span><span class="prelude-val">Some</span>((pre_digest, authority_id.clone()))

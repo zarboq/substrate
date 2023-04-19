@@ -418,18 +418,6 @@
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
 <a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -455,21 +443,16 @@
 </span><span class="kw">pub mod </span>digests;
 <span class="kw">pub mod </span>inherents;
 
-<span class="kw">pub use </span>merlin::Transcript;
-<span class="kw">pub use </span>sp_consensus_vrf::schnorrkel::{
-	Randomness, RANDOMNESS_LENGTH, VRF_OUTPUT_LENGTH, VRF_PROOF_LENGTH,
-};
-
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">use </span>sp_keystore::vrf::{VRFTranscriptData, VRFTranscriptValue};
 <span class="kw">use </span>sp_runtime::{traits::Header, ConsensusEngineId, RuntimeDebug};
 <span class="kw">use </span>sp_std::vec::Vec;
 
 <span class="kw">use </span><span class="kw">crate</span>::digests::{NextConfigDescriptor, NextEpochDescriptor};
+
+<span class="kw">pub use </span>sp_core::sr25519::vrf::{VrfOutput, VrfProof, VrfSignature, VrfTranscript};
 
 <span class="doccomment">/// Key type for BABE module.
 </span><span class="kw">pub const </span>KEY_TYPE: sp_core::crypto::KeyTypeId = sp_application_crypto::key_types::BABE;
@@ -479,11 +462,14 @@
 	<span class="macro">app_crypto!</span>(sr25519, BABE);
 }
 
-<span class="doccomment">/// The prefix used by BABE for its VRF keys.
-</span><span class="kw">pub const </span>BABE_VRF_PREFIX: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;substrate-babe-vrf&quot;</span>;
+<span class="doccomment">/// VRF context used for per-slot randomness generation.
+</span><span class="kw">pub const </span>RANDOMNESS_VRF_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;BabeVRFInOutContext&quot;</span>;
 
-<span class="doccomment">/// BABE VRFInOut context.
-</span><span class="kw">pub static </span>BABE_VRF_INOUT_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;BabeVRFInOutContext&quot;</span>;
+<span class="doccomment">/// VRF output length for per-slot randomness.
+</span><span class="kw">pub const </span>RANDOMNESS_LENGTH: usize = <span class="number">32</span>;
+
+<span class="doccomment">/// Randomness type required by BABE operations.
+</span><span class="kw">pub type </span>Randomness = [u8; RANDOMNESS_LENGTH];
 
 <span class="doccomment">/// A Babe authority keypair. Necessarily equivalent to the schnorrkel public key used in
 /// the main Babe module. If that ever changes, then this must, too.
@@ -528,26 +514,16 @@
 /// of 0 (regardless of whether they are plain or vrf secondary blocks).
 </span><span class="kw">pub type </span>BabeBlockWeight = u32;
 
-<span class="doccomment">/// Make a VRF transcript from given randomness, slot number and epoch.
-</span><span class="kw">pub fn </span>make_transcript(randomness: <span class="kw-2">&amp;</span>Randomness, slot: Slot, epoch: u64) -&gt; Transcript {
-	<span class="kw">let </span><span class="kw-2">mut </span>transcript = Transcript::new(<span class="kw-2">&amp;</span>BABE_ENGINE_ID);
-	transcript.append_u64(<span class="string">b&quot;slot number&quot;</span>, <span class="kw-2">*</span>slot);
-	transcript.append_u64(<span class="string">b&quot;current epoch&quot;</span>, epoch);
-	transcript.append_message(<span class="string">b&quot;chain randomness&quot;</span>, <span class="kw-2">&amp;</span>randomness[..]);
-	transcript
-}
-
 <span class="doccomment">/// Make a VRF transcript data container
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">pub fn </span>make_transcript_data(randomness: <span class="kw-2">&amp;</span>Randomness, slot: Slot, epoch: u64) -&gt; VRFTranscriptData {
-	VRFTranscriptData {
-		label: <span class="kw-2">&amp;</span>BABE_ENGINE_ID,
-		items: <span class="macro">vec!</span>[
-			(<span class="string">&quot;slot number&quot;</span>, VRFTranscriptValue::U64(<span class="kw-2">*</span>slot)),
-			(<span class="string">&quot;current epoch&quot;</span>, VRFTranscriptValue::U64(epoch)),
-			(<span class="string">&quot;chain randomness&quot;</span>, VRFTranscriptValue::Bytes(randomness.to_vec())),
+</span><span class="kw">pub fn </span>make_transcript(randomness: <span class="kw-2">&amp;</span>Randomness, slot: Slot, epoch: u64) -&gt; VrfTranscript {
+	VrfTranscript::new(
+		<span class="kw-2">&amp;</span>BABE_ENGINE_ID,
+		<span class="kw-2">&amp;</span>[
+			(<span class="string">b&quot;slot number&quot;</span>, <span class="kw-2">&amp;</span>slot.to_le_bytes()),
+			(<span class="string">b&quot;current epoch&quot;</span>, <span class="kw-2">&amp;</span>epoch.to_le_bytes()),
+			(<span class="string">b&quot;chain randomness&quot;</span>, randomness),
 		],
-	}
+	)
 }
 
 <span class="doccomment">/// An consensus log item for BABE.
@@ -787,7 +763,7 @@
 	<span class="doccomment">/// The authorities and their weights.
 	</span><span class="kw">pub </span>authorities: Vec&lt;(AuthorityId, BabeAuthorityWeight)&gt;,
 	<span class="doccomment">/// Randomness for this epoch.
-	</span><span class="kw">pub </span>randomness: [u8; VRF_OUTPUT_LENGTH],
+	</span><span class="kw">pub </span>randomness: Randomness,
 	<span class="doccomment">/// Configuration of the epoch.
 	</span><span class="kw">pub </span>config: BabeEpochConfiguration,
 }

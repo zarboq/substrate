@@ -200,7 +200,6 @@ var sourcesIndex = JSON.parse('{\
 "sp_consensus_grandpa":["",[],["lib.rs"]],\
 "sp_consensus_pow":["",[],["lib.rs"]],\
 "sp_consensus_slots":["",[],["lib.rs"]],\
-"sp_consensus_vrf":["",[],["lib.rs","schnorrkel.rs"]],\
 "sp_core":["",[["offchain",[],["mod.rs","storage.rs","testing.rs"]]],["crypto.rs","defer.rs","ecdsa.rs","ed25519.rs","hash.rs","hasher.rs","hashing.rs","hexdisplay.rs","lib.rs","sr25519.rs","testing.rs","traits.rs","uint.rs"]],\
 "sp_core_hashing":["",[],["lib.rs"]],\
 "sp_core_hashing_proc_macro":["",[],["impls.rs","lib.rs"]],\
@@ -210,7 +209,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_inherents":["",[],["client_side.rs","lib.rs"]],\
 "sp_io":["",[],["lib.rs"]],\
 "sp_keyring":["",[],["ed25519.rs","lib.rs","sr25519.rs"]],\
-"sp_keystore":["",[],["lib.rs","testing.rs","vrf.rs"]],\
+"sp_keystore":["",[],["lib.rs","testing.rs"]],\
 "sp_maybe_compressed_blob":["",[],["lib.rs"]],\
 "sp_metadata_ir":["",[],["lib.rs","types.rs","v14.rs","v15.rs"]],\
 "sp_mmr_primitives":["",[],["lib.rs","utils.rs"]],\

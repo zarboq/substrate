@@ -191,7 +191,7 @@
 //! randomness collected from VRF outputs.
 
 </span><span class="kw">use super</span>::{
-	AuthorVrfRandomness, Config, EpochStart, NextRandomness, Randomness, VRF_OUTPUT_LENGTH,
+	AuthorVrfRandomness, Config, EpochStart, NextRandomness, Randomness, RANDOMNESS_LENGTH,
 };
 <span class="kw">use </span>frame_support::traits::Randomness <span class="kw">as </span>RandomnessT;
 <span class="kw">use </span>sp_runtime::traits::{Hash, One, Saturating};
@@ -304,7 +304,7 @@
 <span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;T::Hash, T::BlockNumber&gt; <span class="kw">for </span>RandomnessFromTwoEpochsAgo&lt;T&gt; {
 	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, T::BlockNumber) {
 		<span class="kw">let </span><span class="kw-2">mut </span>subject = subject.to_vec();
-		subject.reserve(VRF_OUTPUT_LENGTH);
+		subject.reserve(RANDOMNESS_LENGTH);
 		subject.extend_from_slice(<span class="kw-2">&amp;</span>Randomness::&lt;T&gt;::get()[..]);
 
 		(T::Hashing::hash(<span class="kw-2">&amp;</span>subject[..]), EpochStart::&lt;T&gt;::get().<span class="number">0</span>)
@@ -314,7 +314,7 @@
 <span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;T::Hash, T::BlockNumber&gt; <span class="kw">for </span>RandomnessFromOneEpochAgo&lt;T&gt; {
 	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, T::BlockNumber) {
 		<span class="kw">let </span><span class="kw-2">mut </span>subject = subject.to_vec();
-		subject.reserve(VRF_OUTPUT_LENGTH);
+		subject.reserve(RANDOMNESS_LENGTH);
 		subject.extend_from_slice(<span class="kw-2">&amp;</span>NextRandomness::&lt;T&gt;::get()[..]);
 
 		(T::Hashing::hash(<span class="kw-2">&amp;</span>subject[..]), EpochStart::&lt;T&gt;::get().<span class="number">1</span>)
@@ -325,7 +325,7 @@
 	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, T::BlockNumber) {
 		<span class="kw">let </span>random = AuthorVrfRandomness::&lt;T&gt;::get().map(|random| {
 			<span class="kw">let </span><span class="kw-2">mut </span>subject = subject.to_vec();
-			subject.reserve(VRF_OUTPUT_LENGTH);
+			subject.reserve(RANDOMNESS_LENGTH);
 			subject.extend_from_slice(<span class="kw-2">&amp;</span>random);
 
 			T::Hashing::hash(<span class="kw-2">&amp;</span>subject[..])

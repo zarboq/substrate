@@ -253,6 +253,14 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -273,8 +281,9 @@
 
 </span><span class="doccomment">//! Verification for BABE headers.
 </span><span class="kw">use crate</span>::{
-	authorship::{calculate_primary_threshold, check_primary_threshold, secondary_slot_author},
-	babe_err, find_pre_digest, BlockT, Epoch, Error, LOG_TARGET,
+	authorship::{calculate_primary_threshold, secondary_slot_author},
+	babe_err, find_pre_digest, BlockT, Epoch, Error, AUTHORING_SCORE_LENGTH,
+	AUTHORING_SCORE_VRF_CONTEXT, LOG_TARGET,
 };
 <span class="kw">use </span>log::{debug, trace};
 <span class="kw">use </span>sc_consensus_epochs::Epoch <span class="kw">as </span>EpochT;
@@ -287,7 +296,10 @@
 	make_transcript, AuthorityId, AuthorityPair, AuthoritySignature,
 };
 <span class="kw">use </span>sp_consensus_slots::Slot;
-<span class="kw">use </span>sp_core::{ByteArray, Pair};
+<span class="kw">use </span>sp_core::{
+	crypto::{VrfVerifier, Wraps},
+	Pair,
+};
 <span class="kw">use </span>sp_runtime::{traits::Header, DigestItem};
 
 <span class="doccomment">/// BABE verification parameters
@@ -410,7 +422,7 @@
 	epoch: <span class="kw-2">&amp;</span>Epoch,
 	c: (u64, u64),
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&lt;B&gt;&gt; {
-	<span class="kw">let </span>author = <span class="kw-2">&amp;</span>epoch.authorities[pre_digest.authority_index <span class="kw">as </span>usize].<span class="number">0</span>;
+	<span class="kw">let </span>authority_id = <span class="kw-2">&amp;</span>epoch.authorities[pre_digest.authority_index <span class="kw">as </span>usize].<span class="number">0</span>;
 	<span class="kw">let </span><span class="kw-2">mut </span>epoch_index = epoch.epoch_index;
 
 	<span class="kw">if </span>epoch.end_slot() &lt;= pre_digest.slot {
@@ -418,28 +430,34 @@
 		</span>epoch_index = epoch.clone_for_slot(pre_digest.slot).epoch_index;
 	}
 
-	<span class="kw">if </span>AuthorityPair::verify(<span class="kw-2">&amp;</span>signature, pre_hash, author) {
-		<span class="kw">let </span>(inout, <span class="kw">_</span>) = {
-			<span class="kw">let </span>transcript = make_transcript(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
-
-			schnorrkel::PublicKey::from_bytes(author.as_slice())
-				.and_then(|p| {
-					p.vrf_verify(transcript, <span class="kw-2">&amp;</span>pre_digest.vrf_output, <span class="kw-2">&amp;</span>pre_digest.vrf_proof)
-				})
-				.map_err(|s| babe_err(Error::VRFVerificationFailed(s)))<span class="question-mark">?
-		</span>};
-
-		<span class="kw">let </span>threshold =
-			calculate_primary_threshold(c, <span class="kw-2">&amp;</span>epoch.authorities, pre_digest.authority_index <span class="kw">as </span>usize);
-
-		<span class="kw">if </span>!check_primary_threshold(<span class="kw-2">&amp;</span>inout, threshold) {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::VRFVerificationOfBlockFailed(author.clone(), threshold)))
-		}
-
-		<span class="prelude-val">Ok</span>(())
-	} <span class="kw">else </span>{
-		<span class="prelude-val">Err</span>(babe_err(Error::BadSignature(pre_hash)))
+	<span class="kw">if </span>!AuthorityPair::verify(<span class="kw-2">&amp;</span>signature, pre_hash, authority_id) {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::BadSignature(pre_hash)))
 	}
+
+	<span class="kw">let </span>transcript = make_transcript(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
+
+	<span class="kw">if </span>!authority_id.as_inner_ref().vrf_verify(<span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;</span>pre_digest.vrf_signature) {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::VrfVerificationFailed))
+	}
+
+	<span class="kw">let </span>threshold =
+		calculate_primary_threshold(c, <span class="kw-2">&amp;</span>epoch.authorities, pre_digest.authority_index <span class="kw">as </span>usize);
+
+	<span class="kw">let </span>score = authority_id
+		.as_inner_ref()
+		.make_bytes::&lt;[u8; AUTHORING_SCORE_LENGTH]&gt;(
+			AUTHORING_SCORE_VRF_CONTEXT,
+			<span class="kw-2">&amp;</span>transcript,
+			<span class="kw-2">&amp;</span>pre_digest.vrf_signature.output,
+		)
+		.map(u128::from_le_bytes)
+		.map_err(|<span class="kw">_</span>| babe_err(Error::VrfVerificationFailed))<span class="question-mark">?</span>;
+
+	<span class="kw">if </span>score &gt;= threshold {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::VrfThresholdExceeded(threshold)))
+	}
+
+	<span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Check a secondary slot proposal header. We validate that the given header is
@@ -452,8 +470,7 @@
 	signature: AuthoritySignature,
 	epoch: <span class="kw-2">&amp;</span>Epoch,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&lt;B&gt;&gt; {
-	<span class="comment">// check the signature is valid under the expected authority and
-	// chain state.
+	<span class="comment">// check the signature is valid under the expected authority and chain state.
 	</span><span class="kw">let </span>expected_author =
 		secondary_slot_author(pre_digest.slot, <span class="kw-2">&amp;</span>epoch.authorities, epoch.randomness)
 			.ok_or(Error::NoSecondaryAuthorExpected)<span class="question-mark">?</span>;
@@ -464,11 +481,11 @@
 		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidAuthor(expected_author.clone(), author.clone()))
 	}
 
-	<span class="kw">if </span>AuthorityPair::verify(<span class="kw-2">&amp;</span>signature, pre_hash.as_ref(), author) {
-		<span class="prelude-val">Ok</span>(())
-	} <span class="kw">else </span>{
-		<span class="prelude-val">Err</span>(Error::BadSignature(pre_hash))
+	<span class="kw">if </span>!AuthorityPair::verify(<span class="kw-2">&amp;</span>signature, pre_hash.as_ref(), author) {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::BadSignature(pre_hash))
 	}
+
+	<span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Check a secondary VRF slot proposal header.
@@ -478,8 +495,7 @@
 	signature: AuthoritySignature,
 	epoch: <span class="kw-2">&amp;</span>Epoch,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&lt;B&gt;&gt; {
-	<span class="comment">// check the signature is valid under the expected authority and
-	// chain state.
+	<span class="comment">// check the signature is valid under the expected authority and chain state.
 	</span><span class="kw">let </span>expected_author =
 		secondary_slot_author(pre_digest.slot, <span class="kw-2">&amp;</span>epoch.authorities, epoch.randomness)
 			.ok_or(Error::NoSecondaryAuthorExpected)<span class="question-mark">?</span>;
@@ -496,17 +512,17 @@
 		</span>epoch_index = epoch.clone_for_slot(pre_digest.slot).epoch_index;
 	}
 
-	<span class="kw">if </span>AuthorityPair::verify(<span class="kw-2">&amp;</span>signature, pre_hash.as_ref(), author) {
-		<span class="kw">let </span>transcript = make_transcript(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
-
-		schnorrkel::PublicKey::from_bytes(author.as_slice())
-			.and_then(|p| p.vrf_verify(transcript, <span class="kw-2">&amp;</span>pre_digest.vrf_output, <span class="kw-2">&amp;</span>pre_digest.vrf_proof))
-			.map_err(|s| babe_err(Error::VRFVerificationFailed(s)))<span class="question-mark">?</span>;
-
-		<span class="prelude-val">Ok</span>(())
-	} <span class="kw">else </span>{
-		<span class="prelude-val">Err</span>(Error::BadSignature(pre_hash))
+	<span class="kw">if </span>!AuthorityPair::verify(<span class="kw-2">&amp;</span>signature, pre_hash.as_ref(), author) {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::BadSignature(pre_hash))
 	}
+
+	<span class="kw">let </span>transcript = make_transcript(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
+
+	<span class="kw">if </span>!author.as_inner_ref().vrf_verify(<span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;</span>pre_digest.vrf_signature) {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::VrfVerificationFailed)
+	}
+
+	<span class="prelude-val">Ok</span>(())
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sc_consensus_babe" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

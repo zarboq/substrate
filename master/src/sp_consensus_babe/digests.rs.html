@@ -213,10 +213,6 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -238,14 +234,15 @@
 
 </span><span class="kw">use super</span>::{
 	AllowedSlots, AuthorityId, AuthorityIndex, AuthoritySignature, BabeAuthorityWeight,
-	BabeEpochConfiguration, Slot, BABE_ENGINE_ID,
+	BabeEpochConfiguration, Randomness, Slot, BABE_ENGINE_ID,
 };
-<span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
-<span class="kw">use </span>scale_info::TypeInfo;
+
+<span class="kw">use </span>sp_core::sr25519::vrf::VrfSignature;
 <span class="kw">use </span>sp_runtime::{DigestItem, RuntimeDebug};
 <span class="kw">use </span>sp_std::vec::Vec;
 
-<span class="kw">use </span>sp_consensus_vrf::schnorrkel::{Randomness, VRFOutput, VRFProof};
+<span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
+<span class="kw">use </span>scale_info::TypeInfo;
 
 <span class="doccomment">/// Raw BABE primary slot assignment pre-digest.
 </span><span class="attr">#[derive(Clone, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -254,10 +251,8 @@
 	</span><span class="kw">pub </span>authority_index: <span class="kw">super</span>::AuthorityIndex,
 	<span class="doccomment">/// Slot
 	</span><span class="kw">pub </span>slot: Slot,
-	<span class="doccomment">/// VRF output
-	</span><span class="kw">pub </span>vrf_output: VRFOutput,
-	<span class="doccomment">/// VRF proof
-	</span><span class="kw">pub </span>vrf_proof: VRFProof,
+	<span class="doccomment">/// VRF signature
+	</span><span class="kw">pub </span>vrf_signature: VrfSignature,
 }
 
 <span class="doccomment">/// BABE secondary slot assignment pre-digest.
@@ -281,10 +276,8 @@
 	</span><span class="kw">pub </span>authority_index: <span class="kw">super</span>::AuthorityIndex,
 	<span class="doccomment">/// Slot
 	</span><span class="kw">pub </span>slot: Slot,
-	<span class="doccomment">/// VRF output
-	</span><span class="kw">pub </span>vrf_output: VRFOutput,
-	<span class="doccomment">/// VRF proof
-	</span><span class="kw">pub </span>vrf_proof: VRFProof,
+	<span class="doccomment">/// VRF signature
+	</span><span class="kw">pub </span>vrf_signature: VrfSignature,
 }
 
 <span class="doccomment">/// A BABE pre-runtime digest. This contains all data required to validate a
@@ -337,11 +330,10 @@
 	}
 
 	<span class="doccomment">/// Returns the VRF output and proof, if they exist.
-	</span><span class="kw">pub fn </span>vrf(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span>VRFOutput, <span class="kw-2">&amp;</span>VRFProof)&gt; {
+	</span><span class="kw">pub fn </span>vrf_signature(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>VrfSignature&gt; {
 		<span class="kw">match </span><span class="self">self </span>{
-			PreDigest::Primary(primary) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">&amp;</span>primary.vrf_output, <span class="kw-2">&amp;</span>primary.vrf_proof)),
-			PreDigest::SecondaryVRF(secondary) =&gt;
-				<span class="prelude-val">Some</span>((<span class="kw-2">&amp;</span>secondary.vrf_output, <span class="kw-2">&amp;</span>secondary.vrf_proof)),
+			PreDigest::Primary(primary) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>primary.vrf_signature),
+			PreDigest::SecondaryVRF(secondary) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>secondary.vrf_signature),
 			PreDigest::SecondaryPlain(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
 		}
 	}

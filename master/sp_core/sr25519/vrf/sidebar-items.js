@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["VrfOutput","VRF output type suitable for schnorrkel operations."],["VrfProof","VRF proof type suitable for schnorrkel operations."],["VrfSignature","VRF signature data"],["VrfTranscript","VRF transcript ready to be used for VRF sign/verify operations."]]};

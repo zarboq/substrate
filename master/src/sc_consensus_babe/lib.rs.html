@@ -1903,6 +1903,11 @@
 <a href="#1903" id="1903">1903</a>
 <a href="#1904" id="1904">1904</a>
 <a href="#1905" id="1905">1905</a>
+<a href="#1906" id="1906">1906</a>
+<a href="#1907" id="1907">1907</a>
+<a href="#1908" id="1908">1908</a>
+<a href="#1909" id="1909">1909</a>
+<a href="#1910" id="1910">1910</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1991,7 +1996,6 @@
 <span class="kw">use </span>log::{debug, info, log, trace, warn};
 <span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>prometheus_endpoint::Registry;
-<span class="kw">use </span>schnorrkel::SignatureError;
 
 <span class="kw">use </span>sc_client_api::{
 	backend::AuxStore, AuxDataOperations, Backend <span class="kw">as </span>BackendT, FinalityNotification,
@@ -2039,7 +2043,7 @@
 		PrimaryPreDigest, SecondaryPlainPreDigest,
 	},
 	AuthorityId, AuthorityPair, AuthoritySignature, BabeApi, BabeAuthorityWeight, BabeBlockWeight,
-	BabeConfiguration, BabeEpochConfiguration, ConsensusLog, BABE_ENGINE_ID, VRF_OUTPUT_LENGTH,
+	BabeConfiguration, BabeEpochConfiguration, ConsensusLog, Randomness, BABE_ENGINE_ID,
 };
 
 <span class="kw">pub use </span>aux_schema::load_block_weight <span class="kw">as </span>block_weight;
@@ -2054,6 +2058,12 @@
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;babe&quot;</span>;
 
+<span class="doccomment">/// VRF context used for slots claiming lottery.
+</span><span class="kw">const </span>AUTHORING_SCORE_VRF_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;substrate-babe-vrf&quot;</span>;
+
+<span class="doccomment">/// VRF output length for slots claiming lottery.
+</span><span class="kw">const </span>AUTHORING_SCORE_LENGTH: usize = <span class="number">16</span>;
+
 <span class="doccomment">/// BABE epoch information
 </span><span class="attr">#[derive(Decode, Encode, PartialEq, Eq, Clone, Debug, scale_info::TypeInfo)]
 </span><span class="kw">pub struct </span>Epoch {
@@ -2066,7 +2076,7 @@
 	<span class="doccomment">/// The authorities and their weights.
 	</span><span class="kw">pub </span>authorities: Vec&lt;(AuthorityId, BabeAuthorityWeight)&gt;,
 	<span class="doccomment">/// Randomness for this epoch.
-	</span><span class="kw">pub </span>randomness: [u8; VRF_OUTPUT_LENGTH],
+	</span><span class="kw">pub </span>randomness: Randomness,
 	<span class="doccomment">/// Configuration of the epoch.
 	</span><span class="kw">pub </span>config: BabeEpochConfiguration,
 }
@@ -2213,12 +2223,12 @@
 	<span class="doccomment">/// No secondary author expected.
 	</span><span class="attr">#[error(<span class="string">&quot;No secondary author expected.&quot;</span>)]
 	</span>NoSecondaryAuthorExpected,
-	<span class="doccomment">/// VRF verification of block by author failed
-	</span><span class="attr">#[error(<span class="string">&quot;VRF verification of block by author {0:?} failed: threshold {1} exceeded&quot;</span>)]
-	</span>VRFVerificationOfBlockFailed(AuthorityId, u128),
 	<span class="doccomment">/// VRF verification failed
-	</span><span class="attr">#[error(<span class="string">&quot;VRF verification failed: {0:?}&quot;</span>)]
-	</span>VRFVerificationFailed(SignatureError),
+	</span><span class="attr">#[error(<span class="string">&quot;VRF verification failed&quot;</span>)]
+	</span>VrfVerificationFailed,
+	<span class="doccomment">/// Primary slot threshold too low
+	</span><span class="attr">#[error(<span class="string">&quot;VRF output rejected, threshold {0} exceeded&quot;</span>)]
+	</span>VrfThresholdExceeded(u128),
 	<span class="doccomment">/// Could not fetch parent header
 	</span><span class="attr">#[error(<span class="string">&quot;Could not fetch parent header: {0}&quot;</span>)]
 	</span>FetchParentHeader(sp_blockchain::Error),

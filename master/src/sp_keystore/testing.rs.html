@@ -306,6 +306,8 @@
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -325,15 +327,13 @@
 
 </span><span class="doccomment">//! Types that should only be used for testing!
 
-</span><span class="kw">use </span>sp_core::{
-	crypto::{ByteArray, KeyTypeId, Pair},
+</span><span class="kw">use crate</span>::{Error, Keystore, KeystorePtr};
+
+<span class="kw">use </span>sp_core::{
+	crypto::{ByteArray, KeyTypeId, Pair, VrfSigner},
 	ecdsa, ed25519, sr25519,
 };
 
-<span class="kw">use crate</span>::{
-	vrf::{make_transcript, VRFSignature, VRFTranscriptData},
-	Error, Keystore, KeystorePtr,
-};
 <span class="kw">use </span>parking_lot::RwLock;
 <span class="kw">use </span>std::{collections::HashMap, sync::Arc};
 
@@ -408,6 +408,16 @@
 		<span class="kw">let </span>sig = <span class="self">self</span>.pair::&lt;T&gt;(key_type, public).map(|pair| pair.sign(msg));
 		<span class="prelude-val">Ok</span>(sig)
 	}
+
+	<span class="kw">fn </span>vrf_sign&lt;T: Pair + VrfSigner&gt;(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>T::Public,
+		transcript: <span class="kw-2">&amp;</span>T::VrfInput,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;T::VrfSignature&gt;, Error&gt; {
+		<span class="kw">let </span>sig = <span class="self">self</span>.pair::&lt;T&gt;(key_type, public).map(|pair| pair.vrf_sign(transcript));
+		<span class="prelude-val">Ok</span>(sig)
+	}
 }
 
 <span class="kw">impl </span>Keystore <span class="kw">for </span>MemoryKeystore {
@@ -436,14 +446,9 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		key_type: KeyTypeId,
 		public: <span class="kw-2">&amp;</span>sr25519::Public,
-		transcript_data: VRFTranscriptData,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;VRFSignature&gt;, Error&gt; {
-		<span class="kw">let </span>sig = <span class="self">self</span>.pair::&lt;sr25519::Pair&gt;(key_type, public).map(|pair| {
-			<span class="kw">let </span>transcript = make_transcript(transcript_data);
-			<span class="kw">let </span>(inout, proof, <span class="kw">_</span>) = pair.as_ref().vrf_sign(transcript);
-			VRFSignature { output: inout.to_output(), proof }
-		});
-		<span class="prelude-val">Ok</span>(sig)
+		transcript: <span class="kw-2">&amp;</span>sr25519::vrf::VrfTranscript,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;sr25519::vrf::VrfSignature&gt;, Error&gt; {
+		<span class="self">self</span>.vrf_sign::&lt;sr25519::Pair&gt;(key_type, public, transcript)
 	}
 
 	<span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt; {
@@ -533,7 +538,6 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span><span class="kw">crate</span>::vrf::VRFTranscriptValue;
 	<span class="kw">use </span>sp_core::{
 		sr25519,
 		testing::{ECDSA, ED25519, SR25519},
@@ -573,23 +577,23 @@
 		<span class="kw">let </span>secret_uri = <span class="string">&quot;//Alice&quot;</span>;
 		<span class="kw">let </span>key_pair = sr25519::Pair::from_string(secret_uri, <span class="prelude-val">None</span>).expect(<span class="string">&quot;Generates key pair&quot;</span>);
 
-		<span class="kw">let </span>transcript_data = VRFTranscriptData {
-			label: <span class="string">b&quot;Test&quot;</span>,
-			items: <span class="macro">vec!</span>[
-				(<span class="string">&quot;one&quot;</span>, VRFTranscriptValue::U64(<span class="number">1</span>)),
-				(<span class="string">&quot;two&quot;</span>, VRFTranscriptValue::U64(<span class="number">2</span>)),
-				(<span class="string">&quot;three&quot;</span>, VRFTranscriptValue::Bytes(<span class="string">&quot;test&quot;</span>.as_bytes().to_vec())),
+		<span class="kw">let </span>transcript = sr25519::vrf::VrfTranscript::new(
+			<span class="string">b&quot;Test&quot;</span>,
+			<span class="kw-2">&amp;</span>[
+				(<span class="string">b&quot;one&quot;</span>, <span class="kw-2">&amp;</span><span class="number">1_u64</span>.to_le_bytes()),
+				(<span class="string">b&quot;two&quot;</span>, <span class="kw-2">&amp;</span><span class="number">2_u64</span>.to_le_bytes()),
+				(<span class="string">b&quot;three&quot;</span>, <span class="string">&quot;test&quot;</span>.as_bytes()),
 			],
-		};
+		);
 
-		<span class="kw">let </span>result = store.sr25519_vrf_sign(SR25519, <span class="kw-2">&amp;</span>key_pair.public(), transcript_data.clone());
+		<span class="kw">let </span>result = store.sr25519_vrf_sign(SR25519, <span class="kw-2">&amp;</span>key_pair.public(), <span class="kw-2">&amp;</span>transcript);
 		<span class="macro">assert!</span>(result.unwrap().is_none());
 
 		store
 			.insert(SR25519, secret_uri, key_pair.public().as_ref())
 			.expect(<span class="string">&quot;Inserts unknown key&quot;</span>);
 
-		<span class="kw">let </span>result = store.sr25519_vrf_sign(SR25519, <span class="kw-2">&amp;</span>key_pair.public(), transcript_data);
+		<span class="kw">let </span>result = store.sr25519_vrf_sign(SR25519, <span class="kw-2">&amp;</span>key_pair.public(), <span class="kw-2">&amp;</span>transcript);
 
 		<span class="macro">assert!</span>(result.unwrap().is_some());
 	}

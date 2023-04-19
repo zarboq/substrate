@@ -1050,8 +1050,6 @@
 <a href="#1050" id="1050">1050</a>
 <a href="#1051" id="1051">1051</a>
 <a href="#1052" id="1052">1052</a>
-<a href="#1053" id="1053">1053</a>
-<a href="#1054" id="1054">1054</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1083,13 +1081,13 @@
 	weights::Weight,
 	BoundedVec, WeakBoundedVec,
 };
-<span class="kw">use </span>sp_application_crypto::ByteArray;
 <span class="kw">use </span>sp_consensus_babe::{
 	digests::{NextConfigDescriptor, NextEpochDescriptor, PreDigest},
 	AllowedSlots, BabeAuthorityWeight, BabeEpochConfiguration, ConsensusLog, Epoch,
-	EquivocationProof, Slot, BABE_ENGINE_ID,
+	EquivocationProof, Randomness <span class="kw">as </span>BabeRandomness, Slot, BABE_ENGINE_ID, RANDOMNESS_LENGTH,
+	RANDOMNESS_VRF_CONTEXT,
 };
-<span class="kw">use </span>sp_consensus_vrf::schnorrkel;
+<span class="kw">use </span>sp_core::crypto::Wraps;
 <span class="kw">use </span>sp_runtime::{
 	generic::DigestItem,
 	traits::{IsMember, One, SaturatedConversion, Saturating, Zero},
@@ -1099,7 +1097,7 @@
 <span class="kw">use </span>sp_staking::{offence::OffenceReportSystem, SessionIndex};
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">pub use </span>sp_consensus_babe::{AuthorityId, PUBLIC_KEY_LENGTH, RANDOMNESS_LENGTH, VRF_OUTPUT_LENGTH};
+<span class="kw">pub use </span>sp_consensus_babe::AuthorityId;
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;runtime::babe&quot;</span>;
 
@@ -1272,7 +1270,7 @@
 	// variable to its underlying value.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>randomness)]
-	</span><span class="kw">pub type </span>Randomness&lt;T&gt; = StorageValue&lt;<span class="kw">_</span>, schnorrkel::Randomness, ValueQuery&gt;;
+	</span><span class="kw">pub type </span>Randomness&lt;T&gt; = StorageValue&lt;<span class="kw">_</span>, BabeRandomness, ValueQuery&gt;;
 
 	<span class="doccomment">/// Pending epoch configuration change that will be applied when the next epoch is enacted.
 	</span><span class="attr">#[pallet::storage]
@@ -1280,7 +1278,7 @@
 
 	<span class="doccomment">/// Next epoch randomness.
 	</span><span class="attr">#[pallet::storage]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>NextRandomness&lt;T&gt; = StorageValue&lt;<span class="kw">_</span>, schnorrkel::Randomness, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>NextRandomness&lt;T&gt; = StorageValue&lt;<span class="kw">_</span>, BabeRandomness, ValueQuery&gt;;
 
 	<span class="doccomment">/// Next epoch authorities.
 	</span><span class="attr">#[pallet::storage]
@@ -1308,7 +1306,7 @@
 		<span class="kw">_</span>,
 		Twox64Concat,
 		u32,
-		BoundedVec&lt;schnorrkel::Randomness, ConstU32&lt;UNDER_CONSTRUCTION_SEGMENT_LENGTH&gt;&gt;,
+		BoundedVec&lt;BabeRandomness, ConstU32&lt;UNDER_CONSTRUCTION_SEGMENT_LENGTH&gt;&gt;,
 		ValueQuery,
 	&gt;;
 
@@ -1324,8 +1322,7 @@
 	/// It is set in `on_finalize`, before it will contain the value from the last block.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>author_vrf_randomness)]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>AuthorVrfRandomness&lt;T&gt; =
-		StorageValue&lt;<span class="kw">_</span>, <span class="prelude-ty">Option</span>&lt;schnorrkel::Randomness&gt;, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>AuthorVrfRandomness&lt;T&gt; = StorageValue&lt;<span class="kw">_</span>, <span class="prelude-ty">Option</span>&lt;BabeRandomness&gt;, ValueQuery&gt;;
 
 	<span class="doccomment">/// The block numbers when the last and current epoch have started, respectively `N-1` and
 	/// `N`.
@@ -1412,31 +1409,33 @@
 					);
 				}
 
-				<span class="kw">if let </span><span class="prelude-val">Some</span>((vrf_output, vrf_proof)) = pre_digest.vrf() {
-					<span class="kw">let </span>randomness: <span class="prelude-ty">Option</span>&lt;schnorrkel::Randomness&gt; = Authorities::&lt;T&gt;::get()
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(vrf_signature) = pre_digest.vrf_signature() {
+					<span class="kw">let </span>randomness: <span class="prelude-ty">Option</span>&lt;BabeRandomness&gt; = Authorities::&lt;T&gt;::get()
 						.get(authority_index <span class="kw">as </span>usize)
 						.and_then(|(authority, <span class="kw">_</span>)| {
-							schnorrkel::PublicKey::from_bytes(authority.as_slice()).ok()
-						})
-						.and_then(|pubkey| {
-							<span class="kw">let </span>current_slot = CurrentSlot::&lt;T&gt;::get();
-
+							<span class="kw">let </span>public = authority.as_inner_ref();
 							<span class="kw">let </span>transcript = sp_consensus_babe::make_transcript(
 								<span class="kw-2">&amp;</span><span class="self">Self</span>::randomness(),
-								current_slot,
+								CurrentSlot::&lt;T&gt;::get(),
 								EpochIndex::&lt;T&gt;::get(),
 							);
 
 							<span class="comment">// NOTE: this is verified by the client when importing the block, before
-							// execution. we don&#39;t run the verification again here to avoid slowing
+							// execution. We don&#39;t run the verification again here to avoid slowing
 							// down the runtime.
-							</span><span class="macro">debug_assert!</span>(pubkey
-								.vrf_verify(transcript.clone(), vrf_output, vrf_proof)
-								.is_ok());
+							</span><span class="macro">debug_assert!</span>({
+								<span class="kw">use </span>sp_core::crypto::VrfVerifier;
+								public.vrf_verify(<span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;</span>vrf_signature)
+							});
 
-							vrf_output.<span class="number">0</span>.attach_input_hash(<span class="kw-2">&amp;</span>pubkey, transcript).ok()
-						})
-						.map(|inout| inout.make_bytes(sp_consensus_babe::BABE_VRF_INOUT_CONTEXT));
+							public
+								.make_bytes(
+									RANDOMNESS_VRF_CONTEXT,
+									<span class="kw-2">&amp;</span>transcript,
+									<span class="kw-2">&amp;</span>vrf_signature.output,
+								)
+								.ok()
+						});
 
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(randomness) = pre_digest.is_primary().then(|| randomness).flatten()
 					{
@@ -1537,9 +1536,6 @@
 		}
 	}
 }
-
-<span class="doccomment">/// A BABE public key
-</span><span class="kw">pub type </span>BabeKey = [u8; PUBLIC_KEY_LENGTH];
 
 <span class="kw">impl</span>&lt;T: Config&gt; FindAuthor&lt;u32&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 	<span class="kw">fn </span>find_author&lt;<span class="lifetime">&#39;a</span>, I&gt;(digests: I) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt;
@@ -1791,7 +1787,7 @@
 		&lt;frame_system::Pallet&lt;T&gt;&gt;::deposit_log(log)
 	}
 
-	<span class="kw">fn </span>deposit_randomness(randomness: <span class="kw-2">&amp;</span>schnorrkel::Randomness) {
+	<span class="kw">fn </span>deposit_randomness(randomness: <span class="kw-2">&amp;</span>BabeRandomness) {
 		<span class="kw">let </span>segment_idx = SegmentIndex::&lt;T&gt;::get();
 		<span class="kw">let </span><span class="kw-2">mut </span>segment = UnderConstruction::&lt;T&gt;::get(<span class="kw-2">&amp;</span>segment_idx);
 		<span class="kw">if </span>segment.try_push(<span class="kw-2">*</span>randomness).is_ok() {
@@ -1885,7 +1881,7 @@
 
 	<span class="doccomment">/// Call this function exactly once when an epoch changes, to update the
 	/// randomness. Returns the new randomness.
-	</span><span class="kw">fn </span>randomness_change_epoch(next_epoch_index: u64) -&gt; schnorrkel::Randomness {
+	</span><span class="kw">fn </span>randomness_change_epoch(next_epoch_index: u64) -&gt; BabeRandomness {
 		<span class="kw">let </span>this_randomness = NextRandomness::&lt;T&gt;::get();
 		<span class="kw">let </span>segment_idx: u32 = SegmentIndex::&lt;T&gt;::mutate(|s| sp_std::mem::replace(s, <span class="number">0</span>));
 
@@ -2044,12 +2040,12 @@
 //
 // an optional size hint as to how many VRF outputs there were may be provided.
 </span><span class="kw">fn </span>compute_randomness(
-	last_epoch_randomness: schnorrkel::Randomness,
+	last_epoch_randomness: BabeRandomness,
 	epoch_index: u64,
-	rho: <span class="kw">impl </span>Iterator&lt;Item = schnorrkel::Randomness&gt;,
+	rho: <span class="kw">impl </span>Iterator&lt;Item = BabeRandomness&gt;,
 	rho_size_hint: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-) -&gt; schnorrkel::Randomness {
-	<span class="kw">let </span><span class="kw-2">mut </span>s = Vec::with_capacity(<span class="number">40 </span>+ rho_size_hint.unwrap_or(<span class="number">0</span>) * VRF_OUTPUT_LENGTH);
+) -&gt; BabeRandomness {
+	<span class="kw">let </span><span class="kw-2">mut </span>s = Vec::with_capacity(<span class="number">40 </span>+ rho_size_hint.unwrap_or(<span class="number">0</span>) * RANDOMNESS_LENGTH);
 	s.extend_from_slice(<span class="kw-2">&amp;</span>last_epoch_randomness);
 	s.extend_from_slice(<span class="kw-2">&amp;</span>epoch_index.to_le_bytes());
 

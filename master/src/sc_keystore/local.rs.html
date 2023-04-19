@@ -645,6 +645,12 @@
 <a href="#645" id="645">645</a>
 <a href="#646" id="646">646</a>
 <a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -667,13 +673,10 @@
 </span><span class="kw">use </span>parking_lot::RwLock;
 <span class="kw">use </span>sp_application_crypto::{AppCrypto, AppPair, IsWrappedBy};
 <span class="kw">use </span>sp_core::{
-	crypto::{ByteArray, ExposeSecret, KeyTypeId, Pair <span class="kw">as </span>CorePair, SecretString},
+	crypto::{ByteArray, ExposeSecret, KeyTypeId, Pair <span class="kw">as </span>CorePair, SecretString, VrfSigner},
 	ecdsa, ed25519, sr25519,
 };
-<span class="kw">use </span>sp_keystore::{
-	vrf::{make_transcript, VRFSignature, VRFTranscriptData},
-	Error <span class="kw">as </span>TraitError, Keystore, KeystorePtr,
-};
+<span class="kw">use </span>sp_keystore::{Error <span class="kw">as </span>TraitError, Keystore, KeystorePtr};
 <span class="kw">use </span>std::{
 	collections::HashMap,
 	fs::{<span class="self">self</span>, File},
@@ -747,6 +750,20 @@
 			</span>.map(|pair| pair.sign(msg));
 		<span class="prelude-val">Ok</span>(signature)
 	}
+
+	<span class="kw">fn </span>vrf_sign&lt;T: CorePair + VrfSigner&gt;(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		key_type: KeyTypeId,
+		public: <span class="kw-2">&amp;</span>T::Public,
+		transcript: <span class="kw-2">&amp;</span>T::VrfInput,
+	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;T::VrfSignature&gt;, TraitError&gt; {
+		<span class="kw">let </span>sig = <span class="self">self
+			</span>.<span class="number">0
+			</span>.read()
+			.key_pair_by_type::&lt;T&gt;(public, key_type)<span class="question-mark">?
+			</span>.map(|pair| pair.vrf_sign(transcript));
+		<span class="prelude-val">Ok</span>(sig)
+	}
 }
 
 <span class="kw">impl </span>Keystore <span class="kw">for </span>LocalKeystore {
@@ -778,14 +795,9 @@
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		key_type: KeyTypeId,
 		public: <span class="kw-2">&amp;</span>sr25519::Public,
-		transcript_data: VRFTranscriptData,
-	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;VRFSignature&gt;, TraitError&gt; {
-		<span class="kw">let </span>sig = <span class="self">self</span>.<span class="number">0</span>.read().key_pair_by_type::&lt;sr25519::Pair&gt;(public, key_type)<span class="question-mark">?</span>.map(|pair| {
-			<span class="kw">let </span>transcript = make_transcript(transcript_data);
-			<span class="kw">let </span>(inout, proof, <span class="kw">_</span>) = pair.as_ref().vrf_sign(transcript);
-			VRFSignature { output: inout.to_output(), proof }
-		});
-		<span class="prelude-val">Ok</span>(sig)
+		transcript: <span class="kw-2">&amp;</span>sr25519::vrf::VrfTranscript,
+	) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;sr25519::vrf::VrfSignature&gt;, TraitError&gt; {
+		<span class="self">self</span>.vrf_sign::&lt;sr25519::Pair&gt;(key_type, public, transcript)
 	}
 
 	<span class="kw">fn </span>ed25519_public_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_type: KeyTypeId) -&gt; Vec&lt;ed25519::Public&gt; {
