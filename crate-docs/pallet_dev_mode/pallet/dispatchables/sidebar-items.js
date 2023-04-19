@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["add_dummy","No need to define a `weight` attribute here because of `dev_mode`."],["set_bar","No need to define a `weight` attribute here because of `dev_mode`."]]};
