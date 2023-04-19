@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["create","Initialize a conversion rate to native balance for the given asset."],["remove","Remove an existing conversion rate to native balance for the given asset."],["update","Update the conversion rate to native balance for the given asset."]]};

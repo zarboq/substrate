@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["ConversionRateToNative","Maps an asset to its fixed point representation in the native balance."]]};
