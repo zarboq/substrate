@@ -967,14 +967,6 @@
 <a href="#967" id="967">967</a>
 <a href="#968" id="968">968</a>
 <a href="#969" id="969">969</a>
-<a href="#970" id="970">970</a>
-<a href="#971" id="971">971</a>
-<a href="#972" id="972">972</a>
-<a href="#973" id="973">973</a>
-<a href="#974" id="974">974</a>
-<a href="#975" id="975">975</a>
-<a href="#976" id="976">976</a>
-<a href="#977" id="977">977</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1464,21 +1456,13 @@
 	}
 
 	<span class="kw">fn </span>verify&lt;M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signature, message: M, pubkey: <span class="kw-2">&amp;</span><span class="self">Self</span>::Public) -&gt; bool {
-		<span class="self">Self</span>::verify_weak(<span class="kw-2">&amp;</span>sig.<span class="number">0</span>[..], message, pubkey)
-	}
-
-	<span class="kw">fn </span>verify_weak&lt;P: AsRef&lt;[u8]&gt;, M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span>[u8], message: M, pubkey: P) -&gt; bool {
-		<span class="kw">let </span>signature = <span class="kw">match </span>schnorrkel::Signature::from_bytes(sig) {
-			<span class="prelude-val">Ok</span>(signature) =&gt; signature,
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="bool-val">false</span>,
-		};
-
-		<span class="kw">let </span>pub_key = <span class="kw">match </span>PublicKey::from_bytes(pubkey.as_ref()) {
-			<span class="prelude-val">Ok</span>(pub_key) =&gt; pub_key,
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="bool-val">false</span>,
-		};
-
-		pub_key.verify_simple(SIGNING_CTX, message.as_ref(), <span class="kw-2">&amp;</span>signature).is_ok()
+		<span class="kw">let </span><span class="prelude-val">Ok</span>(signature) = schnorrkel::Signature::from_bytes(sig.as_ref()) <span class="kw">else </span>{
+			<span class="kw">return </span><span class="bool-val">false
+		</span>};
+		<span class="kw">let </span><span class="prelude-val">Ok</span>(public) = PublicKey::from_bytes(pubkey.as_ref()) <span class="kw">else </span>{
+			<span class="kw">return </span><span class="bool-val">false
+		</span>};
+		public.verify_simple(SIGNING_CTX, message.as_ref(), <span class="kw-2">&amp;</span>signature).is_ok()
 	}
 
 	<span class="kw">fn </span>to_raw_vec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {

@@ -789,20 +789,6 @@
 <a href="#789" id="789">789</a>
 <a href="#790" id="790">790</a>
 <a href="#791" id="791">791</a>
-<a href="#792" id="792">792</a>
-<a href="#793" id="793">793</a>
-<a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
-<a href="#796" id="796">796</a>
-<a href="#797" id="797">797</a>
-<a href="#798" id="798">798</a>
-<a href="#799" id="799">799</a>
-<a href="#800" id="800">800</a>
-<a href="#801" id="801">801</a>
-<a href="#802" id="802">802</a>
-<a href="#803" id="803">803</a>
-<a href="#804" id="804">804</a>
-<a href="#805" id="805">805</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1212,22 +1198,8 @@
 	}
 
 	<span class="doccomment">/// Verify a signature on a message. Returns true if the signature is good.
-	</span><span class="kw">fn </span>verify&lt;M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signature, message: M, pubkey: <span class="kw-2">&amp;</span><span class="self">Self</span>::Public) -&gt; bool {
-		<span class="kw">match </span>sig.recover(message) {
-			<span class="prelude-val">Some</span>(actual) =&gt; actual == <span class="kw-2">*</span>pubkey,
-			<span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
-		}
-	}
-
-	<span class="doccomment">/// Verify a signature on a message. Returns true if the signature is good.
-	///
-	/// This doesn&#39;t use the type system to ensure that `sig` and `pubkey` are the correct
-	/// size. Use it only if you&#39;re coming from byte buffers and need the speed.
-	</span><span class="kw">fn </span>verify_weak&lt;P: AsRef&lt;[u8]&gt;, M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span>[u8], message: M, pubkey: P) -&gt; bool {
-		<span class="kw">match </span>Signature::from_slice(sig).and_then(|sig| sig.recover(message)) {
-			<span class="prelude-val">Some</span>(actual) =&gt; actual.as_ref() == pubkey.as_ref(),
-			<span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
-		}
+	</span><span class="kw">fn </span>verify&lt;M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signature, message: M, public: <span class="kw-2">&amp;</span><span class="self">Self</span>::Public) -&gt; bool {
+		sig.recover(message).map(|actual| actual == <span class="kw-2">*</span>public).unwrap_or_default()
 	}
 
 	<span class="doccomment">/// Return a vec filled with raw data.

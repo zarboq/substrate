@@ -617,16 +617,6 @@
 <a href="#617" id="617">617</a>
 <a href="#618" id="618">618</a>
 <a href="#619" id="619">619</a>
-<a href="#620" id="620">620</a>
-<a href="#621" id="621">621</a>
-<a href="#622" id="622">622</a>
-<a href="#623" id="623">623</a>
-<a href="#624" id="624">624</a>
-<a href="#625" id="625">625</a>
-<a href="#626" id="626">626</a>
-<a href="#627" id="627">627</a>
-<a href="#628" id="628">628</a>
-<a href="#629" id="629">629</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1035,27 +1025,17 @@
 		Signature::from_raw(<span class="self">self</span>.secret.sign(message).into())
 	}
 
-	<span class="doccomment">/// Verify a signature on a message. Returns true if the signature is good.
-	</span><span class="kw">fn </span>verify&lt;M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signature, message: M, pubkey: <span class="kw-2">&amp;</span><span class="self">Self</span>::Public) -&gt; bool {
-		<span class="self">Self</span>::verify_weak(<span class="kw-2">&amp;</span>sig.<span class="number">0</span>[..], message.as_ref(), pubkey)
-	}
-
-	<span class="doccomment">/// Verify a signature on a message. Returns true if the signature is good.
+	<span class="doccomment">/// Verify a signature on a message.
 	///
-	/// This doesn&#39;t use the type system to ensure that `sig` and `pubkey` are the correct
-	/// size. Use it only if you&#39;re coming from byte buffers and need the speed.
-	</span><span class="kw">fn </span>verify_weak&lt;P: AsRef&lt;[u8]&gt;, M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span>[u8], message: M, pubkey: P) -&gt; bool {
-		<span class="kw">let </span>public_key = <span class="kw">match </span>VerificationKey::try_from(pubkey.as_ref()) {
-			<span class="prelude-val">Ok</span>(pk) =&gt; pk,
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="bool-val">false</span>,
-		};
-
-		<span class="kw">let </span>sig = <span class="kw">match </span>ed25519_zebra::Signature::try_from(sig) {
-			<span class="prelude-val">Ok</span>(s) =&gt; s,
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="bool-val">false</span>,
-		};
-
-		public_key.verify(<span class="kw-2">&amp;</span>sig, message.as_ref()).is_ok()
+	/// Returns true if the signature is good.
+	</span><span class="kw">fn </span>verify&lt;M: AsRef&lt;[u8]&gt;&gt;(sig: <span class="kw-2">&amp;</span><span class="self">Self</span>::Signature, message: M, public: <span class="kw-2">&amp;</span><span class="self">Self</span>::Public) -&gt; bool {
+		<span class="kw">let </span><span class="prelude-val">Ok</span>(public) = VerificationKey::try_from(public.as_slice()) <span class="kw">else </span>{
+			<span class="kw">return </span><span class="bool-val">false
+		</span>};
+		<span class="kw">let </span><span class="prelude-val">Ok</span>(signature) = ed25519_zebra::Signature::try_from(sig.as_ref()) <span class="kw">else </span>{
+			<span class="kw">return </span><span class="bool-val">false
+		</span>};
+		public.verify(<span class="kw-2">&amp;</span>signature, message.as_ref()).is_ok()
 	}
 
 	<span class="doccomment">/// Return a vec filled with raw data.
