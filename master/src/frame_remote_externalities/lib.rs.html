@@ -1384,6 +1384,61 @@
 <a href="#1384" id="1384">1384</a>
 <a href="#1385" id="1385">1385</a>
 <a href="#1386" id="1386">1386</a>
+<a href="#1387" id="1387">1387</a>
+<a href="#1388" id="1388">1388</a>
+<a href="#1389" id="1389">1389</a>
+<a href="#1390" id="1390">1390</a>
+<a href="#1391" id="1391">1391</a>
+<a href="#1392" id="1392">1392</a>
+<a href="#1393" id="1393">1393</a>
+<a href="#1394" id="1394">1394</a>
+<a href="#1395" id="1395">1395</a>
+<a href="#1396" id="1396">1396</a>
+<a href="#1397" id="1397">1397</a>
+<a href="#1398" id="1398">1398</a>
+<a href="#1399" id="1399">1399</a>
+<a href="#1400" id="1400">1400</a>
+<a href="#1401" id="1401">1401</a>
+<a href="#1402" id="1402">1402</a>
+<a href="#1403" id="1403">1403</a>
+<a href="#1404" id="1404">1404</a>
+<a href="#1405" id="1405">1405</a>
+<a href="#1406" id="1406">1406</a>
+<a href="#1407" id="1407">1407</a>
+<a href="#1408" id="1408">1408</a>
+<a href="#1409" id="1409">1409</a>
+<a href="#1410" id="1410">1410</a>
+<a href="#1411" id="1411">1411</a>
+<a href="#1412" id="1412">1412</a>
+<a href="#1413" id="1413">1413</a>
+<a href="#1414" id="1414">1414</a>
+<a href="#1415" id="1415">1415</a>
+<a href="#1416" id="1416">1416</a>
+<a href="#1417" id="1417">1417</a>
+<a href="#1418" id="1418">1418</a>
+<a href="#1419" id="1419">1419</a>
+<a href="#1420" id="1420">1420</a>
+<a href="#1421" id="1421">1421</a>
+<a href="#1422" id="1422">1422</a>
+<a href="#1423" id="1423">1423</a>
+<a href="#1424" id="1424">1424</a>
+<a href="#1425" id="1425">1425</a>
+<a href="#1426" id="1426">1426</a>
+<a href="#1427" id="1427">1427</a>
+<a href="#1428" id="1428">1428</a>
+<a href="#1429" id="1429">1429</a>
+<a href="#1430" id="1430">1430</a>
+<a href="#1431" id="1431">1431</a>
+<a href="#1432" id="1432">1432</a>
+<a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1406,8 +1461,13 @@
 //! An equivalent of `sp_io::TestExternalities` that can load its state from a remote substrate
 //! based chain, or a local state snapshot file.
 
-</span><span class="kw">use </span>codec::{Decode, Encode};
+</span><span class="kw">use </span>async_recursion::async_recursion;
+<span class="kw">use </span>codec::{Decode, Encode};
 <span class="kw">use </span>futures::{channel::mpsc, stream::StreamExt};
+<span class="kw">use </span>jsonrpsee::{
+	core::params::ArrayParams,
+	http_client::{HttpClient, HttpClientBuilder},
+};
 <span class="kw">use </span>log::<span class="kw-2">*</span>;
 <span class="kw">use </span>serde::de::DeserializeOwned;
 <span class="kw">use </span>sp_core::{
@@ -1421,6 +1481,7 @@
 <span class="kw">pub use </span>sp_io::TestExternalities;
 <span class="kw">use </span>sp_runtime::{traits::Block <span class="kw">as </span>BlockT, StateVersion};
 <span class="kw">use </span>std::{
+	cmp::max,
 	fs,
 	num::NonZeroUsize,
 	ops::{Deref, DerefMut},
@@ -1428,19 +1489,14 @@
 	sync::Arc,
 	thread,
 };
-<span class="kw">use </span>substrate_rpc_client::{
-	rpc_params, ws_client, BatchRequestBuilder, ChainApi, ClientT, StateApi, WsClient,
-};
+<span class="kw">use </span>substrate_rpc_client::{rpc_params, BatchRequestBuilder, ChainApi, ClientT, StateApi};
 
 <span class="kw">type </span>KeyValue = (StorageKey, StorageData);
 <span class="kw">type </span>TopKeyValues = Vec&lt;KeyValue&gt;;
 <span class="kw">type </span>ChildKeyValues = Vec&lt;(ChildInfo, Vec&lt;KeyValue&gt;)&gt;;
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;remote-ext&quot;</span>;
-<span class="kw">const </span>DEFAULT_WS_ENDPOINT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;wss://rpc.polkadot.io:443&quot;</span>;
-<span class="kw">const </span>DEFAULT_VALUE_DOWNLOAD_BATCH: usize = <span class="number">4096</span>;
-<span class="comment">// NOTE: increasing this value does not seem to impact speed all that much.
-</span><span class="kw">const </span>DEFAULT_KEY_DOWNLOAD_PAGE: u32 = <span class="number">1000</span>;
+<span class="kw">const </span>DEFAULT_HTTP_ENDPOINT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://rpc.polkadot.io:443&quot;</span>;
 <span class="doccomment">/// The snapshot that we store on disk.
 </span><span class="attr">#[derive(Decode, Encode)]
 </span><span class="kw">struct </span>Snapshot&lt;B: BlockT&gt; {
@@ -1503,36 +1559,51 @@
 </span><span class="kw">pub enum </span>Transport {
 	<span class="doccomment">/// Use the `URI` to open a new WebSocket connection.
 	</span>Uri(String),
-	<span class="doccomment">/// Use existing WebSocket connection.
-	</span>RemoteClient(Arc&lt;WsClient&gt;),
+	<span class="doccomment">/// Use HTTP connection.
+	</span>RemoteClient(Arc&lt;HttpClient&gt;),
 }
 
 <span class="kw">impl </span>Transport {
-	<span class="kw">fn </span>as_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>WsClient&gt; {
+	<span class="kw">fn </span>as_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>HttpClient&gt; {
 		<span class="kw">match </span><span class="self">self </span>{
 			<span class="self">Self</span>::RemoteClient(client) =&gt; <span class="prelude-val">Some</span>(client),
 			<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 		}
 	}
 
-	<span class="kw">fn </span>as_client_cloned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;WsClient&gt;&gt; {
+	<span class="kw">fn </span>as_client_cloned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;HttpClient&gt;&gt; {
 		<span class="kw">match </span><span class="self">self </span>{
 			<span class="self">Self</span>::RemoteClient(client) =&gt; <span class="prelude-val">Some</span>(client.clone()),
 			<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 		}
 	}
 
-	<span class="comment">// Open a new WebSocket connection if it&#39;s not connected.
-	</span><span class="kw">async fn </span>map_uri(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	<span class="comment">// Build an HttpClient from a URI.
+	</span><span class="kw">async fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="kw">if let </span><span class="self">Self</span>::Uri(uri) = <span class="self">self </span>{
 			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;initializing remote client to {:?}&quot;</span>, uri);
 
-			<span class="kw">let </span>ws_client = ws_client(uri).<span class="kw">await</span>.map_err(|e| {
+			<span class="comment">// If we have a ws uri, try to convert it to an http uri.
+			// We use an HTTP client rather than WS because WS starts to choke with &quot;accumulated
+			// message length exceeds maximum&quot; errors after processing ~10k keys when fetching
+			// from a node running a default configuration.
+			</span><span class="kw">let </span>uri = <span class="kw">if </span>uri.starts_with(<span class="string">&quot;ws://&quot;</span>) {
+				<span class="kw">let </span>uri = uri.replace(<span class="string">&quot;ws://&quot;</span>, <span class="string">&quot;http://&quot;</span>);
+				<span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;replacing ws:// in uri with http://: {:?} (ws is currently unstable for fetching remote storage, for more see https://github.com/paritytech/jsonrpsee/issues/1086)&quot;</span>, uri);
+				uri
+			} <span class="kw">else if </span>uri.starts_with(<span class="string">&quot;wss://&quot;</span>) {
+				<span class="kw">let </span>uri = uri.replace(<span class="string">&quot;wss://&quot;</span>, <span class="string">&quot;https://&quot;</span>);
+				<span class="macro">log::info!</span>(target: LOG_TARGET, <span class="string">&quot;replacing wss:// in uri with https://: {:?} (ws is currently unstable for fetching remote storage, for more see https://github.com/paritytech/jsonrpsee/issues/1086)&quot;</span>, uri);
+				uri
+			} <span class="kw">else </span>{
+				uri.clone()
+			};
+			<span class="kw">let </span>http_client = HttpClientBuilder::default().build(uri).map_err(|e| {
 				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;error: {:?}&quot;</span>, e);
-				<span class="string">&quot;failed to build ws client&quot;
+				<span class="string">&quot;failed to build http client&quot;
 			</span>})<span class="question-mark">?</span>;
 
-			<span class="kw-2">*</span><span class="self">self </span>= <span class="self">Self</span>::RemoteClient(Arc::new(ws_client))
+			<span class="kw-2">*</span><span class="self">self </span>= <span class="self">Self</span>::RemoteClient(Arc::new(http_client))
 		}
 
 		<span class="prelude-val">Ok</span>(())
@@ -1545,8 +1616,8 @@
 	}
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;WsClient&gt;&gt; <span class="kw">for </span>Transport {
-	<span class="kw">fn </span>from(client: Arc&lt;WsClient&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>From&lt;Arc&lt;HttpClient&gt;&gt; <span class="kw">for </span>Transport {
+	<span class="kw">fn </span>from(client: Arc&lt;HttpClient&gt;) -&gt; <span class="self">Self </span>{
 		Transport::RemoteClient(client)
 	}
 }
@@ -1575,18 +1646,18 @@
 }
 
 <span class="kw">impl</span>&lt;B: BlockT&gt; OnlineConfig&lt;B&gt; {
-	<span class="doccomment">/// Return rpc (ws) client reference.
-	</span><span class="kw">fn </span>rpc_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>WsClient {
+	<span class="doccomment">/// Return rpc (http) client reference.
+	</span><span class="kw">fn </span>rpc_client(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HttpClient {
 		<span class="self">self</span>.transport
 			.as_client()
-			.expect(<span class="string">&quot;ws client must have been initialized by now; qed.&quot;</span>)
+			.expect(<span class="string">&quot;http client must have been initialized by now; qed.&quot;</span>)
 	}
 
-	<span class="doccomment">/// Return a cloned rpc (ws) client, suitable for being moved to threads.
-	</span><span class="kw">fn </span>rpc_client_cloned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;WsClient&gt; {
+	<span class="doccomment">/// Return a cloned rpc (http) client, suitable for being moved to threads.
+	</span><span class="kw">fn </span>rpc_client_cloned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;HttpClient&gt; {
 		<span class="self">self</span>.transport
 			.as_client_cloned()
-			.expect(<span class="string">&quot;ws client must have been initialized by now; qed.&quot;</span>)
+			.expect(<span class="string">&quot;http client must have been initialized by now; qed.&quot;</span>)
 	}
 
 	<span class="kw">fn </span>at_expected(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; B::Hash {
@@ -1597,7 +1668,7 @@
 <span class="kw">impl</span>&lt;B: BlockT&gt; Default <span class="kw">for </span>OnlineConfig&lt;B&gt; {
 	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{
-			transport: Transport::from(DEFAULT_WS_ENDPOINT.to_owned()),
+			transport: Transport::from(DEFAULT_HTTP_ENDPOINT.to_owned()),
 			child_trie: <span class="bool-val">true</span>,
 			at: <span class="prelude-val">None</span>,
 			state_snapshot: <span class="prelude-val">None</span>,
@@ -1693,10 +1764,16 @@
 	</span>B::Hash: DeserializeOwned,
 	B::Header: DeserializeOwned,
 {
+	<span class="kw">const </span>BATCH_SIZE_INCREASE_FACTOR: f32 = <span class="number">1.10</span>;
+	<span class="kw">const </span>BATCH_SIZE_DECREASE_FACTOR: f32 = <span class="number">0.50</span>;
+	<span class="kw">const </span>INITIAL_BATCH_SIZE: usize = <span class="number">5000</span>;
+	<span class="comment">// NOTE: increasing this value does not seem to impact speed all that much.
+	</span><span class="kw">const </span>DEFAULT_KEY_DOWNLOAD_PAGE: u32 = <span class="number">1000</span>;
+
 	<span class="doccomment">/// Get the number of threads to use.
 	</span><span class="kw">fn </span>threads() -&gt; NonZeroUsize {
 		thread::available_parallelism()
-			.unwrap_or(NonZeroUsize::new(<span class="number">4usize</span>).expect(<span class="string">&quot;4 is non-zero; qed&quot;</span>))
+			.unwrap_or(NonZeroUsize::new(<span class="number">1usize</span>).expect(<span class="string">&quot;4 is non-zero; qed&quot;</span>))
 	}
 
 	<span class="kw">async fn </span>rpc_get_storage(
@@ -1738,7 +1815,7 @@
 				.rpc_client()
 				.storage_keys_paged(
 					<span class="prelude-val">Some</span>(prefix.clone()),
-					DEFAULT_KEY_DOWNLOAD_PAGE,
+					<span class="self">Self</span>::DEFAULT_KEY_DOWNLOAD_PAGE,
 					last_key.clone(),
 					<span class="prelude-val">Some</span>(at),
 				)
@@ -1751,7 +1828,7 @@
 
 			all_keys.extend(page);
 
-			<span class="kw">if </span>page_len &lt; DEFAULT_KEY_DOWNLOAD_PAGE <span class="kw">as </span>usize {
+			<span class="kw">if </span>page_len &lt; <span class="self">Self</span>::DEFAULT_KEY_DOWNLOAD_PAGE <span class="kw">as </span>usize {
 				<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;last page received: {}&quot;</span>, page_len);
 				<span class="kw">break </span>all_keys
 			} <span class="kw">else </span>{
@@ -1768,6 +1845,123 @@
 		};
 
 		<span class="prelude-val">Ok</span>(keys)
+	}
+
+	<span class="doccomment">/// Fetches storage data from a node using a dynamic batch size.
+	///
+	/// This function adjusts the batch size on the fly to help prevent overwhelming the node with
+	/// large batch requests, and stay within request size limits enforced by the node.
+	///
+	/// # Arguments
+	///
+	/// * `client` - An `Arc` wrapped `HttpClient` used for making the requests.
+	/// * `payloads` - A vector of tuples containing a JSONRPC method name and `ArrayParams`
+	/// * `batch_size` - The initial batch size to use for the request. The batch size will be
+	///   adjusted dynamically in case of failure.
+	///
+	/// # Returns
+	///
+	/// Returns a `Result` with a vector of `Option&lt;StorageData&gt;`, where each element corresponds to
+	/// the storage data for the given method and parameters. The result will be an `Err` with a
+	/// `String` error message if the request fails.
+	///
+	/// # Errors
+	///
+	/// This function will return an error if:
+	/// * The batch request fails and the batch size is less than 2.
+	/// * There are invalid batch params.
+	/// * There is an error in the batch response.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use your_crate::{get_storage_data_dynamic_batch_size, HttpClient, ArrayParams};
+	/// use std::sync::Arc;
+	///
+	/// async fn example() {
+	///     let client = Arc::new(HttpClient::new());
+	///     let payloads = vec![
+	///         (&quot;some_method&quot;.to_string(), ArrayParams::new(vec![])),
+	///         (&quot;another_method&quot;.to_string(), ArrayParams::new(vec![])),
+	///     ];
+	///     let initial_batch_size = 10;
+	///
+	///     let storage_data = get_storage_data_dynamic_batch_size(client, payloads, batch_size).await;
+	///     match storage_data {
+	///         Ok(data) =&gt; println!(&quot;Storage data: {:?}&quot;, data),
+	///         Err(e) =&gt; eprintln!(&quot;Error fetching storage data: {}&quot;, e),
+	///     }
+	/// }
+	/// ```
+	</span><span class="attr">#[async_recursion]
+	</span><span class="kw">async fn </span>get_storage_data_dynamic_batch_size(
+		client: <span class="kw-2">&amp;</span>Arc&lt;HttpClient&gt;,
+		payloads: Vec&lt;(String, ArrayParams)&gt;,
+		batch_size: usize,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="prelude-ty">Option</span>&lt;StorageData&gt;&gt;, String&gt; {
+		<span class="comment">// All payloads have been processed
+		</span><span class="kw">if </span>payloads.is_empty() {
+			<span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
+		};
+
+		<span class="macro">log::debug!</span>(
+			target: LOG_TARGET,
+			<span class="string">&quot;Remaining payloads: {} Batch request size: {}&quot;</span>,
+			payloads.len(),
+			batch_size,
+		);
+
+		<span class="comment">// Payloads to attempt to process this batch
+		</span><span class="kw">let </span>page = payloads.iter().take(batch_size).cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+
+		<span class="comment">// Build the batch request
+		</span><span class="kw">let </span><span class="kw-2">mut </span>batch = BatchRequestBuilder::new();
+		<span class="kw">for </span>(method, params) <span class="kw">in </span>page.iter() {
+			batch
+				.insert(method, params.clone())
+				.map_err(|<span class="kw">_</span>| <span class="string">&quot;Invalid batch method and/or params&quot;</span>)<span class="question-mark">?
+		</span>}
+		<span class="kw">let </span>batch_response = <span class="kw">match </span>client.batch_request::&lt;<span class="prelude-ty">Option</span>&lt;StorageData&gt;&gt;(batch).<span class="kw">await </span>{
+			<span class="prelude-val">Ok</span>(batch_response) =&gt; batch_response,
+			<span class="prelude-val">Err</span>(e) =&gt; {
+				<span class="kw">if </span>batch_size &lt; <span class="number">2 </span>{
+					<span class="kw">return </span><span class="prelude-val">Err</span>(e.to_string())
+				}
+
+				<span class="macro">log::debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Batch request failed, trying again with smaller batch size. {}&quot;</span>,
+					e.to_string()
+				);
+
+				<span class="kw">return </span><span class="self">Self</span>::get_storage_data_dynamic_batch_size(
+					client,
+					payloads,
+					max(<span class="number">1</span>, (batch_size <span class="kw">as </span>f32 * <span class="self">Self</span>::BATCH_SIZE_DECREASE_FACTOR) <span class="kw">as </span>usize),
+				)
+				.<span class="kw">await
+			</span>},
+		};
+
+		<span class="comment">// Collect the data from this batch
+		</span><span class="kw">let </span><span class="kw-2">mut </span>data: Vec&lt;<span class="prelude-ty">Option</span>&lt;StorageData&gt;&gt; = <span class="macro">vec!</span>[];
+		<span class="kw">for </span>item <span class="kw">in </span>batch_response.into_iter() {
+			<span class="kw">match </span>item {
+				<span class="prelude-val">Ok</span>(x) =&gt; data.push(x),
+				<span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(e.message().to_string()),
+			}
+		}
+
+		<span class="comment">// Return this data joined with the remaining keys
+		</span><span class="kw">let </span>payloads = payloads.iter().skip(batch_size).cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+		<span class="kw">let </span><span class="kw-2">mut </span>rest = <span class="self">Self</span>::get_storage_data_dynamic_batch_size(
+			client,
+			payloads,
+			max(batch_size + <span class="number">1</span>, (batch_size <span class="kw">as </span>f32 * <span class="self">Self</span>::BATCH_SIZE_INCREASE_FACTOR) <span class="kw">as </span>usize),
+		)
+		.<span class="kw">await</span><span class="question-mark">?</span>;
+		data.append(<span class="kw-2">&amp;mut </span>rest);
+		<span class="prelude-val">Ok</span>(data)
 	}
 
 	<span class="doccomment">/// Synonym of `getPairs` that uses paged queries to first get the keys, and then
@@ -1814,81 +2008,61 @@
 		<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = mpsc::unbounded::&lt;Message&gt;();
 
 		<span class="kw">for </span>thread_keys <span class="kw">in </span>keys_chunked {
-			<span class="kw">let </span>thread_client = client.clone();
 			<span class="kw">let </span>thread_sender = tx.clone();
+			<span class="kw">let </span>thread_client = client.clone();
 			<span class="kw">let </span>handle = std::thread::spawn(<span class="kw">move </span>|| {
-				<span class="kw">let </span>rt = tokio::runtime::Runtime::new().unwrap();
-				<span class="kw">let </span><span class="kw-2">mut </span>thread_key_values = Vec::with_capacity(thread_keys.len());
+				<span class="comment">// Process the payloads in chunks so each thread can pass kvs back to the main
+				// thread to start inserting before all of the data has been queried from the node.
+				// Inserting data takes a very long time, so the earlier it can start the better.
+				</span><span class="kw">let </span><span class="kw-2">mut </span>thread_key_values = <span class="macro">vec!</span>[];
+				<span class="kw">let </span>chunk_size = thread_keys.len() / <span class="number">1</span>;
+				<span class="kw">for </span>thread_keys_chunk <span class="kw">in </span>thread_keys.chunks(chunk_size) {
+					<span class="kw">let </span><span class="kw-2">mut </span>thread_key_chunk_values = Vec::with_capacity(thread_keys_chunk.len());
 
-				<span class="kw">for </span>chunk_keys <span class="kw">in </span>thread_keys.chunks(DEFAULT_VALUE_DOWNLOAD_BATCH) {
-					<span class="kw">let </span><span class="kw-2">mut </span>batch = BatchRequestBuilder::new();
+					<span class="kw">let </span>payloads = thread_keys_chunk
+						.iter()
+						.map(|key| (<span class="string">&quot;state_getStorage&quot;</span>.to_string(), <span class="macro">rpc_params!</span>(key, at)))
+						.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-					<span class="kw">for </span>key <span class="kw">in </span>chunk_keys.iter() {
-						batch
-							.insert(<span class="string">&quot;state_getStorage&quot;</span>, <span class="macro">rpc_params!</span>[key, at])
-							.map_err(|<span class="kw">_</span>| <span class="string">&quot;Invalid batch params&quot;</span>)
-							.unwrap();
-					}
-
-					<span class="kw">let </span>batch_response = rt
-						.block_on(thread_client.batch_request::&lt;<span class="prelude-ty">Option</span>&lt;StorageData&gt;&gt;(batch))
-						.map_err(|e| {
-							<span class="macro">log::error!</span>(
-								target: LOG_TARGET,
-								<span class="string">&quot;failed to execute batch: {:?}. Error: {:?}&quot;</span>,
-								chunk_keys.iter().map(HexDisplay::from).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-								e
-							);
-							<span class="string">&quot;batch failed.&quot;
-						</span>})
-						.unwrap();
+					<span class="kw">let </span>rt = tokio::runtime::Runtime::new().unwrap();
+					<span class="kw">let </span>storage_data = <span class="kw">match </span>rt.block_on(<span class="self">Self</span>::get_storage_data_dynamic_batch_size(
+						<span class="kw-2">&amp;</span>thread_client,
+						payloads,
+						<span class="self">Self</span>::INITIAL_BATCH_SIZE,
+					)) {
+						<span class="prelude-val">Ok</span>(storage_data) =&gt; storage_data,
+						<span class="prelude-val">Err</span>(e) =&gt; {
+							thread_sender.unbounded_send(Message::BatchFailed(e)).unwrap();
+							<span class="kw">return </span>Default::default()
+						},
+					};
 
 					<span class="comment">// Check if we got responses for all submitted requests.
-					</span><span class="macro">assert_eq!</span>(chunk_keys.len(), batch_response.len());
+					</span><span class="macro">assert_eq!</span>(thread_keys_chunk.len(), storage_data.len());
 
-					<span class="kw">let </span><span class="kw-2">mut </span>batch_kv = Vec::with_capacity(chunk_keys.len());
-					<span class="kw">for </span>(key, maybe_value) <span class="kw">in </span>chunk_keys.into_iter().zip(batch_response) {
+					<span class="kw">let </span><span class="kw-2">mut </span>batch_kv = Vec::with_capacity(thread_keys_chunk.len());
+					<span class="kw">for </span>(key, maybe_value) <span class="kw">in </span>thread_keys_chunk.iter().zip(storage_data) {
 						<span class="kw">match </span>maybe_value {
-							<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(data)) =&gt; {
-								thread_key_values.push((key.clone(), data.clone()));
+							<span class="prelude-val">Some</span>(data) =&gt; {
+								thread_key_chunk_values.push((key.clone(), data.clone()));
 								batch_kv.push((key.clone().<span class="number">0</span>, data.<span class="number">0</span>));
 							},
-							<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
+							<span class="prelude-val">None </span>=&gt; {
 								<span class="macro">log::warn!</span>(
 									target: LOG_TARGET,
 									<span class="string">&quot;key {:?} had none corresponding value.&quot;</span>,
 									<span class="kw-2">&amp;</span>key
 								);
 								<span class="kw">let </span>data = StorageData(<span class="macro">vec!</span>[]);
-								thread_key_values.push((key.clone(), data.clone()));
+								thread_key_chunk_values.push((key.clone(), data.clone()));
 								batch_kv.push((key.clone().<span class="number">0</span>, data.<span class="number">0</span>));
 							},
-							<span class="prelude-val">Err</span>(e) =&gt; {
-								<span class="kw">let </span>reason = <span class="macro">format!</span>(<span class="string">&quot;key {:?} failed: {:?}&quot;</span>, <span class="kw-2">&amp;</span>key, e);
-								<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;Reason: {}&quot;</span>, reason);
-								<span class="comment">// Signal failures to the main thread, stop aggregating (key, value)
-								// pairs and return immediately an error.
-								</span>thread_sender.unbounded_send(Message::BatchFailed(reason)).unwrap();
-								<span class="kw">return </span>Default::default()
-							},
 						};
-
-						<span class="kw">if </span>thread_key_values.len() % (thread_keys.len() / <span class="number">10</span>).max(<span class="number">1</span>) == <span class="number">0 </span>{
-							<span class="kw">let </span>ratio: f64 =
-								thread_key_values.len() <span class="kw">as </span>f64 / thread_keys.len() <span class="kw">as </span>f64;
-							<span class="macro">log::debug!</span>(
-								target: LOG_TARGET,
-								<span class="string">&quot;[thread = {:?}] progress = {:.2} [{} / {}]&quot;</span>,
-								std::thread::current().id(),
-								ratio,
-								thread_key_values.len(),
-								thread_keys.len(),
-							);
-						}
 					}
 
-					<span class="comment">// Send this batch to the main thread to start inserting.
+					<span class="comment">// Send this chunk to the main thread to start inserting.
 					</span>thread_sender.unbounded_send(Message::Batch(batch_kv)).unwrap();
+					thread_key_values.extend(thread_key_chunk_values);
 				}
 
 				thread_sender.unbounded_send(Message::Terminated).unwrap();
@@ -1902,10 +2076,21 @@
 		// `pending_ext`.
 		</span><span class="kw">let </span><span class="kw-2">mut </span>terminated = <span class="number">0usize</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>batch_failed = <span class="bool-val">false</span>;
+		<span class="kw">let </span><span class="kw-2">mut </span>processed = <span class="number">0usize</span>;
 		<span class="kw">loop </span>{
 			<span class="kw">match </span>rx.next().<span class="kw">await</span>.unwrap() {
 				Message::Batch(kv) =&gt; {
 					<span class="kw">for </span>(k, v) <span class="kw">in </span>kv {
+						processed += <span class="number">1</span>;
+						<span class="kw">if </span>processed % <span class="number">50_000 </span>== <span class="number">0 </span>|| processed == keys.len() || processed == <span class="number">1 </span>{
+							<span class="macro">log::info!</span>(
+								target: LOG_TARGET,
+								<span class="string">&quot;inserting keys progress = {:.0}% [{} / {}]&quot;</span>,
+								(processed <span class="kw">as </span>f32 / keys.len() <span class="kw">as </span>f32) * <span class="number">100f32</span>,
+								processed,
+								keys.len(),
+							);
+						}
 						<span class="comment">// skip writing the child root data.
 						</span><span class="kw">if </span>is_default_child_storage_key(k.as_ref()) {
 							<span class="kw">continue
@@ -1940,73 +2125,58 @@
 
 	<span class="doccomment">/// Get the values corresponding to `child_keys` at the given `prefixed_top_key`.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>rpc_child_get_storage_paged(
-		client: <span class="kw-2">&amp;</span>WsClient,
+		client: <span class="kw-2">&amp;</span>Arc&lt;HttpClient&gt;,
 		prefixed_top_key: <span class="kw-2">&amp;</span>StorageKey,
 		child_keys: Vec&lt;StorageKey&gt;,
 		at: B::Hash,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;KeyValue&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>child_kv_inner = <span class="macro">vec!</span>[];
-		<span class="kw">let </span><span class="kw-2">mut </span>batch_success = <span class="bool-val">true</span>;
+		<span class="kw">let </span>child_keys_len = child_keys.len();
 
-		<span class="kw">for </span>batch_child_key <span class="kw">in </span>child_keys.chunks(DEFAULT_VALUE_DOWNLOAD_BATCH) {
-			<span class="kw">let </span><span class="kw-2">mut </span>batch_request = BatchRequestBuilder::new();
+		<span class="kw">let </span>payloads = child_keys
+			.iter()
+			.map(|key| {
+				(
+					<span class="string">&quot;childstate_getStorage&quot;</span>.to_string(),
+					<span class="macro">rpc_params!</span>[
+						PrefixedStorageKey::new(prefixed_top_key.as_ref().to_vec()),
+						key,
+						at
+					],
+				)
+			})
+			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-			<span class="kw">for </span>key <span class="kw">in </span>batch_child_key {
-				batch_request
-					.insert(
-						<span class="string">&quot;childstate_getStorage&quot;</span>,
-						<span class="macro">rpc_params!</span>[
-							PrefixedStorageKey::new(prefixed_top_key.as_ref().to_vec()),
-							key,
-							at
-						],
-					)
-					.map_err(|<span class="kw">_</span>| <span class="string">&quot;Invalid batch params&quot;</span>)<span class="question-mark">?</span>;
-			}
+		<span class="kw">let </span>storage_data = <span class="kw">match </span><span class="self">Self</span>::get_storage_data_dynamic_batch_size(
+			client,
+			payloads,
+			<span class="self">Self</span>::INITIAL_BATCH_SIZE,
+		)
+		.<span class="kw">await
+		</span>{
+			<span class="prelude-val">Ok</span>(storage_data) =&gt; storage_data,
+			<span class="prelude-val">Err</span>(e) =&gt; {
+				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;batch processing failed: {:?}&quot;</span>, e);
+				<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;batch processing failed&quot;</span>)
+			},
+		};
 
-			<span class="kw">let </span>batch_response =
-				client.batch_request::&lt;<span class="prelude-ty">Option</span>&lt;StorageData&gt;&gt;(batch_request).<span class="kw">await</span>.map_err(|e| {
-					<span class="macro">log::error!</span>(
-						target: LOG_TARGET,
-						<span class="string">&quot;failed to execute batch: {:?}. Error: {:?}&quot;</span>,
-						batch_child_key,
-						e
-					);
-					<span class="string">&quot;batch failed.&quot;
-				</span>})<span class="question-mark">?</span>;
+		<span class="macro">assert_eq!</span>(child_keys_len, storage_data.len());
 
-			<span class="macro">assert_eq!</span>(batch_child_key.len(), batch_response.len());
-
-			<span class="kw">for </span>(key, maybe_value) <span class="kw">in </span>batch_child_key.iter().zip(batch_response) {
-				<span class="kw">match </span>maybe_value {
-					<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(v)) =&gt; {
-						child_kv_inner.push((key.clone(), v));
-					},
-					<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
-						<span class="macro">log::warn!</span>(
-							target: LOG_TARGET,
-							<span class="string">&quot;key {:?} had none corresponding value.&quot;</span>,
-							<span class="kw-2">&amp;</span>key
-						);
-						child_kv_inner.push((key.clone(), StorageData(<span class="macro">vec!</span>[])));
-					},
-					<span class="prelude-val">Err</span>(e) =&gt; {
-						<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;key {:?} failed: {:?}&quot;</span>, <span class="kw-2">&amp;</span>key, e);
-						batch_success = <span class="bool-val">false</span>;
-					},
-				};
-			}
-		}
-
-		<span class="kw">if </span>batch_success {
-			<span class="prelude-val">Ok</span>(child_kv_inner)
-		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(<span class="string">&quot;batch failed.&quot;</span>)
-		}
+		<span class="prelude-val">Ok</span>(child_keys
+			.iter()
+			.zip(storage_data)
+			.map(|(key, maybe_value)| <span class="kw">match </span>maybe_value {
+				<span class="prelude-val">Some</span>(v) =&gt; (key.clone(), v),
+				<span class="prelude-val">None </span>=&gt; {
+					<span class="macro">log::warn!</span>(target: LOG_TARGET, <span class="string">&quot;key {:?} had no corresponding value.&quot;</span>, <span class="kw-2">&amp;</span>key);
+					(key.clone(), StorageData(<span class="macro">vec!</span>[]))
+				},
+			})
+			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;())
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>rpc_child_get_keys(
-		client: <span class="kw-2">&amp;</span>WsClient,
+		client: <span class="kw-2">&amp;</span>HttpClient,
 		prefixed_top_key: <span class="kw-2">&amp;</span>StorageKey,
 		child_prefix: StorageKey,
 		at: B::Hash,
@@ -2064,107 +2234,47 @@
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(Default::default())
 		}
 
-		<span class="comment">// div-ceil simulation.
-		</span><span class="kw">let </span>threads = <span class="self">Self</span>::threads().get();
-		<span class="kw">let </span>child_roots_per_thread = (child_roots.len() + threads - <span class="number">1</span>) / threads;
-
 		<span class="macro">info!</span>(
 			target: LOG_TARGET,
-			<span class="string">&quot;👩‍👦 scraping child-tree data from {} top keys, split among {} threads, {} top keys per thread&quot;</span>,
+			<span class="string">&quot;👩‍👦 scraping child-tree data from {} top keys&quot;</span>,
 			child_roots.len(),
-			threads,
-			child_roots_per_thread,
 		);
 
-		<span class="comment">// NOTE: the threading done here is the simpler, yet slightly un-elegant because we are
-		// splitting child root among threads, and it is very common for these root to have vastly
-		// different child tries underneath them, causing some threads to finish way faster than
-		// others. Certainly still better than single thread though.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>handles = <span class="macro">vec!</span>[];
-		<span class="kw">let </span>client = <span class="self">self</span>.as_online().rpc_client_cloned();
 		<span class="kw">let </span>at = <span class="self">self</span>.as_online().at_expected();
 
-		<span class="kw">enum </span>Message {
-			Terminated,
-			Batch((ChildInfo, Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;)),
-		}
-		<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = mpsc::unbounded::&lt;Message&gt;();
+		<span class="kw">let </span>arc_client = <span class="self">self</span>.as_online().rpc_client_cloned();
+		<span class="kw">let </span><span class="kw-2">mut </span>child_kv = <span class="macro">vec!</span>[];
+		<span class="kw">for </span>prefixed_top_key <span class="kw">in </span>child_roots {
+			<span class="kw">let </span>child_keys = <span class="self">Self</span>::rpc_child_get_keys(
+				arc_client.as_ref(),
+				<span class="kw-2">&amp;</span>prefixed_top_key,
+				StorageKey(<span class="macro">vec!</span>[]),
+				at,
+			)
+			.<span class="kw">await</span><span class="question-mark">?</span>;
 
-		<span class="kw">for </span>thread_child_roots <span class="kw">in </span>child_roots
-			.chunks(child_roots_per_thread)
-			.map(|x| x.into())
-			.collect::&lt;Vec&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;&gt;()
-		{
-			<span class="kw">let </span>thread_client = client.clone();
-			<span class="kw">let </span>thread_sender = tx.clone();
-			<span class="kw">let </span>handle = thread::spawn(<span class="kw">move </span>|| {
-				<span class="kw">let </span>rt = tokio::runtime::Runtime::new().unwrap();
-				<span class="kw">let </span><span class="kw-2">mut </span>thread_child_kv = <span class="macro">vec!</span>[];
-				<span class="kw">for </span>prefixed_top_key <span class="kw">in </span>thread_child_roots {
-					<span class="kw">let </span>child_keys = rt.block_on(<span class="self">Self</span>::rpc_child_get_keys(
-						<span class="kw-2">&amp;</span>thread_client,
-						<span class="kw-2">&amp;</span>prefixed_top_key,
-						StorageKey(<span class="macro">vec!</span>[]),
-						at,
-					))<span class="question-mark">?</span>;
-					<span class="kw">let </span>child_kv_inner = rt.block_on(<span class="self">Self</span>::rpc_child_get_storage_paged(
-						<span class="kw-2">&amp;</span>thread_client,
-						<span class="kw-2">&amp;</span>prefixed_top_key,
-						child_keys,
-						at,
-					))<span class="question-mark">?</span>;
+			<span class="kw">let </span>child_kv_inner =
+				<span class="self">Self</span>::rpc_child_get_storage_paged(<span class="kw-2">&amp;</span>arc_client, <span class="kw-2">&amp;</span>prefixed_top_key, child_keys, at)
+					.<span class="kw">await</span><span class="question-mark">?</span>;
 
-					<span class="kw">let </span>prefixed_top_key = PrefixedStorageKey::new(prefixed_top_key.clone().<span class="number">0</span>);
-					<span class="kw">let </span>un_prefixed = <span class="kw">match </span>ChildType::from_prefixed_key(<span class="kw-2">&amp;</span>prefixed_top_key) {
-						<span class="prelude-val">Some</span>((ChildType::ParentKeyId, storage_key)) =&gt; storage_key,
-						<span class="prelude-val">None </span>=&gt; {
-							<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;invalid key: {:?}&quot;</span>, prefixed_top_key);
-							<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid child key&quot;</span>)
-						},
-					};
-
-					thread_sender
-						.unbounded_send(Message::Batch((
-							ChildInfo::new_default(un_prefixed),
-							child_kv_inner
-								.iter()
-								.cloned()
-								.map(|(k, v)| (k.<span class="number">0</span>, v.<span class="number">0</span>))
-								.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-						)))
-						.unwrap();
-					thread_child_kv.push((ChildInfo::new_default(un_prefixed), child_kv_inner));
-				}
-
-				thread_sender.unbounded_send(Message::Terminated).unwrap();
-				<span class="prelude-val">Ok</span>(thread_child_kv)
-			});
-			handles.push(handle);
-		}
-
-		<span class="comment">// first, wait until all threads send a `Terminated` message, in the meantime populate
-		// `pending_ext`.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>terminated = <span class="number">0usize</span>;
-		<span class="kw">loop </span>{
-			<span class="kw">match </span>rx.next().<span class="kw">await</span>.unwrap() {
-				Message::Batch((info, kvs)) =&gt;
-					<span class="kw">for </span>(k, v) <span class="kw">in </span>kvs {
-						pending_ext.insert_child(info.clone(), k, v);
-					},
-				Message::Terminated =&gt; {
-					terminated += <span class="number">1</span>;
-					<span class="kw">if </span>terminated == handles.len() {
-						<span class="kw">break
-					</span>}
+			<span class="kw">let </span>prefixed_top_key = PrefixedStorageKey::new(prefixed_top_key.clone().<span class="number">0</span>);
+			<span class="kw">let </span>un_prefixed = <span class="kw">match </span>ChildType::from_prefixed_key(<span class="kw-2">&amp;</span>prefixed_top_key) {
+				<span class="prelude-val">Some</span>((ChildType::ParentKeyId, storage_key)) =&gt; storage_key,
+				<span class="prelude-val">None </span>=&gt; {
+					<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;invalid key: {:?}&quot;</span>, prefixed_top_key);
+					<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid child key&quot;</span>)
 				},
+			};
+
+			<span class="kw">let </span>info = ChildInfo::new_default(un_prefixed);
+			<span class="kw">let </span>key_values =
+				child_kv_inner.iter().cloned().map(|(k, v)| (k.<span class="number">0</span>, v.<span class="number">0</span>)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+			child_kv.push((info.clone(), child_kv_inner));
+			<span class="kw">for </span>(k, v) <span class="kw">in </span>key_values {
+				pending_ext.insert_child(info.clone(), k, v);
 			}
 		}
 
-		<span class="kw">let </span>child_kv = handles
-			.into_iter()
-			.flat_map(|h| h.join().unwrap())
-			.flatten()
-			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		<span class="prelude-val">Ok</span>(child_kv)
 	}
 
@@ -2227,8 +2337,8 @@
 	///
 	/// initializes the remote client in `transport`, and sets the `at` field, if not specified.
 	</span><span class="kw">async fn </span>init_remote_client(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="comment">// First, initialize the ws client.
-		</span><span class="self">self</span>.as_online_mut().transport.map_uri().<span class="kw">await</span><span class="question-mark">?</span>;
+		<span class="comment">// First, initialize the http client.
+		</span><span class="self">self</span>.as_online_mut().transport.init().<span class="kw">await</span><span class="question-mark">?</span>;
 
 		<span class="comment">// Then, if `at` is not set, set it.
 		</span><span class="kw">if </span><span class="self">self</span>.as_online().at.is_none() {
