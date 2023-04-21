@@ -1175,6 +1175,21 @@
 <a href="#1175" id="1175">1175</a>
 <a href="#1176" id="1176">1176</a>
 <a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1514,6 +1529,10 @@
 		</span>Locked { who: T::AccountId, amount: T::Balance },
 		<span class="doccomment">/// Some balance was unlocked.
 		</span>Unlocked { who: T::AccountId, amount: T::Balance },
+		<span class="doccomment">/// Some balance was frozen.
+		</span>Frozen { who: T::AccountId, amount: T::Balance },
+		<span class="doccomment">/// Some balance was thawed.
+		</span>Thawed { who: T::AccountId, amount: T::Balance },
 	}
 
 	<span class="attr">#[pallet::error]
@@ -2261,7 +2280,10 @@
 			who: <span class="kw-2">&amp;</span>T::AccountId,
 			freezes: BoundedSlice&lt;IdAmount&lt;T::FreezeIdentifier, T::Balance&gt;, T::MaxFreezes&gt;,
 		) -&gt; DispatchResult {
+			<span class="kw">let </span><span class="kw-2">mut </span>prev_frozen = Zero::zero();
+			<span class="kw">let </span><span class="kw-2">mut </span>after_frozen = Zero::zero();
 			<span class="kw">let </span>(<span class="kw">_</span>, maybe_dust) = <span class="self">Self</span>::mutate_account(who, |b| {
+				prev_frozen = b.frozen;
 				b.frozen = Zero::zero();
 				<span class="kw">for </span>l <span class="kw">in </span>Locks::&lt;T, I&gt;::get(who).iter() {
 					b.frozen = b.frozen.max(l.amount);
@@ -2269,12 +2291,20 @@
 				<span class="kw">for </span>l <span class="kw">in </span>freezes.iter() {
 					b.frozen = b.frozen.max(l.amount);
 				}
+				after_frozen = b.frozen;
 			})<span class="question-mark">?</span>;
 			<span class="macro">debug_assert!</span>(maybe_dust.is_none(), <span class="string">&quot;Not altering main balance; qed&quot;</span>);
 			<span class="kw">if </span>freezes.is_empty() {
 				Freezes::&lt;T, I&gt;::remove(who);
 			} <span class="kw">else </span>{
 				Freezes::&lt;T, I&gt;::insert(who, freezes);
+			}
+			<span class="kw">if </span>prev_frozen &gt; after_frozen {
+				<span class="kw">let </span>amount = prev_frozen.saturating_sub(after_frozen);
+				<span class="self">Self</span>::deposit_event(Event::Thawed { who: who.clone(), amount });
+			} <span class="kw">else if </span>after_frozen &gt; prev_frozen {
+				<span class="kw">let </span>amount = after_frozen.saturating_sub(prev_frozen);
+				<span class="self">Self</span>::deposit_event(Event::Frozen { who: who.clone(), amount });
 			}
 			<span class="prelude-val">Ok</span>(())
 		}
