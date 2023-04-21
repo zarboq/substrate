@@ -875,6 +875,56 @@
 <a href="#875" id="875">875</a>
 <a href="#876" id="876">876</a>
 <a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
+<a href="#887" id="887">887</a>
+<a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
+<a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
+<a href="#894" id="894">894</a>
+<a href="#895" id="895">895</a>
+<a href="#896" id="896">896</a>
+<a href="#897" id="897">897</a>
+<a href="#898" id="898">898</a>
+<a href="#899" id="899">899</a>
+<a href="#900" id="900">900</a>
+<a href="#901" id="901">901</a>
+<a href="#902" id="902">902</a>
+<a href="#903" id="903">903</a>
+<a href="#904" id="904">904</a>
+<a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
+<a href="#910" id="910">910</a>
+<a href="#911" id="911">911</a>
+<a href="#912" id="912">912</a>
+<a href="#913" id="913">913</a>
+<a href="#914" id="914">914</a>
+<a href="#915" id="915">915</a>
+<a href="#916" id="916">916</a>
+<a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+<a href="#927" id="927">927</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2023 Parity Technologies (UK) Ltd.
@@ -944,6 +994,7 @@
 		Arc,
 	},
 	task::Poll,
+	time::{Duration, Instant},
 };
 
 <span class="doccomment">/// Interval at which we perform time based maintenance
@@ -952,12 +1003,19 @@
 <span class="doccomment">/// Maximum number of known block hashes to keep for a peer.
 </span><span class="kw">const </span>MAX_KNOWN_BLOCKS: usize = <span class="number">1024</span>; <span class="comment">// ~32kb per peer + LruHashSet overhead
 
-</span><span class="kw">mod </span>rep {
+</span><span class="doccomment">/// If the block announces stream to peer has been inactive for two minutes meaning local node
+/// has not sent or received block announcements to/from the peer, report the node for inactivity,
+/// disconnect it and attempt to establish connection to some other peer.
+</span><span class="kw">const </span>INACTIVITY_EVICT_THRESHOLD: Duration = Duration::from_secs(<span class="number">30</span>);
+
+<span class="kw">mod </span>rep {
 	<span class="kw">use </span>sc_peerset::ReputationChange <span class="kw">as </span>Rep;
 	<span class="doccomment">/// Peer has different genesis.
 	</span><span class="kw">pub const </span>GENESIS_MISMATCH: Rep = Rep::new_fatal(<span class="string">&quot;Genesis mismatch&quot;</span>);
 	<span class="doccomment">/// Peer send us a block announcement that failed at validation.
 	</span><span class="kw">pub const </span>BAD_BLOCK_ANNOUNCEMENT: Rep = Rep::new(-(<span class="number">1 </span>&lt;&lt; <span class="number">12</span>), <span class="string">&quot;Bad block announcement&quot;</span>);
+	<span class="doccomment">/// Block announce substream with the peer has been inactive too long
+	</span><span class="kw">pub const </span>INACTIVE_SUBSTREAM: Rep = Rep::new(-(<span class="number">1 </span>&lt;&lt; <span class="number">10</span>), <span class="string">&quot;Inactive block announce substream&quot;</span>);
 }
 
 <span class="kw">struct </span>Metrics {
@@ -1037,6 +1095,10 @@
 	</span><span class="kw">pub </span>known_blocks: LruHashSet&lt;B::Hash&gt;,
 	<span class="doccomment">/// Notification sink.
 	</span>sink: NotificationsSink,
+	<span class="doccomment">/// Instant when the last notification was sent to peer.
+	</span>last_notification_sent: Instant,
+	<span class="doccomment">/// Instant when the last notification was received from peer.
+	</span>last_notification_received: Instant,
 }
 
 <span class="kw">pub struct </span>SyncingEngine&lt;B: BlockT, Client&gt; {
@@ -1076,6 +1138,9 @@
 
 	<span class="doccomment">/// All connected peers. Contains both full and light node peers.
 	</span>peers: HashMap&lt;PeerId, Peer&lt;B&gt;&gt;,
+
+	<span class="doccomment">/// Evicted peers
+	</span>evicted: HashSet&lt;PeerId&gt;,
 
 	<span class="doccomment">/// List of nodes for which we perform additional logging because they are important for the
 	/// user.
@@ -1230,6 +1295,7 @@
 				chain_sync,
 				network_service,
 				peers: HashMap::new(),
+				evicted: HashSet::new(),
 				block_announce_data_cache: LruCache::new(cache_capacity),
 				block_announce_protocol_name,
 				num_connected: num_connected.clone(),
@@ -1393,6 +1459,7 @@
 			</span>},
 		};
 		peer.known_blocks.insert(hash);
+		peer.last_notification_received = Instant::now();
 
 		<span class="kw">if </span>peer.info.roles.is_full() {
 			<span class="kw">let </span>is_best = <span class="kw">match </span>announce.state.unwrap_or(BlockState::Best) {
@@ -1443,6 +1510,7 @@
 					data: <span class="prelude-val">Some</span>(data.clone()),
 				};
 
+				peer.last_notification_sent = Instant::now();
 				peer.sink.send_sync_notification(message.encode());
 			}
 		}
@@ -1473,6 +1541,35 @@
 
 		<span class="kw">while let </span>Poll::Ready(()) = <span class="self">self</span>.tick_timeout.poll_unpin(cx) {
 			<span class="self">self</span>.report_metrics();
+
+			<span class="comment">// go over all connected peers and check if any of them have been idle for a while. Idle
+			// in this case means that we haven&#39;t sent or received block announcements to/from this
+			// peer. If that is the case, because of #5685, it could be that the block announces
+			// substream is not actually open and and this peer is just wasting a slot and is should
+			// be replaced with some other node that is willing to send us block announcements.
+			</span><span class="kw">for </span>(id, peer) <span class="kw">in </span><span class="self">self</span>.peers.iter() {
+				<span class="comment">// because of a delay between disconnecting a peer in `SyncingEngine` and getting
+				// the response back from `Protocol`, a peer might be reported and disconnect
+				// multiple times. To prevent this from happening (until the underlying issue is
+				// fixed), keep track of evicted peers and report and disconnect them only once.
+				</span><span class="kw">if </span><span class="self">self</span>.evicted.contains(id) {
+					<span class="kw">continue
+				</span>}
+
+				<span class="kw">let </span>last_received_late =
+					peer.last_notification_received.elapsed() &gt; INACTIVITY_EVICT_THRESHOLD;
+				<span class="kw">let </span>last_sent_late =
+					peer.last_notification_sent.elapsed() &gt; INACTIVITY_EVICT_THRESHOLD;
+
+				<span class="kw">if </span>last_received_late &amp;&amp; last_sent_late {
+					<span class="macro">log::debug!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;evict peer {id} since it has been idling for too long&quot;</span>);
+					<span class="self">self</span>.network_service.report_peer(<span class="kw-2">*</span>id, rep::INACTIVE_SUBSTREAM);
+					<span class="self">self</span>.network_service
+						.disconnect_peer(<span class="kw-2">*</span>id, <span class="self">self</span>.block_announce_protocol_name.clone());
+					<span class="self">self</span>.evicted.insert(<span class="kw-2">*</span>id);
+				}
+			}
+
 			<span class="self">self</span>.tick_timeout.reset(TICK_TIMEOUT);
 		}
 
@@ -1569,6 +1666,7 @@
 					},
 				},
 				sc_network::SyncEvent::NotificationStreamClosed { remote } =&gt; {
+					<span class="self">self</span>.evicted.remove(<span class="kw-2">&amp;</span>remote);
 					<span class="kw">if </span><span class="self">self</span>.on_sync_peer_disconnected(remote).is_err() {
 						<span class="macro">log::trace!</span>(
 							target: <span class="string">&quot;sync&quot;</span>,
@@ -1721,6 +1819,8 @@
 				NonZeroUsize::new(MAX_KNOWN_BLOCKS).expect(<span class="string">&quot;Constant is nonzero&quot;</span>),
 			),
 			sink,
+			last_notification_sent: Instant::now(),
+			last_notification_received: Instant::now(),
 		};
 
 		<span class="kw">let </span>req = <span class="kw">if </span>peer.info.roles.is_full() {
