@@ -1744,6 +1744,21 @@
 <a href="#1744" id="1744">1744</a>
 <a href="#1745" id="1745">1745</a>
 <a href="#1746" id="1746">1746</a>
+<a href="#1747" id="1747">1747</a>
+<a href="#1748" id="1748">1748</a>
+<a href="#1749" id="1749">1749</a>
+<a href="#1750" id="1750">1750</a>
+<a href="#1751" id="1751">1751</a>
+<a href="#1752" id="1752">1752</a>
+<a href="#1753" id="1753">1753</a>
+<a href="#1754" id="1754">1754</a>
+<a href="#1755" id="1755">1755</a>
+<a href="#1756" id="1756">1756</a>
+<a href="#1757" id="1757">1757</a>
+<a href="#1758" id="1758">1758</a>
+<a href="#1759" id="1759">1759</a>
+<a href="#1760" id="1760">1760</a>
+<a href="#1761" id="1761">1761</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3054,7 +3069,12 @@
 		})<span class="question-mark">?</span>;
 		<span class="comment">// Extend the lock to `balance` (rather than setting it) since we don&#39;t know what other
 		// votes are in place.
-		</span>T::Currency::extend_lock(DEMOCRACY_ID, who, vote.balance(), WithdrawReasons::TRANSFER);
+		</span>T::Currency::extend_lock(
+			DEMOCRACY_ID,
+			who,
+			vote.balance(),
+			WithdrawReasons::except(WithdrawReasons::RESERVE),
+		);
 		ReferendumInfoOf::&lt;T&gt;::insert(ref_index, ReferendumInfo::Ongoing(status));
 		<span class="prelude-val">Ok</span>(())
 	}
@@ -3200,7 +3220,12 @@
 			<span class="kw">let </span>votes = <span class="self">Self</span>::increase_upstream_delegation(<span class="kw-2">&amp;</span>target, conviction.votes(balance));
 			<span class="comment">// Extend the lock to `balance` (rather than setting it) since we don&#39;t know what other
 			// votes are in place.
-			</span>T::Currency::extend_lock(DEMOCRACY_ID, <span class="kw-2">&amp;</span>who, balance, WithdrawReasons::TRANSFER);
+			</span>T::Currency::extend_lock(
+				DEMOCRACY_ID,
+				<span class="kw-2">&amp;</span>who,
+				balance,
+				WithdrawReasons::except(WithdrawReasons::RESERVE),
+			);
 			<span class="prelude-val">Ok</span>(votes)
 		})<span class="question-mark">?</span>;
 		<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::Delegated { who, target });
@@ -3245,7 +3270,12 @@
 		<span class="kw">if </span>lock_needed.is_zero() {
 			T::Currency::remove_lock(DEMOCRACY_ID, who);
 		} <span class="kw">else </span>{
-			T::Currency::set_lock(DEMOCRACY_ID, who, lock_needed, WithdrawReasons::TRANSFER);
+			T::Currency::set_lock(
+				DEMOCRACY_ID,
+				who,
+				lock_needed,
+				WithdrawReasons::except(WithdrawReasons::RESERVE),
+			);
 		}
 	}
 
