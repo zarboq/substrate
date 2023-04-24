@@ -1012,9 +1012,6 @@
 <a href="#1012" id="1012">1012</a>
 <a href="#1013" id="1013">1013</a>
 <a href="#1014" id="1014">1014</a>
-<a href="#1015" id="1015">1015</a>
-<a href="#1016" id="1016">1016</a>
-<a href="#1017" id="1017">1017</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1070,7 +1067,7 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">struct </span>ParamDef {
 	name: String,
-	typ: Type,
+	_typ: Type,
 	start: syn::GenericArgument,
 	end: syn::GenericArgument,
 }
@@ -1246,7 +1243,7 @@
 		<span class="kw">let </span>args = segment.arguments.to_token_stream().into();
 		<span class="kw">let </span><span class="prelude-val">Ok</span>(args) = syn::parse::&lt;RangeArgs&gt;(args) <span class="kw">else </span>{ <span class="kw">return </span>invalid_param(typ.span()) };
 
-		params.push(ParamDef { name, typ: typ.clone(), start: args.start, end: args.end });
+		params.push(ParamDef { name, _typ: typ.clone(), start: args.start, end: args.end });
 	}
 	<span class="prelude-val">Ok</span>(params)
 }
@@ -1698,7 +1695,6 @@
 </span><span class="kw">struct </span>UnrolledParams {
 	param_ranges: Vec&lt;TokenStream2&gt;,
 	param_names: Vec&lt;TokenStream2&gt;,
-	param_types: Vec&lt;TokenStream2&gt;,
 }
 
 <span class="kw">impl </span>UnrolledParams {
@@ -1720,14 +1716,7 @@
 				<span class="macro">quote!</span>(#name)
 			})
 			.collect();
-		<span class="kw">let </span>param_types: Vec&lt;TokenStream2&gt; = params
-			.iter()
-			.map(|p| {
-				<span class="kw">let </span>typ = <span class="kw-2">&amp;</span>p.typ;
-				<span class="macro">quote!</span>(#typ)
-			})
-			.collect();
-		UnrolledParams { param_ranges, param_names, param_types }
+		UnrolledParams { param_ranges, param_names }
 	}
 }
 
@@ -1743,7 +1732,6 @@
 		<span class="prelude-val">Ok</span>(ident) =&gt; ident,
 		<span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span>err.to_compile_error().into(),
 	};
-	<span class="kw">let </span>home = <span class="macro">quote!</span>(#krate::v2);
 	<span class="kw">let </span>codec = <span class="macro">quote!</span>(#krate::frame_support::codec);
 	<span class="kw">let </span>traits = <span class="macro">quote!</span>(#krate::frame_support::traits);
 	<span class="kw">let </span>setup_stmts = benchmark_def.setup_stmts;
@@ -1755,7 +1743,6 @@
 	</span><span class="kw">let </span>unrolled = UnrolledParams::from(<span class="kw-2">&amp;</span>benchmark_def.params);
 	<span class="kw">let </span>param_names = unrolled.param_names;
 	<span class="kw">let </span>param_ranges = unrolled.param_ranges;
-	<span class="kw">let </span>param_types = unrolled.param_types;
 
 	<span class="kw">let </span>type_use_generics = <span class="kw">match </span>is_instance {
 		<span class="bool-val">false </span>=&gt; <span class="macro">quote!</span>(T),
@@ -1779,6 +1766,18 @@
 				final_args.push((<span class="kw-2">*</span>(<span class="kw-2">*</span>arg)).clone());
 			}
 			expr_call.args = final_args;
+
+			<span class="kw">let </span>origin = <span class="kw">match </span>origin {
+				Expr::Cast(t) =&gt; {
+					<span class="kw">let </span>ty = t.ty.clone();
+					<span class="macro">quote! </span>{
+						&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::RuntimeOrigin <span class="kw">as </span>From&lt;#ty&gt;&gt;::from(#origin);
+					}
+				},
+				<span class="kw">_ </span>=&gt; <span class="macro">quote! </span>{
+					#origin.into();
+				},
+			};
 
 			<span class="comment">// determine call name (handles `_` and normal call syntax)
 			</span><span class="kw">let </span>expr_span = expr_call.span();
@@ -1820,7 +1819,7 @@
 				<span class="kw">let </span>__call_decoded = &lt;Call&lt;#type_use_generics&gt; <span class="kw">as </span>#codec::Decode&gt;
 					::decode(<span class="kw-2">&amp;mut &amp;</span>__benchmarked_call_encoded[..])
 					.expect(<span class="string">&quot;call is encoded above, encoding must be correct&quot;</span>);
-				<span class="kw">let </span>__origin = #origin.into();
+				<span class="kw">let </span>__origin = #origin;
 				&lt;Call&lt;#type_use_generics&gt; <span class="kw">as </span>#traits::UnfilteredDispatchable&gt;::dispatch_bypass_filter(
 					__call_decoded,
 					__origin,
@@ -1893,11 +1892,6 @@
 	</span><span class="kw">let </span>res = <span class="macro">quote! </span>{
 		<span class="comment">// benchmark function definition
 		</span>#fn_def
-
-		<span class="comment">// compile-time assertions that each referenced param type implements ParamRange
-		</span>#(
-			#<span class="macro">home::assert_impl_all!</span>(#param_types: #home::ParamRange);
-		)*
 
 		<span class="attr">#[allow(non_camel_case_types)]
 		</span>#(
