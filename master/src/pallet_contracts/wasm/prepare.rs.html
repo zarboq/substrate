@@ -1231,7 +1231,7 @@
 	wasm::{
 		runtime::AllowDeprecatedInterface, Determinism, Environment, OwnerInfo, PrefabWasmModule,
 	},
-	AccountIdOf, CodeVec, Config, Error, Schedule,
+	AccountIdOf, CodeVec, Config, Error, Schedule, LOG_TARGET,
 };
 <span class="kw">use </span>codec::{Encode, MaxEncodedLen};
 <span class="kw">use </span>sp_runtime::{traits::Hash, DispatchError};
@@ -1585,7 +1585,7 @@
 	})
 	.validate_all(original_code)
 	.map_err(|err| {
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;runtime::contracts&quot;</span>, <span class="string">&quot;{}&quot;</span>, err);
+		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;{}&quot;</span>, err);
 		(Error::&lt;T&gt;::CodeRejected.into(), <span class="string">&quot;validation of new code failed&quot;</span>)
 	})<span class="question-mark">?</span>;
 
@@ -1609,7 +1609,7 @@
 		<span class="prelude-val">Ok</span>((code, memory_limits))
 	})()
 	.map_err(|msg: <span class="kw-2">&amp;</span>str| {
-		<span class="macro">log::debug!</span>(target: <span class="string">&quot;runtime::contracts&quot;</span>, <span class="string">&quot;new code rejected: {}&quot;</span>, msg);
+		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;new code rejected: {}&quot;</span>, msg);
 		(Error::&lt;T&gt;::CodeRejected.into(), msg)
 	})<span class="question-mark">?</span>;
 
@@ -1632,7 +1632,7 @@
 			},
 		)
 		.map_err(|err| {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;runtime::contracts&quot;</span>, <span class="string">&quot;{}&quot;</span>, err);
+			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;{}&quot;</span>, err);
 			(Error::&lt;T&gt;::CodeRejected.into(), <span class="string">&quot;new code rejected after instrumentation&quot;</span>)
 		})<span class="question-mark">?</span>;
 	}
@@ -1724,7 +1724,7 @@
 		InstrumentReason::Reinstrument,
 	)
 	.map_err(|(err, msg)| {
-		<span class="macro">log::error!</span>(target: <span class="string">&quot;runtime::contracts&quot;</span>, <span class="string">&quot;CodeRejected during reinstrument: {}&quot;</span>, msg);
+		<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;CodeRejected during reinstrument: {}&quot;</span>, msg);
 		err
 	})
 	.map(|(code, <span class="kw">_</span>)| code)

@@ -3261,7 +3261,7 @@
 	exec::{ExecResult, Executable, ExportedFunction, Ext},
 	gas::GasMeter,
 	AccountIdOf, BalanceOf, CodeHash, CodeVec, Config, Error, OwnerInfoOf, RelaxedCodeVec,
-	Schedule,
+	Schedule, LOG_TARGET,
 };
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>frame_support::dispatch::{DispatchError, DispatchResult};
@@ -3544,7 +3544,7 @@
 			},
 		)
 		.map_err(|msg| {
-			<span class="macro">log::debug!</span>(target: <span class="string">&quot;runtime::contracts&quot;</span>, <span class="string">&quot;failed to instantiate code: {}&quot;</span>, msg);
+			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;failed to instantiate code: {}&quot;</span>, msg);
 			Error::&lt;T&gt;::CodeRejected
 		})<span class="question-mark">?</span>;
 		store.data_mut().set_memory(memory);
@@ -3553,7 +3553,7 @@
 			.get_export(<span class="kw-2">&amp;</span>store, function.identifier())
 			.and_then(|export| export.into_func())
 			.ok_or_else(|| {
-				<span class="macro">log::error!</span>(target: <span class="string">&quot;runtime::contracts&quot;</span>, <span class="string">&quot;failed to find entry point&quot;</span>);
+				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;failed to find entry point&quot;</span>);
 				Error::&lt;T&gt;::CodeRejected
 			})<span class="question-mark">?</span>;
 
