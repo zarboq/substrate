@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["remove_deferred_storage",""]]};
+window.SIDEBAR_ITEMS = {"fn":[["remove_deferred_storage",""]],"mod":[["v1",""]]};
