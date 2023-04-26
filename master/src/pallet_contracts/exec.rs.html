@@ -3452,6 +3452,80 @@
 <a href="#3452" id="3452">3452</a>
 <a href="#3453" id="3453">3453</a>
 <a href="#3454" id="3454">3454</a>
+<a href="#3455" id="3455">3455</a>
+<a href="#3456" id="3456">3456</a>
+<a href="#3457" id="3457">3457</a>
+<a href="#3458" id="3458">3458</a>
+<a href="#3459" id="3459">3459</a>
+<a href="#3460" id="3460">3460</a>
+<a href="#3461" id="3461">3461</a>
+<a href="#3462" id="3462">3462</a>
+<a href="#3463" id="3463">3463</a>
+<a href="#3464" id="3464">3464</a>
+<a href="#3465" id="3465">3465</a>
+<a href="#3466" id="3466">3466</a>
+<a href="#3467" id="3467">3467</a>
+<a href="#3468" id="3468">3468</a>
+<a href="#3469" id="3469">3469</a>
+<a href="#3470" id="3470">3470</a>
+<a href="#3471" id="3471">3471</a>
+<a href="#3472" id="3472">3472</a>
+<a href="#3473" id="3473">3473</a>
+<a href="#3474" id="3474">3474</a>
+<a href="#3475" id="3475">3475</a>
+<a href="#3476" id="3476">3476</a>
+<a href="#3477" id="3477">3477</a>
+<a href="#3478" id="3478">3478</a>
+<a href="#3479" id="3479">3479</a>
+<a href="#3480" id="3480">3480</a>
+<a href="#3481" id="3481">3481</a>
+<a href="#3482" id="3482">3482</a>
+<a href="#3483" id="3483">3483</a>
+<a href="#3484" id="3484">3484</a>
+<a href="#3485" id="3485">3485</a>
+<a href="#3486" id="3486">3486</a>
+<a href="#3487" id="3487">3487</a>
+<a href="#3488" id="3488">3488</a>
+<a href="#3489" id="3489">3489</a>
+<a href="#3490" id="3490">3490</a>
+<a href="#3491" id="3491">3491</a>
+<a href="#3492" id="3492">3492</a>
+<a href="#3493" id="3493">3493</a>
+<a href="#3494" id="3494">3494</a>
+<a href="#3495" id="3495">3495</a>
+<a href="#3496" id="3496">3496</a>
+<a href="#3497" id="3497">3497</a>
+<a href="#3498" id="3498">3498</a>
+<a href="#3499" id="3499">3499</a>
+<a href="#3500" id="3500">3500</a>
+<a href="#3501" id="3501">3501</a>
+<a href="#3502" id="3502">3502</a>
+<a href="#3503" id="3503">3503</a>
+<a href="#3504" id="3504">3504</a>
+<a href="#3505" id="3505">3505</a>
+<a href="#3506" id="3506">3506</a>
+<a href="#3507" id="3507">3507</a>
+<a href="#3508" id="3508">3508</a>
+<a href="#3509" id="3509">3509</a>
+<a href="#3510" id="3510">3510</a>
+<a href="#3511" id="3511">3511</a>
+<a href="#3512" id="3512">3512</a>
+<a href="#3513" id="3513">3513</a>
+<a href="#3514" id="3514">3514</a>
+<a href="#3515" id="3515">3515</a>
+<a href="#3516" id="3516">3516</a>
+<a href="#3517" id="3517">3517</a>
+<a href="#3518" id="3518">3518</a>
+<a href="#3519" id="3519">3519</a>
+<a href="#3520" id="3520">3520</a>
+<a href="#3521" id="3521">3521</a>
+<a href="#3522" id="3522">3522</a>
+<a href="#3523" id="3523">3523</a>
+<a href="#3524" id="3524">3524</a>
+<a href="#3525" id="3525">3525</a>
+<a href="#3526" id="3526">3526</a>
+<a href="#3527" id="3527">3527</a>
+<a href="#3528" id="3528">3528</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3477,7 +3551,9 @@
 };
 <span class="kw">use </span>frame_support::{
 	crypto::ecdsa::ECDSAExt,
-	dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable},
+	dispatch::{
+		fmt::Debug, DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable,
+	},
 	storage::{with_transaction, TransactionOutcome},
 	traits::{
 		tokens::{Fortitude::Polite, Preservation::Expendable},
@@ -3494,7 +3570,7 @@
 	sr25519::{Public <span class="kw">as </span>SR25519Public, Signature <span class="kw">as </span>SR25519Signature},
 };
 <span class="kw">use </span>sp_io::{crypto::secp256k1_ecdsa_recover_compressed, hashing::blake2_256};
-<span class="kw">use </span>sp_runtime::traits::{Convert, Hash};
+<span class="kw">use </span>sp_runtime::traits::{Convert, Hash, Zero};
 <span class="kw">use </span>sp_std::{marker::PhantomData, mem, prelude::<span class="kw-2">*</span>, vec::Vec};
 
 <span class="kw">pub type </span>AccountIdOf&lt;T&gt; = &lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId;
@@ -3591,6 +3667,7 @@
 	</span><span class="kw">fn </span>call(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		gas_limit: Weight,
+		deposit_limit: BalanceOf&lt;<span class="self">Self</span>::T&gt;,
 		to: AccountIdOf&lt;<span class="self">Self</span>::T&gt;,
 		value: BalanceOf&lt;<span class="self">Self</span>::T&gt;,
 		input_data: Vec&lt;u8&gt;,
@@ -3614,6 +3691,7 @@
 	</span><span class="kw">fn </span>instantiate(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		gas_limit: Weight,
+		deposit_limit: BalanceOf&lt;<span class="self">Self</span>::T&gt;,
 		code: CodeHash&lt;<span class="self">Self</span>::T&gt;,
 		value: BalanceOf&lt;<span class="self">Self</span>::T&gt;,
 		input_data: Vec&lt;u8&gt;,
@@ -4146,8 +4224,9 @@
 			args,
 			value,
 			gas_meter,
-			storage_meter,
 			Weight::zero(),
+			storage_meter,
+			BalanceOf::&lt;T&gt;::zero(),
 			schedule,
 			determinism,
 		)<span class="question-mark">?</span>;
@@ -4173,12 +4252,13 @@
 	///
 	/// This does not take `self` because when constructing the first frame `self` is
 	/// not initialized, yet.
-	</span><span class="kw">fn </span>new_frame&lt;S: storage::meter::State&gt;(
+	</span><span class="kw">fn </span>new_frame&lt;S: storage::meter::State + Default + Debug&gt;(
 		frame_args: FrameArgs&lt;T, E&gt;,
 		value_transferred: BalanceOf&lt;T&gt;,
 		gas_meter: <span class="kw-2">&amp;mut </span>GasMeter&lt;T&gt;,
-		storage_meter: <span class="kw-2">&amp;mut </span>storage::meter::GenericMeter&lt;T, S&gt;,
 		gas_limit: Weight,
+		storage_meter: <span class="kw-2">&amp;mut </span>storage::meter::GenericMeter&lt;T, S&gt;,
+		deposit_limit: BalanceOf&lt;T&gt;,
 		schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
 		determinism: Determinism,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(Frame&lt;T&gt;, E, <span class="prelude-ty">Option</span>&lt;u64&gt;), ExecError&gt; {
@@ -4235,7 +4315,7 @@
 			account_id,
 			entry_point,
 			nested_gas: gas_meter.nested(gas_limit)<span class="question-mark">?</span>,
-			nested_storage: storage_meter.nested(),
+			nested_storage: storage_meter.nested(deposit_limit),
 			allows_reentry: <span class="bool-val">true</span>,
 		};
 
@@ -4248,6 +4328,7 @@
 		frame_args: FrameArgs&lt;T, E&gt;,
 		value_transferred: BalanceOf&lt;T&gt;,
 		gas_limit: Weight,
+		deposit_limit: BalanceOf&lt;T&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;E, ExecError&gt; {
 		<span class="kw">if </span><span class="self">self</span>.frames.len() == T::CallStack::size() {
 			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::MaxCallDepthReached.into())
@@ -4271,8 +4352,9 @@
 			frame_args,
 			value_transferred,
 			nested_gas,
-			nested_storage,
 			gas_limit,
+			nested_storage,
+			deposit_limit,
 			<span class="self">self</span>.schedule,
 			<span class="self">self</span>.determinism,
 		)<span class="question-mark">?</span>;
@@ -4313,8 +4395,10 @@
 				<span class="kw">return </span><span class="prelude-val">Ok</span>(output)
 			}
 
-			<span class="comment">// Storage limit is enforced as late as possible (when the last frame returns) so that
-			// the ordering of storage accesses does not matter.
+			<span class="comment">// Storage limit is normally enforced as late as possible (when the last frame returns)
+			// so that the ordering of storage accesses does not matter.
+			// (However, if a special limit was set for a sub-call, it should be enforced right
+			// after the sub-call returned. See below for this case of enforcement).
 			</span><span class="kw">if </span><span class="self">self</span>.frames.is_empty() {
 				<span class="kw">let </span>frame = <span class="kw-2">&amp;mut </span><span class="self">self</span>.first_frame;
 				frame.contract_info.load(<span class="kw-2">&amp;</span>frame.account_id);
@@ -4323,13 +4407,20 @@
 			}
 
 			<span class="kw">let </span>frame = <span class="self">self</span>.top_frame();
-			<span class="kw">let </span>account_id = <span class="kw-2">&amp;</span>frame.account_id;
+			<span class="kw">let </span>account_id = <span class="kw-2">&amp;</span>frame.account_id.clone();
 			<span class="kw">match </span>(entry_point, delegated_code_hash) {
 				(ExportedFunction::Constructor, <span class="kw">_</span>) =&gt; {
 					<span class="comment">// It is not allowed to terminate a contract inside its constructor.
 					</span><span class="kw">if </span><span class="macro">matches!</span>(frame.contract_info, CachedContract::Terminated(<span class="kw">_</span>)) {
 						<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::TerminatedInConstructor.into())
 					}
+
+					<span class="comment">// If a special limit was set for the sub-call, we enforce it here.
+					// This is needed because contract constructor might write to storage.
+					// The sub-call will be rolled back in case the limit is exhausted.
+					</span><span class="kw">let </span>frame = <span class="self">self</span>.top_frame_mut();
+					<span class="kw">let </span>contract = frame.contract_info.as_contract();
+					frame.nested_storage.enforce_subcall_limit(contract)<span class="question-mark">?</span>;
 
 					<span class="comment">// Deposit an instantiation event.
 					</span>Contracts::&lt;T&gt;::deposit_event(
@@ -4347,9 +4438,15 @@
 					);
 				},
 				(ExportedFunction::Call, <span class="prelude-val">None</span>) =&gt; {
+					<span class="comment">// If a special limit was set for the sub-call, we enforce it here.
+					// The sub-call will be rolled back in case the limit is exhausted.
+					</span><span class="kw">let </span>frame = <span class="self">self</span>.top_frame_mut();
+					<span class="kw">let </span>contract = frame.contract_info.as_contract();
+					frame.nested_storage.enforce_subcall_limit(contract)<span class="question-mark">?</span>;
+
 					<span class="kw">let </span>caller = <span class="self">self</span>.caller();
 					Contracts::&lt;T&gt;::deposit_event(
-						<span class="macro">vec!</span>[T::Hashing::hash_of(caller), T::Hashing::hash_of(account_id)],
+						<span class="macro">vec!</span>[T::Hashing::hash_of(caller), T::Hashing::hash_of(<span class="kw-2">&amp;</span>account_id)],
 						Event::Called { caller: caller.clone(), contract: account_id.clone() },
 					);
 				},
@@ -4561,6 +4658,7 @@
 	<span class="kw">fn </span>call(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		gas_limit: Weight,
+		deposit_limit: BalanceOf&lt;T&gt;,
 		to: T::AccountId,
 		value: BalanceOf&lt;T&gt;,
 		input_data: Vec&lt;u8&gt;,
@@ -4589,6 +4687,7 @@
 				FrameArgs::Call { dest: to, cached_info, delegated_call: <span class="prelude-val">None </span>},
 				value,
 				gas_limit,
+				deposit_limit,
 			)<span class="question-mark">?</span>;
 			<span class="self">self</span>.run(executable, input_data)
 		};
@@ -4620,6 +4719,7 @@
 			},
 			value,
 			Weight::zero(),
+			BalanceOf::&lt;T&gt;::zero(),
 		)<span class="question-mark">?</span>;
 		<span class="self">self</span>.run(executable, input_data)
 	}
@@ -4627,6 +4727,7 @@
 	<span class="kw">fn </span>instantiate(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		gas_limit: Weight,
+		deposit_limit: BalanceOf&lt;<span class="self">Self</span>::T&gt;,
 		code_hash: CodeHash&lt;T&gt;,
 		value: BalanceOf&lt;T&gt;,
 		input_data: Vec&lt;u8&gt;,
@@ -4644,6 +4745,7 @@
 			},
 			value,
 			gas_limit,
+			deposit_limit,
 		)<span class="question-mark">?</span>;
 		<span class="kw">let </span>account_id = <span class="self">self</span>.top_frame().account_id.clone();
 		<span class="self">self</span>.run(executable, input_data).map(|ret| (account_id, ret))
@@ -5371,7 +5473,7 @@
 		<span class="kw">let </span>value = Default::default();
 		<span class="kw">let </span>recurse_ch = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="comment">// Try to call into yourself.
-			</span><span class="kw">let </span>r = ctx.ext.call(Weight::zero(), BOB, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>);
+			</span><span class="kw">let </span>r = ctx.ext.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), BOB, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>);
 
 			ReachedBottom::mutate(|reached_bottom| {
 				<span class="kw">if </span>!<span class="kw-2">*</span>reached_bottom {
@@ -5425,7 +5527,11 @@
 			</span>WitnessedCallerBob::mutate(|caller| <span class="kw-2">*</span>caller = <span class="prelude-val">Some</span>(ctx.ext.caller().clone()));
 
 			<span class="comment">// Call into CHARLIE contract.
-			</span><span class="macro">assert_matches!</span>(ctx.ext.call(Weight::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
+			</span><span class="macro">assert_matches!</span>(
+				ctx.ext
+					.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>),
+				<span class="prelude-val">Ok</span>(<span class="kw">_</span>)
+			);
 			exec_success()
 		});
 		<span class="kw">let </span>charlie_ch = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
@@ -5559,7 +5665,8 @@
 			<span class="comment">// ALICE is the origin of the call stack
 			</span><span class="macro">assert!</span>(ctx.ext.caller_is_origin());
 			<span class="comment">// BOB calls CHARLIE
-			</span>ctx.ext.call(Weight::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>)
+			</span>ctx.ext
+				.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>)
 		});
 
 		ExtBuilder::default().build().execute_with(|| {
@@ -5590,7 +5697,11 @@
 			</span><span class="macro">assert_eq!</span>(<span class="kw-2">*</span>ctx.ext.address(), BOB);
 
 			<span class="comment">// Call into charlie contract.
-			</span><span class="macro">assert_matches!</span>(ctx.ext.call(Weight::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>), <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
+			</span><span class="macro">assert_matches!</span>(
+				ctx.ext
+					.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>),
+				<span class="prelude-val">Ok</span>(<span class="kw">_</span>)
+			);
 			exec_success()
 		});
 		<span class="kw">let </span>charlie_ch = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
@@ -5741,6 +5852,7 @@
 					.ext
 					.instantiate(
 						Weight::zero(),
+						BalanceOf::&lt;Test&gt;::zero(),
 						dummy_ch,
 						&lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance(),
 						<span class="macro">vec!</span>[],
@@ -5805,6 +5917,7 @@
 				</span><span class="macro">assert_matches!</span>(
 					ctx.ext.instantiate(
 						Weight::zero(),
+						BalanceOf::&lt;Test&gt;::zero(),
 						dummy_ch,
 						&lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance(),
 						<span class="macro">vec!</span>[],
@@ -5897,13 +6010,26 @@
 				<span class="kw">let </span>info = ctx.ext.contract_info();
 				<span class="macro">assert_eq!</span>(info.storage_byte_deposit, <span class="number">0</span>);
 				info.storage_byte_deposit = <span class="number">42</span>;
-				<span class="macro">assert_eq!</span>(ctx.ext.call(Weight::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>), exec_trapped());
+				<span class="macro">assert_eq!</span>(
+					ctx.ext.call(
+						Weight::zero(),
+						BalanceOf::&lt;Test&gt;::zero(),
+						CHARLIE,
+						<span class="number">0</span>,
+						<span class="macro">vec!</span>[],
+						<span class="bool-val">true
+					</span>),
+					exec_trapped()
+				);
 				<span class="macro">assert_eq!</span>(ctx.ext.contract_info().storage_byte_deposit, <span class="number">42</span>);
 			}
 			exec_success()
 		});
 		<span class="kw">let </span>code_charlie = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
-			<span class="macro">assert!</span>(ctx.ext.call(Weight::zero(), BOB, <span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">99</span>], <span class="bool-val">true</span>).is_ok());
+			<span class="macro">assert!</span>(ctx
+				.ext
+				.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), BOB, <span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">99</span>], <span class="bool-val">true</span>)
+				.is_ok());
 			exec_trapped()
 		});
 
@@ -5933,7 +6059,7 @@
 	</span><span class="kw">fn </span>recursive_call_during_constructor_fails() {
 		<span class="kw">let </span>code = MockLoader::insert(Constructor, |ctx, <span class="kw">_</span>| {
 			<span class="macro">assert_matches!</span>(
-				ctx.ext.call(Weight::zero(), ctx.ext.address().clone(), <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>),
+				ctx.ext.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), ctx.ext.address().clone(), <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">true</span>),
 				<span class="prelude-val">Err</span>(ExecError{error, ..}) <span class="kw">if </span>error == &lt;Error&lt;Test&gt;&gt;::ContractNotFound.into()
 			);
 			exec_success()
@@ -6072,7 +6198,7 @@
 		<span class="comment">// call the contract passed as input with disabled reentry
 		</span><span class="kw">let </span>code_bob = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="kw">let </span>dest = Decode::decode(<span class="kw-2">&amp;mut </span>ctx.input_data.as_ref()).unwrap();
-			ctx.ext.call(Weight::zero(), dest, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">false</span>)
+			ctx.ext.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), dest, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">false</span>)
 		});
 
 		<span class="kw">let </span>code_charlie = MockLoader::insert(Call, |<span class="kw">_</span>, <span class="kw">_</span>| exec_success());
@@ -6119,15 +6245,17 @@
 	</span><span class="kw">fn </span>call_deny_reentry() {
 		<span class="kw">let </span>code_bob = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
 			<span class="kw">if </span>ctx.input_data[<span class="number">0</span>] == <span class="number">0 </span>{
-				ctx.ext.call(Weight::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">false</span>)
+				ctx.ext
+					.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), CHARLIE, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">false</span>)
 			} <span class="kw">else </span>{
 				exec_success()
 			}
 		});
 
 		<span class="comment">// call BOB with input set to &#39;1&#39;
-		</span><span class="kw">let </span>code_charlie =
-			MockLoader::insert(Call, |ctx, <span class="kw">_</span>| ctx.ext.call(Weight::zero(), BOB, <span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">1</span>], <span class="bool-val">true</span>));
+		</span><span class="kw">let </span>code_charlie = MockLoader::insert(Call, |ctx, <span class="kw">_</span>| {
+			ctx.ext.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), BOB, <span class="number">0</span>, <span class="macro">vec!</span>[<span class="number">1</span>], <span class="bool-val">true</span>)
+		});
 
 		ExtBuilder::default().build().execute_with(|| {
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
@@ -6316,6 +6444,7 @@
 			ctx.ext
 				.instantiate(
 					Weight::zero(),
+					BalanceOf::&lt;Test&gt;::zero(),
 					fail_code,
 					ctx.ext.minimum_balance() * <span class="number">100</span>,
 					<span class="macro">vec!</span>[],
@@ -6329,6 +6458,7 @@
 				.ext
 				.instantiate(
 					Weight::zero(),
+					BalanceOf::&lt;Test&gt;::zero(),
 					success_code,
 					ctx.ext.minimum_balance() * <span class="number">100</span>,
 					<span class="macro">vec!</span>[],
@@ -6337,7 +6467,9 @@
 				.unwrap();
 
 			<span class="comment">// a plain call should not influence the account counter
-			</span>ctx.ext.call(Weight::zero(), account_id, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">false</span>).unwrap();
+			</span>ctx.ext
+				.call(Weight::zero(), BalanceOf::&lt;Test&gt;::zero(), account_id, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="bool-val">false</span>)
+				.unwrap();
 
 			exec_success()
 		});
@@ -6841,7 +6973,14 @@
 			</span><span class="macro">assert_eq!</span>(ctx.ext.nonce(), <span class="number">1</span>);
 			<span class="comment">// Should not change with a failed instantiation
 			</span><span class="macro">assert_err!</span>(
-				ctx.ext.instantiate(Weight::zero(), fail_code, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="kw-2">&amp;</span>[],),
+				ctx.ext.instantiate(
+					Weight::zero(),
+					BalanceOf::&lt;Test&gt;::zero(),
+					fail_code,
+					<span class="number">0</span>,
+					<span class="macro">vec!</span>[],
+					<span class="kw-2">&amp;</span>[],
+				),
 				ExecError {
 					error: &lt;Error&lt;Test&gt;&gt;::ContractTrapped.into(),
 					origin: ErrorOrigin::Callee
@@ -6849,7 +6988,16 @@
 			);
 			<span class="macro">assert_eq!</span>(ctx.ext.nonce(), <span class="number">1</span>);
 			<span class="comment">// Successful instantiation increments
-			</span>ctx.ext.instantiate(Weight::zero(), success_code, <span class="number">0</span>, <span class="macro">vec!</span>[], <span class="kw-2">&amp;</span>[]).unwrap();
+			</span>ctx.ext
+				.instantiate(
+					Weight::zero(),
+					BalanceOf::&lt;Test&gt;::zero(),
+					success_code,
+					<span class="number">0</span>,
+					<span class="macro">vec!</span>[],
+					<span class="kw-2">&amp;</span>[],
+				)
+				.unwrap();
 			<span class="macro">assert_eq!</span>(ctx.ext.nonce(), <span class="number">2</span>);
 			exec_success()
 		});

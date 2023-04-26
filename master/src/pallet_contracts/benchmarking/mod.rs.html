@@ -3218,6 +3218,19 @@
 <a href="#3218" id="3218">3218</a>
 <a href="#3219" id="3219">3219</a>
 <a href="#3220" id="3220">3220</a>
+<a href="#3221" id="3221">3221</a>
+<a href="#3222" id="3222">3222</a>
+<a href="#3223" id="3223">3223</a>
+<a href="#3224" id="3224">3224</a>
+<a href="#3225" id="3225">3225</a>
+<a href="#3226" id="3226">3226</a>
+<a href="#3227" id="3227">3227</a>
+<a href="#3228" id="3228">3228</a>
+<a href="#3229" id="3229">3229</a>
+<a href="#3230" id="3230">3230</a>
+<a href="#3231" id="3231">3231</a>
+<a href="#3232" id="3232">3232</a>
+<a href="#3233" id="3233">3233</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3767,7 +3780,7 @@
 	</span>seal_gas_left {
 		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(WasmModule::getter(
-			<span class="string">&quot;seal0&quot;</span>, <span class="string">&quot;seal_gas_left&quot;</span>, r
+			<span class="string">&quot;seal1&quot;</span>, <span class="string">&quot;gas_left&quot;</span>, r
 		), <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
@@ -3824,9 +3837,9 @@
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
-				module: <span class="string">&quot;seal0&quot;</span>,
-				name: <span class="string">&quot;seal_weight_to_fee&quot;</span>,
-				params: <span class="macro">vec!</span>[ValueType::I64, ValueType::I32, ValueType::I32],
+				module: <span class="string">&quot;seal1&quot;</span>,
+				name: <span class="string">&quot;weight_to_fee&quot;</span>,
+				params: <span class="macro">vec!</span>[ValueType::I64, ValueType::I64, ValueType::I32, ValueType::I32],
 				return_type: <span class="prelude-val">None</span>,
 			}],
 			data_segments: <span class="macro">vec!</span>[DataSegment {
@@ -3835,6 +3848,7 @@
 			}],
 			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
 				Instruction::I64Const(<span class="number">500_000</span>),
+				Instruction::I64Const(<span class="number">300_000</span>),
 				Instruction::I32Const(<span class="number">4</span>),
 				Instruction::I32Const(<span class="number">0</span>),
 				Instruction::Call(<span class="number">0</span>),
@@ -4804,15 +4818,25 @@
 		<span class="kw">let </span>callee_bytes = callees.iter().flat_map(|x| x.account_id.encode()).collect();
 		<span class="kw">let </span>value: BalanceOf&lt;T&gt; = <span class="number">0u32</span>.into();
 		<span class="kw">let </span>value_bytes = value.encode();
-		<span class="kw">let </span>value_len = value_bytes.len();
+		<span class="kw">let </span>value_len = BalanceOf::&lt;T&gt;::max_encoded_len() <span class="kw">as </span>u32;
+		<span class="comment">// Set an own limit every 2nd call
+		</span><span class="kw">let </span>own_limit = (u32::MAX - <span class="number">100</span>).into();
+		<span class="kw">let </span>deposits = (<span class="number">0</span>..r)
+			.map(|i| <span class="kw">if </span>i % <span class="number">2 </span>== <span class="number">0 </span>{ <span class="number">0u32</span>.into() } <span class="kw">else </span>{ own_limit } )
+			.collect::&lt;Vec&lt;BalanceOf&lt;T&gt;&gt;&gt;();
+		<span class="kw">let </span>deposits_bytes: Vec&lt;u8&gt; = deposits.iter().flat_map(|i| i.encode()).collect();
+		<span class="kw">let </span>deposits_len = deposits_bytes.len() <span class="kw">as </span>u32;
+		<span class="kw">let </span>deposit_len = value_len.clone();
+		<span class="kw">let </span>callee_offset = value_len + deposits_len;
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
-				module: <span class="string">&quot;seal0&quot;</span>,
-				name: <span class="string">&quot;seal_call&quot;</span>,
+				module: <span class="string">&quot;seal2&quot;</span>,
+				name: <span class="string">&quot;call&quot;</span>,
 				params: <span class="macro">vec!</span>[
 					ValueType::I32,
 					ValueType::I32,
+					ValueType::I64,
 					ValueType::I64,
 					ValueType::I32,
 					ValueType::I32,
@@ -4829,16 +4853,21 @@
 					value: value_bytes,
 				},
 				DataSegment {
-					offset: value_len <span class="kw">as </span>u32,
+					offset: value_len,
+					value: deposits_bytes,
+				},
+				DataSegment {
+					offset: callee_offset,
 					value: callee_bytes,
 				},
 			],
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
-				Counter(value_len <span class="kw">as </span>u32, callee_len <span class="kw">as </span>u32), <span class="comment">// callee_ptr
-				</span>Regular(Instruction::I32Const(callee_len <span class="kw">as </span>i32)), <span class="comment">// callee_len
-				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// gas
+				Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// flags
+				</span>Counter(callee_offset, callee_len <span class="kw">as </span>u32), <span class="comment">// callee_ptr
+				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// ref_time weight
+				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// proof_size weight
+				</span>Counter(value_len, deposit_len <span class="kw">as </span>u32), <span class="comment">// deposit_limit_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_ptr
-				</span>Regular(Instruction::I32Const(value_len <span class="kw">as </span>i32)), <span class="comment">// value_len
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_len
 				</span>Regular(Instruction::I32Const(SENTINEL <span class="kw">as </span>i32)), <span class="comment">// output_ptr
@@ -4850,7 +4879,7 @@
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
-	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
+	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">Some</span>(BalanceOf::&lt;T&gt;::from(u32::MAX).into()), <span class="macro">vec!</span>[])
 
 	<span class="comment">// This is a slow call: We redeuce the number of runs.
 	</span><span class="attr">#[pov_mode = Measured]
@@ -4962,17 +4991,17 @@
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, bytes)
 
 	<span class="comment">// We assume that every instantiate sends at least the minimum balance.
-	// This is a slow call: We redeuce the number of runs.
+	// This is a slow call: we reduce the number of runs.
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>seal_instantiate {
-		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS / <span class="number">2</span>;
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">1 </span>.. API_BENCHMARK_RUNS / <span class="number">2</span>;
 		<span class="kw">let </span>hashes = (<span class="number">0</span>..r)
 			.map(|i| {
 				<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 					memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 					call_body: <span class="prelude-val">Some</span>(body::plain(<span class="macro">vec!</span>[
-						<span class="comment">// we need to add this in order to make contracts unique
-						// so that they can be deployed from the same sender
+						<span class="comment">// We need to add this in order to make contracts unique,
+						// so that they can be deployed from the same sender.
 						</span>Instruction::I32Const(i <span class="kw">as </span>i32),
 						Instruction::Drop,
 						Instruction::End,
@@ -4985,27 +5014,24 @@
 			.collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt;()<span class="question-mark">?</span>;
 		<span class="kw">let </span>hash_len = hashes.get(<span class="number">0</span>).map(|x| x.encode().len()).unwrap_or(<span class="number">0</span>);
 		<span class="kw">let </span>hashes_bytes = hashes.iter().flat_map(|x| x.encode()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="kw">let </span>hashes_len = hashes_bytes.len();
+		<span class="kw">let </span>hashes_len = <span class="kw-2">&amp;</span>hashes_bytes.len();
 		<span class="kw">let </span>value = Pallet::&lt;T&gt;::min_balance();
 		<span class="macro">assert!</span>(value &gt; <span class="number">0u32</span>.into());
 		<span class="kw">let </span>value_bytes = value.encode();
-		<span class="kw">let </span>value_len = value_bytes.len();
+		<span class="kw">let </span>value_len = BalanceOf::&lt;T&gt;::max_encoded_len();
 		<span class="kw">let </span>addr_len = T::AccountId::max_encoded_len();
-
-		<span class="comment">// offsets where to place static data in contract memory
-		</span><span class="kw">let </span>value_offset = <span class="number">0</span>;
-		<span class="kw">let </span>hashes_offset = value_offset + value_len;
+		<span class="comment">// Offsets where to place static data in contract memory.
+		</span><span class="kw">let </span>hashes_offset = value_len;
 		<span class="kw">let </span>addr_len_offset = hashes_offset + hashes_len;
 		<span class="kw">let </span>addr_offset = addr_len_offset + addr_len;
-
 		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
 			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
 			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
-				module: <span class="string">&quot;seal0&quot;</span>,
-				name: <span class="string">&quot;seal_instantiate&quot;</span>,
+				module: <span class="string">&quot;seal2&quot;</span>,
+				name: <span class="string">&quot;instantiate&quot;</span>,
 				params: <span class="macro">vec!</span>[
 					ValueType::I32,
-					ValueType::I32,
+					ValueType::I64,
 					ValueType::I64,
 					ValueType::I32,
 					ValueType::I32,
@@ -5022,7 +5048,7 @@
 			}],
 			data_segments: <span class="macro">vec!</span>[
 				DataSegment {
-					offset: value_offset <span class="kw">as </span>u32,
+					offset: <span class="number">0</span>,
 					value: value_bytes,
 				},
 				DataSegment {
@@ -5036,10 +5062,10 @@
 			],
 			call_body: <span class="prelude-val">Some</span>(body::repeated_dyn(r, <span class="macro">vec!</span>[
 				Counter(hashes_offset <span class="kw">as </span>u32, hash_len <span class="kw">as </span>u32), <span class="comment">// code_hash_ptr
-				</span>Regular(Instruction::I32Const(hash_len <span class="kw">as </span>i32)), <span class="comment">// code_hash_len
-				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// gas
-				</span>Regular(Instruction::I32Const(value_offset <span class="kw">as </span>i32)), <span class="comment">// value_ptr
-				</span>Regular(Instruction::I32Const(value_len <span class="kw">as </span>i32)), <span class="comment">// value_len
+				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// ref_time weight
+				</span>Regular(Instruction::I64Const(<span class="number">0</span>)), <span class="comment">// proof_size weight
+				</span>Regular(Instruction::I32Const(SENTINEL <span class="kw">as </span>i32)), <span class="comment">// deposit limit ptr: use parent&#39;s limit
+				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// value_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// input_data_len
 				</span>Regular(Instruction::I32Const(addr_offset <span class="kw">as </span>i32)), <span class="comment">// address_ptr
@@ -5047,7 +5073,7 @@
 				</span>Regular(Instruction::I32Const(SENTINEL <span class="kw">as </span>i32)), <span class="comment">// output_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// output_len_ptr
 				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// salt_ptr
-				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// salt_ptr_len
+				</span>Regular(Instruction::I32Const(<span class="number">0</span>)), <span class="comment">// salt_len_ptr
 				</span>Regular(Instruction::Call(<span class="number">0</span>)),
 				Regular(Instruction::Drop),
 			])),

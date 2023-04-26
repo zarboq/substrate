@@ -3216,6 +3216,12 @@
 <a href="#3216" id="3216">3216</a>
 <a href="#3217" id="3217">3217</a>
 <a href="#3218" id="3218">3218</a>
+<a href="#3219" id="3219">3219</a>
+<a href="#3220" id="3220">3220</a>
+<a href="#3221" id="3221">3221</a>
+<a href="#3222" id="3222">3222</a>
+<a href="#3223" id="3223">3223</a>
+<a href="#3224" id="3224">3224</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3588,7 +3594,7 @@
 		gas::GasMeter,
 		storage::WriteOutcome,
 		tests::{RuntimeCall, Test, ALICE, BOB},
-		BalanceOf, CodeHash, Error, OldWeight, Pallet <span class="kw">as </span>Contracts,
+		BalanceOf, CodeHash, Error, Pallet <span class="kw">as </span>Contracts,
 	};
 	<span class="kw">use </span>assert_matches::assert_matches;
 	<span class="kw">use </span>frame_support::{
@@ -3688,6 +3694,7 @@
 		<span class="kw">fn </span>call(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			_gas_limit: Weight,
+			_deposit_limit: BalanceOf&lt;<span class="self">Self</span>::T&gt;,
 			to: AccountIdOf&lt;<span class="self">Self</span>::T&gt;,
 			value: u64,
 			data: Vec&lt;u8&gt;,
@@ -3707,6 +3714,7 @@
 		<span class="kw">fn </span>instantiate(
 			<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 			gas_limit: Weight,
+			_deposit_limit: BalanceOf&lt;<span class="self">Self</span>::T&gt;,
 			code_hash: CodeHash&lt;Test&gt;,
 			value: u64,
 			data: Vec&lt;u8&gt;,
@@ -3805,7 +3813,11 @@
 			<span class="number">16_384
 		</span>}
 		<span class="kw">fn </span>get_weight_price(<span class="kw-2">&amp;</span><span class="self">self</span>, weight: Weight) -&gt; BalanceOf&lt;<span class="self">Self</span>::T&gt; {
-			BalanceOf::&lt;<span class="self">Self</span>::T&gt;::from(<span class="number">1312_u32</span>).saturating_mul(weight.ref_time().into())
+			BalanceOf::&lt;<span class="self">Self</span>::T&gt;::from(<span class="number">1312_u32</span>)
+				.saturating_mul(weight.ref_time().into())
+				.saturating_add(
+					BalanceOf::&lt;<span class="self">Self</span>::T&gt;::from(<span class="number">103_u32</span>).saturating_mul(weight.proof_size()),
+				)
 		}
 		<span class="kw">fn </span>schedule(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Schedule&lt;<span class="self">Self</span>::T&gt; {
 			<span class="kw-2">&amp;</span><span class="self">self</span>.schedule
@@ -4807,7 +4819,7 @@
 
 	<span class="kw">const </span>CODE_GAS_PRICE: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
-	(import &quot;seal0&quot; &quot;seal_weight_to_fee&quot; (func $seal_weight_to_fee (param i64 i32 i32)))
+	(import &quot;seal1&quot; &quot;weight_to_fee&quot; (func $seal_weight_to_fee (param i64 i64 i32 i32)))
 	(import &quot;env&quot; &quot;memory&quot; (memory 1 1))
 
 	;; size of our buffer is 32 bytes
@@ -4824,7 +4836,7 @@
 
 	(func (export &quot;call&quot;)
 		;; This stores the gas price in the buffer
-		(call $seal_weight_to_fee (i64.const 2) (i32.const 0) (i32.const 32))
+		(call $seal_weight_to_fee (i64.const 2) (i64.const 1) (i32.const 0) (i32.const 32))
 
 		;; assert len == 8
 		(call $assert
@@ -4834,11 +4846,11 @@
 			)
 		)
 
-		;; assert that contents of the buffer is equal to the i64 value of 2 * 1312.
+		;; assert that contents of the buffer is equal to the i64 value of 2 * 1312 + 103 = 2727.
 		(call $assert
 			(i64.eq
 				(i64.load (i32.const 0))
-				(i64.const 2624)
+				(i64.const 2727)
 			)
 		)
 	)
@@ -4853,12 +4865,12 @@
 
 	<span class="kw">const </span>CODE_GAS_LEFT: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
 (module
-	(import &quot;seal0&quot; &quot;seal_gas_left&quot; (func $seal_gas_left (param i32 i32)))
+	(import &quot;seal1&quot; &quot;gas_left&quot; (func $seal_gas_left (param i32 i32)))
 	(import &quot;seal0&quot; &quot;seal_return&quot; (func $seal_return (param i32 i32 i32)))
 	(import &quot;env&quot; &quot;memory&quot; (memory 1 1))
 
-	;; size of our buffer is 32 bytes
-	(data (i32.const 32) &quot;\20&quot;)
+	;; Make output buffer size 20 bytes
+	(data (i32.const 20) &quot;\14&quot;)
 
 	(func $assert (param i32)
 		(block $ok
@@ -4870,19 +4882,19 @@
 	)
 
 	(func (export &quot;call&quot;)
-		;; This stores the gas left in the buffer
-		(call $seal_gas_left (i32.const 0) (i32.const 32))
+		;; This stores the weight left to the buffer
+		(call $seal_gas_left (i32.const 0) (i32.const 20))
 
-		;; assert len == 8
+		;; Assert len &lt;= 16 (max encoded Weight len)
 		(call $assert
-			(i32.eq
-				(i32.load (i32.const 32))
-				(i32.const 8)
+			(i32.le_u
+				(i32.load (i32.const 20))
+				(i32.const 16)
 			)
 		)
 
-		;; return gas left
-		(call $seal_return (i32.const 0) (i32.const 0) (i32.const 8))
+		;; Return weight left and its encoded value len
+		(call $seal_return (i32.const 0) (i32.const 0) (i32.load (i32.const 20)))
 
 		(unreachable)
 	)
@@ -4897,11 +4909,11 @@
 
 		<span class="kw">let </span>output = execute(CODE_GAS_LEFT, <span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>ext).unwrap();
 
-		<span class="kw">let </span>gas_left = OldWeight::decode(<span class="kw-2">&amp;mut &amp;*</span>output.data).unwrap();
+		<span class="kw">let </span>weight_left = Weight::decode(<span class="kw-2">&amp;mut &amp;*</span>output.data).unwrap();
 		<span class="kw">let </span>actual_left = ext.gas_meter.gas_left();
-		<span class="comment">// TODO: account for proof size weight
-		</span><span class="macro">assert!</span>(gas_left &lt; gas_limit.ref_time(), <span class="string">&quot;gas_left must be less than initial&quot;</span>);
-		<span class="macro">assert!</span>(gas_left &gt; actual_left.ref_time(), <span class="string">&quot;gas_left must be greater than final&quot;</span>);
+
+		<span class="macro">assert!</span>(weight_left.all_lt(gas_limit), <span class="string">&quot;gas_left must be less than initial&quot;</span>);
+		<span class="macro">assert!</span>(weight_left.all_gt(actual_left), <span class="string">&quot;gas_left must be greater than final&quot;</span>);
 	}
 
 	<span class="doccomment">/// Test that [`frame_support::weights::OldWeight`] en/decodes the same as our

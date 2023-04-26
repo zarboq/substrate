@@ -803,6 +803,44 @@
 <a href="#803" id="803">803</a>
 <a href="#804" id="804">804</a>
 <a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -828,7 +866,7 @@
 };
 <span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>frame_support::{
-	dispatch::DispatchError,
+	dispatch::{fmt::Debug, DispatchError},
 	ensure,
 	traits::{
 		tokens::{Fortitude::Polite, Preservation::Protect, WithdrawConsequence},
@@ -837,7 +875,10 @@
 	DefaultNoBound, RuntimeDebugNoBound,
 };
 <span class="kw">use </span>pallet_contracts_primitives::StorageDeposit <span class="kw">as </span>Deposit;
-<span class="kw">use </span>sp_runtime::{traits::Saturating, FixedPointNumber, FixedU128};
+<span class="kw">use </span>sp_runtime::{
+	traits::{Saturating, Zero},
+	FixedPointNumber, FixedU128,
+};
 <span class="kw">use </span>sp_std::{marker::PhantomData, vec::Vec};
 
 <span class="doccomment">/// Deposit that uses the native currency&#39;s balance type.
@@ -901,17 +942,24 @@
 </span><span class="kw">pub trait </span>State: private::Sealed {}
 
 <span class="doccomment">/// State parameter that constitutes a meter that is in its root state.
-</span><span class="kw">pub enum </span>Root {}
+</span><span class="attr">#[derive(Default, Debug)]
+</span><span class="kw">pub struct </span>Root;
 
 <span class="doccomment">/// State parameter that constitutes a meter that is in its nested state.
-</span><span class="kw">pub enum </span>Nested {}
+/// Its value indicates whether the nested meter has its own limit.
+</span><span class="attr">#[derive(DefaultNoBound, RuntimeDebugNoBound)]
+</span><span class="kw">pub enum </span>Nested {
+	<span class="attr">#[default]
+	</span>DerivedLimit,
+	OwnLimit,
+}
 
 <span class="kw">impl </span>State <span class="kw">for </span>Root {}
 <span class="kw">impl </span>State <span class="kw">for </span>Nested {}
 
 <span class="doccomment">/// A type that allows the metering of consumed or freed storage of a single contract call stack.
 </span><span class="attr">#[derive(DefaultNoBound, RuntimeDebugNoBound)]
-</span><span class="kw">pub struct </span>RawMeter&lt;T: Config, E, S: State&gt; {
+</span><span class="kw">pub struct </span>RawMeter&lt;T: Config, E, S: State + Default + Debug&gt; {
 	<span class="doccomment">/// The limit of how much balance this meter is allowed to consume.
 	</span>limit: BalanceOf&lt;T&gt;,
 	<span class="doccomment">/// The amount of balance that was used in this meter and all of its already absorbed children.
@@ -923,8 +971,10 @@
 	/// We only have one charge per contract hence the size of this vector is
 	/// limited by the maximum call depth.
 	</span>charges: Vec&lt;Charge&lt;T&gt;&gt;,
-	<span class="doccomment">/// Type parameters are only used in impls.
-	</span>_phantom: PhantomData&lt;(E, S)&gt;,
+	<span class="doccomment">/// We store the nested state to determine if it has a special limit for sub-call.
+	</span>nested: S,
+	<span class="doccomment">/// Type parameter only used in impls.
+	</span>_phantom: PhantomData&lt;E&gt;,
 }
 
 <span class="doccomment">/// This type is used to describe a storage change when charging from the meter.
@@ -1019,6 +1069,9 @@
 /// this we can do all the refunds before doing any charge. This way a plain account can use
 /// more deposit than it has balance as along as it is covered by a refund. This
 /// essentially makes the order of storage changes irrelevant with regard to the deposit system.
+/// The only exception is when a special (tougher) deposit limit is specified for a cross-contract
+/// call. In that case the limit is enforced once the call is returned, rolling it back if
+/// exhausted.
 </span><span class="attr">#[derive(RuntimeDebugNoBound, Clone)]
 </span><span class="kw">struct </span>Charge&lt;T: Config&gt; {
 	deposit_account: DepositAccount&lt;T&gt;,
@@ -1060,16 +1113,24 @@
 <span class="kw">where
 	</span>T: Config,
 	E: Ext&lt;T&gt;,
-	S: State,
+	S: State + Default + Debug,
 {
-	<span class="doccomment">/// Create a new child that has its `limit` set to whatever is remaining of it.
+	<span class="doccomment">/// Create a new child that has its `limit`.
+	/// Passing `0` as the limit is interpreted as to take whatever is remaining from its parent.
 	///
 	/// This is called whenever a new subcall is initiated in order to track the storage
 	/// usage for this sub call separately. This is necessary because we want to exchange balance
 	/// with the current contract we are interacting with.
-	</span><span class="kw">pub fn </span>nested(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawMeter&lt;T, E, Nested&gt; {
+	</span><span class="kw">pub fn </span>nested(<span class="kw-2">&amp;</span><span class="self">self</span>, limit: BalanceOf&lt;T&gt;) -&gt; RawMeter&lt;T, E, Nested&gt; {
 		<span class="macro">debug_assert!</span>(<span class="self">self</span>.is_alive());
-		RawMeter { limit: <span class="self">self</span>.available(), ..Default::default() }
+		<span class="comment">// If a special limit is specified higher than it is available,
+		// we want to enforce the lesser limit to the nested meter, to fail in the sub-call.
+		</span><span class="kw">let </span>limit = <span class="self">self</span>.available().min(limit);
+		<span class="kw">if </span>limit.is_zero() {
+			RawMeter { limit: <span class="self">self</span>.available(), ..Default::default() }
+		} <span class="kw">else </span>{
+			RawMeter { limit, nested: Nested::OwnLimit, ..Default::default() }
+		}
 	}
 
 	<span class="doccomment">/// Absorb a child that was spawned to handle a sub call.
@@ -1202,7 +1263,7 @@
 		</span><span class="self">self</span>.total_deposit = deposit.clone();
 		info.storage_base_deposit = deposit.charge_or_zero();
 
-		<span class="comment">// Usually, deposit charges are deferred to be able to coalesce them with refunds.
+		<span class="comment">// Normally, deposit charges are deferred to be able to coalesce them with refunds.
 		// However, we need to charge immediately so that the account is created before
 		// charges possibly below the ed are collected and fail.
 		</span>E::charge(
@@ -1234,8 +1295,10 @@
 	///
 	/// # Note
 	///
-	/// We only need to call this **once** for every call stack and not for every cross contract
-	/// call. Hence this is only called when the last call frame returns.
+	/// We normally need to call this **once** for every call stack and not for every cross contract
+	/// call. However, if a dedicated limit is specified for a sub-call, this needs to be called
+	/// once the sub-call has returned. For this, the [`Self::enforce_subcall_limit`] wrapper is
+	/// used.
 	</span><span class="kw">pub fn </span>enforce_limit(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>ContractInfo&lt;T&gt;&gt;,
@@ -1253,6 +1316,18 @@
 		}
 		<span class="prelude-val">Ok</span>(())
 	}
+
+	<span class="doccomment">/// This is a wrapper around [`Self::enforce_limit`] to use on the exit from a sub-call to
+	/// enforce its special limit if needed.
+	</span><span class="kw">pub fn </span>enforce_subcall_limit(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>ContractInfo&lt;T&gt;&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
+		<span class="kw">match </span><span class="self">self</span>.nested {
+			Nested::OwnLimit =&gt; <span class="self">self</span>.enforce_limit(info),
+			Nested::DerivedLimit =&gt; <span class="prelude-val">Ok</span>(()),
+		}
+	}
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Ext&lt;T&gt; <span class="kw">for </span>ReservingExt {
@@ -1267,7 +1342,8 @@
 		</span><span class="kw">let </span>max = T::Currency::reducible_balance(origin, Protect, Polite)
 			.saturating_sub(min_leftover)
 			.saturating_sub(Pallet::&lt;T&gt;::min_balance());
-		<span class="kw">let </span>limit = limit.unwrap_or(max);
+		<span class="kw">let </span>default = max.min(T::DefaultDepositLimit::get());
+		<span class="kw">let </span>limit = limit.unwrap_or(default);
 		<span class="macro">ensure!</span>(
 			limit &lt;= max &amp;&amp;
 				<span class="macro">matches!</span>(T::Currency::can_withdraw(origin, limit), WithdrawConsequence::Success),
@@ -1478,7 +1554,7 @@
 		<span class="macro">assert_eq!</span>(meter.available(), <span class="number">1_000</span>);
 
 		<span class="comment">// an empty charge does not create a `Charge` entry
-		</span><span class="kw">let </span><span class="kw-2">mut </span>nested0 = meter.nested();
+		</span><span class="kw">let </span><span class="kw-2">mut </span>nested0 = meter.nested(BalanceOf::&lt;Test&gt;::zero());
 		nested0.charge(<span class="kw-2">&amp;</span>Default::default());
 		meter.absorb(nested0, DepositAccount(BOB), <span class="prelude-val">None</span>);
 
@@ -1500,7 +1576,7 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>nested0_info =
 			new_info(StorageInfo { bytes: <span class="number">100</span>, items: <span class="number">5</span>, bytes_deposit: <span class="number">100</span>, items_deposit: <span class="number">10 </span>});
-		<span class="kw">let </span><span class="kw-2">mut </span>nested0 = meter.nested();
+		<span class="kw">let </span><span class="kw-2">mut </span>nested0 = meter.nested(BalanceOf::&lt;Test&gt;::zero());
 		nested0.charge(<span class="kw-2">&amp;</span>Diff {
 			bytes_added: <span class="number">108</span>,
 			bytes_removed: <span class="number">5</span>,
@@ -1511,13 +1587,13 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>nested1_info =
 			new_info(StorageInfo { bytes: <span class="number">100</span>, items: <span class="number">10</span>, bytes_deposit: <span class="number">100</span>, items_deposit: <span class="number">20 </span>});
-		<span class="kw">let </span><span class="kw-2">mut </span>nested1 = nested0.nested();
+		<span class="kw">let </span><span class="kw-2">mut </span>nested1 = nested0.nested(BalanceOf::&lt;Test&gt;::zero());
 		nested1.charge(<span class="kw-2">&amp;</span>Diff { items_removed: <span class="number">5</span>, ..Default::default() });
 		nested0.absorb(nested1, DepositAccount(CHARLIE), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>nested1_info));
 
 		<span class="kw">let </span><span class="kw-2">mut </span>nested2_info =
 			new_info(StorageInfo { bytes: <span class="number">100</span>, items: <span class="number">7</span>, bytes_deposit: <span class="number">100</span>, items_deposit: <span class="number">20 </span>});
-		<span class="kw">let </span><span class="kw-2">mut </span>nested2 = nested0.nested();
+		<span class="kw">let </span><span class="kw-2">mut </span>nested2 = nested0.nested(BalanceOf::&lt;Test&gt;::zero());
 		nested2.charge(<span class="kw-2">&amp;</span>Diff { items_removed: <span class="number">7</span>, ..Default::default() });
 		nested0.absorb(nested2, DepositAccount(CHARLIE), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>nested2_info));
 
@@ -1565,7 +1641,7 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>meter = TestMeter::new(<span class="kw-2">&amp;</span>ALICE, <span class="prelude-val">Some</span>(<span class="number">1_000</span>), <span class="number">0</span>).unwrap();
 		<span class="macro">assert_eq!</span>(meter.available(), <span class="number">1_000</span>);
 
-		<span class="kw">let </span><span class="kw-2">mut </span>nested0 = meter.nested();
+		<span class="kw">let </span><span class="kw-2">mut </span>nested0 = meter.nested(BalanceOf::&lt;Test&gt;::zero());
 		nested0.charge(<span class="kw-2">&amp;</span>Diff {
 			bytes_added: <span class="number">5</span>,
 			bytes_removed: <span class="number">1</span>,
@@ -1576,7 +1652,7 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>nested1_info =
 			new_info(StorageInfo { bytes: <span class="number">100</span>, items: <span class="number">10</span>, bytes_deposit: <span class="number">100</span>, items_deposit: <span class="number">20 </span>});
-		<span class="kw">let </span><span class="kw-2">mut </span>nested1 = nested0.nested();
+		<span class="kw">let </span><span class="kw-2">mut </span>nested1 = nested0.nested(BalanceOf::&lt;Test&gt;::zero());
 		nested1.charge(<span class="kw-2">&amp;</span>Diff { items_removed: <span class="number">5</span>, ..Default::default() });
 		nested1.charge(<span class="kw-2">&amp;</span>Diff { bytes_added: <span class="number">20</span>, ..Default::default() });
 		nested1.terminate(<span class="kw-2">&amp;</span>nested1_info);

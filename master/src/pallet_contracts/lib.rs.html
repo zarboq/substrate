@@ -1353,6 +1353,10 @@
 <a href="#1353" id="1353">1353</a>
 <a href="#1354" id="1354">1354</a>
 <a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
+<a href="#1357" id="1357">1357</a>
+<a href="#1358" id="1358">1358</a>
+<a href="#1359" id="1359">1359</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1370,9 +1374,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="doccomment">//! # Contract Pallet
+</span><span class="doccomment">//! # Contracts Pallet
 //!
-//! The Contract module provides functionality for the runtime to deploy and execute WebAssembly
+//! The Contracts module provides functionality for the runtime to deploy and execute WebAssembly
 //! smart-contracts.
 //!
 //! - [`Config`]
@@ -1428,7 +1432,7 @@
 //!
 //! ## Usage
 //!
-//! The Contract module is a work in progress. The following examples show how this Contract module
+//! The Contracts module is a work in progress. The following examples show how this module
 //! can be used to instantiate and call contracts.
 //!
 //! * [`ink!`](https://use.ink) is
@@ -1620,6 +1624,10 @@
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>DepositPerByte: Get&lt;BalanceOf&lt;<span class="self">Self</span>&gt;&gt;;
 
+		<span class="doccomment">/// Fallback value to limit the storage deposit if it&#39;s not being set by the caller.
+		</span><span class="attr">#[pallet::constant]
+		</span><span class="kw">type </span>DefaultDepositLimit: Get&lt;BalanceOf&lt;<span class="self">Self</span>&gt;&gt;;
+
 		<span class="doccomment">/// The amount of balance a caller has to pay for each storage item.
 		///
 		/// # Note
@@ -1670,8 +1678,8 @@
 		}
 
 		<span class="kw">fn </span>integrity_test() {
-			<span class="comment">// Total runtime memory is expected to have 128Mb upper limit
-			</span><span class="kw">const </span>MAX_RUNTIME_MEM: u32 = <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">128</span>;
+			<span class="comment">// Total runtime memory limit
+			</span><span class="kw">let </span>max_runtime_mem: u32 = T::Schedule::get().limits.runtime_memory;
 			<span class="comment">// Memory limits for a single contract:
 			// Value stack size: 1Mb per contract, default defined in wasmi
 			</span><span class="kw">const </span>MAX_STACK_SIZE: u32 = <span class="number">1024 </span>* <span class="number">1024</span>;
@@ -1705,10 +1713,10 @@
 			// This gives us the following formula:
 			//
 			// `(MaxCodeLen * 18 * 4 + MAX_STACK_SIZE + max_heap_size) * max_call_depth &lt;
-			// MAX_RUNTIME_MEM/2`
+			// max_runtime_mem/2`
 			//
 			// Hence the upper limit for the `MaxCodeLen` can be defined as follows:
-			</span><span class="kw">let </span>code_len_limit = MAX_RUNTIME_MEM
+			</span><span class="kw">let </span>code_len_limit = max_runtime_mem
 				.saturating_div(<span class="number">2</span>)
 				.saturating_div(max_call_depth)
 				.saturating_sub(max_heap_size)
