@@ -904,6 +904,8 @@
 <a href="#904" id="904">904</a>
 <a href="#905" id="905">905</a>
 <a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1396,7 +1398,9 @@
 			<span class="kw">return </span><span class="bool-val">true
 		</span>}
 		<span class="self">Self</span>::account(who).free.checked_sub(<span class="kw-2">&amp;</span>value).map_or(<span class="bool-val">false</span>, |new_balance| {
-			<span class="self">Self</span>::ensure_can_withdraw(who, value, WithdrawReasons::RESERVE, new_balance).is_ok()
+			new_balance &gt;= T::ExistentialDeposit::get() &amp;&amp;
+				<span class="self">Self</span>::ensure_can_withdraw(who, value, WithdrawReasons::RESERVE, new_balance)
+					.is_ok()
 		})
 	}
 

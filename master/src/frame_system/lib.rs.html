@@ -1726,6 +1726,18 @@
 <a href="#1726" id="1726">1726</a>
 <a href="#1727" id="1727">1727</a>
 <a href="#1728" id="1728">1728</a>
+<a href="#1729" id="1729">1729</a>
+<a href="#1730" id="1730">1730</a>
+<a href="#1731" id="1731">1731</a>
+<a href="#1732" id="1732">1732</a>
+<a href="#1733" id="1733">1733</a>
+<a href="#1734" id="1734">1734</a>
+<a href="#1735" id="1735">1735</a>
+<a href="#1736" id="1736">1736</a>
+<a href="#1737" id="1737">1737</a>
+<a href="#1738" id="1738">1738</a>
+<a href="#1739" id="1739">1739</a>
+<a href="#1740" id="1740">1740</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2950,10 +2962,20 @@
 		a.consumers == <span class="number">0 </span>|| a.providers &gt; <span class="number">1
 	</span>}
 
-	<span class="doccomment">/// True if the account has at least one provider reference.
-	</span><span class="kw">pub fn </span>can_inc_consumer(who: <span class="kw-2">&amp;</span>T::AccountId) -&gt; bool {
+	<span class="doccomment">/// True if the account has at least one provider reference and adding `amount` consumer
+	/// references would not take it above the the maximum.
+	</span><span class="kw">pub fn </span>can_accrue_consumers(who: <span class="kw-2">&amp;</span>T::AccountId, amount: u32) -&gt; bool {
 		<span class="kw">let </span>a = Account::&lt;T&gt;::get(who);
-		a.providers &gt; <span class="number">0 </span>&amp;&amp; a.consumers &lt; T::MaxConsumers::max_consumers()
+		<span class="kw">match </span>a.consumers.checked_add(amount) {
+			<span class="prelude-val">Some</span>(c) =&gt; a.providers &gt; <span class="number">0 </span>&amp;&amp; c &lt;= T::MaxConsumers::max_consumers(),
+			<span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
+		}
+	}
+
+	<span class="doccomment">/// True if the account has at least one provider reference and fewer consumer references than
+	/// the maximum.
+	</span><span class="kw">pub fn </span>can_inc_consumer(who: <span class="kw-2">&amp;</span>T::AccountId) -&gt; bool {
+		<span class="self">Self</span>::can_accrue_consumers(who, <span class="number">1</span>)
 	}
 
 	<span class="doccomment">/// Deposits an event into this block&#39;s event record.
@@ -3407,8 +3429,10 @@
 		<span class="kw">let </span>is_default = account.data == T::AccountData::default();
 		<span class="kw">let </span><span class="kw-2">mut </span>some_data = <span class="kw">if </span>is_default { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(account.data) };
 		<span class="kw">let </span>result = f(<span class="kw-2">&amp;mut </span>some_data)<span class="question-mark">?</span>;
-		<span class="kw">if </span><span class="self">Self</span>::providers(k) &gt; <span class="number">0 </span>{
+		<span class="kw">if </span><span class="self">Self</span>::providers(k) &gt; <span class="number">0 </span>|| <span class="self">Self</span>::sufficients(k) &gt; <span class="number">0 </span>{
 			Account::&lt;T&gt;::mutate(k, |a| a.data = some_data.unwrap_or_default());
+		} <span class="kw">else </span>{
+			Account::&lt;T&gt;::remove(k)
 		}
 		<span class="prelude-val">Ok</span>(result)
 	}
