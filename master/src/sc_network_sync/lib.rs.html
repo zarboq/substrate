@@ -4212,11 +4212,6 @@
 <a href="#4212" id="4212">4212</a>
 <a href="#4213" id="4213">4213</a>
 <a href="#4214" id="4214">4214</a>
-<a href="#4215" id="4215">4215</a>
-<a href="#4216" id="4216">4216</a>
-<a href="#4217" id="4217">4217</a>
-<a href="#4218" id="4218">4218</a>
-<a href="#4219" id="4219">4219</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -6927,9 +6922,7 @@
 				<span class="kw">break
 			</span>}
 
-			<span class="kw">if </span>result.is_err() {
-				has_error = <span class="bool-val">true</span>;
-			}
+			has_error |= result.is_err();
 
 			<span class="kw">match </span>result {
 				<span class="prelude-val">Ok</span>(BlockImportStatus::ImportedKnown(number, who)) =&gt;
@@ -6940,9 +6933,7 @@
 					<span class="kw">if </span>aux.clear_justification_requests {
 						<span class="macro">trace!</span>(
 							target: <span class="string">&quot;sync&quot;</span>,
-							<span class="string">&quot;Block imported clears all pending justification requests {}: {:?}&quot;</span>,
-							number,
-							hash,
+							<span class="string">&quot;Block imported clears all pending justification requests {number}: {hash:?}&quot;</span>,
 						);
 						<span class="self">self</span>.clear_justification_requests();
 					}
@@ -6950,9 +6941,7 @@
 					<span class="kw">if </span>aux.needs_justification {
 						<span class="macro">trace!</span>(
 							target: <span class="string">&quot;sync&quot;</span>,
-							<span class="string">&quot;Block imported but requires justification {}: {:?}&quot;</span>,
-							number,
-							hash,
+							<span class="string">&quot;Block imported but requires justification {number}: {hash:?}&quot;</span>,
 						);
 						<span class="self">self</span>.request_justification(<span class="kw-2">&amp;</span>hash, number);
 					}
@@ -7012,25 +7001,26 @@
 						output.push(<span class="prelude-val">Err</span>(BadPeer(peer, rep::INCOMPLETE_HEADER)));
 						output.extend(<span class="self">self</span>.restart());
 					},
-				<span class="prelude-val">Err</span>(BlockImportError::VerificationFailed(who, e)) =&gt;
+				<span class="prelude-val">Err</span>(BlockImportError::VerificationFailed(who, e)) =&gt; {
+					<span class="kw">let </span>extra_message =
+						who.map_or_else(|| <span class="string">&quot;&quot;</span>.into(), |peer| <span class="macro">format!</span>(<span class="string">&quot; received from ({peer})&quot;</span>));
+
+					<span class="macro">warn!</span>(
+						target: <span class="string">&quot;sync&quot;</span>,
+						<span class="string">&quot;💔 Verification failed for block {hash:?}{extra_message}: {e:?}&quot;</span>,
+					);
+
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(peer) = who {
-						<span class="macro">warn!</span>(
-							target: <span class="string">&quot;sync&quot;</span>,
-							<span class="string">&quot;💔 Verification failed for block {:?} received from peer: {}, {:?}&quot;</span>,
-							hash,
-							peer,
-							e,
-						);
 						output.push(<span class="prelude-val">Err</span>(BadPeer(peer, rep::VERIFICATION_FAIL)));
-						output.extend(<span class="self">self</span>.restart());
-					},
+					}
+
+					output.extend(<span class="self">self</span>.restart());
+				},
 				<span class="prelude-val">Err</span>(BlockImportError::BadBlock(who)) =&gt;
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(peer) = who {
 						<span class="macro">warn!</span>(
 							target: <span class="string">&quot;sync&quot;</span>,
-							<span class="string">&quot;💔 Block {:?} received from peer {} has been blacklisted&quot;</span>,
-							hash,
-							peer,
+							<span class="string">&quot;💔 Block {hash:?} received from peer {peer} has been blacklisted&quot;</span>,
 						);
 						output.push(<span class="prelude-val">Err</span>(BadPeer(peer, rep::BAD_BLOCK)));
 					},
@@ -7038,10 +7028,10 @@
 					<span class="comment">// This may happen if the chain we were requesting upon has been discarded
 					// in the meantime because other chain has been finalized.
 					// Don&#39;t mark it as bad as it still may be synced if explicitly requested.
-					</span><span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Obsolete block {:?}&quot;</span>, hash);
+					</span><span class="macro">trace!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;Obsolete block {hash:?}&quot;</span>);
 				},
 				e @ <span class="prelude-val">Err</span>(BlockImportError::UnknownParent) | e @ <span class="prelude-val">Err</span>(BlockImportError::Other(<span class="kw">_</span>)) =&gt; {
-					<span class="macro">warn!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;💔 Error importing block {:?}: {}&quot;</span>, hash, e.unwrap_err());
+					<span class="macro">warn!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;💔 Error importing block {hash:?}: {}&quot;</span>, e.unwrap_err());
 					<span class="self">self</span>.state_sync = <span class="prelude-val">None</span>;
 					<span class="self">self</span>.warp_sync = <span class="prelude-val">None</span>;
 					output.extend(<span class="self">self</span>.restart());
