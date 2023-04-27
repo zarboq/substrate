@@ -190,6 +190,32 @@
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -212,7 +238,9 @@
 </span><span class="doccomment">//! A crate which contains primitives that are useful for implementation that uses staking
 //! approaches in general. Definitions related to sessions, slashing, etc go here.
 
-</span><span class="kw">use </span>sp_runtime::{DispatchError, DispatchResult};
+</span><span class="kw">use </span>scale_info::TypeInfo;
+<span class="kw">use </span>sp_core::RuntimeDebug;
+<span class="kw">use </span>sp_runtime::{DispatchError, DispatchResult};
 <span class="kw">use </span>sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 
 <span class="kw">pub mod </span>offence;
@@ -222,6 +250,18 @@
 
 <span class="doccomment">/// Counter for the number of eras that have passed.
 </span><span class="kw">pub type </span>EraIndex = u32;
+
+<span class="doccomment">/// Representation of the status of a staker.
+</span><span class="attr">#[derive(RuntimeDebug, TypeInfo)]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone))]
+</span><span class="kw">pub enum </span>StakerStatus&lt;AccountId&gt; {
+	<span class="doccomment">/// Chilling.
+	</span>Idle,
+	<span class="doccomment">/// Declaring desire in validate, i.e author blocks.
+	</span>Validator,
+	<span class="doccomment">/// Declaring desire to nominate, delegate, or generally approve of the given set of others.
+	</span>Nominator(Vec&lt;AccountId&gt;),
+}
 
 <span class="doccomment">/// Trait describing something that implements a hook for any operations to perform when a staker is
 /// slashed.
@@ -249,7 +289,7 @@
 
 <span class="doccomment">/// A struct that reflects stake that an account has in the staking system. Provides a set of
 /// methods to operate on it&#39;s properties. Aimed at making `StakingInterface` more concise.
-</span><span class="kw">pub struct </span>Stake&lt;T: StakingInterface + <span class="question-mark">?</span>Sized&gt; {
+</span><span class="kw">pub struct </span>Stake&lt;Balance&gt; {
 	<span class="doccomment">/// The total stake that `stash` has in the staking system. This includes the
 	/// `active` stake, and any funds currently in the process of unbonding via
 	/// [`StakingInterface::unbond`].
@@ -259,10 +299,10 @@
 	/// This is only guaranteed to reflect the amount locked by the staking system. If there are
 	/// non-staking locks on the bonded pair&#39;s balance this amount is going to be larger in
 	/// reality.
-	</span><span class="kw">pub </span>total: T::Balance,
+	</span><span class="kw">pub </span>total: Balance,
 	<span class="doccomment">/// The total amount of the stash&#39;s balance that will be at stake in any forthcoming
 	/// rounds.
-	</span><span class="kw">pub </span>active: T::Balance,
+	</span><span class="kw">pub </span>active: Balance,
 }
 
 <span class="doccomment">/// A generic representation of a staking implementation.
@@ -301,22 +341,26 @@
 	/// This should be the latest planned era that the staking system knows about.
 	</span><span class="kw">fn </span>current_era() -&gt; EraIndex;
 
-	<span class="doccomment">/// Returns the stake of `who`.
-	</span><span class="kw">fn </span>stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;Stake&lt;<span class="self">Self</span>&gt;, DispatchError&gt;;
+	<span class="doccomment">/// Returns the [`Stake`] of `who`.
+	</span><span class="kw">fn </span>stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;Stake&lt;<span class="self">Self</span>::Balance&gt;, DispatchError&gt;;
 
-	<span class="kw">fn </span>total_stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
+	<span class="doccomment">/// Total stake of a staker, `Err` if not a staker.
+	</span><span class="kw">fn </span>total_stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
 		<span class="self">Self</span>::stake(who).map(|s| s.total)
 	}
 
-	<span class="kw">fn </span>active_stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
+	<span class="doccomment">/// Total active portion of a staker&#39;s [`Stake`], `Err` if not a staker.
+	</span><span class="kw">fn </span>active_stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
 		<span class="self">Self</span>::stake(who).map(|s| s.active)
 	}
 
-	<span class="kw">fn </span>is_unbonding(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;bool, DispatchError&gt; {
+	<span class="doccomment">/// Returns whether a staker is unbonding, `Err` if not a staker at all.
+	</span><span class="kw">fn </span>is_unbonding(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;bool, DispatchError&gt; {
 		<span class="self">Self</span>::stake(who).map(|s| s.active != s.total)
 	}
 
-	<span class="kw">fn </span>fully_unbond(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult {
+	<span class="doccomment">/// Returns whether a staker is FULLY unbonding, `Err` if not a staker at all.
+	</span><span class="kw">fn </span>fully_unbond(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; DispatchResult {
 		<span class="self">Self</span>::unbond(who, <span class="self">Self</span>::stake(who)<span class="question-mark">?</span>.active)
 	}
 
@@ -366,9 +410,17 @@
 	<span class="doccomment">/// Checks whether an account `staker` has been exposed in an era.
 	</span><span class="kw">fn </span>is_exposed_in_era(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId, era: <span class="kw-2">&amp;</span>EraIndex) -&gt; bool;
 
+	<span class="doccomment">/// Return the status of the given staker, `None` if not staked at all.
+	</span><span class="kw">fn </span>status(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;StakerStatus&lt;<span class="self">Self</span>::AccountId&gt;, DispatchError&gt;;
+
 	<span class="doccomment">/// Get the nominations of a stash, if they are a nominator, `None` otherwise.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
-	</span><span class="kw">fn </span>nominations(who: <span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;<span class="self">Self</span>::AccountId&gt;&gt;;
+	</span><span class="kw">fn </span>nominations(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;<span class="self">Self</span>::AccountId&gt;&gt; {
+		<span class="kw">match </span><span class="self">Self</span>::status(who) {
+			<span class="prelude-val">Ok</span>(StakerStatus::Nominator(t)) =&gt; <span class="prelude-val">Some</span>(t),
+			<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+		}
+	}
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">fn </span>add_era_stakers(

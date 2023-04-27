@@ -1800,6 +1800,32 @@
 <a href="#1800" id="1800">1800</a>
 <a href="#1801" id="1801">1801</a>
 <a href="#1802" id="1802">1802</a>
+<a href="#1803" id="1803">1803</a>
+<a href="#1804" id="1804">1804</a>
+<a href="#1805" id="1805">1805</a>
+<a href="#1806" id="1806">1806</a>
+<a href="#1807" id="1807">1807</a>
+<a href="#1808" id="1808">1808</a>
+<a href="#1809" id="1809">1809</a>
+<a href="#1810" id="1810">1810</a>
+<a href="#1811" id="1811">1811</a>
+<a href="#1812" id="1812">1812</a>
+<a href="#1813" id="1813">1813</a>
+<a href="#1814" id="1814">1814</a>
+<a href="#1815" id="1815">1815</a>
+<a href="#1816" id="1816">1816</a>
+<a href="#1817" id="1817">1817</a>
+<a href="#1818" id="1818">1818</a>
+<a href="#1819" id="1819">1819</a>
+<a href="#1820" id="1820">1820</a>
+<a href="#1821" id="1821">1821</a>
+<a href="#1822" id="1822">1822</a>
+<a href="#1823" id="1823">1823</a>
+<a href="#1824" id="1824">1824</a>
+<a href="#1825" id="1825">1825</a>
+<a href="#1826" id="1826">1826</a>
+<a href="#1827" id="1827">1827</a>
+<a href="#1828" id="1828">1828</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1824,6 +1850,7 @@
 	SortedListProvider, VoteWeight, VoterOf,
 };
 <span class="kw">use </span>frame_support::{
+	defensive,
 	dispatch::WithPostDispatchInfo,
 	pallet_prelude::<span class="kw-2">*</span>,
 	traits::{
@@ -3410,7 +3437,7 @@
 		<span class="self">Self</span>::current_era().unwrap_or(Zero::zero())
 	}
 
-	<span class="kw">fn </span>stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;Stake&lt;<span class="self">Self</span>&gt;, DispatchError&gt; {
+	<span class="kw">fn </span>stake(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;Stake&lt;BalanceOf&lt;T&gt;&gt;, DispatchError&gt; {
 		<span class="self">Self</span>::bonded(who)
 			.and_then(|c| <span class="self">Self</span>::ledger(c))
 			.map(|l| Stake { total: l.total, active: l.active })
@@ -3464,8 +3491,33 @@
 		<span class="self">Self</span>::nominate(RawOrigin::Signed(ctrl).into(), targets)
 	}
 
+	<span class="kw">fn </span>status(
+		who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;sp_staking::StakerStatus&lt;<span class="self">Self</span>::AccountId&gt;, DispatchError&gt; {
+		<span class="kw">let </span>is_bonded = <span class="self">Self</span>::bonded(who).is_some();
+		<span class="kw">if </span>!is_bonded {
+			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::NotStash.into())
+		}
+
+		<span class="kw">let </span>is_validator = Validators::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>who);
+		<span class="kw">let </span>is_nominator = Nominators::&lt;T&gt;::get(<span class="kw-2">&amp;</span>who);
+
+		<span class="kw">use </span>sp_staking::StakerStatus;
+		<span class="kw">match </span>(is_validator, is_nominator.is_some()) {
+			(<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; <span class="prelude-val">Ok</span>(StakerStatus::Idle),
+			(<span class="bool-val">true</span>, <span class="bool-val">false</span>) =&gt; <span class="prelude-val">Ok</span>(StakerStatus::Validator),
+			(<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="prelude-val">Ok</span>(StakerStatus::Nominator(
+				is_nominator.expect(<span class="string">&quot;is checked above; qed&quot;</span>).targets.into_inner(),
+			)),
+			(<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; {
+				<span class="macro">defensive!</span>(<span class="string">&quot;cannot be both validators and nominator&quot;</span>);
+				<span class="prelude-val">Err</span>(Error::&lt;T&gt;::BadState.into())
+			},
+		}
+	}
+
 	<span class="macro">sp_staking::runtime_benchmarks_enabled! </span>{
-		<span class="kw">fn </span>nominations(who: <span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;T::AccountId&gt;&gt; {
+		<span class="kw">fn </span>nominations(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;T::AccountId&gt;&gt; {
 			Nominators::&lt;T&gt;::get(who).map(|n| n.targets.into_inner())
 		}
 
