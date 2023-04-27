@@ -1432,6 +1432,23 @@
 <a href="#1432" id="1432">1432</a>
 <a href="#1433" id="1433">1433</a>
 <a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1474,7 +1491,7 @@
 <span class="kw">pub use </span>sp_io::TestExternalities;
 <span class="kw">use </span>sp_runtime::{traits::Block <span class="kw">as </span>BlockT, StateVersion};
 <span class="kw">use </span>std::{
-	cmp::max,
+	cmp::{max, min},
 	fs,
 	num::NonZeroUsize,
 	ops::{Deref, DerefMut},
@@ -1591,10 +1608,14 @@
 			} <span class="kw">else </span>{
 				uri.clone()
 			};
-			<span class="kw">let </span>http_client = HttpClientBuilder::default().build(uri).map_err(|e| {
-				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;error: {:?}&quot;</span>, e);
-				<span class="string">&quot;failed to build http client&quot;
-			</span>})<span class="question-mark">?</span>;
+			<span class="kw">let </span>http_client = HttpClientBuilder::default()
+				.max_request_body_size(u32::MAX)
+				.request_timeout(std::time::Duration::from_secs(<span class="number">60 </span>* <span class="number">5</span>))
+				.build(uri)
+				.map_err(|e| {
+					<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;error: {:?}&quot;</span>, e);
+					<span class="string">&quot;failed to build http client&quot;
+				</span>})<span class="question-mark">?</span>;
 
 			<span class="kw-2">*</span><span class="self">self </span>= <span class="self">Self</span>::RemoteClient(Arc::new(http_client))
 		}
@@ -1757,6 +1778,7 @@
 	</span>B::Hash: DeserializeOwned,
 	B::Header: DeserializeOwned,
 {
+	<span class="kw">const </span>DEFAULT_PARALLELISM: usize = <span class="number">4</span>;
 	<span class="kw">const </span>BATCH_SIZE_INCREASE_FACTOR: f32 = <span class="number">1.10</span>;
 	<span class="kw">const </span>BATCH_SIZE_DECREASE_FACTOR: f32 = <span class="number">0.50</span>;
 	<span class="kw">const </span>INITIAL_BATCH_SIZE: usize = <span class="number">5000</span>;
@@ -1764,9 +1786,21 @@
 	</span><span class="kw">const </span>DEFAULT_KEY_DOWNLOAD_PAGE: u32 = <span class="number">1000</span>;
 
 	<span class="doccomment">/// Get the number of threads to use.
+	/// Cap the number of threads. Performance improvement beyond a small number of threads is
+	/// negligible, and too many threads can create issues with the HttpClient.
 	</span><span class="kw">fn </span>threads() -&gt; NonZeroUsize {
-		thread::available_parallelism()
-			.unwrap_or(NonZeroUsize::new(<span class="number">1usize</span>).expect(<span class="string">&quot;4 is non-zero; qed&quot;</span>))
+		<span class="kw">let </span>avaliable = thread::available_parallelism()
+			.unwrap_or(NonZeroUsize::new(<span class="number">1usize</span>).expect(<span class="string">&quot;1 is non-zero; qed&quot;</span>))
+			.get();
+		<span class="macro">assert!</span>(avaliable &gt; <span class="number">0</span>, <span class="string">&quot;avaliable parallelism must be greater than 0&quot;</span>);
+
+		<span class="kw">let </span>requested: usize = <span class="kw">match </span>std::env::var(<span class="string">&quot;TRY_RUNTIME_MAX_THREADS&quot;</span>) {
+			<span class="prelude-val">Ok</span>(n) =&gt; n.parse::&lt;usize&gt;().expect(<span class="string">&quot;TRY_RUNTIME_MAX_THREADS must be a number&quot;</span>),
+			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="self">Self</span>::DEFAULT_PARALLELISM,
+		};
+		<span class="macro">assert!</span>(requested &gt; <span class="number">0</span>, <span class="string">&quot;TRY_RUNTIME_MAX_THREADS must be greater than 0&quot;</span>);
+		<span class="kw">return </span>NonZeroUsize::new(min(requested, avaliable))
+			.expect(<span class="string">&quot;requested and avaliable are non-zero; qed&quot;</span>)
 	}
 
 	<span class="kw">async fn </span>rpc_get_storage(

@@ -505,6 +505,79 @@
 <a href="#505" id="505">505</a>
 <a href="#506" id="506">506</a>
 <a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -617,8 +690,8 @@
 					<span class="kw">let </span>m = hooks::HooksDef::try_from(span, index, item)<span class="question-mark">?</span>;
 					hooks = <span class="prelude-val">Some</span>(m);
 				},
-				<span class="prelude-val">Some</span>(PalletAttr::RuntimeCall(span)) <span class="kw">if </span>call.is_none() =&gt;
-					call = <span class="prelude-val">Some</span>(call::CallDef::try_from(span, index, item, dev_mode)<span class="question-mark">?</span>),
+				<span class="prelude-val">Some</span>(PalletAttr::RuntimeCall(cw, span)) <span class="kw">if </span>call.is_none() =&gt;
+					call = <span class="prelude-val">Some</span>(call::CallDef::try_from(span, index, item, dev_mode, cw)<span class="question-mark">?</span>),
 				<span class="prelude-val">Some</span>(PalletAttr::Error(span)) <span class="kw">if </span>error.is_none() =&gt;
 					error = <span class="prelude-val">Some</span>(error::ErrorDef::try_from(span, index, item)<span class="question-mark">?</span>),
 				<span class="prelude-val">Some</span>(PalletAttr::RuntimeEvent(span)) <span class="kw">if </span>event.is_none() =&gt;
@@ -909,6 +982,7 @@
 </span><span class="kw">mod </span>keyword {
 	<span class="macro">syn::custom_keyword!</span>(origin);
 	<span class="macro">syn::custom_keyword!</span>(call);
+	<span class="macro">syn::custom_keyword!</span>(weight);
 	<span class="macro">syn::custom_keyword!</span>(event);
 	<span class="macro">syn::custom_keyword!</span>(config);
 	<span class="macro">syn::custom_keyword!</span>(hooks);
@@ -932,7 +1006,44 @@
 	Config(proc_macro2::Span),
 	Pallet(proc_macro2::Span),
 	Hooks(proc_macro2::Span),
-	RuntimeCall(proc_macro2::Span),
+	<span class="doccomment">/// A `#[pallet::call]` with optional attributes to specialize the behaviour.
+	///
+	/// # Attributes
+	///
+	/// Each attribute `attr` can take the form of `#[pallet::call(attr = …)]` or
+	/// `#[pallet::call(attr(…))]`. The possible attributes are:
+	///
+	/// ## `weight`
+	///
+	/// Can be used to reduce the repetitive weight annotation in the trivial case. It accepts one
+	/// argument that is expected to be an implementation of the `WeightInfo` or something that
+	/// behaves syntactically equivalent. This allows to annotate a `WeightInfo` for all the calls.
+	/// Now each call does not need to specify its own `#[pallet::weight]` but can instead use the
+	/// one from the `#[pallet::call]` definition. So instead of having to write it on each call:
+	///
+	/// ```ignore
+	/// #[pallet::call]
+	/// impl&lt;T: Config&gt; Pallet&lt;T&gt; {
+	///     #[pallet::weight(T::WeightInfo::create())]
+	///     pub fn create(
+	/// ```
+	/// you can now omit it on the call itself, if the name of the weigh function matches the call:
+	///
+	/// ```ignore
+	/// #[pallet::call(weight = &lt;T as crate::Config&gt;::WeightInfo)]
+	/// impl&lt;T: Config&gt; Pallet&lt;T&gt; {
+	///     pub fn create(
+	/// ```
+	///
+	/// It is possible to use this syntax together with instantiated pallets by using `Config&lt;I&gt;`
+	/// instead.
+	///
+	/// ### Dev Mode
+	///
+	/// Normally the `dev_mode` sets all weights of calls without a `#[pallet::weight]` annotation
+	/// to zero. Now when there is a `weight` attribute on the `#[pallet::call]`, then that is used
+	/// instead of the zero weight. So to say: it works together with `dev_mode`.
+	</span>RuntimeCall(<span class="prelude-ty">Option</span>&lt;InheritedCallWeightAttr&gt;, proc_macro2::Span),
 	Error(proc_macro2::Span),
 	RuntimeEvent(proc_macro2::Span),
 	RuntimeOrigin(proc_macro2::Span),
@@ -952,7 +1063,7 @@
 			<span class="self">Self</span>::Config(span) =&gt; <span class="kw-2">*</span>span,
 			<span class="self">Self</span>::Pallet(span) =&gt; <span class="kw-2">*</span>span,
 			<span class="self">Self</span>::Hooks(span) =&gt; <span class="kw-2">*</span>span,
-			<span class="self">Self</span>::RuntimeCall(span) =&gt; <span class="kw-2">*</span>span,
+			<span class="self">Self</span>::RuntimeCall(<span class="kw">_</span>, span) =&gt; <span class="kw-2">*</span>span,
 			<span class="self">Self</span>::Error(span) =&gt; <span class="kw-2">*</span>span,
 			<span class="self">Self</span>::RuntimeEvent(span) =&gt; <span class="kw-2">*</span>span,
 			<span class="self">Self</span>::RuntimeOrigin(span) =&gt; <span class="kw-2">*</span>span,
@@ -984,7 +1095,12 @@
 		} <span class="kw">else if </span>lookahead.peek(keyword::hooks) {
 			<span class="prelude-val">Ok</span>(PalletAttr::Hooks(content.parse::&lt;keyword::hooks&gt;()<span class="question-mark">?</span>.span()))
 		} <span class="kw">else if </span>lookahead.peek(keyword::call) {
-			<span class="prelude-val">Ok</span>(PalletAttr::RuntimeCall(content.parse::&lt;keyword::call&gt;()<span class="question-mark">?</span>.span()))
+			<span class="kw">let </span>span = content.parse::&lt;keyword::call&gt;().expect(<span class="string">&quot;peeked&quot;</span>).span();
+			<span class="kw">let </span>attr = <span class="kw">match </span>content.is_empty() {
+				<span class="bool-val">true </span>=&gt; <span class="prelude-val">None</span>,
+				<span class="bool-val">false </span>=&gt; <span class="prelude-val">Some</span>(InheritedCallWeightAttr::parse(<span class="kw-2">&amp;</span>content)<span class="question-mark">?</span>),
+			};
+			<span class="prelude-val">Ok</span>(PalletAttr::RuntimeCall(attr, span))
 		} <span class="kw">else if </span>lookahead.peek(keyword::error) {
 			<span class="prelude-val">Ok</span>(PalletAttr::Error(content.parse::&lt;keyword::error&gt;()<span class="question-mark">?</span>.span()))
 		} <span class="kw">else if </span>lookahead.peek(keyword::event) {
@@ -1010,6 +1126,36 @@
 		} <span class="kw">else </span>{
 			<span class="prelude-val">Err</span>(lookahead.error())
 		}
+	}
+}
+
+<span class="doccomment">/// The optional weight annotation on a `#[pallet::call]` like `#[pallet::call(weight($type))]`.
+</span><span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>InheritedCallWeightAttr {
+	<span class="kw">pub </span>typename: syn::Type,
+	<span class="kw">pub </span>span: proc_macro2::Span,
+}
+
+<span class="kw">impl </span>syn::parse::Parse <span class="kw">for </span>InheritedCallWeightAttr {
+	<span class="comment">// Parses `(weight($type))` or `(weight = $type)`.
+	</span><span class="kw">fn </span>parse(input: syn::parse::ParseStream) -&gt; syn::Result&lt;<span class="self">Self</span>&gt; {
+		<span class="kw">let </span>content;
+		<span class="macro">syn::parenthesized!</span>(content <span class="kw">in </span>input);
+		content.parse::&lt;keyword::weight&gt;()<span class="question-mark">?</span>;
+		<span class="kw">let </span>lookahead = content.lookahead1();
+
+		<span class="kw">let </span>buffer = <span class="kw">if </span>lookahead.peek(syn::token::Paren) {
+			<span class="kw">let </span>inner;
+			<span class="macro">syn::parenthesized!</span>(inner <span class="kw">in </span>content);
+			inner
+		} <span class="kw">else if </span>lookahead.peek(<span class="macro">syn::Token!</span>[=]) {
+			content.parse::&lt;<span class="macro">syn::Token!</span>[=]&gt;().expect(<span class="string">&quot;peeked&quot;</span>);
+			content
+		} <span class="kw">else </span>{
+			<span class="kw">return </span><span class="prelude-val">Err</span>(lookahead.error())
+		};
+
+		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ typename: buffer.parse()<span class="question-mark">?</span>, span: input.span() })
 	}
 }
 </code></pre></div>

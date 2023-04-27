@@ -324,6 +324,31 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -341,7 +366,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">super</span>::helper;
+</span><span class="kw">use super</span>::{helper, InheritedCallWeightAttr};
 <span class="kw">use </span>frame_support_procedural_tools::get_doc_literals;
 <span class="kw">use </span>quote::ToTokens;
 <span class="kw">use </span>std::collections::HashMap;
@@ -372,6 +397,23 @@
 	</span><span class="kw">pub </span>attr_span: proc_macro2::Span,
 	<span class="doccomment">/// Docs, specified on the impl Block.
 	</span><span class="kw">pub </span>docs: Vec&lt;syn::Expr&gt;,
+	<span class="doccomment">/// The optional `weight` attribute on the `pallet::call`.
+	</span><span class="kw">pub </span>inherited_call_weight: <span class="prelude-ty">Option</span>&lt;InheritedCallWeightAttr&gt;,
+}
+
+<span class="doccomment">/// The weight of a call.
+</span><span class="attr">#[derive(Clone)]
+</span><span class="kw">pub enum </span>CallWeightDef {
+	<span class="doccomment">/// Explicitly set on the call itself with `#[pallet::weight(…)]`. This value is used.
+	</span>Immediate(syn::Expr),
+
+	<span class="doccomment">/// The default value that should be set for dev-mode pallets. Usually zero.
+	</span>DevModeDefault,
+
+	<span class="doccomment">/// Inherits whatever value is configured on the pallet level.
+	///
+	/// The concrete value is not known at this point.
+	</span>Inherited,
 }
 
 <span class="doccomment">/// Definition of dispatchable typically: `#[weight...] fn foo(origin .., param1: ...) -&gt; ..`
@@ -381,8 +423,8 @@
 	</span><span class="kw">pub </span>name: syn::Ident,
 	<span class="doccomment">/// Information on args: `(is_compact, name, type)`
 	</span><span class="kw">pub </span>args: Vec&lt;(bool, syn::Ident, Box&lt;syn::Type&gt;)&gt;,
-	<span class="doccomment">/// Weight formula.
-	</span><span class="kw">pub </span>weight: syn::Expr,
+	<span class="doccomment">/// Weight for the call.
+	</span><span class="kw">pub </span>weight: CallWeightDef,
 	<span class="doccomment">/// Call index of the dispatchable.
 	</span><span class="kw">pub </span>call_index: u8,
 	<span class="doccomment">/// Whether an explicit call index was specified.
@@ -477,6 +519,7 @@
 		index: usize,
 		item: <span class="kw-2">&amp;mut </span>syn::Item,
 		dev_mode: bool,
+		inherited_call_weight: <span class="prelude-ty">Option</span>&lt;InheritedCallWeightAttr&gt;,
 	) -&gt; syn::Result&lt;<span class="self">Self</span>&gt; {
 		<span class="kw">let </span>item_impl = <span class="kw">if let </span>syn::Item::Impl(item) = item {
 			item
@@ -554,17 +597,23 @@
 					weight_attrs.push(FunctionAttr::Weight(empty_weight));
 				}
 
-				<span class="kw">if </span>weight_attrs.len() != <span class="number">1 </span>{
-					<span class="kw">let </span>msg = <span class="kw">if </span>weight_attrs.is_empty() {
-						<span class="string">&quot;Invalid pallet::call, requires weight attribute i.e. `#[pallet::weight($expr)]`&quot;
-					</span>} <span class="kw">else </span>{
-						<span class="string">&quot;Invalid pallet::call, too many weight attributes given&quot;
-					</span>};
-					<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(method.sig.span(), msg))
-				}
-				<span class="kw">let </span>weight = <span class="kw">match </span>weight_attrs.pop().unwrap() {
-					FunctionAttr::Weight(w) =&gt; w,
-					<span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;checked during creation of the let binding&quot;</span>),
+				<span class="kw">let </span>weight = <span class="kw">match </span>weight_attrs.len() {
+					<span class="number">0 </span><span class="kw">if </span>inherited_call_weight.is_some() =&gt; CallWeightDef::Inherited,
+					<span class="number">0 </span><span class="kw">if </span>dev_mode =&gt; CallWeightDef::DevModeDefault,
+					<span class="number">0 </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
+						method.sig.span(),
+						<span class="string">&quot;A pallet::call requires either a concrete `#[pallet::weight($expr)]` or an 
+						inherited weight from the `#[pallet:call(weight($type))]` attribute, but 
+						none were given.&quot;</span>,
+					)),
+					<span class="number">1 </span>=&gt; <span class="kw">match </span>weight_attrs.pop().unwrap() {
+						FunctionAttr::Weight(w) =&gt; CallWeightDef::Immediate(w),
+						<span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;checked during creation of the let binding&quot;</span>),
+					},
+					<span class="kw">_ </span>=&gt; {
+						<span class="kw">let </span>msg = <span class="string">&quot;Invalid pallet::call, too many weight attributes given&quot;</span>;
+						<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(method.sig.span(), msg))
+					},
 				};
 
 				<span class="kw">if </span>call_idx_attrs.len() &gt; <span class="number">1 </span>{
@@ -647,6 +696,7 @@
 			methods,
 			where_clause: item_impl.generics.where_clause.clone(),
 			docs: get_doc_literals(<span class="kw-2">&amp;</span>item_impl.attrs),
+			inherited_call_weight,
 		})
 	}
 }

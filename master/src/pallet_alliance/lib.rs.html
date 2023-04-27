@@ -1129,16 +1129,6 @@
 <a href="#1129" id="1129">1129</a>
 <a href="#1130" id="1130">1130</a>
 <a href="#1131" id="1131">1131</a>
-<a href="#1132" id="1132">1132</a>
-<a href="#1133" id="1133">1133</a>
-<a href="#1134" id="1134">1134</a>
-<a href="#1135" id="1135">1135</a>
-<a href="#1136" id="1136">1136</a>
-<a href="#1137" id="1137">1137</a>
-<a href="#1138" id="1138">1138</a>
-<a href="#1139" id="1139">1139</a>
-<a href="#1140" id="1140">1140</a>
-<a href="#1141" id="1141">1141</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1638,7 +1628,7 @@
 	</span><span class="kw">pub type </span>UnscrupulousWebsites&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; =
 		StorageValue&lt;<span class="kw">_</span>, BoundedVec&lt;UrlOf&lt;T, I&gt;, T::MaxUnscrupulousItems&gt;, ValueQuery&gt;;
 
-	<span class="attr">#[pallet::call]
+	<span class="attr">#[pallet::call(weight(&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::WeightInfo))]
 	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
 		<span class="doccomment">/// Add a new proposal to be voted on.
 		///
@@ -1790,7 +1780,6 @@
 
 		<span class="doccomment">/// Set a new IPFS CID to the alliance rule.
 		</span><span class="attr">#[pallet::call_index(<span class="number">5</span>)]
-		#[pallet::weight(T::WeightInfo::set_rule())]
 		</span><span class="kw">pub fn </span>set_rule(origin: OriginFor&lt;T&gt;, rule: Cid) -&gt; DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 
@@ -1802,7 +1791,6 @@
 
 		<span class="doccomment">/// Make an announcement of a new IPFS CID about alliance issues.
 		</span><span class="attr">#[pallet::call_index(<span class="number">6</span>)]
-		#[pallet::weight(T::WeightInfo::announce())]
 		</span><span class="kw">pub fn </span>announce(origin: OriginFor&lt;T&gt;, announcement: Cid) -&gt; DispatchResult {
 			T::AnnouncementOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 
@@ -1818,7 +1806,6 @@
 
 		<span class="doccomment">/// Remove an announcement.
 		</span><span class="attr">#[pallet::call_index(<span class="number">7</span>)]
-		#[pallet::weight(T::WeightInfo::remove_announcement())]
 		</span><span class="kw">pub fn </span>remove_announcement(origin: OriginFor&lt;T&gt;, announcement: Cid) -&gt; DispatchResult {
 			T::AnnouncementOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 
@@ -1836,7 +1823,6 @@
 
 		<span class="doccomment">/// Submit oneself for candidacy. A fixed deposit is reserved.
 		</span><span class="attr">#[pallet::call_index(<span class="number">8</span>)]
-		#[pallet::weight(T::WeightInfo::join_alliance())]
 		</span><span class="kw">pub fn </span>join_alliance(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 
@@ -1873,7 +1859,6 @@
 		<span class="doccomment">/// A Fellow can nominate someone to join the alliance as an Ally. There is no deposit
 		/// required from the nominator or nominee.
 		</span><span class="attr">#[pallet::call_index(<span class="number">9</span>)]
-		#[pallet::weight(T::WeightInfo::nominate_ally())]
 		</span><span class="kw">pub fn </span>nominate_ally(origin: OriginFor&lt;T&gt;, who: AccountIdLookupOf&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>nominator = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(<span class="self">Self</span>::has_voting_rights(<span class="kw-2">&amp;</span>nominator), Error::&lt;T, I&gt;::NoVotingRights);
@@ -1898,7 +1883,6 @@
 
 		<span class="doccomment">/// Elevate an Ally to Fellow.
 		</span><span class="attr">#[pallet::call_index(<span class="number">10</span>)]
-		#[pallet::weight(T::WeightInfo::elevate_ally())]
 		</span><span class="kw">pub fn </span>elevate_ally(origin: OriginFor&lt;T&gt;, ally: AccountIdLookupOf&lt;T&gt;) -&gt; DispatchResult {
 			T::MembershipManager::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>ally = T::Lookup::lookup(ally)<span class="question-mark">?</span>;
@@ -1915,7 +1899,6 @@
 		<span class="doccomment">/// As a member, give a retirement notice and start a retirement period required to pass in
 		/// order to retire.
 		</span><span class="attr">#[pallet::call_index(<span class="number">11</span>)]
-		#[pallet::weight(T::WeightInfo::give_retirement_notice())]
 		</span><span class="kw">pub fn </span>give_retirement_notice(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>role = <span class="self">Self</span>::member_role_of(<span class="kw-2">&amp;</span>who).ok_or(Error::&lt;T, I&gt;::NotMember)<span class="question-mark">?</span>;
@@ -1938,7 +1921,6 @@
 		/// This can only be done once you have called `give_retirement_notice` and the
 		/// `RetirementPeriod` has passed.
 		</span><span class="attr">#[pallet::call_index(<span class="number">12</span>)]
-		#[pallet::weight(T::WeightInfo::retire())]
 		</span><span class="kw">pub fn </span>retire(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>retirement_period_end = RetiringMembers::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>who)
@@ -1961,7 +1943,6 @@
 
 		<span class="doccomment">/// Kick a member from the Alliance and slash its deposit.
 		</span><span class="attr">#[pallet::call_index(<span class="number">13</span>)]
-		#[pallet::weight(T::WeightInfo::kick_member())]
 		</span><span class="kw">pub fn </span>kick_member(origin: OriginFor&lt;T&gt;, who: AccountIdLookupOf&lt;T&gt;) -&gt; DispatchResult {
 			T::MembershipManager::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>member = T::Lookup::lookup(who)<span class="question-mark">?</span>;
@@ -2063,7 +2044,6 @@
 		/// who do not want to leave the Alliance but do not have the capacity to participate
 		/// operationally for some time.
 		</span><span class="attr">#[pallet::call_index(<span class="number">17</span>)]
-		#[pallet::weight(T::WeightInfo::abdicate_fellow_status())]
 		</span><span class="kw">pub fn </span>abdicate_fellow_status(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>role = <span class="self">Self</span>::member_role_of(<span class="kw-2">&amp;</span>who).ok_or(Error::&lt;T, I&gt;::NotMember)<span class="question-mark">?</span>;
