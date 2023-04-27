@@ -1222,6 +1222,12 @@
 <a href="#1222" id="1222">1222</a>
 <a href="#1223" id="1223">1223</a>
 <a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1470,6 +1476,10 @@
 				<span class="self">self</span>.members.len(),
 				<span class="string">&quot;Members cannot contain duplicate accounts.&quot;
 			</span>);
+			<span class="macro">assert!</span>(
+				<span class="self">self</span>.members.len() &lt;= T::MaxMembers::get() <span class="kw">as </span>usize,
+				<span class="string">&quot;Members length cannot exceed MaxMembers.&quot;</span>,
+			);
 
 			Pallet::&lt;T, I&gt;::initialize_members(<span class="kw-2">&amp;</span><span class="self">self</span>.members)
 		}
@@ -2331,6 +2341,8 @@
 	<span class="kw">fn </span>initialize_members(members: <span class="kw-2">&amp;</span>[T::AccountId]) {
 		<span class="kw">if </span>!members.is_empty() {
 			<span class="macro">assert!</span>(&lt;Members&lt;T, I&gt;&gt;::get().is_empty(), <span class="string">&quot;Members are already initialized!&quot;</span>);
+			<span class="kw">let </span><span class="kw-2">mut </span>members = members.to_vec();
+			members.sort();
 			&lt;Members&lt;T, I&gt;&gt;::put(members);
 		}
 	}
