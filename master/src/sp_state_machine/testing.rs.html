@@ -412,6 +412,17 @@
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
 <a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -544,6 +555,17 @@
 	<span class="doccomment">/// A shared reference type around the offchain worker storage.
 	</span><span class="kw">pub fn </span>offchain_db(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; TestPersistentOffchainDB {
 		<span class="self">self</span>.offchain_db.clone()
+	}
+
+	<span class="doccomment">/// Batch insert key/values into backend
+	</span><span class="kw">pub fn </span>batch_insert&lt;I&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, kvs: I)
+	<span class="kw">where
+		</span>I: IntoIterator&lt;Item = (StorageKey, StorageValue)&gt;,
+	{
+		<span class="self">self</span>.backend.insert(
+			<span class="prelude-val">Some</span>((<span class="prelude-val">None</span>, kvs.into_iter().map(|(k, v)| (k, <span class="prelude-val">Some</span>(v))).collect())),
+			<span class="self">self</span>.state_version,
+		);
 	}
 
 	<span class="doccomment">/// Insert key/value into backend
