@@ -30,8 +30,8 @@ pub use tests::MockExt;
 pub use crate::wasm::{
 	prepare::TryInstantiate,
 	runtime::{
-		AllowDeprecatedInterface, AllowUnstableInterface, CallFlags, Environment, ReturnCode,
-		Runtime, RuntimeCosts,
+		AllowDeprecatedInterface, AllowUnstableInterface, CallFlags, Environment, Memory,
+		ReturnCode, RiscvMemory, Runtime, RuntimeCosts, WasmMemory,
 	},
 };
 
@@ -52,8 +52,7 @@ use frame_support::{
 use sp_core::Get;
 use sp_runtime::RuntimeDebug;
 use sp_std::prelude::*;
-use wasmi::{Instance, Linker, Memory, MemoryType, StackLimits, Store};
-
+use wasmi::{Instance, Linker, Memory as WasmiMemory, MemoryType, StackLimits, Store};
 const BYTES_PER_PAGE: usize = 64 * 1024;
 
 /// Validated Wasm module ready for execution.
@@ -205,7 +204,7 @@ impl<T: Config> WasmBlob<T> {
 		determinism: Determinism,
 		stack_limits: StackLimits,
 		allow_deprecated: AllowDeprecatedInterface,
-	) -> Result<(Store<H>, Memory, Instance), &'static str>
+	) -> Result<(Store<H>, WasmiMemory, Instance), &'static str>
 	where
 		E: Environment<H>,
 	{
@@ -231,7 +230,7 @@ impl<T: Config> WasmBlob<T> {
 		let qed = "We checked the limits versus our Schedule,
 					 which specifies the max amount of memory pages
 					 well below u16::MAX; qed";
-		let memory = Memory::new(
+		let memory = WasmiMemory::new(
 			&mut store,
 			MemoryType::new(memory_limits.0, Some(memory_limits.1)).expect(qed),
 		)
@@ -408,9 +407,8 @@ impl<T: Config> Executable<T> for WasmBlob<T> {
 		input_data: Vec<u8>,
 	) -> ExecResult {
 		let code = self.code.as_slice();
-		// Instantiate the Wasm module to the engine.
-		let runtime = Runtime::new(ext, input_data);
 		let schedule = <T>::Schedule::get();
+		let runtime = Runtime::<_, WasmMemory<E::T>>::new(ext, input_data);
 		let (mut store, memory, instance) = Self::instantiate::<crate::wasm::runtime::Env, _>(
 			code,
 			runtime,

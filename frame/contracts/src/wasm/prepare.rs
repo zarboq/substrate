@@ -353,6 +353,7 @@ mod tests {
 		exec::Ext,
 		schedule::Limits,
 		tests::{Test, ALICE},
+		wasm::{Memory, RiscvMemory},
 	};
 	use pallet_contracts_proc_macro::define_env;
 	use std::fmt;
