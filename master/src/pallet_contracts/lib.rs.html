@@ -1366,6 +1366,63 @@
 <a href="#1366" id="1366">1366</a>
 <a href="#1367" id="1367">1367</a>
 <a href="#1368" id="1368">1368</a>
+<a href="#1369" id="1369">1369</a>
+<a href="#1370" id="1370">1370</a>
+<a href="#1371" id="1371">1371</a>
+<a href="#1372" id="1372">1372</a>
+<a href="#1373" id="1373">1373</a>
+<a href="#1374" id="1374">1374</a>
+<a href="#1375" id="1375">1375</a>
+<a href="#1376" id="1376">1376</a>
+<a href="#1377" id="1377">1377</a>
+<a href="#1378" id="1378">1378</a>
+<a href="#1379" id="1379">1379</a>
+<a href="#1380" id="1380">1380</a>
+<a href="#1381" id="1381">1381</a>
+<a href="#1382" id="1382">1382</a>
+<a href="#1383" id="1383">1383</a>
+<a href="#1384" id="1384">1384</a>
+<a href="#1385" id="1385">1385</a>
+<a href="#1386" id="1386">1386</a>
+<a href="#1387" id="1387">1387</a>
+<a href="#1388" id="1388">1388</a>
+<a href="#1389" id="1389">1389</a>
+<a href="#1390" id="1390">1390</a>
+<a href="#1391" id="1391">1391</a>
+<a href="#1392" id="1392">1392</a>
+<a href="#1393" id="1393">1393</a>
+<a href="#1394" id="1394">1394</a>
+<a href="#1395" id="1395">1395</a>
+<a href="#1396" id="1396">1396</a>
+<a href="#1397" id="1397">1397</a>
+<a href="#1398" id="1398">1398</a>
+<a href="#1399" id="1399">1399</a>
+<a href="#1400" id="1400">1400</a>
+<a href="#1401" id="1401">1401</a>
+<a href="#1402" id="1402">1402</a>
+<a href="#1403" id="1403">1403</a>
+<a href="#1404" id="1404">1404</a>
+<a href="#1405" id="1405">1405</a>
+<a href="#1406" id="1406">1406</a>
+<a href="#1407" id="1407">1407</a>
+<a href="#1408" id="1408">1408</a>
+<a href="#1409" id="1409">1409</a>
+<a href="#1410" id="1410">1410</a>
+<a href="#1411" id="1411">1411</a>
+<a href="#1412" id="1412">1412</a>
+<a href="#1413" id="1413">1413</a>
+<a href="#1414" id="1414">1414</a>
+<a href="#1415" id="1415">1415</a>
+<a href="#1416" id="1416">1416</a>
+<a href="#1417" id="1417">1417</a>
+<a href="#1418" id="1418">1418</a>
+<a href="#1419" id="1419">1419</a>
+<a href="#1420" id="1420">1420</a>
+<a href="#1421" id="1421">1421</a>
+<a href="#1422" id="1422">1422</a>
+<a href="#1423" id="1423">1423</a>
+<a href="#1424" id="1424">1424</a>
+<a href="#1425" id="1425">1425</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1465,7 +1522,6 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
-
 <span class="kw">use crate</span>::{
 	exec::{AccountIdOf, ErrorOrigin, ExecError, Executable, Key, Stack <span class="kw">as </span>ExecStack},
 	gas::GasMeter,
@@ -1473,19 +1529,20 @@
 	wasm::{OwnerInfo, PrefabWasmModule, TryInstantiate},
 	weights::WeightInfo,
 };
-<span class="kw">use </span>codec::{Codec, Encode, HasCompact};
+<span class="kw">use </span>codec::{Codec, Decode, Encode, HasCompact};
 <span class="kw">use </span>environmental::<span class="kw-2">*</span>;
 <span class="kw">use </span>frame_support::{
-	dispatch::{Dispatchable, GetDispatchInfo, Pays, PostDispatchInfo},
+	dispatch::{DispatchError, Dispatchable, GetDispatchInfo, Pays, PostDispatchInfo, RawOrigin},
 	ensure,
+	error::BadOrigin,
 	traits::{
 		tokens::fungible::Inspect, ConstU32, Contains, Currency, Get, Randomness,
 		ReservableCurrency, Time,
 	},
 	weights::Weight,
-	BoundedVec, WeakBoundedVec,
+	BoundedVec, RuntimeDebugNoBound, WeakBoundedVec,
 };
-<span class="kw">use </span>frame_system::Pallet <span class="kw">as </span>System;
+<span class="kw">use </span>frame_system::{ensure_signed, pallet_prelude::OriginFor, Pallet <span class="kw">as </span>System};
 <span class="kw">use </span>pallet_contracts_primitives::{
 	Code, CodeUploadResult, CodeUploadReturnValue, ContractAccessError, ContractExecResult,
 	ContractInstantiateResult, ExecReturnValue, GetStorageResult, InstantiateReturnValue,
@@ -1952,17 +2009,15 @@
 			storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;&lt;BalanceOf&lt;T&gt; <span class="kw">as </span>codec::HasCompact&gt;::Type&gt;,
 			data: Vec&lt;u8&gt;,
 		) -&gt; DispatchResultWithPostInfo {
-			<span class="kw">let </span>gas_limit: Weight = gas_limit.into();
-			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
-			<span class="kw">let </span>dest = T::Lookup::lookup(dest)<span class="question-mark">?</span>;
 			<span class="kw">let </span>common = CommonInput {
-				origin,
+				origin: Origin::from_runtime_origin(origin)<span class="question-mark">?</span>,
 				value,
 				data,
-				gas_limit,
+				gas_limit: gas_limit.into(),
 				storage_deposit_limit: storage_deposit_limit.map(Into::into),
 				debug_message: <span class="prelude-val">None</span>,
 			};
+			<span class="kw">let </span>dest = T::Lookup::lookup(dest)<span class="question-mark">?</span>;
 			<span class="kw">let </span><span class="kw-2">mut </span>output =
 				CallInput::&lt;T&gt; { dest, determinism: Determinism::Enforced }.run_guarded(common);
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>(retval) = <span class="kw-2">&amp;</span>output.result {
@@ -2013,12 +2068,11 @@
 			data: Vec&lt;u8&gt;,
 			salt: Vec&lt;u8&gt;,
 		) -&gt; DispatchResultWithPostInfo {
-			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>code_len = code.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>salt_len = salt.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>common = CommonInput {
-				origin,
+				origin: Origin::from_runtime_origin(origin)<span class="question-mark">?</span>,
 				value,
 				data,
 				gas_limit,
@@ -2056,11 +2110,10 @@
 			data: Vec&lt;u8&gt;,
 			salt: Vec&lt;u8&gt;,
 		) -&gt; DispatchResultWithPostInfo {
-			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>salt_len = salt.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>common = CommonInput {
-				origin,
+				origin: Origin::from_runtime_origin(origin)<span class="question-mark">?</span>,
 				value,
 				data,
 				gas_limit,
@@ -2132,8 +2185,8 @@
 		/// calls. This is because on failure all storage changes including events are
 		/// rolled back.
 		</span>Called {
-			<span class="doccomment">/// The account that called the `contract`.
-			</span>caller: T::AccountId,
+			<span class="doccomment">/// The caller of the `contract`.
+			</span>caller: Origin&lt;T&gt;,
 			<span class="doccomment">/// The contract that was called.
 			</span>contract: T::AccountId,
 		},
@@ -2292,9 +2345,38 @@
 		StorageValue&lt;<span class="kw">_</span>, DeletionQueueManager&lt;T&gt;, ValueQuery&gt;;
 }
 
+<span class="doccomment">/// The type of origins supported by the contracts pallet.
+</span><span class="attr">#[derive(Clone, Encode, Decode, PartialEq, TypeInfo, RuntimeDebugNoBound)]
+</span><span class="kw">pub enum </span>Origin&lt;T: Config&gt; {
+	Root,
+	Signed(T::AccountId),
+}
+
+<span class="kw">impl</span>&lt;T: Config&gt; Origin&lt;T&gt; {
+	<span class="doccomment">/// Creates a new Signed Caller from an AccountId.
+	</span><span class="kw">pub fn </span>from_account_id(account_id: T::AccountId) -&gt; <span class="self">Self </span>{
+		Origin::Signed(account_id)
+	}
+	<span class="doccomment">/// Creates a new Origin from a `RuntimeOrigin`.
+	</span><span class="kw">pub fn </span>from_runtime_origin(o: OriginFor&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, DispatchError&gt; {
+		<span class="kw">match </span>o.into() {
+			<span class="prelude-val">Ok</span>(RawOrigin::Root) =&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Root),
+			<span class="prelude-val">Ok</span>(RawOrigin::Signed(t)) =&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Signed(t)),
+			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(BadOrigin.into()),
+		}
+	}
+	<span class="doccomment">/// Returns the AccountId of a Signed Origin or an error if the origin is Root.
+	</span><span class="kw">pub fn </span>account_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>T::AccountId, DispatchError&gt; {
+		<span class="kw">match </span><span class="self">self </span>{
+			Origin::Signed(id) =&gt; <span class="prelude-val">Ok</span>(id),
+			Origin::Root =&gt; <span class="prelude-val">Err</span>(DispatchError::RootNotAllowed),
+		}
+	}
+}
+
 <span class="doccomment">/// Context of a contract invocation.
 </span><span class="kw">struct </span>CommonInput&lt;<span class="lifetime">&#39;a</span>, T: Config&gt; {
-	origin: T::AccountId,
+	origin: Origin&lt;T&gt;,
 	value: BalanceOf&lt;T&gt;,
 	data: Vec&lt;u8&gt;,
 	gas_limit: Weight,
@@ -2343,6 +2425,19 @@
 		</span><span class="macro">environmental!</span>(executing_contract: bool);
 
 		<span class="kw">let </span>gas_limit = common.gas_limit;
+
+		<span class="comment">// Check whether the origin is allowed here. The logic of the access rules
+		// is in the `ensure_origin`, this could vary for different implementations of this
+		// trait. For example, some actions might not allow Root origin as they could require an
+		// AccountId associated with the origin.
+		</span><span class="kw">if let </span><span class="prelude-val">Err</span>(e) = <span class="self">self</span>.ensure_origin(common.origin.clone()) {
+			<span class="kw">return </span>InternalOutput {
+				gas_meter: GasMeter::new(gas_limit),
+				storage_deposit: Default::default(),
+				result: <span class="prelude-val">Err</span>(ExecError { error: e.into(), origin: ErrorOrigin::Caller }),
+			}
+		}
+
 		executing_contract::using_once(<span class="kw-2">&amp;mut </span><span class="bool-val">false</span>, || {
 			executing_contract::with(|f| {
 				<span class="comment">// Fail if already entered contract execution
@@ -2378,6 +2473,11 @@
 		common: CommonInput&lt;T&gt;,
 		gas_meter: GasMeter&lt;T&gt;,
 	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt;;
+
+	<span class="doccomment">/// This method ensures that the given `origin` is allowed to invoke the current `Invokable`.
+	///
+	/// Called by dispatchables and public functions through the [`Invokable::run_guarded`].
+	</span><span class="kw">fn </span>ensure_origin(<span class="kw-2">&amp;</span><span class="self">self</span>, origin: Origin&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt;;
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Invokable&lt;T&gt; <span class="kw">for </span>CallInput&lt;T&gt; {
@@ -2388,8 +2488,10 @@
 		common: CommonInput&lt;T&gt;,
 		<span class="kw-2">mut </span>gas_meter: GasMeter&lt;T&gt;,
 	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
+		<span class="kw">let </span>CallInput { dest, determinism } = <span class="self">self</span>;
+		<span class="kw">let </span>CommonInput { origin, value, data, debug_message, .. } = common;
 		<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
-			<span class="kw">match </span>StorageMeter::new(<span class="kw-2">&amp;</span>common.origin, common.storage_deposit_limit, common.value) {
+			<span class="kw">match </span>StorageMeter::new(<span class="kw-2">&amp;</span>origin, common.storage_deposit_limit, common.value) {
 				<span class="prelude-val">Ok</span>(meter) =&gt; meter,
 				<span class="prelude-val">Err</span>(err) =&gt;
 					<span class="kw">return </span>InternalOutput {
@@ -2399,8 +2501,6 @@
 					},
 			};
 		<span class="kw">let </span>schedule = T::Schedule::get();
-		<span class="kw">let </span>CallInput { dest, determinism } = <span class="self">self</span>;
-		<span class="kw">let </span>CommonInput { origin, value, data, debug_message, .. } = common;
 		<span class="kw">let </span>result = ExecStack::&lt;T, PrefabWasmModule&lt;T&gt;&gt;::run_call(
 			origin.clone(),
 			dest.clone(),
@@ -2422,6 +2522,10 @@
 			},
 		}
 	}
+
+	<span class="kw">fn </span>ensure_origin(<span class="kw-2">&amp;</span><span class="self">self</span>, _origin: Origin&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
+		<span class="prelude-val">Ok</span>(())
+	}
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Invokable&lt;T&gt; <span class="kw">for </span>InstantiateInput&lt;T&gt; {
@@ -2435,12 +2539,15 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>storage_deposit = Default::default();
 		<span class="kw">let </span>try_exec = || {
 			<span class="kw">let </span>schedule = T::Schedule::get();
+			<span class="kw">let </span>InstantiateInput { salt, .. } = <span class="self">self</span>;
+			<span class="kw">let </span>CommonInput { origin: contract_origin, .. } = common;
+			<span class="kw">let </span>origin = contract_origin.account_id()<span class="question-mark">?</span>;
 			<span class="kw">let </span>(extra_deposit, executable) = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.code {
 				Code::Upload(binary) =&gt; {
 					<span class="kw">let </span>executable = PrefabWasmModule::from_code(
 						binary.clone(),
 						<span class="kw-2">&amp;</span>schedule,
-						common.origin.clone(),
+						origin.clone(),
 						Determinism::Enforced,
 						TryInstantiate::Skip,
 					)
@@ -2462,14 +2569,13 @@
 					PrefabWasmModule::from_storage(<span class="kw-2">*</span>hash, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter)<span class="question-mark">?</span>,
 				),
 			};
+			<span class="kw">let </span>contract_origin = Origin::from_account_id(origin.clone());
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = StorageMeter::new(
-				<span class="kw-2">&amp;</span>common.origin,
+				<span class="kw-2">&amp;</span>contract_origin,
 				common.storage_deposit_limit,
 				common.value.saturating_add(extra_deposit),
 			)<span class="question-mark">?</span>;
-
-			<span class="kw">let </span>InstantiateInput { salt, .. } = <span class="self">self</span>;
-			<span class="kw">let </span>CommonInput { origin, value, data, debug_message, .. } = common;
+			<span class="kw">let </span>CommonInput { value, data, debug_message, .. } = common;
 			<span class="kw">let </span>result = ExecStack::&lt;T, PrefabWasmModule&lt;T&gt;&gt;::run_instantiate(
 				origin.clone(),
 				executable,
@@ -2483,11 +2589,18 @@
 			);
 
 			storage_deposit = storage_meter
-				.try_into_deposit(<span class="kw-2">&amp;</span>origin)<span class="question-mark">?
+				.try_into_deposit(<span class="kw-2">&amp;</span>contract_origin)<span class="question-mark">?
 				</span>.saturating_add(<span class="kw-2">&amp;</span>StorageDeposit::Charge(extra_deposit));
 			result
 		};
 		InternalOutput { result: try_exec(), gas_meter, storage_deposit }
+	}
+
+	<span class="kw">fn </span>ensure_origin(<span class="kw-2">&amp;</span><span class="self">self</span>, origin: Origin&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
+		<span class="kw">match </span>origin {
+			Origin::Signed(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
+			Origin::Root =&gt; <span class="prelude-val">Err</span>(DispatchError::RootNotAllowed),
+		}
 	}
 }
 
@@ -2515,6 +2628,7 @@
 		determinism: Determinism,
 	) -&gt; ContractExecResult&lt;BalanceOf&lt;T&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+		<span class="kw">let </span>origin = Origin::from_account_id(origin);
 		<span class="kw">let </span>common = CommonInput {
 			origin,
 			value,
@@ -2557,7 +2671,7 @@
 	) -&gt; ContractInstantiateResult&lt;T::AccountId, BalanceOf&lt;T&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 		<span class="kw">let </span>common = CommonInput {
-			origin,
+			origin: Origin::from_account_id(origin),
 			value,
 			data,
 			gas_limit,

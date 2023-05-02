@@ -3231,6 +3231,28 @@
 <a href="#3231" id="3231">3231</a>
 <a href="#3232" id="3232">3232</a>
 <a href="#3233" id="3233">3233</a>
+<a href="#3234" id="3234">3234</a>
+<a href="#3235" id="3235">3235</a>
+<a href="#3236" id="3236">3236</a>
+<a href="#3237" id="3237">3237</a>
+<a href="#3238" id="3238">3238</a>
+<a href="#3239" id="3239">3239</a>
+<a href="#3240" id="3240">3240</a>
+<a href="#3241" id="3241">3241</a>
+<a href="#3242" id="3242">3242</a>
+<a href="#3243" id="3243">3243</a>
+<a href="#3244" id="3244">3244</a>
+<a href="#3245" id="3245">3245</a>
+<a href="#3246" id="3246">3246</a>
+<a href="#3247" id="3247">3247</a>
+<a href="#3248" id="3248">3248</a>
+<a href="#3249" id="3249">3249</a>
+<a href="#3250" id="3250">3250</a>
+<a href="#3251" id="3251">3251</a>
+<a href="#3252" id="3252">3252</a>
+<a href="#3253" id="3253">3253</a>
+<a href="#3254" id="3254">3254</a>
+<a href="#3255" id="3255">3255</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3765,6 +3787,28 @@
 		});
 		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
 		<span class="kw">let </span>origin = RawOrigin::Signed(instance.caller.clone());
+	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
+
+	<span class="attr">#[pov_mode = Measured]
+	</span>seal_caller_is_root {
+		<span class="kw">let </span>r <span class="kw">in </span><span class="number">0 </span>.. API_BENCHMARK_RUNS;
+
+		<span class="kw">let </span>code = WasmModule::&lt;T&gt;::from(ModuleDefinition {
+			memory: <span class="prelude-val">Some</span>(ImportedMemory::max::&lt;T&gt;()),
+			imported_functions: <span class="macro">vec!</span>[ImportedFunction {
+				module: <span class="string">&quot;seal0&quot;</span>,
+				name: <span class="string">&quot;caller_is_root&quot;</span>,
+				params: <span class="macro">vec!</span>[],
+				return_type: <span class="prelude-val">Some</span>(ValueType::I32),
+			}],
+			call_body: <span class="prelude-val">Some</span>(body::repeated(r, <span class="kw-2">&amp;</span>[
+				Instruction::Call(<span class="number">0</span>),
+				Instruction::Drop,
+			])),
+			.. Default::default()
+		});
+		<span class="kw">let </span>instance = Contract::&lt;T&gt;::new(code, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
+		<span class="kw">let </span>origin = RawOrigin::Root;
 	}: call(origin, instance.addr, <span class="number">0u32</span>.into(), Weight::MAX, <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])
 
 	<span class="attr">#[pov_mode = Measured]

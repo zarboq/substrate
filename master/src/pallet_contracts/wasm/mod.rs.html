@@ -3222,6 +3222,60 @@
 <a href="#3222" id="3222">3222</a>
 <a href="#3223" id="3223">3223</a>
 <a href="#3224" id="3224">3224</a>
+<a href="#3225" id="3225">3225</a>
+<a href="#3226" id="3226">3226</a>
+<a href="#3227" id="3227">3227</a>
+<a href="#3228" id="3228">3228</a>
+<a href="#3229" id="3229">3229</a>
+<a href="#3230" id="3230">3230</a>
+<a href="#3231" id="3231">3231</a>
+<a href="#3232" id="3232">3232</a>
+<a href="#3233" id="3233">3233</a>
+<a href="#3234" id="3234">3234</a>
+<a href="#3235" id="3235">3235</a>
+<a href="#3236" id="3236">3236</a>
+<a href="#3237" id="3237">3237</a>
+<a href="#3238" id="3238">3238</a>
+<a href="#3239" id="3239">3239</a>
+<a href="#3240" id="3240">3240</a>
+<a href="#3241" id="3241">3241</a>
+<a href="#3242" id="3242">3242</a>
+<a href="#3243" id="3243">3243</a>
+<a href="#3244" id="3244">3244</a>
+<a href="#3245" id="3245">3245</a>
+<a href="#3246" id="3246">3246</a>
+<a href="#3247" id="3247">3247</a>
+<a href="#3248" id="3248">3248</a>
+<a href="#3249" id="3249">3249</a>
+<a href="#3250" id="3250">3250</a>
+<a href="#3251" id="3251">3251</a>
+<a href="#3252" id="3252">3252</a>
+<a href="#3253" id="3253">3253</a>
+<a href="#3254" id="3254">3254</a>
+<a href="#3255" id="3255">3255</a>
+<a href="#3256" id="3256">3256</a>
+<a href="#3257" id="3257">3257</a>
+<a href="#3258" id="3258">3258</a>
+<a href="#3259" id="3259">3259</a>
+<a href="#3260" id="3260">3260</a>
+<a href="#3261" id="3261">3261</a>
+<a href="#3262" id="3262">3262</a>
+<a href="#3263" id="3263">3263</a>
+<a href="#3264" id="3264">3264</a>
+<a href="#3265" id="3265">3265</a>
+<a href="#3266" id="3266">3266</a>
+<a href="#3267" id="3267">3267</a>
+<a href="#3268" id="3268">3268</a>
+<a href="#3269" id="3269">3269</a>
+<a href="#3270" id="3270">3270</a>
+<a href="#3271" id="3271">3271</a>
+<a href="#3272" id="3272">3272</a>
+<a href="#3273" id="3273">3273</a>
+<a href="#3274" id="3274">3274</a>
+<a href="#3275" id="3275">3275</a>
+<a href="#3276" id="3276">3276</a>
+<a href="#3277" id="3277">3277</a>
+<a href="#3278" id="3278">3278</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3594,7 +3648,7 @@
 		gas::GasMeter,
 		storage::WriteOutcome,
 		tests::{RuntimeCall, Test, ALICE, BOB},
-		BalanceOf, CodeHash, Error, Pallet <span class="kw">as </span>Contracts,
+		BalanceOf, CodeHash, Error, Origin, Pallet <span class="kw">as </span>Contracts,
 	};
 	<span class="kw">use </span>assert_matches::assert_matches;
 	<span class="kw">use </span>frame_support::{
@@ -3660,6 +3714,7 @@
 		ecdsa_recover: RefCell&lt;Vec&lt;([u8; <span class="number">65</span>], [u8; <span class="number">32</span>])&gt;&gt;,
 		sr25519_verify: RefCell&lt;Vec&lt;([u8; <span class="number">64</span>], Vec&lt;u8&gt;, [u8; <span class="number">32</span>])&gt;&gt;,
 		code_hashes: Vec&lt;CodeHash&lt;Test&gt;&gt;,
+		caller: Origin&lt;Test&gt;,
 	}
 
 	<span class="doccomment">/// The call is mocked and just returns this hardcoded value.
@@ -3683,6 +3738,7 @@
 				gas_meter: GasMeter::new(Weight::from_parts(<span class="number">10_000_000_000</span>, <span class="number">10 </span>* <span class="number">1024 </span>* <span class="number">1024</span>)),
 				debug_buffer: Default::default(),
 				ecdsa_recover: Default::default(),
+				caller: Default::default(),
 				sr25519_verify: Default::default(),
 			}
 		}
@@ -3769,8 +3825,8 @@
 			}
 			<span class="prelude-val">Ok</span>(result)
 		}
-		<span class="kw">fn </span>caller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>AccountIdOf&lt;<span class="self">Self</span>::T&gt; {
-			<span class="kw-2">&amp;</span>ALICE
+		<span class="kw">fn </span>caller(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Origin&lt;<span class="self">Self</span>::T&gt; {
+			<span class="self">self</span>.caller.clone()
 		}
 		<span class="kw">fn </span>is_contract(<span class="kw-2">&amp;</span><span class="self">self</span>, _address: <span class="kw-2">&amp;</span>AccountIdOf&lt;<span class="self">Self</span>::T&gt;) -&gt; bool {
 			<span class="bool-val">true
@@ -3785,6 +3841,9 @@
 		<span class="kw">fn </span>caller_is_origin(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
 			<span class="bool-val">false
 		</span>}
+		<span class="kw">fn </span>caller_is_root(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+			<span class="kw-2">&amp;</span><span class="self">self</span>.caller == <span class="kw-2">&amp;</span>Origin::Root
+		}
 		<span class="kw">fn </span>address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>AccountIdOf&lt;<span class="self">Self</span>::T&gt; {
 			<span class="kw-2">&amp;</span>BOB
 		}
@@ -4721,6 +4780,16 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>caller() {
 		<span class="macro">assert_ok!</span>(execute(CODE_CALLER, <span class="macro">vec!</span>[], MockExt::default()));
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>caller_traps_when_no_account_id() {
+		<span class="kw">let </span><span class="kw-2">mut </span>ext = MockExt::default();
+		ext.caller = Origin::Root;
+		<span class="macro">assert_eq!</span>(
+			execute(CODE_CALLER, <span class="macro">vec!</span>[], ext),
+			<span class="prelude-val">Err</span>(ExecError { error: DispatchError::RootNotAllowed, origin: ErrorOrigin::Caller })
+		);
 	}
 
 	<span class="doccomment">/// calls `seal_address` and compares the result with the constant (BOB&#39;s address part).
@@ -6199,6 +6268,45 @@
 
 		<span class="comment">// The mock ext just always returns 0u32 (`false`)
 		</span><span class="macro">assert_eq!</span>(output, ExecReturnValue { flags: ReturnFlags::empty(), data: <span class="number">0u32</span>.encode() },);
+	}
+
+	<span class="attr">#[test]
+	</span><span class="kw">fn </span>caller_is_root_works() {
+		<span class="kw">const </span>CODE_CALLER_IS_ROOT: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
+;; This runs `caller_is_root` check on zero account address
+(module
+	(import &quot;seal0&quot; &quot;caller_is_root&quot; (func $caller_is_root (result i32)))
+	(import &quot;seal0&quot; &quot;seal_return&quot; (func $seal_return (param i32 i32 i32)))
+	(import &quot;env&quot; &quot;memory&quot; (memory 1 1))
+
+	;; [0, 4) here the return code of the `caller_is_root` will be stored
+	;; we initialize it with non-zero value to be sure that it&#39;s being overwritten below
+	(data (i32.const 0) &quot;\10\10\10\10&quot;)
+
+	(func (export &quot;deploy&quot;))
+
+	(func (export &quot;call&quot;)
+		(i32.store
+			(i32.const 0)
+			(call $caller_is_root)
+		)
+		;; exit with success and take `caller_is_root` return code to the output buffer
+		(call $seal_return (i32.const 0) (i32.const 0) (i32.const 4))
+	)
+)
+&quot;#</span>;
+		<span class="comment">// The default `caller` is ALICE. Therefore not root.
+		</span><span class="kw">let </span>output = execute(CODE_CALLER_IS_ROOT, <span class="macro">vec!</span>[], MockExt::default()).unwrap();
+		<span class="macro">assert_eq!</span>(output, ExecReturnValue { flags: ReturnFlags::empty(), data: <span class="number">0u32</span>.encode() },);
+
+		<span class="comment">// The caller is forced to be root instead of using the default ALICE.
+		</span><span class="kw">let </span>output = execute(
+			CODE_CALLER_IS_ROOT,
+			<span class="macro">vec!</span>[],
+			MockExt { caller: Origin::Root, ..MockExt::default() },
+		)
+		.unwrap();
+		<span class="macro">assert_eq!</span>(output, ExecReturnValue { flags: ReturnFlags::empty(), data: <span class="number">1u32</span>.encode() },);
 	}
 
 	<span class="attr">#[test]

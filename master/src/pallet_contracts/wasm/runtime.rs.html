@@ -2793,6 +2793,28 @@
 <a href="#2793" id="2793">2793</a>
 <a href="#2794" id="2794">2794</a>
 <a href="#2795" id="2795">2795</a>
+<a href="#2796" id="2796">2796</a>
+<a href="#2797" id="2797">2797</a>
+<a href="#2798" id="2798">2798</a>
+<a href="#2799" id="2799">2799</a>
+<a href="#2800" id="2800">2800</a>
+<a href="#2801" id="2801">2801</a>
+<a href="#2802" id="2802">2802</a>
+<a href="#2803" id="2803">2803</a>
+<a href="#2804" id="2804">2804</a>
+<a href="#2805" id="2805">2805</a>
+<a href="#2806" id="2806">2806</a>
+<a href="#2807" id="2807">2807</a>
+<a href="#2808" id="2808">2808</a>
+<a href="#2809" id="2809">2809</a>
+<a href="#2810" id="2810">2810</a>
+<a href="#2811" id="2811">2811</a>
+<a href="#2812" id="2812">2812</a>
+<a href="#2813" id="2813">2813</a>
+<a href="#2814" id="2814">2814</a>
+<a href="#2815" id="2815">2815</a>
+<a href="#2816" id="2816">2816</a>
+<a href="#2817" id="2817">2817</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2986,6 +3008,8 @@
 	</span>OwnCodeHash,
 	<span class="doccomment">/// Weight of calling `seal_caller_is_origin`.
 	</span>CallerIsOrigin,
+	<span class="doccomment">/// Weight of calling `caller_is_root`.
+	</span>CallerIsRoot,
 	<span class="doccomment">/// Weight of calling `seal_address`.
 	</span>Address,
 	<span class="doccomment">/// Weight of calling `seal_gas_left`.
@@ -3078,6 +3102,7 @@
 			CodeHash =&gt; s.code_hash,
 			OwnCodeHash =&gt; s.own_code_hash,
 			CallerIsOrigin =&gt; s.caller_is_origin,
+			CallerIsRoot =&gt; s.caller_is_root,
 			Address =&gt; s.address,
 			GasLeft =&gt; s.gas_left,
 			Balance =&gt; s.balance,
@@ -4545,14 +4570,18 @@
 	/// If this is a top-level call (i.e. initiated by an extrinsic) the origin address of the
 	/// extrinsic will be returned. Otherwise, if this call is initiated by another contract then
 	/// the address of the contract will be returned. The value is encoded as T::AccountId.
+	///
+	/// If there is no address associated with the caller (e.g. because the caller is root) then
+	/// it traps with `BadOrigin`.
 	</span><span class="attr">#[prefixed_alias]
 	</span><span class="kw">fn </span>caller(ctx: <span class="kw">_</span>, memory: <span class="kw">_</span>, out_ptr: u32, out_len_ptr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), TrapReason&gt; {
 		ctx.charge_gas(RuntimeCosts::Caller)<span class="question-mark">?</span>;
+		<span class="kw">let </span>caller = ctx.ext.caller().account_id()<span class="question-mark">?</span>.clone();
 		<span class="prelude-val">Ok</span>(ctx.write_sandbox_output(
 			memory,
 			out_ptr,
 			out_len_ptr,
-			<span class="kw-2">&amp;</span>ctx.ext.caller().encode(),
+			<span class="kw-2">&amp;</span>caller.encode(),
 			<span class="bool-val">false</span>,
 			already_charged,
 		)<span class="question-mark">?</span>)
@@ -4649,6 +4678,21 @@
 	</span><span class="kw">fn </span>caller_is_origin(ctx: <span class="kw">_</span>, _memory: <span class="kw">_</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
 		ctx.charge_gas(RuntimeCosts::CallerIsOrigin)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(ctx.ext.caller_is_origin() <span class="kw">as </span>u32)
+	}
+
+	<span class="doccomment">/// Checks whether the caller of the current contract is root.
+	///
+	/// Note that only the origin of the call stack can be root. Hence this function returning
+	/// `true` implies that the contract is being called by the origin.
+	///
+	/// A return value of `true` indicates that this contract is being called by a root origin,
+	/// and `false` indicates that the caller is a signed origin.
+	///
+	/// Returned value is a `u32`-encoded boolean: (`0 = false`, `1 = true`).
+	</span><span class="attr">#[unstable]
+	</span><span class="kw">fn </span>caller_is_root(ctx: <span class="kw">_</span>, _memory: <span class="kw">_</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, TrapReason&gt; {
+		ctx.charge_gas(RuntimeCosts::CallerIsRoot)<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(ctx.ext.caller_is_root() <span class="kw">as </span>u32)
 	}
 
 	<span class="doccomment">/// Stores the address of the current contract into the supplied buffer.
