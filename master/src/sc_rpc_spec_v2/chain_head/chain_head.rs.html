@@ -429,6 +429,38 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -455,7 +487,7 @@
 		chain_head_follow::ChainHeadFollower,
 		error::Error <span class="kw">as </span>ChainHeadRpcError,
 		event::{ChainHeadEvent, ChainHeadResult, ErrorEvent, FollowEvent, NetworkConfig},
-		subscription::SubscriptionManagement,
+		subscription::{SubscriptionManagement, SubscriptionManagementError},
 	},
 	SubscriptionTaskExecutor,
 };
@@ -475,12 +507,12 @@
 <span class="kw">use </span>sp_blockchain::{Error <span class="kw">as </span>BlockChainError, HeaderBackend, HeaderMetadata};
 <span class="kw">use </span>sp_core::{hexdisplay::HexDisplay, storage::well_known_keys, traits::CallContext, Bytes};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
-<span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
+<span class="kw">use </span>std::{marker::PhantomData, sync::Arc, time::Duration};
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;rpc-spec-v2&quot;</span>;
 
 <span class="doccomment">/// An API for chain head RPC calls.
-</span><span class="kw">pub struct </span>ChainHead&lt;BE, Block: BlockT, Client&gt; {
+</span><span class="kw">pub struct </span>ChainHead&lt;BE: Backend&lt;Block&gt;, Block: BlockT, Client&gt; {
 	<span class="doccomment">/// Substrate client.
 	</span>client: Arc&lt;Client&gt;,
 	<span class="doccomment">/// Backend of the chain.
@@ -488,16 +520,14 @@
 	<span class="doccomment">/// Executor to spawn subscriptions.
 	</span>executor: SubscriptionTaskExecutor,
 	<span class="doccomment">/// Keep track of the pinned blocks for each subscription.
-	</span>subscriptions: Arc&lt;SubscriptionManagement&lt;Block&gt;&gt;,
+	</span>subscriptions: Arc&lt;SubscriptionManagement&lt;Block, BE&gt;&gt;,
 	<span class="doccomment">/// The hexadecimal encoded hash of the genesis block.
 	</span>genesis_hash: String,
-	<span class="doccomment">/// The maximum number of pinned blocks allowed per connection.
-	</span>max_pinned_blocks: usize,
 	<span class="doccomment">/// Phantom member to pin the block type.
 	</span>_phantom: PhantomData&lt;Block&gt;,
 }
 
-<span class="kw">impl</span>&lt;BE, Block: BlockT, Client&gt; ChainHead&lt;BE, Block, Client&gt; {
+<span class="kw">impl</span>&lt;BE: Backend&lt;Block&gt;, Block: BlockT, Client&gt; ChainHead&lt;BE, Block, Client&gt; {
 	<span class="doccomment">/// Create a new [`ChainHead`].
 	</span><span class="kw">pub fn </span>new&lt;GenesisHash: AsRef&lt;[u8]&gt;&gt;(
 		client: Arc&lt;Client&gt;,
@@ -505,16 +535,20 @@
 		executor: SubscriptionTaskExecutor,
 		genesis_hash: GenesisHash,
 		max_pinned_blocks: usize,
+		max_pinned_duration: Duration,
 	) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>genesis_hash = <span class="macro">format!</span>(<span class="string">&quot;0x{:?}&quot;</span>, HexDisplay::from(<span class="kw-2">&amp;</span>genesis_hash.as_ref()));
 
 		<span class="self">Self </span>{
 			client,
-			backend,
+			backend: backend.clone(),
 			executor,
-			subscriptions: Arc::new(SubscriptionManagement::new()),
+			subscriptions: Arc::new(SubscriptionManagement::new(
+				max_pinned_blocks,
+				max_pinned_duration,
+				backend,
+			)),
 			genesis_hash,
-			max_pinned_blocks,
 			_phantom: PhantomData,
 		}
 	}
@@ -590,9 +624,8 @@
 				<span class="kw">return </span><span class="prelude-val">Err</span>(err)
 			},
 		};
-
 		<span class="comment">// Keep track of the subscription.
-		</span><span class="kw">let </span><span class="prelude-val">Some</span>((rx_stop, sub_handle)) = <span class="self">self</span>.subscriptions.insert_subscription(sub_id.clone(), runtime_updates, <span class="self">self</span>.max_pinned_blocks) <span class="kw">else </span>{
+		</span><span class="kw">let </span><span class="prelude-val">Some</span>(rx_stop) = <span class="self">self</span>.subscriptions.insert_subscription(sub_id.clone(), runtime_updates) <span class="kw">else </span>{
 			<span class="comment">// Inserting the subscription can only fail if the JsonRPSee
 			// generated a duplicate subscription ID.
 			</span><span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[follow][id={:?}] Subscription already accepted&quot;</span>, sub_id);
@@ -608,7 +641,7 @@
 			<span class="kw">let </span><span class="kw-2">mut </span>chain_head_follow = ChainHeadFollower::new(
 				client,
 				backend,
-				sub_handle,
+				subscriptions.clone(),
 				runtime_updates,
 				sub_id.clone(),
 			);
@@ -633,19 +666,28 @@
 		<span class="kw">let </span>client = <span class="self">self</span>.client.clone();
 		<span class="kw">let </span>subscriptions = <span class="self">self</span>.subscriptions.clone();
 
-		<span class="kw">let </span>fut = <span class="kw">async move </span>{
-			<span class="kw">let </span><span class="prelude-val">Some</span>(handle) = subscriptions.get_subscription(<span class="kw-2">&amp;</span>follow_subscription) <span class="kw">else </span>{
+		<span class="kw">let </span>block_guard = <span class="kw">match </span>subscriptions.lock_block(<span class="kw-2">&amp;</span>follow_subscription, hash) {
+			<span class="prelude-val">Ok</span>(block) =&gt; block,
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::SubscriptionAbsent) =&gt; {
 				<span class="comment">// Invalid invalid subscription ID.
 				</span><span class="kw">let _ </span>= sink.send(<span class="kw-2">&amp;</span>ChainHeadEvent::&lt;String&gt;::Disjoint);
-				<span class="kw">return
-			</span>};
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::BlockHashAbsent) =&gt; {
+				<span class="comment">// Block is not part of the subscription.
+				</span><span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidBlock);
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+			<span class="prelude-val">Err</span>(error) =&gt; {
+				<span class="kw">let _ </span>= sink.send(<span class="kw-2">&amp;</span>ChainHeadEvent::&lt;String&gt;::Error(ErrorEvent {
+					error: error.to_string(),
+				}));
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+		};
 
-			<span class="comment">// Block is not part of the subscription.
-			</span><span class="kw">if </span>!handle.contains_block(<span class="kw-2">&amp;</span>hash) {
-				<span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidBlock);
-				<span class="kw">return
-			</span>}
-
+		<span class="kw">let </span>fut = <span class="kw">async move </span>{
+			<span class="kw">let </span>_block_guard = block_guard;
 			<span class="kw">let </span>event = <span class="kw">match </span>client.block(hash) {
 				<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(signed_block)) =&gt; {
 					<span class="kw">let </span>extrinsics = signed_block.block.extrinsics();
@@ -657,10 +699,10 @@
 					</span><span class="macro">debug!</span>(
 						target: LOG_TARGET,
 						<span class="string">&quot;[body][id={:?}] Stopping subscription because hash={:?} was pruned&quot;</span>,
-						follow_subscription,
+						<span class="kw-2">&amp;</span>follow_subscription,
 						hash
 					);
-					handle.stop();
+					subscriptions.remove_subscription(<span class="kw-2">&amp;</span>follow_subscription);
 					ChainHeadEvent::&lt;String&gt;::Disjoint
 				},
 				<span class="prelude-val">Err</span>(error) =&gt; ChainHeadEvent::Error(ErrorEvent { error: error.to_string() }),
@@ -677,15 +719,18 @@
 		follow_subscription: String,
 		hash: Block::Hash,
 	) -&gt; RpcResult&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; {
-		<span class="kw">let </span><span class="prelude-val">Some</span>(handle) = <span class="self">self</span>.subscriptions.get_subscription(<span class="kw-2">&amp;</span>follow_subscription) <span class="kw">else </span>{
-			<span class="comment">// Invalid invalid subscription ID.
-			</span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+		<span class="kw">let </span>_block_guard = <span class="kw">match </span><span class="self">self</span>.subscriptions.lock_block(<span class="kw-2">&amp;</span>follow_subscription, hash) {
+			<span class="prelude-val">Ok</span>(block) =&gt; block,
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::SubscriptionAbsent) =&gt; {
+				<span class="comment">// Invalid invalid subscription ID.
+				</span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+			},
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::BlockHashAbsent) =&gt; {
+				<span class="comment">// Block is not part of the subscription.
+				</span><span class="kw">return </span><span class="prelude-val">Err</span>(ChainHeadRpcError::InvalidBlock.into())
+			},
+			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(ChainHeadRpcError::InvalidBlock.into()),
 		};
-
-		<span class="comment">// Block is not part of the subscription.
-		</span><span class="kw">if </span>!handle.contains_block(<span class="kw-2">&amp;</span>hash) {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(ChainHeadRpcError::InvalidBlock.into())
-		}
 
 		<span class="self">self</span>.client
 			.header(hash)
@@ -717,19 +762,28 @@
 		<span class="kw">let </span>client = <span class="self">self</span>.client.clone();
 		<span class="kw">let </span>subscriptions = <span class="self">self</span>.subscriptions.clone();
 
-		<span class="kw">let </span>fut = <span class="kw">async move </span>{
-			<span class="kw">let </span><span class="prelude-val">Some</span>(handle) = subscriptions.get_subscription(<span class="kw-2">&amp;</span>follow_subscription) <span class="kw">else </span>{
+		<span class="kw">let </span>block_guard = <span class="kw">match </span>subscriptions.lock_block(<span class="kw-2">&amp;</span>follow_subscription, hash) {
+			<span class="prelude-val">Ok</span>(block) =&gt; block,
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::SubscriptionAbsent) =&gt; {
 				<span class="comment">// Invalid invalid subscription ID.
 				</span><span class="kw">let _ </span>= sink.send(<span class="kw-2">&amp;</span>ChainHeadEvent::&lt;String&gt;::Disjoint);
-				<span class="kw">return
-			</span>};
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::BlockHashAbsent) =&gt; {
+				<span class="comment">// Block is not part of the subscription.
+				</span><span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidBlock);
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+			<span class="prelude-val">Err</span>(error) =&gt; {
+				<span class="kw">let _ </span>= sink.send(<span class="kw-2">&amp;</span>ChainHeadEvent::&lt;String&gt;::Error(ErrorEvent {
+					error: error.to_string(),
+				}));
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+		};
 
-			<span class="comment">// Block is not part of the subscription.
-			</span><span class="kw">if </span>!handle.contains_block(<span class="kw-2">&amp;</span>hash) {
-				<span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidBlock);
-				<span class="kw">return
-			</span>}
-
+		<span class="kw">let </span>fut = <span class="kw">async move </span>{
+			<span class="kw">let </span>_block_guard = block_guard;
 			<span class="comment">// The child key is provided, use the key to query the child trie.
 			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(child_key) = child_key {
 				<span class="comment">// The child key must not be prefixed with &quot;:child_storage:&quot; nor
@@ -798,21 +852,29 @@
 		<span class="kw">let </span>client = <span class="self">self</span>.client.clone();
 		<span class="kw">let </span>subscriptions = <span class="self">self</span>.subscriptions.clone();
 
-		<span class="kw">let </span>fut = <span class="kw">async move </span>{
-			<span class="kw">let </span><span class="prelude-val">Some</span>(handle) = subscriptions.get_subscription(<span class="kw-2">&amp;</span>follow_subscription) <span class="kw">else </span>{
+		<span class="kw">let </span>block_guard = <span class="kw">match </span>subscriptions.lock_block(<span class="kw-2">&amp;</span>follow_subscription, hash) {
+			<span class="prelude-val">Ok</span>(block) =&gt; block,
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::SubscriptionAbsent) =&gt; {
 				<span class="comment">// Invalid invalid subscription ID.
 				</span><span class="kw">let _ </span>= sink.send(<span class="kw-2">&amp;</span>ChainHeadEvent::&lt;String&gt;::Disjoint);
-				<span class="kw">return
-			</span>};
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::BlockHashAbsent) =&gt; {
+				<span class="comment">// Block is not part of the subscription.
+				</span><span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidBlock);
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+			<span class="prelude-val">Err</span>(error) =&gt; {
+				<span class="kw">let _ </span>= sink.send(<span class="kw-2">&amp;</span>ChainHeadEvent::&lt;String&gt;::Error(ErrorEvent {
+					error: error.to_string(),
+				}));
+				<span class="kw">return </span><span class="prelude-val">Ok</span>(())
+			},
+		};
 
-			<span class="comment">// Block is not part of the subscription.
-			</span><span class="kw">if </span>!handle.contains_block(<span class="kw-2">&amp;</span>hash) {
-				<span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidBlock);
-				<span class="kw">return
-			</span>}
-
+		<span class="kw">let </span>fut = <span class="kw">async move </span>{
 			<span class="comment">// Reject subscription if runtime_updates is false.
-			</span><span class="kw">if </span>!handle.has_runtime_updates() {
+			</span><span class="kw">if </span>!block_guard.has_runtime_updates() {
 				<span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidParam(
 					<span class="string">&quot;The runtime updates flag must be set&quot;</span>.into(),
 				));
@@ -848,16 +910,18 @@
 		follow_subscription: String,
 		hash: Block::Hash,
 	) -&gt; RpcResult&lt;()&gt; {
-		<span class="kw">let </span><span class="prelude-val">Some</span>(handle) = <span class="self">self</span>.subscriptions.get_subscription(<span class="kw-2">&amp;</span>follow_subscription) <span class="kw">else </span>{
-			<span class="comment">// Invalid invalid subscription ID.
-			</span><span class="kw">return </span><span class="prelude-val">Ok</span>(())
-		};
-
-		<span class="kw">if </span>!handle.unpin_block(<span class="kw-2">&amp;</span>hash) {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(ChainHeadRpcError::InvalidBlock.into())
+		<span class="kw">match </span><span class="self">self</span>.subscriptions.unpin_block(<span class="kw-2">&amp;</span>follow_subscription, hash) {
+			<span class="prelude-val">Ok</span>(()) =&gt; <span class="prelude-val">Ok</span>(()),
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::SubscriptionAbsent) =&gt; {
+				<span class="comment">// Invalid invalid subscription ID.
+				</span><span class="prelude-val">Ok</span>(())
+			},
+			<span class="prelude-val">Err</span>(SubscriptionManagementError::BlockHashAbsent) =&gt; {
+				<span class="comment">// Block is not part of the subscription.
+				</span><span class="prelude-val">Err</span>(ChainHeadRpcError::InvalidBlock.into())
+			},
+			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(ChainHeadRpcError::InvalidBlock.into()),
 		}
-
-		<span class="prelude-val">Ok</span>(())
 	}
 }
 </code></pre></div>

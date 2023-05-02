@@ -1015,6 +1015,18 @@
 <a href="#1015" id="1015">1015</a>
 <a href="#1016" id="1016">1016</a>
 <a href="#1017" id="1017">1017</a>
+<a href="#1018" id="1018">1018</a>
+<a href="#1019" id="1019">1019</a>
+<a href="#1020" id="1020">1020</a>
+<a href="#1021" id="1021">1021</a>
+<a href="#1022" id="1022">1022</a>
+<a href="#1023" id="1023">1023</a>
+<a href="#1024" id="1024">1024</a>
+<a href="#1025" id="1025">1025</a>
+<a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
+<a href="#1028" id="1028">1028</a>
+<a href="#1029" id="1029">1029</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1087,7 +1099,11 @@
 <span class="kw">use </span>sp_core::traits::{CodeExecutor, SpawnNamed};
 <span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, BlockIdTo, NumberFor, Zero};
-<span class="kw">use </span>std::{str::FromStr, sync::Arc, time::SystemTime};
+<span class="kw">use </span>std::{
+	str::FromStr,
+	sync::Arc,
+	time::{Duration, SystemTime},
+};
 
 <span class="doccomment">/// Full client type.
 </span><span class="kw">pub type </span>TFullClient&lt;TBl, TRtApi, TExec&gt; =
@@ -1684,16 +1700,24 @@
 	)
 	.into_rpc();
 
-	<span class="comment">// Maximum pinned blocks per connection.
-	// This number is large enough to consider immediate blocks,
-	// but it will change to facilitate adequate limits for the pinning API.
-	</span><span class="kw">const </span>MAX_PINNED_BLOCKS: usize = <span class="number">4096</span>;
+	<span class="comment">// Maximum pinned blocks across all connections.
+	// This number is large enough to consider immediate blocks.
+	// Note: This should never exceed the `PINNING_CACHE_SIZE` from client/db.
+	</span><span class="kw">const </span>MAX_PINNED_BLOCKS: usize = <span class="number">512</span>;
+
+	<span class="comment">// Any block of any subscription should not be pinned more than
+	// this constant. When a subscription contains a block older than this,
+	// the subscription becomes subject to termination.
+	// Note: This should be enough for immediate blocks.
+	</span><span class="kw">const </span>MAX_PINNED_SECONDS: u64 = <span class="number">60</span>;
+
 	<span class="kw">let </span>chain_head_v2 = sc_rpc_spec_v2::chain_head::ChainHead::new(
 		client.clone(),
 		backend.clone(),
 		task_executor.clone(),
 		client.info().genesis_hash,
 		MAX_PINNED_BLOCKS,
+		Duration::from_secs(MAX_PINNED_SECONDS),
 	)
 	.into_rpc();
 

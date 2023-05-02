@@ -606,6 +606,10 @@
 <a href="#606" id="606">606</a>
 <a href="#607" id="607">607</a>
 <a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -632,7 +636,7 @@
 		BestBlockChanged, Finalized, FollowEvent, Initialized, NewBlock, RuntimeEvent,
 		RuntimeVersionEvent,
 	},
-	subscription::{SubscriptionHandle, SubscriptionManagementError},
+	subscription::{SubscriptionManagement, SubscriptionManagementError},
 };
 <span class="kw">use </span>futures::{
 	channel::oneshot,
@@ -652,13 +656,13 @@
 <span class="kw">use </span>std::{collections::HashSet, sync::Arc};
 
 <span class="doccomment">/// Generates the events of the `chainHead_follow` method.
-</span><span class="kw">pub struct </span>ChainHeadFollower&lt;BE, Block: BlockT, Client&gt; {
+</span><span class="kw">pub struct </span>ChainHeadFollower&lt;BE: Backend&lt;Block&gt;, Block: BlockT, Client&gt; {
 	<span class="doccomment">/// Substrate client.
 	</span>client: Arc&lt;Client&gt;,
 	<span class="doccomment">/// Backend of the chain.
 	</span>backend: Arc&lt;BE&gt;,
-	<span class="doccomment">/// Subscription handle.
-	</span>sub_handle: SubscriptionHandle&lt;Block&gt;,
+	<span class="doccomment">/// Subscriptions handle.
+	</span>sub_handle: Arc&lt;SubscriptionManagement&lt;Block, BE&gt;&gt;,
 	<span class="doccomment">/// Subscription was started with the runtime updates flag.
 	</span>runtime_updates: bool,
 	<span class="doccomment">/// Subscription ID.
@@ -667,12 +671,12 @@
 	</span>best_block_cache: <span class="prelude-ty">Option</span>&lt;Block::Hash&gt;,
 }
 
-<span class="kw">impl</span>&lt;BE, Block: BlockT, Client&gt; ChainHeadFollower&lt;BE, Block, Client&gt; {
+<span class="kw">impl</span>&lt;BE: Backend&lt;Block&gt;, Block: BlockT, Client&gt; ChainHeadFollower&lt;BE, Block, Client&gt; {
 	<span class="doccomment">/// Create a new [`ChainHeadFollower`].
 	</span><span class="kw">pub fn </span>new(
 		client: Arc&lt;Client&gt;,
 		backend: Arc&lt;BE&gt;,
-		sub_handle: SubscriptionHandle&lt;Block&gt;,
+		sub_handle: Arc&lt;SubscriptionManagement&lt;Block, BE&gt;&gt;,
 		runtime_updates: bool,
 		sub_id: String,
 	) -&gt; <span class="self">Self </span>{
@@ -829,7 +833,7 @@
 
 		<span class="comment">// The initialized event is the first one sent.
 		</span><span class="kw">let </span>finalized_block_hash = startup_point.finalized_hash;
-		<span class="self">self</span>.sub_handle.pin_block(finalized_block_hash)<span class="question-mark">?</span>;
+		<span class="self">self</span>.sub_handle.pin_block(<span class="kw-2">&amp;</span><span class="self">self</span>.sub_id, finalized_block_hash)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>finalized_block_runtime = <span class="self">self</span>.generate_runtime_event(finalized_block_hash, <span class="prelude-val">None</span>);
 
@@ -843,7 +847,7 @@
 
 		finalized_block_descendants.push(initialized_event);
 		<span class="kw">for </span>(child, parent) <span class="kw">in </span>initial_blocks.into_iter() {
-			<span class="self">self</span>.sub_handle.pin_block(child)<span class="question-mark">?</span>;
+			<span class="self">self</span>.sub_handle.pin_block(<span class="kw-2">&amp;</span><span class="self">self</span>.sub_id, child)<span class="question-mark">?</span>;
 
 			<span class="kw">let </span>new_runtime = <span class="self">self</span>.generate_runtime_event(child, <span class="prelude-val">Some</span>(parent));
 
@@ -918,7 +922,7 @@
 		startup_point: <span class="kw-2">&amp;</span>StartupPoint&lt;Block&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;FollowEvent&lt;Block::Hash&gt;&gt;, SubscriptionManagementError&gt; {
 		<span class="comment">// The block was already pinned by the initial block events or by the finalized event.
-		</span><span class="kw">if </span>!<span class="self">self</span>.sub_handle.pin_block(notification.hash)<span class="question-mark">? </span>{
+		</span><span class="kw">if </span>!<span class="self">self</span>.sub_handle.pin_block(<span class="kw-2">&amp;</span><span class="self">self</span>.sub_id, notification.hash)<span class="question-mark">? </span>{
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(Default::default())
 		}
 
@@ -960,7 +964,7 @@
 			std::iter::once(first_header.parent_hash()).chain(finalized_block_hashes.iter());
 		<span class="kw">for </span>(i, (hash, parent)) <span class="kw">in </span>finalized_block_hashes.iter().zip(parents).enumerate() {
 			<span class="comment">// Check if the block was already reported and thus, is already pinned.
-			</span><span class="kw">if </span>!<span class="self">self</span>.sub_handle.pin_block(<span class="kw-2">*</span>hash)<span class="question-mark">? </span>{
+			</span><span class="kw">if </span>!<span class="self">self</span>.sub_handle.pin_block(<span class="kw-2">&amp;</span><span class="self">self</span>.sub_id, <span class="kw-2">*</span>hash)<span class="question-mark">? </span>{
 				<span class="kw">continue
 			</span>}
 
@@ -1172,6 +1176,10 @@
 			stream_item = stream.next();
 			stop_event = next_stop_event;
 		}
+
+		<span class="comment">// If we got here either the substrate streams have closed
+		// or the `Stop` receiver was triggered.
+		</span><span class="kw">let _ </span>= sink.send(<span class="kw-2">&amp;</span>FollowEvent::&lt;String&gt;::Stop);
 	}
 
 	<span class="doccomment">/// Generate the block events for the `chainHead_follow` method.
