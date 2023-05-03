@@ -1423,6 +1423,63 @@
 <a href="#1423" id="1423">1423</a>
 <a href="#1424" id="1424">1424</a>
 <a href="#1425" id="1425">1425</a>
+<a href="#1426" id="1426">1426</a>
+<a href="#1427" id="1427">1427</a>
+<a href="#1428" id="1428">1428</a>
+<a href="#1429" id="1429">1429</a>
+<a href="#1430" id="1430">1430</a>
+<a href="#1431" id="1431">1431</a>
+<a href="#1432" id="1432">1432</a>
+<a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
+<a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
+<a href="#1454" id="1454">1454</a>
+<a href="#1455" id="1455">1455</a>
+<a href="#1456" id="1456">1456</a>
+<a href="#1457" id="1457">1457</a>
+<a href="#1458" id="1458">1458</a>
+<a href="#1459" id="1459">1459</a>
+<a href="#1460" id="1460">1460</a>
+<a href="#1461" id="1461">1461</a>
+<a href="#1462" id="1462">1462</a>
+<a href="#1463" id="1463">1463</a>
+<a href="#1464" id="1464">1464</a>
+<a href="#1465" id="1465">1465</a>
+<a href="#1466" id="1466">1466</a>
+<a href="#1467" id="1467">1467</a>
+<a href="#1468" id="1468">1468</a>
+<a href="#1469" id="1469">1469</a>
+<a href="#1470" id="1470">1470</a>
+<a href="#1471" id="1471">1471</a>
+<a href="#1472" id="1472">1472</a>
+<a href="#1473" id="1473">1473</a>
+<a href="#1474" id="1474">1474</a>
+<a href="#1475" id="1475">1475</a>
+<a href="#1476" id="1476">1476</a>
+<a href="#1477" id="1477">1477</a>
+<a href="#1478" id="1478">1478</a>
+<a href="#1479" id="1479">1479</a>
+<a href="#1480" id="1480">1480</a>
+<a href="#1481" id="1481">1481</a>
+<a href="#1482" id="1482">1482</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1542,7 +1599,7 @@
 	weights::Weight,
 	BoundedVec, RuntimeDebugNoBound, WeakBoundedVec,
 };
-<span class="kw">use </span>frame_system::{ensure_signed, pallet_prelude::OriginFor, Pallet <span class="kw">as </span>System};
+<span class="kw">use </span>frame_system::{ensure_signed, pallet_prelude::OriginFor, EventRecord, Pallet <span class="kw">as </span>System};
 <span class="kw">use </span>pallet_contracts_primitives::{
 	Code, CodeUploadResult, CodeUploadReturnValue, ContractAccessError, ContractExecResult,
 	ContractInstantiateResult, ExecReturnValue, GetStorageResult, InstantiateReturnValue,
@@ -1573,6 +1630,8 @@
 <span class="kw">type </span>RelaxedCodeVec&lt;T&gt; = WeakBoundedVec&lt;u8, &lt;T <span class="kw">as </span>Config&gt;::MaxCodeLen&gt;;
 <span class="kw">type </span>AccountIdLookupOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::Lookup <span class="kw">as </span>StaticLookup&gt;::Source;
 <span class="kw">type </span>DebugBufferVec&lt;T&gt; = BoundedVec&lt;u8, &lt;T <span class="kw">as </span>Config&gt;::MaxDebugBufferLen&gt;;
+<span class="kw">type </span>EventRecordOf&lt;T&gt; =
+	EventRecord&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent, &lt;T <span class="kw">as </span>frame_system::Config&gt;::Hash&gt;;
 
 <span class="doccomment">/// The old weight type.
 ///
@@ -2396,6 +2455,35 @@
 	salt: Vec&lt;u8&gt;,
 }
 
+<span class="doccomment">/// Determines whether events should be collected during execution.
+</span><span class="attr">#[derive(PartialEq)]
+</span><span class="kw">pub enum </span>CollectEvents {
+	<span class="doccomment">/// Collect events.
+	///
+	/// # Note
+	///
+	/// Events should only be collected when called off-chain, as this would otherwise
+	/// collect all the Events emitted in the block so far and put them into the PoV.
+	///
+	/// **Never** use this mode for on-chain execution.
+	</span>UnsafeCollect,
+	<span class="doccomment">/// Skip event collection.
+	</span>Skip,
+}
+
+<span class="doccomment">/// Determines whether debug messages will be collected.
+</span><span class="attr">#[derive(PartialEq)]
+</span><span class="kw">pub enum </span>DebugInfo {
+	<span class="doccomment">/// Collect debug messages.
+	/// # Note
+	///
+	/// This should only ever be set to `UnsafeDebug` when executing as an RPC because
+	/// it adds allocations and could be abused to drive the runtime into an OOM panic.
+	</span>UnsafeDebug,
+	<span class="doccomment">/// Skip collection of debug messages.
+	</span>Skip,
+}
+
 <span class="doccomment">/// Return type of private helper functions.
 </span><span class="kw">struct </span>InternalOutput&lt;T: Config, O&gt; {
 	<span class="doccomment">/// The gas meter that was used to execute the call.
@@ -2612,11 +2700,11 @@
 	///
 	/// # Note
 	///
-	/// `debug` should only ever be set to `true` when executing as an RPC because
-	/// it adds allocations and could be abused to drive the runtime into an OOM panic.
-	/// If set to `true` it returns additional human readable debugging information.
+	/// If `debug` is set to `DebugInfo::UnsafeDebug` it returns additional human readable debugging
+	/// information.
 	///
-	/// It returns the execution result and the amount of used weight.
+	/// If `collect_events` is set to `CollectEvents::UnsafeCollect` it collects all the Events
+	/// emitted in the block so far and the ones emitted during the execution of this contract.
 	</span><span class="kw">pub fn </span>bare_call(
 		origin: T::AccountId,
 		dest: T::AccountId,
@@ -2624,10 +2712,15 @@
 		gas_limit: Weight,
 		storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
 		data: Vec&lt;u8&gt;,
-		debug: bool,
+		debug: DebugInfo,
+		collect_events: CollectEvents,
 		determinism: Determinism,
-	) -&gt; ContractExecResult&lt;BalanceOf&lt;T&gt;&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+	) -&gt; ContractExecResult&lt;BalanceOf&lt;T&gt;, EventRecordOf&lt;T&gt;&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span><span class="macro">matches!</span>(debug, DebugInfo::UnsafeDebug) {
+			<span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default())
+		} <span class="kw">else </span>{
+			<span class="prelude-val">None
+		</span>};
 		<span class="kw">let </span>origin = Origin::from_account_id(origin);
 		<span class="kw">let </span>common = CommonInput {
 			origin,
@@ -2638,12 +2731,19 @@
 			debug_message: debug_message.as_mut(),
 		};
 		<span class="kw">let </span>output = CallInput::&lt;T&gt; { dest, determinism }.run_guarded(common);
+		<span class="kw">let </span>events = <span class="kw">if </span><span class="macro">matches!</span>(collect_events, CollectEvents::UnsafeCollect) {
+			<span class="prelude-val">Some</span>(System::&lt;T&gt;::read_events_no_consensus().map(|e| <span class="kw-2">*</span>e).collect())
+		} <span class="kw">else </span>{
+			<span class="prelude-val">None
+		</span>};
+
 		ContractExecResult {
 			result: output.result.map_err(|r| r.error),
 			gas_consumed: output.gas_meter.gas_consumed(),
 			gas_required: output.gas_meter.gas_required(),
 			storage_deposit: output.storage_deposit,
 			debug_message: debug_message.unwrap_or_default().to_vec(),
+			events,
 		}
 	}
 
@@ -2656,9 +2756,11 @@
 	///
 	/// # Note
 	///
-	/// `debug` should only ever be set to `true` when executing as an RPC because
-	/// it adds allocations and could be abused to drive the runtime into an OOM panic.
-	/// If set to `true` it returns additional human readable debugging information.
+	/// If `debug` is set to `DebugInfo::UnsafeDebug` it returns additional human readable debugging
+	/// information.
+	///
+	/// If `collect_events` is set to `CollectEvents::UnsafeCollect` it collects all the Events
+	/// emitted in the block so far.
 	</span><span class="kw">pub fn </span>bare_instantiate(
 		origin: T::AccountId,
 		value: BalanceOf&lt;T&gt;,
@@ -2667,9 +2769,14 @@
 		code: Code&lt;CodeHash&lt;T&gt;&gt;,
 		data: Vec&lt;u8&gt;,
 		salt: Vec&lt;u8&gt;,
-		debug: bool,
-	) -&gt; ContractInstantiateResult&lt;T::AccountId, BalanceOf&lt;T&gt;&gt; {
-		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug { <span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+		debug: DebugInfo,
+		collect_events: CollectEvents,
+	) -&gt; ContractInstantiateResult&lt;T::AccountId, BalanceOf&lt;T&gt;, EventRecordOf&lt;T&gt;&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>debug_message = <span class="kw">if </span>debug == DebugInfo::UnsafeDebug {
+			<span class="prelude-val">Some</span>(DebugBufferVec::&lt;T&gt;::default())
+		} <span class="kw">else </span>{
+			<span class="prelude-val">None
+		</span>};
 		<span class="kw">let </span>common = CommonInput {
 			origin: Origin::from_account_id(origin),
 			value,
@@ -2679,6 +2786,12 @@
 			debug_message: debug_message.as_mut(),
 		};
 		<span class="kw">let </span>output = InstantiateInput::&lt;T&gt; { code, salt }.run_guarded(common);
+		<span class="comment">// collect events if CollectEvents is UnsafeCollect
+		</span><span class="kw">let </span>events = <span class="kw">if </span>collect_events == CollectEvents::UnsafeCollect {
+			<span class="prelude-val">Some</span>(System::&lt;T&gt;::read_events_no_consensus().map(|e| <span class="kw-2">*</span>e).collect())
+		} <span class="kw">else </span>{
+			<span class="prelude-val">None
+		</span>};
 		ContractInstantiateResult {
 			result: output
 				.result
@@ -2688,6 +2801,7 @@
 			gas_required: output.gas_meter.gas_required(),
 			storage_deposit: output.storage_deposit,
 			debug_message: debug_message.unwrap_or_default().to_vec(),
+			events,
 		}
 	}
 
@@ -2795,11 +2909,12 @@
 <span class="macro">sp_api::decl_runtime_apis! </span>{
 	<span class="doccomment">/// The API used to dry-run contract interactions.
 	</span><span class="attr">#[api_version(<span class="number">2</span>)]
-	</span><span class="kw">pub trait </span>ContractsApi&lt;AccountId, Balance, BlockNumber, Hash&gt; <span class="kw">where
+	</span><span class="kw">pub trait </span>ContractsApi&lt;AccountId, Balance, BlockNumber, Hash, EventRecord&gt; <span class="kw">where
 		</span>AccountId: Codec,
 		Balance: Codec,
 		BlockNumber: Codec,
 		Hash: Codec,
+		EventRecord: Codec,
 	{
 		<span class="doccomment">/// Perform a call from a specified account to a given contract.
 		///
@@ -2811,7 +2926,7 @@
 			gas_limit: <span class="prelude-ty">Option</span>&lt;Weight&gt;,
 			storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;Balance&gt;,
 			input_data: Vec&lt;u8&gt;,
-		) -&gt; ContractExecResult&lt;Balance&gt;;
+		) -&gt; ContractExecResult&lt;Balance, EventRecord&gt;;
 
 		<span class="doccomment">/// Instantiate a new contract.
 		///
@@ -2824,8 +2939,7 @@
 			code: Code&lt;Hash&gt;,
 			data: Vec&lt;u8&gt;,
 			salt: Vec&lt;u8&gt;,
-		) -&gt; ContractInstantiateResult&lt;AccountId, Balance&gt;;
-
+		) -&gt; ContractInstantiateResult&lt;AccountId, Balance, EventRecord&gt;;
 
 		<span class="doccomment">/// Upload new code without instantiating a contract from it.
 		///

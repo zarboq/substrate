@@ -2519,6 +2519,13 @@
 <a href="#2519" id="2519">2519</a>
 <a href="#2520" id="2520">2520</a>
 <a href="#2521" id="2521">2521</a>
+<a href="#2522" id="2522">2522</a>
+<a href="#2523" id="2523">2523</a>
+<a href="#2524" id="2524">2524</a>
+<a href="#2525" id="2525">2525</a>
+<a href="#2526" id="2526">2526</a>
+<a href="#2527" id="2527">2527</a>
+<a href="#2528" id="2528">2528</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4401,6 +4408,11 @@
 	pallet_contracts::Migration&lt;Runtime&gt;,
 );
 
+<span class="kw">type </span>EventRecord = frame_system::EventRecord&lt;
+	&lt;Runtime <span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent,
+	&lt;Runtime <span class="kw">as </span>frame_system::Config&gt;::Hash,
+&gt;;
+
 <span class="doccomment">/// MMR helper types.
 </span><span class="kw">mod </span>mmr {
 	<span class="kw">use </span><span class="kw">super</span>::Runtime;
@@ -4662,7 +4674,7 @@
 		}
 	}
 
-	<span class="kw">impl </span>pallet_contracts::ContractsApi&lt;Block, AccountId, Balance, BlockNumber, Hash&gt; <span class="kw">for </span>Runtime
+	<span class="kw">impl </span>pallet_contracts::ContractsApi&lt;Block, AccountId, Balance, BlockNumber, Hash, EventRecord&gt; <span class="kw">for </span>Runtime
 	{
 		<span class="kw">fn </span>call(
 			origin: AccountId,
@@ -4671,7 +4683,7 @@
 			gas_limit: <span class="prelude-ty">Option</span>&lt;Weight&gt;,
 			storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;Balance&gt;,
 			input_data: Vec&lt;u8&gt;,
-		) -&gt; pallet_contracts_primitives::ContractExecResult&lt;Balance&gt; {
+		) -&gt; pallet_contracts_primitives::ContractExecResult&lt;Balance, EventRecord&gt; {
 			<span class="kw">let </span>gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_call(
 				origin,
@@ -4680,7 +4692,8 @@
 				gas_limit,
 				storage_deposit_limit,
 				input_data,
-				<span class="bool-val">true</span>,
+				pallet_contracts::DebugInfo::UnsafeDebug,
+				pallet_contracts::CollectEvents::UnsafeCollect,
 				pallet_contracts::Determinism::Enforced,
 			)
 		}
@@ -4693,7 +4706,7 @@
 			code: pallet_contracts_primitives::Code&lt;Hash&gt;,
 			data: Vec&lt;u8&gt;,
 			salt: Vec&lt;u8&gt;,
-		) -&gt; pallet_contracts_primitives::ContractInstantiateResult&lt;AccountId, Balance&gt;
+		) -&gt; pallet_contracts_primitives::ContractInstantiateResult&lt;AccountId, Balance, EventRecord&gt;
 		{
 			<span class="kw">let </span>gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_instantiate(
@@ -4704,8 +4717,9 @@
 				code,
 				data,
 				salt,
-				<span class="bool-val">true
-			</span>)
+				pallet_contracts::DebugInfo::UnsafeDebug,
+				pallet_contracts::CollectEvents::UnsafeCollect,
+			)
 		}
 
 		<span class="kw">fn </span>upload_code(
