@@ -65,6 +65,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_core_fellowship":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_democracy":["",[],["benchmarking.rs","conviction.rs","lib.rs","migrations.rs","types.rs","vote.rs","vote_threshold.rs","weights.rs"]],\
 "pallet_dev_mode":["",[],["lib.rs"]],\
+"pallet_election_provider_e2e_test":["",[],["lib.rs"]],\
 "pallet_election_provider_multi_phase":["",[],["benchmarking.rs","helpers.rs","lib.rs","migrations.rs","signed.rs","unsigned.rs","weights.rs"]],\
 "pallet_election_provider_support_benchmarking":["",[],["lib.rs"]],\
 "pallet_elections_phragmen":["",[["migrations",[],["mod.rs","v3.rs","v4.rs","v5.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
