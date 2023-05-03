@@ -180,64 +180,6 @@
 <a href="#180" id="180">180</a>
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -260,7 +202,10 @@
 
 </span><span class="attr">#![warn(missing_docs)]
 
-</span><span class="kw">use </span>jsonrpsee::{
+</span><span class="kw">pub mod </span>middleware;
+
+<span class="kw">use </span>http::header::HeaderValue;
+<span class="kw">use </span>jsonrpsee::{
 	server::{
 		middleware::proxy_get_request::ProxyGetRequestLayer, AllowHosts, ServerBuilder,
 		ServerHandle,
@@ -268,119 +213,62 @@
 	RpcModule,
 };
 <span class="kw">use </span>std::{error::Error <span class="kw">as </span>StdError, net::SocketAddr};
+<span class="kw">use </span>tower_http::cors::{AllowOrigin, CorsLayer};
 
 <span class="kw">pub use </span><span class="kw">crate</span>::middleware::RpcMetrics;
-<span class="kw">use </span>http::header::HeaderValue;
 <span class="kw">pub use </span>jsonrpsee::core::{
 	id_providers::{RandomIntegerIdProvider, RandomStringIdProvider},
 	traits::IdProvider,
 };
-<span class="kw">use </span>tower_http::cors::{AllowOrigin, CorsLayer};
 
-<span class="kw">const </span>MEGABYTE: usize = <span class="number">1024 </span>* <span class="number">1024</span>;
+<span class="kw">const </span>MEGABYTE: u32 = <span class="number">1024 </span>* <span class="number">1024</span>;
 
-<span class="doccomment">/// Maximal payload accepted by RPC servers.
-</span><span class="kw">pub const </span>RPC_MAX_PAYLOAD_DEFAULT: usize = <span class="number">15 </span>* MEGABYTE;
-
-<span class="doccomment">/// Default maximum number of connections for WS RPC servers.
-</span><span class="kw">const </span>WS_MAX_CONNECTIONS: usize = <span class="number">100</span>;
-
-<span class="doccomment">/// Default maximum number subscriptions per connection for WS RPC servers.
-</span><span class="kw">const </span>WS_MAX_SUBS_PER_CONN: usize = <span class="number">1024</span>;
-
-<span class="kw">pub mod </span>middleware;
-
-<span class="doccomment">/// Type alias JSON-RPC server
+<span class="doccomment">/// Type alias for the JSON-RPC server.
 </span><span class="kw">pub type </span>Server = ServerHandle;
 
-<span class="doccomment">/// Server config.
-</span><span class="attr">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>WsConfig {
+<span class="doccomment">/// RPC server configuration.
+</span><span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Config&lt;<span class="lifetime">&#39;a</span>, M: Send + Sync + <span class="lifetime">&#39;static</span>&gt; {
+	<span class="doccomment">/// Socket addresses.
+	</span><span class="kw">pub </span>addrs: [SocketAddr; <span class="number">2</span>],
+	<span class="doccomment">/// CORS.
+	</span><span class="kw">pub </span>cors: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Vec&lt;String&gt;&gt;,
 	<span class="doccomment">/// Maximum connections.
-	</span><span class="kw">pub </span>max_connections: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+	</span><span class="kw">pub </span>max_connections: u32,
 	<span class="doccomment">/// Maximum subscriptions per connection.
-	</span><span class="kw">pub </span>max_subs_per_conn: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+	</span><span class="kw">pub </span>max_subs_per_conn: u32,
 	<span class="doccomment">/// Maximum rpc request payload size.
-	</span><span class="kw">pub </span>max_payload_in_mb: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+	</span><span class="kw">pub </span>max_payload_in_mb: u32,
 	<span class="doccomment">/// Maximum rpc response payload size.
-	</span><span class="kw">pub </span>max_payload_out_mb: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+	</span><span class="kw">pub </span>max_payload_out_mb: u32,
+	<span class="doccomment">/// Metrics.
+	</span><span class="kw">pub </span>metrics: <span class="prelude-ty">Option</span>&lt;RpcMetrics&gt;,
+	<span class="doccomment">/// RPC API.
+	</span><span class="kw">pub </span>rpc_api: RpcModule&lt;M&gt;,
+	<span class="doccomment">/// Subscription ID provider.
+	</span><span class="kw">pub </span>id_provider: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>IdProvider&gt;&gt;,
+	<span class="doccomment">/// Tokio runtime handle.
+	</span><span class="kw">pub </span>tokio_handle: tokio::runtime::Handle,
 }
 
-<span class="kw">impl </span>WsConfig {
-	<span class="comment">// Deconstructs the config to get the finalized inner values.
-	//
-	// `Payload size` or `max subs per connection` bigger than u32::MAX will be truncated.
-	</span><span class="kw">fn </span>deconstruct(<span class="self">self</span>) -&gt; (u32, u32, u32, u32) {
-		<span class="kw">let </span>max_conns = <span class="self">self</span>.max_connections.unwrap_or(WS_MAX_CONNECTIONS) <span class="kw">as </span>u32;
-		<span class="kw">let </span>max_payload_in_mb = payload_size_or_default(<span class="self">self</span>.max_payload_in_mb) <span class="kw">as </span>u32;
-		<span class="kw">let </span>max_payload_out_mb = payload_size_or_default(<span class="self">self</span>.max_payload_out_mb) <span class="kw">as </span>u32;
-		<span class="kw">let </span>max_subs_per_conn = <span class="self">self</span>.max_subs_per_conn.unwrap_or(WS_MAX_SUBS_PER_CONN) <span class="kw">as </span>u32;
-
-		(max_payload_in_mb, max_payload_out_mb, max_conns, max_subs_per_conn)
-	}
-}
-
-<span class="doccomment">/// Start HTTP server listening on given address.
-</span><span class="kw">pub async fn </span>start_http&lt;M: Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
-	addrs: [SocketAddr; <span class="number">2</span>],
-	cors: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;String&gt;&gt;,
-	max_payload_in_mb: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-	max_payload_out_mb: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-	metrics: <span class="prelude-ty">Option</span>&lt;RpcMetrics&gt;,
-	rpc_api: RpcModule&lt;M&gt;,
-	rt: tokio::runtime::Handle,
+<span class="doccomment">/// Start RPC server listening on given address.
+</span><span class="kw">pub async fn </span>start_server&lt;M: Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
+	config: Config&lt;<span class="lifetime">&#39;_</span>, M&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;ServerHandle, Box&lt;<span class="kw">dyn </span>StdError + Send + Sync&gt;&gt; {
-	<span class="kw">let </span>max_payload_in = payload_size_or_default(max_payload_in_mb) <span class="kw">as </span>u32;
-	<span class="kw">let </span>max_payload_out = payload_size_or_default(max_payload_out_mb) <span class="kw">as </span>u32;
-	<span class="kw">let </span>host_filter = hosts_filter(cors.is_some(), <span class="kw-2">&amp;</span>addrs);
+	<span class="kw">let </span>Config {
+		addrs,
+		cors,
+		max_payload_in_mb,
+		max_payload_out_mb,
+		max_connections,
+		max_subs_per_conn,
+		metrics,
+		id_provider,
+		tokio_handle,
+		rpc_api,
+	} = config;
 
-	<span class="kw">let </span>middleware = tower::ServiceBuilder::new()
-		<span class="comment">// Proxy `GET /health` requests to internal `system_health` method.
-		</span>.layer(ProxyGetRequestLayer::new(<span class="string">&quot;/health&quot;</span>, <span class="string">&quot;system_health&quot;</span>)<span class="question-mark">?</span>)
-		.layer(try_into_cors(cors)<span class="question-mark">?</span>);
-
-	<span class="kw">let </span>builder = ServerBuilder::new()
-		.max_request_body_size(max_payload_in)
-		.max_response_body_size(max_payload_out)
-		.set_host_filtering(host_filter)
-		.set_middleware(middleware)
-		.custom_tokio_runtime(rt)
-		.http_only();
-
-	<span class="kw">let </span>rpc_api = build_rpc_api(rpc_api);
-	<span class="kw">let </span>(handle, addr) = <span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = metrics {
-		<span class="kw">let </span>server = builder.set_logger(metrics).build(<span class="kw-2">&amp;</span>addrs[..]).<span class="kw">await</span><span class="question-mark">?</span>;
-		<span class="kw">let </span>addr = server.local_addr();
-		(server.start(rpc_api)<span class="question-mark">?</span>, addr)
-	} <span class="kw">else </span>{
-		<span class="kw">let </span>server = builder.build(<span class="kw-2">&amp;</span>addrs[..]).<span class="kw">await</span><span class="question-mark">?</span>;
-		<span class="kw">let </span>addr = server.local_addr();
-		(server.start(rpc_api)<span class="question-mark">?</span>, addr)
-	};
-
-	<span class="macro">log::info!</span>(
-		<span class="string">&quot;Running JSON-RPC HTTP server: addr={}, allowed origins={}&quot;</span>,
-		addr.map_or_else(|<span class="kw">_</span>| <span class="string">&quot;unknown&quot;</span>.to_string(), |a| a.to_string()),
-		format_cors(cors)
-	);
-
-	<span class="prelude-val">Ok</span>(handle)
-}
-
-<span class="doccomment">/// Start a JSON-RPC server listening on given address that supports both HTTP and WS.
-</span><span class="kw">pub async fn </span>start&lt;M: Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
-	addrs: [SocketAddr; <span class="number">2</span>],
-	cors: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;String&gt;&gt;,
-	ws_config: WsConfig,
-	metrics: <span class="prelude-ty">Option</span>&lt;RpcMetrics&gt;,
-	rpc_api: RpcModule&lt;M&gt;,
-	rt: tokio::runtime::Handle,
-	id_provider: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>IdProvider&gt;&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;ServerHandle, Box&lt;<span class="kw">dyn </span>StdError + Send + Sync&gt;&gt; {
-	<span class="kw">let </span>(max_payload_in, max_payload_out, max_connections, max_subs_per_conn) =
-		ws_config.deconstruct();
-
-	<span class="kw">let </span>host_filter = hosts_filter(cors.is_some(), <span class="kw-2">&amp;</span>addrs);
+	<span class="kw">let </span>host_filter = hosts_filtering(cors.is_some(), <span class="kw-2">&amp;</span>addrs);
 
 	<span class="kw">let </span>middleware = tower::ServiceBuilder::new()
 		<span class="comment">// Proxy `GET /health` requests to internal `system_health` method.
@@ -388,14 +276,14 @@
 		.layer(try_into_cors(cors)<span class="question-mark">?</span>);
 
 	<span class="kw">let </span><span class="kw-2">mut </span>builder = ServerBuilder::new()
-		.max_request_body_size(max_payload_in)
-		.max_response_body_size(max_payload_out)
+		.max_request_body_size(max_payload_in_mb.saturating_mul(MEGABYTE))
+		.max_response_body_size(max_payload_out_mb.saturating_mul(MEGABYTE))
 		.max_connections(max_connections)
 		.max_subscriptions_per_connection(max_subs_per_conn)
 		.ping_interval(std::time::Duration::from_secs(<span class="number">30</span>))
 		.set_host_filtering(host_filter)
 		.set_middleware(middleware)
-		.custom_tokio_runtime(rt);
+		.custom_tokio_runtime(tokio_handle);
 
 	<span class="kw">if let </span><span class="prelude-val">Some</span>(provider) = id_provider {
 		builder = builder.set_id_provider(provider);
@@ -415,12 +303,26 @@
 	};
 
 	<span class="macro">log::info!</span>(
-		<span class="string">&quot;Running JSON-RPC WS server: addr={}, allowed origins={}&quot;</span>,
+		<span class="string">&quot;Running JSON-RPC server: addr={}, allowed origins={}&quot;</span>,
 		addr.map_or_else(|<span class="kw">_</span>| <span class="string">&quot;unknown&quot;</span>.to_string(), |a| a.to_string()),
 		format_cors(cors)
 	);
 
 	<span class="prelude-val">Ok</span>(handle)
+}
+
+<span class="kw">fn </span>hosts_filtering(enabled: bool, addrs: <span class="kw-2">&amp;</span>[SocketAddr]) -&gt; AllowHosts {
+	<span class="kw">if </span>enabled {
+		<span class="comment">// NOTE The listening addresses are whitelisted by default.
+		</span><span class="kw">let </span><span class="kw-2">mut </span>hosts = Vec::with_capacity(addrs.len() * <span class="number">2</span>);
+		<span class="kw">for </span>addr <span class="kw">in </span>addrs {
+			hosts.push(<span class="macro">format!</span>(<span class="string">&quot;localhost:{}&quot;</span>, addr.port()).into());
+			hosts.push(<span class="macro">format!</span>(<span class="string">&quot;127.0.0.1:{}&quot;</span>, addr.port()).into());
+		}
+		AllowHosts::Only(hosts)
+	} <span class="kw">else </span>{
+		AllowHosts::Any
+	}
 }
 
 <span class="kw">fn </span>build_rpc_api&lt;M: Send + Sync + <span class="lifetime">&#39;static</span>&gt;(<span class="kw-2">mut </span>rpc_api: RpcModule&lt;M&gt;) -&gt; RpcModule&lt;M&gt; {
@@ -436,24 +338,6 @@
 		.expect(<span class="string">&quot;infallible all other methods have their own address space; qed&quot;</span>);
 
 	rpc_api
-}
-
-<span class="kw">fn </span>payload_size_or_default(size_mb: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; usize {
-	size_mb.map_or(RPC_MAX_PAYLOAD_DEFAULT, |mb| mb.saturating_mul(MEGABYTE))
-}
-
-<span class="kw">fn </span>hosts_filter(enabled: bool, addrs: <span class="kw-2">&amp;</span>[SocketAddr]) -&gt; AllowHosts {
-	<span class="kw">if </span>enabled {
-		<span class="comment">// NOTE The listening addresses are whitelisted by default.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>hosts = Vec::with_capacity(addrs.len() * <span class="number">2</span>);
-		<span class="kw">for </span>addr <span class="kw">in </span>addrs {
-			hosts.push(<span class="macro">format!</span>(<span class="string">&quot;localhost:{}&quot;</span>, addr.port()).into());
-			hosts.push(<span class="macro">format!</span>(<span class="string">&quot;127.0.0.1:{}&quot;</span>, addr.port()).into());
-		}
-		AllowHosts::Only(hosts)
-	} <span class="kw">else </span>{
-		AllowHosts::Any
-	}
 }
 
 <span class="kw">fn </span>try_into_cors(
