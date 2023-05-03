@@ -2139,6 +2139,11 @@
 <a href="#2139" id="2139">2139</a>
 <a href="#2140" id="2140">2140</a>
 <a href="#2141" id="2141">2141</a>
+<a href="#2142" id="2142">2142</a>
+<a href="#2143" id="2143">2143</a>
+<a href="#2144" id="2144">2144</a>
+<a href="#2145" id="2145">2145</a>
+<a href="#2146" id="2146">2146</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3077,19 +3082,24 @@
 			<span class="kw">return </span><span class="prelude-val">Err</span>(sp_blockchain::Error::NotInFinalizedChain)
 		}
 
-		<span class="kw">let </span>route_from_best =
-			sp_blockchain::tree_route(<span class="self">self</span>.backend.blockchain(), best_block, block)<span class="question-mark">?</span>;
+		<span class="comment">// If there is only one leaf, best block is guaranteed to be
+		// a descendant of the new finalized block. If not,
+		// we need to check.
+		</span><span class="kw">if </span><span class="self">self</span>.backend.blockchain().leaves()<span class="question-mark">?</span>.len() &gt; <span class="number">1 </span>{
+			<span class="kw">let </span>route_from_best =
+				sp_blockchain::tree_route(<span class="self">self</span>.backend.blockchain(), best_block, block)<span class="question-mark">?</span>;
 
-		<span class="comment">// if the block is not a direct ancestor of the current best chain,
-		// then some other block is the common ancestor.
-		</span><span class="kw">if </span>route_from_best.common_block().hash != block {
-			<span class="comment">// NOTE: we&#39;re setting the finalized block as best block, this might
-			// be slightly inaccurate since we might have a &quot;better&quot; block
-			// further along this chain, but since best chain selection logic is
-			// plugable we cannot make a better choice here. usages that need
-			// an accurate &quot;best&quot; block need to go through `SelectChain`
-			// instead.
-			</span>operation.op.mark_head(block)<span class="question-mark">?</span>;
+			<span class="comment">// if the block is not a direct ancestor of the current best chain,
+			// then some other block is the common ancestor.
+			</span><span class="kw">if </span>route_from_best.common_block().hash != block {
+				<span class="comment">// NOTE: we&#39;re setting the finalized block as best block, this might
+				// be slightly inaccurate since we might have a &quot;better&quot; block
+				// further along this chain, but since best chain selection logic is
+				// plugable we cannot make a better choice here. usages that need
+				// an accurate &quot;best&quot; block need to go through `SelectChain`
+				// instead.
+				</span>operation.op.mark_head(block)<span class="question-mark">?</span>;
+			}
 		}
 
 		<span class="kw">let </span>enacted = route_from_finalized.enacted();
