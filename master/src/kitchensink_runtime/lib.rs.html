@@ -2526,6 +2526,36 @@
 <a href="#2526" id="2526">2526</a>
 <a href="#2527" id="2527">2527</a>
 <a href="#2528" id="2528">2528</a>
+<a href="#2529" id="2529">2529</a>
+<a href="#2530" id="2530">2530</a>
+<a href="#2531" id="2531">2531</a>
+<a href="#2532" id="2532">2532</a>
+<a href="#2533" id="2533">2533</a>
+<a href="#2534" id="2534">2534</a>
+<a href="#2535" id="2535">2535</a>
+<a href="#2536" id="2536">2536</a>
+<a href="#2537" id="2537">2537</a>
+<a href="#2538" id="2538">2538</a>
+<a href="#2539" id="2539">2539</a>
+<a href="#2540" id="2540">2540</a>
+<a href="#2541" id="2541">2541</a>
+<a href="#2542" id="2542">2542</a>
+<a href="#2543" id="2543">2543</a>
+<a href="#2544" id="2544">2544</a>
+<a href="#2545" id="2545">2545</a>
+<a href="#2546" id="2546">2546</a>
+<a href="#2547" id="2547">2547</a>
+<a href="#2548" id="2548">2548</a>
+<a href="#2549" id="2549">2549</a>
+<a href="#2550" id="2550">2550</a>
+<a href="#2551" id="2551">2551</a>
+<a href="#2552" id="2552">2552</a>
+<a href="#2553" id="2553">2553</a>
+<a href="#2554" id="2554">2554</a>
+<a href="#2555" id="2555">2555</a>
+<a href="#2556" id="2556">2556</a>
+<a href="#2557" id="2557">2557</a>
+<a href="#2558" id="2558">2558</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4283,6 +4313,26 @@
 	<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
 }
 
+<span class="macro">parameter_types! </span>{
+	<span class="kw">pub </span>StatementCost: Balance = <span class="number">1 </span>* DOLLARS;
+	<span class="kw">pub </span>StatementByteCost: Balance = <span class="number">100 </span>* MILLICENTS;
+	<span class="kw">pub const </span>MinAllowedStatements: u32 = <span class="number">4</span>;
+	<span class="kw">pub const </span>MaxAllowedStatements: u32 = <span class="number">10</span>;
+	<span class="kw">pub const </span>MinAllowedBytes: u32 = <span class="number">1024</span>;
+	<span class="kw">pub const </span>MaxAllowedBytes: u32 = <span class="number">4096</span>;
+}
+
+<span class="kw">impl </span>pallet_statement::Config <span class="kw">for </span>Runtime {
+	<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
+	<span class="kw">type </span>Currency = Balances;
+	<span class="kw">type </span>StatementCost = StatementCost;
+	<span class="kw">type </span>ByteCost = StatementByteCost;
+	<span class="kw">type </span>MinAllowedStatements = MinAllowedStatements;
+	<span class="kw">type </span>MaxAllowedStatements = MaxAllowedStatements;
+	<span class="kw">type </span>MinAllowedBytes = MinAllowedBytes;
+	<span class="kw">type </span>MaxAllowedBytes = MaxAllowedBytes;
+}
+
 <span class="macro">construct_runtime!</span>(
 	<span class="kw">pub struct </span>Runtime <span class="kw">where
 		</span>Block = Block,
@@ -4354,6 +4404,7 @@
 		FastUnstake: pallet_fast_unstake,
 		MessageQueue: pallet_message_queue,
 		Pov: frame_benchmarking_pallet_pov,
+		Statement: pallet_statement,
 	}
 );
 
@@ -4536,6 +4587,15 @@
 			block_hash: &lt;Block <span class="kw">as </span>BlockT&gt;::Hash,
 		) -&gt; TransactionValidity {
 			Executive::validate_transaction(source, tx, block_hash)
+		}
+	}
+
+	<span class="kw">impl </span>sp_statement_store::runtime_api::ValidateStatement&lt;Block&gt; <span class="kw">for </span>Runtime {
+		<span class="kw">fn </span>validate_statement(
+			source: sp_statement_store::runtime_api::StatementSource,
+			statement: sp_statement_store::Statement,
+		) -&gt; <span class="prelude-ty">Result</span>&lt;sp_statement_store::runtime_api::ValidStatement, sp_statement_store::runtime_api::InvalidStatement&gt; {
+			Statement::validate_statement(source, statement)
 		}
 	}
 

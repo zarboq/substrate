@@ -172,6 +172,23 @@
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -262,6 +279,8 @@
 	</span><span class="kw">pub </span>babe: BabeDeps,
 	<span class="doccomment">/// GRANDPA specific dependencies.
 	</span><span class="kw">pub </span>grandpa: GrandpaDeps&lt;B&gt;,
+	<span class="doccomment">/// Shared statement store reference.
+	</span><span class="kw">pub </span>statement_store: Arc&lt;<span class="kw">dyn </span>sp_statement_store::StatementStore&gt;,
 }
 
 <span class="doccomment">/// Instantiate all Full RPC extensions.
@@ -292,14 +311,26 @@
 	<span class="kw">use </span>pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	<span class="kw">use </span>sc_consensus_babe_rpc::{Babe, BabeApiServer};
 	<span class="kw">use </span>sc_consensus_grandpa_rpc::{Grandpa, GrandpaApiServer};
-	<span class="kw">use </span>sc_rpc::dev::{Dev, DevApiServer};
+	<span class="kw">use </span>sc_rpc::{
+		dev::{Dev, DevApiServer},
+		statement::StatementApiServer,
+	};
 	<span class="kw">use </span>sc_rpc_spec_v2::chain_spec::{ChainSpec, ChainSpecApiServer};
 	<span class="kw">use </span>sc_sync_state_rpc::{SyncState, SyncStateApiServer};
 	<span class="kw">use </span>substrate_frame_rpc_system::{System, SystemApiServer};
 	<span class="kw">use </span>substrate_state_trie_migration_rpc::{StateMigration, StateMigrationApiServer};
 
 	<span class="kw">let </span><span class="kw-2">mut </span>io = RpcModule::new(());
-	<span class="kw">let </span>FullDeps { client, pool, select_chain, chain_spec, deny_unsafe, babe, grandpa } = deps;
+	<span class="kw">let </span>FullDeps {
+		client,
+		pool,
+		select_chain,
+		chain_spec,
+		deny_unsafe,
+		babe,
+		grandpa,
+		statement_store,
+	} = deps;
 
 	<span class="kw">let </span>BabeDeps { keystore, babe_worker_handle } = babe;
 	<span class="kw">let </span>GrandpaDeps {
@@ -343,6 +374,9 @@
 
 	io.merge(StateMigration::new(client.clone(), backend, deny_unsafe).into_rpc())<span class="question-mark">?</span>;
 	io.merge(Dev::new(client, deny_unsafe).into_rpc())<span class="question-mark">?</span>;
+	<span class="kw">let </span>statement_store =
+		sc_rpc::statement::StatementStore::new(statement_store, deny_unsafe).into_rpc();
+	io.merge(statement_store)<span class="question-mark">?</span>;
 
 	<span class="prelude-val">Ok</span>(io)
 }

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Error","Statement RPC errors."]],"type":[["Result","Statement RPC Result type."]]};

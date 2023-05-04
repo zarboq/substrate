@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["Error","Re-export the API for backward compatibility. Statement RPC errors."]],"struct":[["StatementStore","Statement store API"]],"trait":[["StatementApiServer","Re-export the API for backward compatibility. Server trait implementation for the `StatementApi` RPC API."]]};

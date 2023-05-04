@@ -431,6 +431,8 @@
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
 <a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -692,6 +694,7 @@
 	<span class="kw">fn </span>create_runner() -&gt; Runner&lt;Cli&gt; {
 		<span class="kw">let </span>runtime = build_runtime().unwrap();
 
+		<span class="kw">let </span>root = PathBuf::from(<span class="string">&quot;db&quot;</span>);
 		<span class="kw">let </span>runner = Runner::new(
 			Configuration {
 				impl_name: <span class="string">&quot;spec&quot;</span>.into(),
@@ -701,7 +704,7 @@
 				transaction_pool: Default::default(),
 				network: NetworkConfiguration::new_memory(),
 				keystore: sc_service::config::KeystoreConfig::InMemory,
-				database: sc_client_db::DatabaseSource::ParityDb { path: PathBuf::from(<span class="string">&quot;db&quot;</span>) },
+				database: sc_client_db::DatabaseSource::ParityDb { path: root.clone() },
 				trie_cache_maximum_size: <span class="prelude-val">None</span>,
 				state_pruning: <span class="prelude-val">None</span>,
 				blocks_pruning: sc_client_db::BlocksPruning::KeepAll,
@@ -739,7 +742,8 @@
 				tracing_receiver: Default::default(),
 				max_runtime_instances: <span class="number">8</span>,
 				announce_block: <span class="bool-val">true</span>,
-				base_path: <span class="prelude-val">None</span>,
+				base_path: sc_service::BasePath::new(root.clone()),
+				data_path: root,
 				informant_output_format: Default::default(),
 				runtime_cache_size: <span class="number">2</span>,
 			},

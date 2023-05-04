@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["error","Statement RPC errors."]],"trait":[["StatementApiClient","Client implementation for the `StatementApi` RPC API."],["StatementApiServer","Server trait implementation for the `StatementApi` RPC API."]]};
