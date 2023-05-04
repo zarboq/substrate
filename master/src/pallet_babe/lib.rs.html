@@ -1046,10 +1046,6 @@
 <a href="#1046" id="1046">1046</a>
 <a href="#1047" id="1047">1047</a>
 <a href="#1048" id="1048">1048</a>
-<a href="#1049" id="1049">1049</a>
-<a href="#1050" id="1050">1050</a>
-<a href="#1051" id="1051">1051</a>
-<a href="#1052" id="1052">1052</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1409,12 +1405,12 @@
 					);
 				}
 
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(vrf_signature) = pre_digest.vrf_signature() {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(signature) = pre_digest.vrf_signature() {
 					<span class="kw">let </span>randomness: <span class="prelude-ty">Option</span>&lt;BabeRandomness&gt; = Authorities::&lt;T&gt;::get()
 						.get(authority_index <span class="kw">as </span>usize)
 						.and_then(|(authority, <span class="kw">_</span>)| {
 							<span class="kw">let </span>public = authority.as_inner_ref();
-							<span class="kw">let </span>transcript = sp_consensus_babe::make_transcript(
+							<span class="kw">let </span>transcript = sp_consensus_babe::make_vrf_transcript(
 								<span class="kw-2">&amp;</span><span class="self">Self</span>::randomness(),
 								CurrentSlot::&lt;T&gt;::get(),
 								EpochIndex::&lt;T&gt;::get(),
@@ -1424,16 +1420,12 @@
 							// execution. We don&#39;t run the verification again here to avoid slowing
 							// down the runtime.
 							</span><span class="macro">debug_assert!</span>({
-								<span class="kw">use </span>sp_core::crypto::VrfVerifier;
-								public.vrf_verify(<span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;</span>vrf_signature)
+								<span class="kw">use </span>sp_core::crypto::VrfPublic;
+								public.vrf_verify(<span class="kw-2">&amp;</span>transcript.clone().into_sign_data(), <span class="kw-2">&amp;</span>signature)
 							});
 
 							public
-								.make_bytes(
-									RANDOMNESS_VRF_CONTEXT,
-									<span class="kw-2">&amp;</span>transcript,
-									<span class="kw-2">&amp;</span>vrf_signature.output,
-								)
+								.make_bytes(RANDOMNESS_VRF_CONTEXT, <span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;</span>signature.output)
 								.ok()
 						});
 

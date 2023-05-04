@@ -293,11 +293,11 @@
 		CompatibleDigestItem, PreDigest, PrimaryPreDigest, SecondaryPlainPreDigest,
 		SecondaryVRFPreDigest,
 	},
-	make_transcript, AuthorityId, AuthorityPair, AuthoritySignature,
+	make_vrf_sign_data, AuthorityId, AuthorityPair, AuthoritySignature,
 };
 <span class="kw">use </span>sp_consensus_slots::Slot;
 <span class="kw">use </span>sp_core::{
-	crypto::{VrfVerifier, Wraps},
+	crypto::{VrfPublic, Wraps},
 	Pair,
 };
 <span class="kw">use </span>sp_runtime::{traits::Header, DigestItem};
@@ -434,9 +434,9 @@
 		<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::BadSignature(pre_hash)))
 	}
 
-	<span class="kw">let </span>transcript = make_transcript(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
+	<span class="kw">let </span>data = make_vrf_sign_data(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
 
-	<span class="kw">if </span>!authority_id.as_inner_ref().vrf_verify(<span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;</span>pre_digest.vrf_signature) {
+	<span class="kw">if </span>!authority_id.as_inner_ref().vrf_verify(<span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;</span>pre_digest.vrf_signature) {
 		<span class="kw">return </span><span class="prelude-val">Err</span>(babe_err(Error::VrfVerificationFailed))
 	}
 
@@ -445,9 +445,9 @@
 
 	<span class="kw">let </span>score = authority_id
 		.as_inner_ref()
-		.make_bytes::&lt;[u8; AUTHORING_SCORE_LENGTH]&gt;(
+		.make_bytes::&lt;AUTHORING_SCORE_LENGTH&gt;(
 			AUTHORING_SCORE_VRF_CONTEXT,
-			<span class="kw-2">&amp;</span>transcript,
+			<span class="kw-2">&amp;</span>data.as_ref(),
 			<span class="kw-2">&amp;</span>pre_digest.vrf_signature.output,
 		)
 		.map(u128::from_le_bytes)
@@ -516,9 +516,9 @@
 		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::BadSignature(pre_hash))
 	}
 
-	<span class="kw">let </span>transcript = make_transcript(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
+	<span class="kw">let </span>data = make_vrf_sign_data(<span class="kw-2">&amp;</span>epoch.randomness, pre_digest.slot, epoch_index);
 
-	<span class="kw">if </span>!author.as_inner_ref().vrf_verify(<span class="kw-2">&amp;</span>transcript, <span class="kw-2">&amp;</span>pre_digest.vrf_signature) {
+	<span class="kw">if </span>!author.as_inner_ref().vrf_verify(<span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;</span>pre_digest.vrf_signature) {
 		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::VrfVerificationFailed)
 	}
 

@@ -334,7 +334,7 @@
 <span class="kw">use </span>sp_application_crypto::AppCrypto;
 <span class="kw">use </span>sp_consensus_babe::{
 	digests::{PreDigest, PrimaryPreDigest, SecondaryPlainPreDigest, SecondaryVRFPreDigest},
-	make_transcript, AuthorityId, BabeAuthorityWeight, Randomness, Slot,
+	make_vrf_sign_data, AuthorityId, BabeAuthorityWeight, Randomness, Slot,
 };
 <span class="kw">use </span>sp_core::{
 	blake2_256,
@@ -458,9 +458,9 @@
 	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
 		<span class="kw">if </span>authority_id == expected_author {
 			<span class="kw">let </span>pre_digest = <span class="kw">if </span>author_secondary_vrf {
-				<span class="kw">let </span>transcript = make_transcript(randomness, slot, epoch_index);
+				<span class="kw">let </span>data = make_vrf_sign_data(randomness, slot, epoch_index);
 				<span class="kw">let </span>result =
-					keystore.sr25519_vrf_sign(AuthorityId::ID, authority_id.as_ref(), <span class="kw-2">&amp;</span>transcript);
+					keystore.sr25519_vrf_sign(AuthorityId::ID, authority_id.as_ref(), <span class="kw-2">&amp;</span>data);
 				<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(vrf_signature)) = result {
 					<span class="prelude-val">Some</span>(PreDigest::SecondaryVRF(SecondaryVRFPreDigest {
 						slot,
@@ -549,18 +549,18 @@
 		</span>epoch_index = epoch.clone_for_slot(slot).epoch_index;
 	}
 
-	<span class="kw">let </span>transcript = make_transcript(randomness, slot, epoch_index);
+	<span class="kw">let </span>data = make_vrf_sign_data(randomness, slot, epoch_index);
 
 	<span class="kw">for </span>(authority_id, authority_index) <span class="kw">in </span>keys {
-		<span class="kw">let </span>result = keystore.sr25519_vrf_sign(AuthorityId::ID, authority_id.as_ref(), <span class="kw-2">&amp;</span>transcript);
+		<span class="kw">let </span>result = keystore.sr25519_vrf_sign(AuthorityId::ID, authority_id.as_ref(), <span class="kw-2">&amp;</span>data);
 		<span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(vrf_signature)) = result {
 			<span class="kw">let </span>threshold = calculate_primary_threshold(c, authorities, <span class="kw-2">*</span>authority_index);
 
 			<span class="kw">let </span>can_claim = authority_id
 				.as_inner_ref()
-				.make_bytes::&lt;[u8; AUTHORING_SCORE_LENGTH]&gt;(
+				.make_bytes::&lt;AUTHORING_SCORE_LENGTH&gt;(
 					AUTHORING_SCORE_VRF_CONTEXT,
-					<span class="kw-2">&amp;</span>transcript,
+					<span class="kw-2">&amp;</span>data.as_ref(),
 					<span class="kw-2">&amp;</span>vrf_signature.output,
 				)
 				.map(|bytes| u128::from_le_bytes(bytes) &lt; threshold)
