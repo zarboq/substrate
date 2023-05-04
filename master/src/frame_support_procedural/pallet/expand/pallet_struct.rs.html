@@ -274,6 +274,12 @@
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -436,11 +442,15 @@
 		}
 	);
 
-	<span class="kw">let </span>storage_version = <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = def.pallet_struct.storage_version.as_ref() {
-		<span class="macro">quote::quote! </span>{ #v }
-	} <span class="kw">else </span>{
-		<span class="macro">quote::quote! </span>{ #frame_support::traits::StorageVersion::default() }
-	};
+	<span class="kw">let </span>(storage_version, current_storage_version_ty) =
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(v) = def.pallet_struct.storage_version.as_ref() {
+			(<span class="macro">quote::quote! </span>{ #v }, <span class="macro">quote::quote! </span>{ #frame_support::traits::StorageVersion })
+		} <span class="kw">else </span>{
+			(
+				<span class="macro">quote::quote! </span>{ core::default::Default::default() },
+				<span class="macro">quote::quote! </span>{ #frame_support::traits::NoStorageVersionSet },
+			)
+		};
 
 	<span class="kw">let </span>whitelisted_storage_idents: Vec&lt;syn::Ident&gt; = def
 		.storages
@@ -475,7 +485,9 @@
 			<span class="kw">for </span>#pallet_ident&lt;#type_use_gen&gt;
 			#config_where_clause
 		{
-			<span class="kw">fn </span>current_storage_version() -&gt; #frame_support::traits::StorageVersion {
+			<span class="kw">type </span>CurrentStorageVersion = #current_storage_version_ty;
+
+			<span class="kw">fn </span>current_storage_version() -&gt; <span class="self">Self</span>::CurrentStorageVersion {
 				#storage_version
 			}
 
@@ -490,7 +502,7 @@
 			#config_where_clause
 		{
 			<span class="kw">fn </span>on_genesis() {
-				<span class="kw">let </span>storage_version = #storage_version;
+				<span class="kw">let </span>storage_version: #frame_support::traits::StorageVersion = #storage_version;
 				storage_version.put::&lt;<span class="self">Self</span>&gt;();
 			}
 		}

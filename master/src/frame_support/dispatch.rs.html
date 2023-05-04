@@ -3965,6 +3965,20 @@
 <a href="#3965" id="3965">3965</a>
 <a href="#3966" id="3966">3966</a>
 <a href="#3967" id="3967">3967</a>
+<a href="#3968" id="3968">3968</a>
+<a href="#3969" id="3969">3969</a>
+<a href="#3970" id="3970">3970</a>
+<a href="#3971" id="3971">3971</a>
+<a href="#3972" id="3972">3972</a>
+<a href="#3973" id="3973">3973</a>
+<a href="#3974" id="3974">3974</a>
+<a href="#3975" id="3975">3975</a>
+<a href="#3976" id="3976">3976</a>
+<a href="#3977" id="3977">3977</a>
+<a href="#3978" id="3978">3978</a>
+<a href="#3979" id="3979">3979</a>
+<a href="#3980" id="3980">3980</a>
+<a href="#3981" id="3981">3981</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -6467,12 +6481,24 @@
 		</span><span class="kw">impl</span>&lt;<span class="macro-nonterminal">$trait_instance</span>: <span class="macro-nonterminal">$trait_name </span>$(&lt;I&gt;, <span class="macro-nonterminal">$instance</span>: <span class="macro-nonterminal">$instantiable</span>)<span class="question-mark">?</span>&gt; <span class="macro-nonterminal">$crate::traits::GetStorageVersion
 			</span><span class="kw">for </span><span class="macro-nonterminal">$module</span>&lt;<span class="macro-nonterminal">$trait_instance </span>$(, <span class="macro-nonterminal">$instance</span>)<span class="question-mark">?</span>&gt; <span class="kw">where </span>$( <span class="macro-nonterminal">$other_where_bounds </span>)*
 		{
-			<span class="kw">fn </span>current_storage_version() -&gt; <span class="macro-nonterminal">$crate::traits::StorageVersion </span>{
+			<span class="kw">type </span>CurrentStorageVersion = <span class="macro-nonterminal">$crate::traits::StorageVersion</span>;
+
+			<span class="kw">fn </span>current_storage_version() -&gt; <span class="self">Self</span>::CurrentStorageVersion {
 				$( <span class="macro-nonterminal">$storage_version </span>)*
 			}
 
 			<span class="kw">fn </span>on_chain_storage_version() -&gt; <span class="macro-nonterminal">$crate::traits::StorageVersion </span>{
 				<span class="macro-nonterminal">$crate::traits::StorageVersion::get</span>::&lt;<span class="self">Self</span>&gt;()
+			}
+		}
+
+		<span class="comment">// Implement `OnGenesis` for `Module`
+		</span><span class="kw">impl</span>&lt;<span class="macro-nonterminal">$trait_instance</span>: <span class="macro-nonterminal">$trait_name </span>$(&lt;I&gt;, <span class="macro-nonterminal">$instance</span>: <span class="macro-nonterminal">$instantiable</span>)<span class="question-mark">?</span>&gt; <span class="macro-nonterminal">$crate::traits::OnGenesis
+			</span><span class="kw">for </span><span class="macro-nonterminal">$module</span>&lt;<span class="macro-nonterminal">$trait_instance </span>$(, <span class="macro-nonterminal">$instance</span>)<span class="question-mark">?</span>&gt; <span class="kw">where </span>$( <span class="macro-nonterminal">$other_where_bounds </span>)*
+		{
+			<span class="kw">fn </span>on_genesis() {
+				<span class="kw">let </span>storage_version = &lt;<span class="self">Self </span><span class="kw">as </span><span class="macro-nonterminal">$crate::traits::GetStorageVersion</span>&gt;::current_storage_version();
+				storage_version.put::&lt;<span class="self">Self</span>&gt;();
 			}
 		}
 	};
@@ -6486,12 +6512,24 @@
 		</span><span class="kw">impl</span>&lt;<span class="macro-nonterminal">$trait_instance</span>: <span class="macro-nonterminal">$trait_name </span>$(&lt;I&gt;, <span class="macro-nonterminal">$instance</span>: <span class="macro-nonterminal">$instantiable</span>)<span class="question-mark">?</span>&gt; <span class="macro-nonterminal">$crate::traits::GetStorageVersion
 			</span><span class="kw">for </span><span class="macro-nonterminal">$module</span>&lt;<span class="macro-nonterminal">$trait_instance </span>$(, <span class="macro-nonterminal">$instance</span>)<span class="question-mark">?</span>&gt; <span class="kw">where </span>$( <span class="macro-nonterminal">$other_where_bounds </span>)*
 		{
-			<span class="kw">fn </span>current_storage_version() -&gt; <span class="macro-nonterminal">$crate::traits::StorageVersion </span>{
+			<span class="kw">type </span>CurrentStorageVersion = <span class="macro-nonterminal">$crate::traits::NoStorageVersionSet</span>;
+
+			<span class="kw">fn </span>current_storage_version() -&gt; <span class="self">Self</span>::CurrentStorageVersion {
 				Default::default()
 			}
 
 			<span class="kw">fn </span>on_chain_storage_version() -&gt; <span class="macro-nonterminal">$crate::traits::StorageVersion </span>{
 				<span class="macro-nonterminal">$crate::traits::StorageVersion::get</span>::&lt;<span class="self">Self</span>&gt;()
+			}
+		}
+
+		<span class="comment">// Implement `OnGenesis` for `Module`
+		</span><span class="kw">impl</span>&lt;<span class="macro-nonterminal">$trait_instance</span>: <span class="macro-nonterminal">$trait_name </span>$(&lt;I&gt;, <span class="macro-nonterminal">$instance</span>: <span class="macro-nonterminal">$instantiable</span>)<span class="question-mark">?</span>&gt; <span class="macro-nonterminal">$crate::traits::OnGenesis
+			</span><span class="kw">for </span><span class="macro-nonterminal">$module</span>&lt;<span class="macro-nonterminal">$trait_instance </span>$(, <span class="macro-nonterminal">$instance</span>)<span class="question-mark">?</span>&gt; <span class="kw">where </span>$( <span class="macro-nonterminal">$other_where_bounds </span>)*
+		{
+			<span class="kw">fn </span>on_genesis() {
+				<span class="kw">let </span>storage_version = <span class="macro-nonterminal">$crate::traits::StorageVersion::default</span>();
+				storage_version.put::&lt;<span class="self">Self</span>&gt;();
 			}
 		}
 	};
@@ -6778,16 +6816,6 @@
 						<span class="macro">stringify!</span>(<span class="macro-nonterminal">$fn_name</span>),
 					)*
 				]
-			}
-		}
-
-		<span class="comment">// Implement `OnGenesis` for `Module`
-		</span><span class="kw">impl</span>&lt;<span class="macro-nonterminal">$trait_instance</span>: <span class="macro-nonterminal">$trait_name </span>$(&lt;I&gt;, <span class="macro-nonterminal">$instance</span>: <span class="macro-nonterminal">$instantiable</span>)<span class="question-mark">?</span>&gt; <span class="macro-nonterminal">$crate::traits::OnGenesis
-			</span><span class="kw">for </span><span class="macro-nonterminal">$mod_type</span>&lt;<span class="macro-nonterminal">$trait_instance </span>$(, <span class="macro-nonterminal">$instance</span>)<span class="question-mark">?</span>&gt; <span class="kw">where </span>$( <span class="macro-nonterminal">$other_where_bounds </span>)*
-		{
-			<span class="kw">fn </span>on_genesis() {
-				<span class="kw">let </span>storage_version = &lt;<span class="self">Self </span><span class="kw">as </span><span class="macro-nonterminal">$crate::traits::GetStorageVersion</span>&gt;::current_storage_version();
-				storage_version.put::&lt;<span class="self">Self</span>&gt;();
 			}
 		}
 
