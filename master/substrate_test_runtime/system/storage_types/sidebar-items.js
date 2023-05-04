@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["Authorities",""],["ExtrinsicData",""],["NewAuthorities",""],["Number",""],["ParentHash",""],["StorageDigest",""]]};

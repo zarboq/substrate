@@ -1057,6 +1057,48 @@
 <a href="#1057" id="1057">1057</a>
 <a href="#1058" id="1058">1058</a>
 <a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1606,37 +1648,29 @@
 	<span class="kw">use </span>sp_api::Core;
 	<span class="kw">use </span>sp_blockchain::HeaderBackend;
 	<span class="kw">use </span>sp_consensus::{BlockOrigin, Environment, Proposer};
-	<span class="kw">use </span>sp_core::Pair;
-	<span class="kw">use </span>sp_runtime::{generic::BlockId, traits::NumberFor};
+	<span class="kw">use </span>sp_runtime::{generic::BlockId, traits::NumberFor, Perbill};
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		prelude::<span class="kw-2">*</span>,
-		runtime::{Extrinsic, Transfer},
+		runtime::{Block <span class="kw">as </span>TestBlock, Extrinsic, ExtrinsicBuilder, Transfer},
 		TestClientBuilder, TestClientBuilderExt,
 	};
 
 	<span class="kw">const </span>SOURCE: TransactionSource = TransactionSource::External;
 
-	<span class="kw">fn </span>extrinsic(nonce: u64) -&gt; Extrinsic {
-		Transfer {
-			amount: Default::default(),
-			nonce,
-			from: AccountKeyring::Alice.into(),
-			to: AccountKeyring::Bob.into(),
-		}
-		.into_signed_tx()
-	}
+	<span class="comment">// Note:
+	// Maximum normal extrinsic size for `substrate_test_runtime` is ~65% of max_block (refer to
+	// `substrate_test_runtime::RuntimeBlockWeights` for details).
+	// This extrinsic sizing allows for:
+	// - one huge xts + a lot of tiny dust
+	// - one huge, no medium,
+	// - two medium xts
+	// This is widely exploited in following tests.
+	</span><span class="kw">const </span>HUGE: u32 = <span class="number">649000000</span>;
+	<span class="kw">const </span>MEDIUM: u32 = <span class="number">250000000</span>;
+	<span class="kw">const </span>TINY: u32 = <span class="number">1000</span>;
 
-	<span class="kw">fn </span>exhausts_resources_extrinsic_from(who: usize) -&gt; Extrinsic {
-		<span class="kw">let </span>pair = AccountKeyring::numeric(who);
-		<span class="kw">let </span>transfer = Transfer {
-			<span class="comment">// increase the amount to bump priority
-			</span>amount: <span class="number">1</span>,
-			nonce: <span class="number">0</span>,
-			from: pair.public(),
-			to: AccountKeyring::Bob.into(),
-		};
-		<span class="kw">let </span>signature = pair.sign(<span class="kw-2">&amp;</span>transfer.encode()).into();
-		Extrinsic::Transfer { transfer, signature, exhaust_resources_when_not_first: <span class="bool-val">true </span>}
+	<span class="kw">fn </span>extrinsic(nonce: u64) -&gt; Extrinsic {
+		ExtrinsicBuilder::new_fill_block(Perbill::from_parts(TINY)).nonce(nonce).build()
 	}
 
 	<span class="kw">fn </span>chain_event&lt;B: BlockT&gt;(header: B::Header) -&gt; ChainEvent&lt;B&gt;
@@ -1797,7 +1831,7 @@
 	</span><span class="attr">#[test]
 	</span><span class="kw">fn </span>should_not_remove_invalid_transactions_from_the_same_sender_after_one_was_invalid() {
 		<span class="comment">// given
-		</span><span class="kw">let </span><span class="kw-2">mut </span>client = Arc::new(substrate_test_runtime_client::new());
+		</span><span class="kw">let </span>client = Arc::new(substrate_test_runtime_client::new());
 		<span class="kw">let </span>spawner = sp_core::testing::TaskExecutor::new();
 		<span class="kw">let </span>txpool = BasicPool::new_full(
 			Default::default(),
@@ -1807,38 +1841,29 @@
 			client.clone(),
 		);
 
+		<span class="kw">let </span>medium = |nonce| {
+			ExtrinsicBuilder::new_fill_block(Perbill::from_parts(MEDIUM))
+				.nonce(nonce)
+				.build()
+		};
+		<span class="kw">let </span>huge = |nonce| {
+			ExtrinsicBuilder::new_fill_block(Perbill::from_parts(HUGE)).nonce(nonce).build()
+		};
+
 		block_on(txpool.submit_at(
 			<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>),
 			SOURCE,
-			<span class="macro">vec!</span>[
-				extrinsic(<span class="number">0</span>),
-				extrinsic(<span class="number">1</span>),
-				Transfer {
-					amount: Default::default(),
-					nonce: <span class="number">2</span>,
-					from: AccountKeyring::Alice.into(),
-					to: AccountKeyring::Bob.into(),
-				}.into_resources_exhausting_tx(),
-				extrinsic(<span class="number">3</span>),
-				Transfer {
-					amount: Default::default(),
-					nonce: <span class="number">4</span>,
-					from: AccountKeyring::Alice.into(),
-					to: AccountKeyring::Bob.into(),
-				}.into_resources_exhausting_tx(),
-				extrinsic(<span class="number">5</span>),
-				extrinsic(<span class="number">6</span>),
-			],
+			<span class="macro">vec!</span>[medium(<span class="number">0</span>), medium(<span class="number">1</span>), huge(<span class="number">2</span>), medium(<span class="number">3</span>), huge(<span class="number">4</span>), medium(<span class="number">5</span>), medium(<span class="number">6</span>)],
 		))
 		.unwrap();
 
 		<span class="kw">let </span><span class="kw-2">mut </span>proposer_factory =
 			ProposerFactory::new(spawner.clone(), client.clone(), txpool.clone(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
 		<span class="kw">let </span><span class="kw-2">mut </span>propose_block = |client: <span class="kw-2">&amp;</span>TestClient,
-		                         number,
+		                         parent_number,
 		                         expected_block_extrinsics,
 		                         expected_pool_transactions| {
-			<span class="kw">let </span>hash = client.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(number)).unwrap();
+			<span class="kw">let </span>hash = client.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(parent_number)).unwrap();
 			<span class="kw">let </span>proposer = proposer_factory.init_with_now(
 				<span class="kw-2">&amp;</span>client.expect_header(hash).unwrap(),
 				Box::new(<span class="kw">move </span>|| time::Instant::now()),
@@ -1853,10 +1878,28 @@
 
 			<span class="comment">// then
 			// block should have some extrinsics although we have some more in the pool.
-			</span><span class="macro">assert_eq!</span>(txpool.ready().count(), expected_pool_transactions);
-			<span class="macro">assert_eq!</span>(block.extrinsics().len(), expected_block_extrinsics);
+			</span><span class="macro">assert_eq!</span>(
+				txpool.ready().count(),
+				expected_pool_transactions,
+				<span class="string">&quot;at block: {}&quot;</span>,
+				block.header.number
+			);
+			<span class="macro">assert_eq!</span>(
+				block.extrinsics().len(),
+				expected_block_extrinsics,
+				<span class="string">&quot;at block: {}&quot;</span>,
+				block.header.number
+			);
 
 			block
+		};
+
+		<span class="kw">let </span>import_and_maintain = |<span class="kw-2">mut </span>client: Arc&lt;TestClient&gt;, block: TestBlock| {
+			<span class="kw">let </span>hash = block.hash();
+			block_on(client.import(BlockOrigin::Own, block)).unwrap();
+			block_on(txpool.maintain(chain_event(
+				client.expect_header(hash).expect(<span class="string">&quot;there should be header&quot;</span>),
+			)));
 		};
 
 		block_on(
@@ -1870,19 +1913,28 @@
 
 		<span class="comment">// let&#39;s create one block and import it
 		</span><span class="kw">let </span>block = propose_block(<span class="kw-2">&amp;</span>client, <span class="number">0</span>, <span class="number">2</span>, <span class="number">7</span>);
-		<span class="kw">let </span>hashof1 = block.hash();
-		block_on(client.import(BlockOrigin::Own, block)).unwrap();
-
-		block_on(
-			txpool.maintain(chain_event(
-				client.expect_header(hashof1).expect(<span class="string">&quot;there should be header&quot;</span>),
-			)),
-		);
+		import_and_maintain(client.clone(), block);
 		<span class="macro">assert_eq!</span>(txpool.ready().count(), <span class="number">5</span>);
 
 		<span class="comment">// now let&#39;s make sure that we can still make some progress
-		</span><span class="kw">let </span>block = propose_block(<span class="kw-2">&amp;</span>client, <span class="number">1</span>, <span class="number">2</span>, <span class="number">5</span>);
-		block_on(client.import(BlockOrigin::Own, block)).unwrap();
+		</span><span class="kw">let </span>block = propose_block(<span class="kw-2">&amp;</span>client, <span class="number">1</span>, <span class="number">1</span>, <span class="number">5</span>);
+		import_and_maintain(client.clone(), block);
+		<span class="macro">assert_eq!</span>(txpool.ready().count(), <span class="number">4</span>);
+
+		<span class="comment">// again let&#39;s make sure that we can still make some progress
+		</span><span class="kw">let </span>block = propose_block(<span class="kw-2">&amp;</span>client, <span class="number">2</span>, <span class="number">1</span>, <span class="number">4</span>);
+		import_and_maintain(client.clone(), block);
+		<span class="macro">assert_eq!</span>(txpool.ready().count(), <span class="number">3</span>);
+
+		<span class="comment">// again let&#39;s make sure that we can still make some progress
+		</span><span class="kw">let </span>block = propose_block(<span class="kw-2">&amp;</span>client, <span class="number">3</span>, <span class="number">1</span>, <span class="number">3</span>);
+		import_and_maintain(client.clone(), block);
+		<span class="macro">assert_eq!</span>(txpool.ready().count(), <span class="number">2</span>);
+
+		<span class="comment">// again let&#39;s make sure that we can still make some progress
+		</span><span class="kw">let </span>block = propose_block(<span class="kw-2">&amp;</span>client, <span class="number">4</span>, <span class="number">2</span>, <span class="number">2</span>);
+		import_and_maintain(client.clone(), block);
+		<span class="macro">assert_eq!</span>(txpool.ready().count(), <span class="number">0</span>);
 	}
 
 	<span class="attr">#[test]
@@ -1908,9 +1960,9 @@
 				amount: <span class="number">100</span>,
 				nonce: <span class="number">0</span>,
 			}
-			.into_signed_tx(),
+			.into_unchecked_extrinsic(),
 		)
-		.chain((<span class="number">0</span>..extrinsics_num - <span class="number">1</span>).map(|v| Extrinsic::IncludeData(<span class="macro">vec!</span>[v <span class="kw">as </span>u8; <span class="number">10</span>])))
+		.chain((<span class="number">1</span>..extrinsics_num <span class="kw">as </span>u64).map(extrinsic))
 		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
 		<span class="kw">let </span>block_limit = genesis_header.encoded_size() +
@@ -1921,7 +1973,7 @@
 				.sum::&lt;usize&gt;() +
 			Vec::&lt;Extrinsic&gt;::new().encoded_size();
 
-		block_on(txpool.submit_at(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>), SOURCE, extrinsics)).unwrap();
+		block_on(txpool.submit_at(<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>), SOURCE, extrinsics.clone())).unwrap();
 
 		block_on(txpool.maintain(chain_event(genesis_header.clone())));
 
@@ -1964,8 +2016,14 @@
 
 		<span class="kw">let </span>proposer = block_on(proposer_factory.init(<span class="kw-2">&amp;</span>genesis_header)).unwrap();
 
-		<span class="comment">// Give it enough time
-		</span><span class="kw">let </span>block = block_on(proposer.propose(
+		<span class="comment">// Exact block_limit, which includes:
+		// 99 (header_size) + 718 (proof@initialize_block) + 246 (one Transfer extrinsic)
+		</span><span class="kw">let </span>block_limit = {
+			<span class="kw">let </span>builder =
+				client.new_block_at(genesis_header.hash(), Default::default(), <span class="bool-val">true</span>).unwrap();
+			builder.estimate_block_size(<span class="bool-val">true</span>) + extrinsics[<span class="number">0</span>].encoded_size()
+		};
+		<span class="kw">let </span>block = block_on(proposer.propose(
 			Default::default(),
 			Default::default(),
 			deadline,
@@ -1974,7 +2032,7 @@
 		.map(|r| r.block)
 		.unwrap();
 
-		<span class="comment">// The block limit didn&#39;t changed, but we now include the proof in the estimation of the
+		<span class="comment">// The block limit was increased, but we now include the proof in the estimation of the
 		// block size and thus, only the `Transfer` will fit into the block. It reads more data
 		// than we have reserved in the block limit.
 		</span><span class="macro">assert_eq!</span>(block.extrinsics().len(), <span class="number">1</span>);
@@ -1993,6 +2051,15 @@
 			client.clone(),
 		);
 
+		<span class="kw">let </span>tiny = |nonce| {
+			ExtrinsicBuilder::new_fill_block(Perbill::from_parts(TINY)).nonce(nonce).build()
+		};
+		<span class="kw">let </span>huge = |who| {
+			ExtrinsicBuilder::new_fill_block(Perbill::from_parts(HUGE))
+				.signer(AccountKeyring::numeric(who))
+				.build()
+		};
+
 		block_on(
 			txpool.submit_at(
 				<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>),
@@ -2000,9 +2067,9 @@
 				<span class="comment">// add 2 * MAX_SKIPPED_TRANSACTIONS that exhaust resources
 				</span>(<span class="number">0</span>..MAX_SKIPPED_TRANSACTIONS * <span class="number">2</span>)
 					.into_iter()
-					.map(|i| exhausts_resources_extrinsic_from(i))
+					.map(huge)
 					<span class="comment">// and some transactions that are okay.
-					</span>.chain((<span class="number">0</span>..MAX_SKIPPED_TRANSACTIONS).into_iter().map(|i| extrinsic(i <span class="kw">as _</span>)))
+					</span>.chain((<span class="number">0</span>..MAX_SKIPPED_TRANSACTIONS <span class="kw">as </span>u64).into_iter().map(tiny))
 					.collect(),
 			),
 		)
@@ -2056,15 +2123,27 @@
 			client.clone(),
 		);
 
+		<span class="kw">let </span>tiny = |who| {
+			ExtrinsicBuilder::new_fill_block(Perbill::from_parts(TINY))
+				.signer(AccountKeyring::numeric(who))
+				.nonce(<span class="number">1</span>)
+				.build()
+		};
+		<span class="kw">let </span>huge = |who| {
+			ExtrinsicBuilder::new_fill_block(Perbill::from_parts(HUGE))
+				.signer(AccountKeyring::numeric(who))
+				.build()
+		};
+
 		block_on(
 			txpool.submit_at(
 				<span class="kw-2">&amp;</span>BlockId::number(<span class="number">0</span>),
 				SOURCE,
 				(<span class="number">0</span>..MAX_SKIPPED_TRANSACTIONS + <span class="number">2</span>)
 					.into_iter()
-					.map(|i| exhausts_resources_extrinsic_from(i))
+					.map(huge)
 					<span class="comment">// and some transactions that are okay.
-					</span>.chain((<span class="number">0</span>..MAX_SKIPPED_TRANSACTIONS).into_iter().map(|i| extrinsic(i <span class="kw">as _</span>)))
+					</span>.chain((<span class="number">0</span>..MAX_SKIPPED_TRANSACTIONS + <span class="number">2</span>).into_iter().map(tiny))
 					.collect(),
 			),
 		)
@@ -2077,7 +2156,7 @@
 					.expect(<span class="string">&quot;there should be header&quot;</span>),
 			)),
 		);
-		<span class="macro">assert_eq!</span>(txpool.ready().count(), MAX_SKIPPED_TRANSACTIONS * <span class="number">2 </span>+ <span class="number">2</span>);
+		<span class="macro">assert_eq!</span>(txpool.ready().count(), MAX_SKIPPED_TRANSACTIONS * <span class="number">2 </span>+ <span class="number">4</span>);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>proposer_factory =
 			ProposerFactory::new(spawner.clone(), client.clone(), txpool.clone(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
@@ -2108,8 +2187,13 @@
 				.map(|r| r.block)
 				.unwrap();
 
-		<span class="comment">// then the block should have no transactions despite some in the pool
-		</span><span class="macro">assert_eq!</span>(block.extrinsics().len(), <span class="number">1</span>);
+		<span class="comment">// then the block should have one or two transactions. This maybe random as they are
+		// processed in parallel. The same signer and consecutive nonces for huge and tiny
+		// transactions guarantees that max two transactions will get to the block.
+		</span><span class="macro">assert!</span>(
+			(<span class="number">1</span>..<span class="number">3</span>).contains(<span class="kw-2">&amp;</span>block.extrinsics().len()),
+			<span class="string">&quot;Block shall contain one or two extrinsics.&quot;
+		</span>);
 		<span class="macro">assert!</span>(
 			cell2.lock().<span class="number">0 </span>&gt; MAX_SKIPPED_TRANSACTIONS,
 			<span class="string">&quot;Not enough calls to current time, which indicates the test might have ended because of deadline, not soft deadline&quot;

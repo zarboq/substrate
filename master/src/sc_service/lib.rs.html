@@ -560,9 +560,6 @@
 <a href="#560" id="560">560</a>
 <a href="#561" id="561">561</a>
 <a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1085,10 +1082,9 @@
 	<span class="kw">use </span>futures::executor::block_on;
 	<span class="kw">use </span>sc_transaction_pool::BasicPool;
 	<span class="kw">use </span>sp_consensus::SelectChain;
-	<span class="kw">use </span>sp_runtime::traits::BlindCheckable;
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		prelude::<span class="kw-2">*</span>,
-		runtime::{Extrinsic, Transfer},
+		runtime::{ExtrinsicBuilder, Transfer, TransferData},
 	};
 
 	<span class="attr">#[test]
@@ -1107,13 +1103,13 @@
 			from: AccountKeyring::Alice.into(),
 			to: AccountKeyring::Bob.into(),
 		}
-		.into_signed_tx();
+		.into_unchecked_extrinsic();
 		block_on(pool.submit_one(<span class="kw-2">&amp;</span>BlockId::hash(best.hash()), source, transaction.clone()))
 			.unwrap();
 		block_on(pool.submit_one(
 			<span class="kw-2">&amp;</span>BlockId::hash(best.hash()),
 			source,
-			Extrinsic::IncludeData(<span class="macro">vec!</span>[<span class="number">1</span>]),
+			ExtrinsicBuilder::new_call_do_not_propagate().nonce(<span class="number">1</span>).build(),
 		))
 		.unwrap();
 		<span class="macro">assert_eq!</span>(pool.status().ready, <span class="number">2</span>);
@@ -1123,9 +1119,7 @@
 
 		<span class="comment">// then
 		</span><span class="macro">assert_eq!</span>(transactions.len(), <span class="number">1</span>);
-		<span class="macro">assert!</span>(transactions[<span class="number">0</span>].<span class="number">1</span>.clone().check().is_ok());
-		<span class="comment">// this should not panic
-		</span><span class="kw">let _ </span>= transactions[<span class="number">0</span>].<span class="number">1</span>.transfer();
+		<span class="macro">assert!</span>(TransferData::try_from(<span class="kw-2">&amp;</span>transactions[<span class="number">0</span>].<span class="number">1</span>).is_ok());
 	}
 }
 </code></pre></div>

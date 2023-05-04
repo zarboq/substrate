@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["additional_storage_with_genesis",""],["insert_genesis_block",""]],"struct":[["GenesisConfig","Configuration of a general Substrate test genesis block."]]};
+window.SIDEBAR_ITEMS = {"fn":[["insert_genesis_block",""]],"struct":[["GenesisStorageBuilder","Builder for generating storage from substrate-test-runtime genesis config. Default storage can be extended with additional key-value pairs."]]};

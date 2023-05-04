@@ -523,6 +523,8 @@
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
@@ -822,7 +824,7 @@
 	};
 	<span class="kw">use </span>sp_consensus::BlockOrigin;
 	<span class="kw">use </span>sp_runtime::codec::Encode;
-	<span class="kw">use </span>substrate_test_runtime::Extrinsic;
+	<span class="kw">use </span>substrate_test_runtime::ExtrinsicBuilder;
 	<span class="kw">use </span>substrate_test_runtime_client::{<span class="self">self</span>, prelude::<span class="kw-2">*</span>, TestClientBuilder};
 
 	<span class="attr">#[tokio::test]
@@ -995,7 +997,9 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>client = TestClientBuilder::with_tx_storage(u32::MAX).build();
 		<span class="kw">let </span><span class="kw-2">mut </span>block_builder = client.new_block(Default::default()).unwrap();
 
-		<span class="kw">let </span>ext = Extrinsic::Store(<span class="macro">vec!</span>[<span class="number">0x13</span>, <span class="number">0x37</span>, <span class="number">0x13</span>, <span class="number">0x38</span>]);
+		<span class="comment">// encoded extrinsic: [161, .. , 2, 6, 16, 19, 55, 19, 56]
+		</span><span class="kw">let </span>ext = ExtrinsicBuilder::new_indexed_call(<span class="macro">vec!</span>[<span class="number">0x13</span>, <span class="number">0x37</span>, <span class="number">0x13</span>, <span class="number">0x38</span>]).build();
+		<span class="kw">let </span>pattern_index = ext.encoded_size() - <span class="number">4</span>;
 
 		block_builder.push(ext.clone()).unwrap();
 		<span class="kw">let </span>block = block_builder.build().unwrap().block;
@@ -1019,7 +1023,7 @@
 								<span class="number">0x70</span>,
 								cid::multihash::Multihash::wrap(
 									u64::from(cid::multihash::Code::Blake2b256),
-									<span class="kw-2">&amp;</span>sp_core::hashing::blake2_256(<span class="kw-2">&amp;</span>ext.encode()[<span class="number">2</span>..]),
+									<span class="kw-2">&amp;</span>sp_core::hashing::blake2_256(<span class="kw-2">&amp;</span>ext.encode()[pattern_index..]),
 								)
 								.unwrap(),
 							)

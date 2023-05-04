@@ -406,6 +406,7 @@
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -721,7 +722,7 @@
 	<span class="kw">use </span>sp_core::Blake2Hasher;
 	<span class="kw">use </span>sp_state_machine::Backend;
 	<span class="kw">use </span>substrate_test_runtime_client::{
-		runtime::Extrinsic, DefaultTestClientBuilderExt, TestClientBuilderExt,
+		runtime::ExtrinsicBuilder, DefaultTestClientBuilderExt, TestClientBuilderExt,
 	};
 
 	<span class="attr">#[test]
@@ -730,9 +731,11 @@
 		<span class="kw">let </span>backend = builder.backend();
 		<span class="kw">let </span>client = builder.build();
 
+		<span class="kw">let </span>genesis_hash = client.info().best_hash;
+
 		<span class="kw">let </span>block = BlockBuilder::new(
 			<span class="kw-2">&amp;</span>client,
-			client.info().best_hash,
+			genesis_hash,
 			client.info().best_number,
 			RecordProof::Yes,
 			Default::default(),
@@ -743,12 +746,11 @@
 		.unwrap();
 
 		<span class="kw">let </span>proof = block.proof.expect(<span class="string">&quot;Proof is build on request&quot;</span>);
+		<span class="kw">let </span>genesis_state_root = client.header(genesis_hash).unwrap().unwrap().state_root;
 
-		<span class="kw">let </span>backend = sp_state_machine::create_proof_check_backend::&lt;Blake2Hasher&gt;(
-			block.storage_changes.transaction_storage_root,
-			proof,
-		)
-		.unwrap();
+		<span class="kw">let </span>backend =
+			sp_state_machine::create_proof_check_backend::&lt;Blake2Hasher&gt;(genesis_state_root, proof)
+				.unwrap();
 
 		<span class="macro">assert!</span>(backend
 			.storage(<span class="kw-2">&amp;</span>sp_core::storage::well_known_keys::CODE)
@@ -772,7 +774,7 @@
 		)
 		.unwrap();
 
-		block_builder.push(Extrinsic::ReadAndPanic(<span class="number">8</span>)).unwrap_err();
+		block_builder.push(ExtrinsicBuilder::new_read_and_panic(<span class="number">8</span>).build()).unwrap_err();
 
 		<span class="kw">let </span>block = block_builder.build().unwrap();
 
@@ -788,7 +790,7 @@
 		)
 		.unwrap();
 
-		block_builder.push(Extrinsic::Read(<span class="number">8</span>)).unwrap();
+		block_builder.push(ExtrinsicBuilder::new_read(<span class="number">8</span>).build()).unwrap();
 
 		<span class="kw">let </span>block = block_builder.build().unwrap();
 

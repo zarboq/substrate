@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["ExtrinsicBuilder","Generates `Extrinsic`"],["Transfer","Transfer used in test substrate pallet. Extrinsic is created and signed using this data."]]};

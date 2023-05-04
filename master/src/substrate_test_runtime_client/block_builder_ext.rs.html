@@ -63,6 +63,21 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -86,6 +101,7 @@
 <span class="kw">use </span>sp_api::{ApiExt, ProvideRuntimeApi};
 
 <span class="kw">use </span>sc_block_builder::BlockBuilderApi;
+<span class="kw">use </span>substrate_test_runtime::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Extension trait for test block builder.
 </span><span class="kw">pub trait </span>BlockBuilderExt {
@@ -94,11 +110,18 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		transfer: substrate_test_runtime::Transfer,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_blockchain::Error&gt;;
-	<span class="doccomment">/// Add storage change extrinsic to the block.
+
+	<span class="doccomment">/// Add unsigned storage change extrinsic to the block.
 	</span><span class="kw">fn </span>push_storage_change(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		key: Vec&lt;u8&gt;,
 		value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_blockchain::Error&gt;;
+
+	<span class="doccomment">/// Adds an extrinsic which pushes DigestItem to header&#39;s log
+	</span><span class="kw">fn </span>push_deposit_log_digest_item(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		log: sp_runtime::generic::DigestItem,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_blockchain::Error&gt;;
 }
 
@@ -117,7 +140,7 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		transfer: substrate_test_runtime::Transfer,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_blockchain::Error&gt; {
-		<span class="self">self</span>.push(transfer.into_signed_tx())
+		<span class="self">self</span>.push(transfer.into_unchecked_extrinsic())
 	}
 
 	<span class="kw">fn </span>push_storage_change(
@@ -125,7 +148,14 @@
 		key: Vec&lt;u8&gt;,
 		value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_blockchain::Error&gt; {
-		<span class="self">self</span>.push(substrate_test_runtime::Extrinsic::StorageChange(key, value))
+		<span class="self">self</span>.push(ExtrinsicBuilder::new_storage_change(key, value).build())
+	}
+
+	<span class="kw">fn </span>push_deposit_log_digest_item(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		log: sp_runtime::generic::DigestItem,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_blockchain::Error&gt; {
+		<span class="self">self</span>.push(ExtrinsicBuilder::new_deposit_log_digest_item(log).build())
 	}
 }
 </code></pre></div>

@@ -380,6 +380,8 @@
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
 <a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -417,7 +419,10 @@
 };
 <span class="kw">use </span>std::collections::{BTreeMap, HashMap, HashSet};
 <span class="kw">use </span>substrate_test_runtime_client::{
-	runtime::{AccountId, Block, BlockNumber, Extrinsic, Hash, Header, Index, Transfer},
+	runtime::{
+		AccountId, Block, BlockNumber, Extrinsic, ExtrinsicBuilder, Hash, Header, Index, Transfer,
+		TransferData,
+	},
 	AccountKeyring::{<span class="self">self</span>, <span class="kw-2">*</span>},
 };
 
@@ -658,7 +663,7 @@
 			<span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span>ready(<span class="prelude-val">Err</span>(e)),
 		}
 
-		<span class="kw">let </span>(requires, provides) = <span class="kw">if let </span><span class="prelude-val">Some</span>(transfer) = uxt.try_transfer() {
+		<span class="kw">let </span>(requires, provides) = <span class="kw">if let </span><span class="prelude-val">Ok</span>(transfer) = TransferData::try_from(<span class="kw-2">&amp;</span>uxt) {
 			<span class="kw">let </span>chain_nonce = <span class="self">self</span>.chain.read().nonces.get(<span class="kw-2">&amp;</span>transfer.from).cloned().unwrap_or(<span class="number">0</span>);
 			<span class="kw">let </span>requires =
 				<span class="kw">if </span>chain_nonce == transfer.nonce { <span class="macro">vec!</span>[] } <span class="kw">else </span>{ <span class="macro">vec!</span>[<span class="macro">vec!</span>[chain_nonce <span class="kw">as </span>u8]] };
@@ -759,8 +764,7 @@
 </span><span class="kw">pub fn </span>uxt(who: AccountKeyring, nonce: Index) -&gt; Extrinsic {
 	<span class="kw">let </span>dummy = codec::Decode::decode(<span class="kw-2">&amp;mut </span>TrailingZeroInput::zeroes()).unwrap();
 	<span class="kw">let </span>transfer = Transfer { from: who.into(), to: dummy, nonce, amount: <span class="number">1 </span>};
-	<span class="kw">let </span>signature = transfer.using_encoded(|e| who.sign(e));
-	Extrinsic::Transfer { transfer, signature, exhaust_resources_when_not_first: <span class="bool-val">false </span>}
+	ExtrinsicBuilder::new_transfer(transfer).build()
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="substrate_test_runtime_transaction_pool" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
