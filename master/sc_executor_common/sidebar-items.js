@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["error","Rust executor possible errors."],["runtime_blob","This module allows for inspection and instrumentation, i.e. modifying the module to alter it’s structure or behavior, of a wasm module."],["util","Utilities used by all backends"],["wasm_runtime","Definitions for a wasm runtime."]]};
+window.SIDEBAR_ITEMS = {"mod":["error","runtime_blob","util","wasm_runtime"]};

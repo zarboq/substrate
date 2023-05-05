@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["WrappedFFIValue","Represents a wrapped ffi value."]],"struct":[["ExchangeableFunction","A function which implementation can be exchanged."],["RestoreImplementation","Restores a function implementation on drop."]],"trait":[["FromFFIValue","Something that can be created from a ffi value."],["IntoFFIValue","Something that can be converted into a ffi value."]]};
+window.SIDEBAR_ITEMS = {"enum":["WrappedFFIValue"],"struct":["ExchangeableFunction","RestoreImplementation"],"trait":["FromFFIValue","IntoFFIValue"]};

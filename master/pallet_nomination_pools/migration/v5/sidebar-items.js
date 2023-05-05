@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MigrateToV5","This migration adds `total_commission_pending` and `total_commission_claimed` field to every `RewardPool`, if any."],["OldRewardPool",""]]};
+window.SIDEBAR_ITEMS = {"struct":["MigrateToV5","OldRewardPool"]};

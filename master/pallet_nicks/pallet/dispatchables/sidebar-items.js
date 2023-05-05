@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["clear_name","Clear an account’s name and return the deposit. Fails if the account was not named."],["force_name","Set a third-party account’s name with no deposit."],["kill_name","Remove an account’s name and take charge of the deposit."],["set_name","Set an account’s name. The name should be a UTF-8-encoded string by convention, though we don’t check it."]]};
+window.SIDEBAR_ITEMS = {"fn":["clear_name","force_name","kill_name","set_name"]};

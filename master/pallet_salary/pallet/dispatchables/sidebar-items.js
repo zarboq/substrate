@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["bump","Move to next payout cycle, assuming that the present block is now within that cycle."],["check_payment","Update a payment’s status; if it failed, alter the state so the payment can be retried."],["induct","Induct oneself into the payout system."],["init","Start the first payout cycle."],["payout","Request a payout."],["payout_other","Request a payout to a secondary account."],["register","Register for a payout."]]};
+window.SIDEBAR_ITEMS = {"fn":["bump","check_payment","induct","init","payout","payout_other","register"]};

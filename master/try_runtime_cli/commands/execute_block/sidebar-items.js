@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ExecuteBlockCmd","Configurations of the [`crate::Command::ExecuteBlock`]."]]};
+window.SIDEBAR_ITEMS = {"struct":["ExecuteBlockCmd"]};

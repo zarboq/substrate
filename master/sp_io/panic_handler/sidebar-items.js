@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["HostFunctions","Provides implementations for the extern host functions."]]};
+window.SIDEBAR_ITEMS = {"struct":["HostFunctions"]};

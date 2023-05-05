@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["MAX_TOPICS","Total number of topic fields allowed."]],"enum":[["Error","Statement store error."]],"struct":[["Options","Store configuration"],["Store","Statement store."]],"trait":[["StatementStore","Statement store API."]]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_TOPICS"],"enum":["Error"],"struct":["Options","Store"],"trait":["StatementStore"]};

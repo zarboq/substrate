@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["initialize_pallet","Initializes the pallet by writing into `TrashData`."],["set_compute","Set the `Compute` storage value that determines how much of the block’s weight `ref_time` to use during `on_idle`."],["set_storage","Set the `Storage` storage value that determines the PoV size usage for each block."]]};
+window.SIDEBAR_ITEMS = {"fn":["initialize_pallet","set_compute","set_storage"]};

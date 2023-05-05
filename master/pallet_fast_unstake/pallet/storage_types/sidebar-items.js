@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ErasToCheckPerBlock","Number of eras to check per block."],["Head","The current “head of the queue” being unstaked."],["Queue","The map of all accounts wishing to be unstaked."]]};
+window.SIDEBAR_ITEMS = {"struct":["ErasToCheckPerBlock","Head","Queue"]};

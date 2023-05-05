@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["NameOf","The lookup table for names."]]};
+window.SIDEBAR_ITEMS = {"struct":["NameOf"]};

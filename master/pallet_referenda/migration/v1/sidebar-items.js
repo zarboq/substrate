@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MigrateV0ToV1","Transforms a submission deposit of ReferendumInfo(Approved|Rejected|Cancelled|TimedOut) to optional value, making it refundable."]]};
+window.SIDEBAR_ITEMS = {"struct":["MigrateV0ToV1"]};

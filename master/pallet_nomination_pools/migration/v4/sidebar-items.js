@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MigrateToV4","Warning"],["OldBondedPoolInner",""]],"type":[["MigrateV3ToV5","Migrates from `v3` directly to `v5` to avoid the broken `v4` migration."]]};
+window.SIDEBAR_ITEMS = {"struct":["MigrateToV4","OldBondedPoolInner"],"type":["MigrateV3ToV5"]};

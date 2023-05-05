@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["note_preimage","Register a preimage on-chain."],["request_preimage","Request a preimage be uploaded to the chain without paying any fees or deposits."],["unnote_preimage","Clear an unrequested preimage from the runtime storage."],["unrequest_preimage","Clear a previously made request for a preimage."]]};
+window.SIDEBAR_ITEMS = {"fn":["note_preimage","request_preimage","unnote_preimage","unrequest_preimage"]};

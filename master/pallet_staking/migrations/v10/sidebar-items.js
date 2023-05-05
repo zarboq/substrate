@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MigrateToV10","Apply any pending slashes that where queued."]]};
+window.SIDEBAR_ITEMS = {"struct":["MigrateToV10"]};

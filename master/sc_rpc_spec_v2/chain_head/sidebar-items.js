@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["api","API trait of the chain head."],["chain_head","API implementation for `chainHead`."],["error","Error helpers for `chainHead` RPC module."],["event","The chain head’s event returned as json compatible object."]]};
+window.SIDEBAR_ITEMS = {"mod":["api","chain_head","error","event"]};

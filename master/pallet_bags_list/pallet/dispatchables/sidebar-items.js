@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["put_in_front_of","Move the caller’s Id directly in front of `lighter`."],["rebag","Declare that some `dislocated` account has, through rewards or penalties, sufficiently changed its score that it should properly fall into a different bag than its current one."]]};
+window.SIDEBAR_ITEMS = {"fn":["put_in_front_of","rebag"]};

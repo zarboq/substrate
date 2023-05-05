@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["DenyUnsafe","Signifies whether a potentially unsafe RPC should be denied."]],"fn":[["create_full","Instantiate all Full RPC extensions."]],"struct":[["BabeDeps","Extra dependencies for BABE."],["FullDeps","Full client dependencies."],["GrandpaDeps","Extra dependencies for GRANDPA"]]};
+window.SIDEBAR_ITEMS = {"enum":["DenyUnsafe"],"fn":["create_full"],"struct":["BabeDeps","FullDeps","GrandpaDeps"]};

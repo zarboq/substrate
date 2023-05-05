@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ClassLocksFor","The voting classes which have a non-zero lock requirement and the lock amounts which they require. The actual amount locked on behalf of this pallet should always be the maximum of this list."],["VotingFor","All voting for a particular voter in a particular voting class. We store the balance for the number of votes that we have recorded."]]};
+window.SIDEBAR_ITEMS = {"struct":["ClassLocksFor","VotingFor"]};

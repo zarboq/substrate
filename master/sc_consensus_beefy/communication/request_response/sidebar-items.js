@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["BeefyJustifsRequestHandler","Handler for incoming BEEFY justifications requests from a remote peer."],["JustificationRequest","BEEFY justification request."]]};
+window.SIDEBAR_ITEMS = {"struct":["BeefyJustifsRequestHandler","JustificationRequest"]};

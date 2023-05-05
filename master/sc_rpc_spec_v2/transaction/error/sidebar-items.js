@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Error","Transaction RPC errors."]]};
+window.SIDEBAR_ITEMS = {"enum":["Error"]};

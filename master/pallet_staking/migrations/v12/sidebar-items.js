@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MigrateToV12","Clean up `HistoryDepth` from storage."]]};
+window.SIDEBAR_ITEMS = {"struct":["MigrateToV12"]};

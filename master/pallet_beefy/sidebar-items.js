@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["pallet","The module that hosts all the FRAME types needed to add this pallet to a runtime."]],"struct":[["EquivocationOffence","BEEFY equivocation offence report."],["EquivocationReportSystem","BEEFY equivocation offence report system."],["TimeSlot","A round number and set id which point on the time of an offence."]],"trait":[["WeightInfo",""]]};
+window.SIDEBAR_ITEMS = {"mod":["pallet"],"struct":["EquivocationOffence","EquivocationReportSystem","TimeSlot"],"trait":["WeightInfo"]};

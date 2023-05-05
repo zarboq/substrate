@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["set","Set the current time."]]};
+window.SIDEBAR_ITEMS = {"fn":["set"]};

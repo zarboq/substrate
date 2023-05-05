@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["connectivity",""],["consensus",""],["sync",""]],"struct":[["TestNetComponents",""]],"trait":[["TestNetNode",""]]};
+window.SIDEBAR_ITEMS = {"fn":["connectivity","consensus","sync"],"struct":["TestNetComponents"],"trait":["TestNetNode"]};

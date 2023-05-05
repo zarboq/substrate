@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["WeightInfo",""]]};
+window.SIDEBAR_ITEMS = {"trait":["WeightInfo"]};

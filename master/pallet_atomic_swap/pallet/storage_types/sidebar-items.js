@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["PendingSwaps",""]]};
+window.SIDEBAR_ITEMS = {"struct":["PendingSwaps"]};

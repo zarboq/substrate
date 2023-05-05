@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["execute","Execute the sanity check of the bags-list."]]};
+window.SIDEBAR_ITEMS = {"fn":["execute"]};

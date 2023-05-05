@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["api","API trait for transactions."],["error","Transaction RPC errors."],["event","The transaction’s event returned as json compatible object."],["transaction","API implementation for submitting transactions."]]};
+window.SIDEBAR_ITEMS = {"mod":["api","error","event","transaction"]};

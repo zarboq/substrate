@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Approvals","Proposal indices that have been approved but not yet awarded."],["Deactivated","The amount which has been reported as inactive to Currency."],["ProposalCount","Number of proposals that have been made."],["Proposals","Proposals that have been made."]]};
+window.SIDEBAR_ITEMS = {"struct":["Approvals","Deactivated","ProposalCount","Proposals"]};

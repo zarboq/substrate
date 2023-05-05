@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["ReferendumInfo","Info regarding a referendum, present or past."]],"struct":[["ReferendumInfoFor_Storage_Instance",""]],"type":[["ReferendumInfoFor",""],["ReferendumInfoOf",""]]};
+window.SIDEBAR_ITEMS = {"enum":["ReferendumInfo"],"struct":["ReferendumInfoFor_Storage_Instance"],"type":["ReferendumInfoFor","ReferendumInfoOf"]};

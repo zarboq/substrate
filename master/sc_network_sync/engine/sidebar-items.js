@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MajorSyncingGauge","The “major syncing” metric."],["Peer","Peer information"],["SyncingEngine",""]]};
+window.SIDEBAR_ITEMS = {"struct":["MajorSyncingGauge","Peer","SyncingEngine"]};

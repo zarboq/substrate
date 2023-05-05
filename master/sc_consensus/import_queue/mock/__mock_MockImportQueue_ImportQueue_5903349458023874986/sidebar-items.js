@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["__poll_actions",""],["__run",""],["__service",""],["__service_ref",""]]};
+window.SIDEBAR_ITEMS = {"mod":["__poll_actions","__run","__service","__service_ref"]};

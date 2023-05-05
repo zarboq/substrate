@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Error","Chain RPC errors."]],"type":[["Result","Chain RPC Result type."]]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"type":["Result"]};

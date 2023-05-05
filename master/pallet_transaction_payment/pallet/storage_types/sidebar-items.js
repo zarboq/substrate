@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["NextFeeMultiplier",""],["StorageVersion",""]]};
+window.SIDEBAR_ITEMS = {"struct":["NextFeeMultiplier","StorageVersion"]};

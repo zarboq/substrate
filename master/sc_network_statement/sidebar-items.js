@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["config","Configuration of the statement protocol"]],"struct":[["StatementHandler","Handler for statements. Call [`StatementHandler::run`] to start the processing."],["StatementHandlerPrototype","Prototype for a [`StatementHandler`]."]],"type":[["StatementImportFuture","Future resolving to statement import result."],["Statements","A set of statements."]]};
+window.SIDEBAR_ITEMS = {"mod":["config"],"struct":["StatementHandler","StatementHandlerPrototype"],"type":["StatementImportFuture","Statements"]};

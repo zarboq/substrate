@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Nodes","Hashes of the nodes in the MMR."],["NumberOfLeaves","Current size of the MMR (number of leaves)."],["RootHash","Latest MMR Root hash."]]};
+window.SIDEBAR_ITEMS = {"struct":["Nodes","NumberOfLeaves","RootHash"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["v0","Initial version of storage types."],["v1",""]]};
+window.SIDEBAR_ITEMS = {"mod":["v0","v1"]};

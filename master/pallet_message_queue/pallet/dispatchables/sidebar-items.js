@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["execute_overweight","Execute an overweight message."],["reap_page","Remove a page which has no more messages remaining to be processed or is stale."]]};
+window.SIDEBAR_ITEMS = {"fn":["execute_overweight","reap_page"]};

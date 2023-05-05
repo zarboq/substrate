@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["ID_RANGE",""]],"enum":[["Action","Actions of a `SortedListProvider` that we fuzz."]],"fn":[["main",""]]};
+window.SIDEBAR_ITEMS = {"constant":["ID_RANGE"],"enum":["Action"],"fn":["main"]};

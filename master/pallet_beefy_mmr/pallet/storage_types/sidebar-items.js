@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["BeefyAuthorities","Details of current BEEFY authority set."],["BeefyNextAuthorities","Details of next BEEFY authority set."]]};
+window.SIDEBAR_ITEMS = {"struct":["BeefyAuthorities","BeefyNextAuthorities"]};

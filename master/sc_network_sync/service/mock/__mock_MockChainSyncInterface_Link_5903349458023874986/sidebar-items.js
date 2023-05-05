@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["__blocks_processed",""],["__justification_imported",""],["__request_justification",""]]};
+window.SIDEBAR_ITEMS = {"mod":["__blocks_processed","__justification_imported","__request_justification"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["CRYPTO_ID","An identifier used to match public keys against sr25519 keys"]],"mod":[["vrf","Schnorrkel VRF related types and operations."]],"struct":[["Pair","An Schnorrkel/Ristretto x25519 (“sr25519”) key pair."],["Public","An Schnorrkel/Ristretto x25519 (“sr25519”) public key."],["Signature","An Schnorrkel/Ristretto x25519 (“sr25519”) signature."]]};
+window.SIDEBAR_ITEMS = {"constant":["CRYPTO_ID"],"mod":["vrf"],"struct":["Pair","Public","Signature"]};

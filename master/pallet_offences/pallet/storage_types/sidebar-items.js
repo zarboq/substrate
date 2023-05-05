@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ConcurrentReportsIndex","A vector of reports of the same kind that happened at the same time slot."],["Reports","The primary structure that holds all offence records keyed by report identifiers."]]};
+window.SIDEBAR_ITEMS = {"struct":["ConcurrentReportsIndex","Reports"]};

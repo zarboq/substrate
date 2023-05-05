@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["LOG_TARGET","Logging target for the mmr gadget."]],"struct":[["MmrGadget","A MMR Gadget."]],"trait":[["MmrClient","A convenience MMR client trait that defines all the type bounds a MMR client has to satisfy and defines some helper methods."]]};
+window.SIDEBAR_ITEMS = {"constant":["LOG_TARGET"],"struct":["MmrGadget"],"trait":["MmrClient"]};

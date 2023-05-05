@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["ProtocolName","The protocol name transmitted on the wire."]]};
+window.SIDEBAR_ITEMS = {"enum":["ProtocolName"]};

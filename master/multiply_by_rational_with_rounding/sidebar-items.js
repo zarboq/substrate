@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["check",""],["main","Tries to demonstrate that `multiply_by_rational_with_rounding` is incorrect."],["round","Round a `Fraction` according to the given mode."]],"struct":[["ArbitraryRounding","An [`arbitrary::Arbitrary`] [`Rounding`] mode."]]};
+window.SIDEBAR_ITEMS = {"fn":["check","main","round"],"struct":["ArbitraryRounding"]};

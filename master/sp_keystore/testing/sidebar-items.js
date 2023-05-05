@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MemoryKeystore","A keystore implementation usable in tests."]]};
+window.SIDEBAR_ITEMS = {"struct":["MemoryKeystore"]};

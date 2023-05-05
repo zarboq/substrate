@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["SizeType",""]]};
+window.SIDEBAR_ITEMS = {"enum":["SizeType"]};

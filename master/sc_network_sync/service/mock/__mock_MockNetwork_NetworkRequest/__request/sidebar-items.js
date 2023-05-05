@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Expectation","Expectation type for methods that return a `'static` type. This is the type returned by the `expect_*` methods."]]};
+window.SIDEBAR_ITEMS = {"struct":["Expectation"]};

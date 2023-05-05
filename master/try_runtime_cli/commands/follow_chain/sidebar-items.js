@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["FollowChainCmd","Configurations of the [`crate::Command::FollowChain`]."]]};
+window.SIDEBAR_ITEMS = {"struct":["FollowChainCmd"]};

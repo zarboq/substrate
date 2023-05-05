@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["accumulate_dummy","This is your public interface. Be extremely careful. This is just a simple example of how to interact with the pallet from the external world."],["set_dummy","A privileged call; in this case it resets our dummy value to something new."]]};
+window.SIDEBAR_ITEMS = {"fn":["accumulate_dummy","set_dummy"]};

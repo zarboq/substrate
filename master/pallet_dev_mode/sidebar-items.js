@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["pallet","Enable `dev_mode` for this pallet."]]};
+window.SIDEBAR_ITEMS = {"mod":["pallet"]};

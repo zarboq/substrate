@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["NominationPoolsApi","Runtime api for accessing information about nomination pools."]]};
+window.SIDEBAR_ITEMS = {"trait":["NominationPoolsApi"]};

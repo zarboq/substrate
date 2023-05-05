@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MigrateToV11",""]]};
+window.SIDEBAR_ITEMS = {"struct":["MigrateToV11"]};

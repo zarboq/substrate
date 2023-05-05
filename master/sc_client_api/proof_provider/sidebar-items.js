@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["ProofProvider","Interface for providing block proving utilities."]]};
+window.SIDEBAR_ITEMS = {"trait":["ProofProvider"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["Anon","A type that can be used as a scheduler."],["Named","A type that can be used as a scheduler."]]};
+window.SIDEBAR_ITEMS = {"trait":["Anon","Named"]};

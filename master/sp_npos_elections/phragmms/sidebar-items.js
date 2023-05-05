@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["phragmms","Execute the phragmms method."]]};
+window.SIDEBAR_ITEMS = {"fn":["phragmms"]};

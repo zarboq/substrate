@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["heartbeat","Complexity:"]]};
+window.SIDEBAR_ITEMS = {"fn":["heartbeat"]};

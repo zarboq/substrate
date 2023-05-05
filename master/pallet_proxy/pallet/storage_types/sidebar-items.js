@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Announcements","The announcements made by the proxy (key)."],["Proxies","The set of account proxies. Maps the account which has delegated to the accounts which are being delegated to, together with the amount held on deposit."]]};
+window.SIDEBAR_ITEMS = {"struct":["Announcements","Proxies"]};

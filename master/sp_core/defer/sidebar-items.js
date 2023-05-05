@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["DeferGuard","Executes the wrapped closure on drop."]]};
+window.SIDEBAR_ITEMS = {"struct":["DeferGuard"]};

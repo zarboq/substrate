@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["SimpleTrie","Immutable generated trie database with root."]],"type":[["Hasher",""]]};
+window.SIDEBAR_ITEMS = {"struct":["SimpleTrie"],"type":["Hasher"]};

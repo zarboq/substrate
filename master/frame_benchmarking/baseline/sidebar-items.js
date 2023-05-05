@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Pallet",""]],"trait":[["Config",""]],"type":[["SignerId",""]]};
+window.SIDEBAR_ITEMS = {"struct":["Pallet"],"trait":["Config"],"type":["SignerId"]};

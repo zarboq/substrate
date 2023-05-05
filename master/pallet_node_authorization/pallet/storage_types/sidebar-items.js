@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["AdditionalConnections","The additional adapative connections of each node."],["Owners","A map that maintains the ownership of each node."],["WellKnownNodes","The set of well known nodes. This is stored sorted (just by value)."]]};
+window.SIDEBAR_ITEMS = {"struct":["AdditionalConnections","Owners","WellKnownNodes"]};

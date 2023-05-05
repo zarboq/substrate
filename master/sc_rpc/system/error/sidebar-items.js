@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Error","System RPC errors."]],"type":[["Result","System RPC Result type."]]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"type":["Result"]};

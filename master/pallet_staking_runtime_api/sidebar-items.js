@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["StakingApi",""]]};
+window.SIDEBAR_ITEMS = {"trait":["StakingApi"]};

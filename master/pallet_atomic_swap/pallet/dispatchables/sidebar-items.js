@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["cancel_swap","Cancel an atomic swap. Only possible after the originally set duration has passed."],["claim_swap","Claim an atomic swap."],["create_swap","Register a new atomic swap, declaring an intention to send funds from origin to target on the current blockchain. The target can claim the fund using the revealed proof. If the fund is not claimed after `duration` blocks, then the sender can cancel the swap."]]};
+window.SIDEBAR_ITEMS = {"fn":["cancel_swap","claim_swap","create_swap"]};

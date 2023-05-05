@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["Balanced","Trait for slashing a fungible asset which can be place on hold."],["Inspect","Trait for inspecting a fungible asset whose accounts support partitioning and slashing."],["Mutate","Trait for mutating a fungible asset which can be placed on hold."],["Unbalanced","A fungible, holdable token class where the balance on hold can be set arbitrarily."]]};
+window.SIDEBAR_ITEMS = {"trait":["Balanced","Inspect","Mutate","Unbalanced"]};

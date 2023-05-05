@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ChildBounties","Child bounties that have been added."],["ChildBountyCount","Number of total child bounties."],["ChildBountyDescriptions","The description of each child-bounty."],["ChildrenCuratorFees","The cumulative child-bounty curator fee for each parent bounty."],["ParentChildBounties","Number of child bounties per parent bounty. Map of parent bounty index to number of child bounties."]]};
+window.SIDEBAR_ITEMS = {"struct":["ChildBounties","ChildBountyCount","ChildBountyDescriptions","ChildrenCuratorFees","ParentChildBounties"]};

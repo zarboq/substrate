@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["message","Network packet message types. These get serialized and put into the lower level protocol payload."],["role",""],["sync","Abstract interfaces and data structures related to network sync."]],"trait":[["ExHashT","Minimum Requirements for a Hash within Networking"]]};
+window.SIDEBAR_ITEMS = {"mod":["message","role","sync"],"trait":["ExHashT"]};

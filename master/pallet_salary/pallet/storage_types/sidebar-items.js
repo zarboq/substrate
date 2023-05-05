@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Claimant","The status of a claimant."],["Status","The overall status of the system."]]};
+window.SIDEBAR_ITEMS = {"struct":["Claimant","Status"]};

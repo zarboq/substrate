@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["check_mul","Checks that `(n / d) * d <= n`."],["check_reciprocal_mul","Checks that `n / (n / d) >= d`."],["main","Tries to disprove `(n / d) * d <= n` for any `PerThing`s."]]};
+window.SIDEBAR_ITEMS = {"fn":["check_mul","check_reciprocal_mul","main"]};

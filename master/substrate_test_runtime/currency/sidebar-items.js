@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["DOLLARS",""]]};
+window.SIDEBAR_ITEMS = {"constant":["DOLLARS"]};

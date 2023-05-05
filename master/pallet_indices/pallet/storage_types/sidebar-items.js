@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Accounts","The lookup from index to account."]]};
+window.SIDEBAR_ITEMS = {"struct":["Accounts"]};

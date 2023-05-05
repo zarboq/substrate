@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["control","Control the operation of this pallet."],["deregister","Deregister oneself from the fast-unstake."],["register_fast_unstake","Register oneself for fast-unstake."]]};
+window.SIDEBAR_ITEMS = {"fn":["control","deregister","register_fast_unstake"]};

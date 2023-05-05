@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ImportBenchmark",""],["ImportBenchmarkDescription",""]]};
+window.SIDEBAR_ITEMS = {"struct":["ImportBenchmark","ImportBenchmarkDescription"]};

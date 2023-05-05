@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"attr":[["prefix_logs_with","Add a log prefix to the function."]]};
+window.SIDEBAR_ITEMS = {"attr":["prefix_logs_with"]};

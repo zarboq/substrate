@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Author","Author of current block."]]};
+window.SIDEBAR_ITEMS = {"struct":["Author"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["FastForwardCmd","Configurations of the [`crate::Command::FastForward`]."]]};
+window.SIDEBAR_ITEMS = {"struct":["FastForwardCmd"]};

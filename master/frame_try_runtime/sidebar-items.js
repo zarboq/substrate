@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["TryStateSelect","Which state tests to execute."],["UpgradeCheckSelect","Select which checks should be run when trying a runtime upgrade upgrade."]],"trait":[["TryRuntime","Runtime api for testing the execution of a runtime upgrade."]]};
+window.SIDEBAR_ITEMS = {"enum":["TryStateSelect","UpgradeCheckSelect"],"trait":["TryRuntime"]};

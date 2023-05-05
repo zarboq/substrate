@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Error","Errors of the on-chain election."]],"struct":[["OnChainExecution","A simple on-chain implementation of the election provider trait."]],"trait":[["Config","Configuration trait for an onchain election execution."]],"type":[["BoundedExecution",""],["OnChainBoundedSupportsOf","Same as `BoundedSupportsOf` but for `onchain::Config`."]]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["OnChainExecution"],"trait":["Config"],"type":["BoundedExecution","OnChainBoundedSupportsOf"]};

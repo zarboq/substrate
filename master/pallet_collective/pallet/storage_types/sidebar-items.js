@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Members","The current members of the collective. This is stored sorted (just by value)."],["Prime","The prime member that helps determine the default vote behavior in case of absentations."],["ProposalCount","Proposals so far."],["ProposalOf","Actual proposal for a given hash, if it’s current."],["Proposals","The hashes of the active proposals."],["Voting","Votes on a given proposal, if it is ongoing."]]};
+window.SIDEBAR_ITEMS = {"struct":["Members","Prime","ProposalCount","ProposalOf","Proposals","Voting"]};

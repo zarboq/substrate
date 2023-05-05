@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["pallet","The module that hosts all the FRAME types needed to add this pallet to a runtime."]],"trait":[["EventHandler","An event handler for the authorship pallet. There is a dummy implementation for `()`, which does nothing."]]};
+window.SIDEBAR_ITEMS = {"mod":["pallet"],"trait":["EventHandler"]};

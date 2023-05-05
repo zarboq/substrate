@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ActiveRecoveries","Active recovery attempts."],["Proxy","The list of allowed proxy accounts."],["Recoverable","The set of recoverable accounts and their recovery configuration."]]};
+window.SIDEBAR_ITEMS = {"struct":["ActiveRecoveries","Proxy","Recoverable"]};

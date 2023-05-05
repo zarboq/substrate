@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"derive":[["ChainSpecExtension",""],["ChainSpecGroup",""]]};
+window.SIDEBAR_ITEMS = {"derive":["ChainSpecExtension","ChainSpecGroup"]};
