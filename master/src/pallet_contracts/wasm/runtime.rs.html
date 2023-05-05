@@ -2815,6 +2815,16 @@
 <a href="#2815" id="2815">2815</a>
 <a href="#2816" id="2816">2816</a>
 <a href="#2817" id="2817">2817</a>
+<a href="#2818" id="2818">2818</a>
+<a href="#2819" id="2819">2819</a>
+<a href="#2820" id="2820">2820</a>
+<a href="#2821" id="2821">2821</a>
+<a href="#2822" id="2822">2822</a>
+<a href="#2823" id="2823">2823</a>
+<a href="#2824" id="2824">2824</a>
+<a href="#2825" id="2825">2825</a>
+<a href="#2826" id="2826">2826</a>
+<a href="#2827" id="2827">2827</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4052,6 +4062,10 @@
 		out_len_ptr: u32,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ReturnCode, TrapReason&gt; {
 		<span class="kw">let </span>charged = ctx.charge_gas(RuntimeCosts::TakeStorage(ctx.ext.max_value_size()))<span class="question-mark">?</span>;
+		<span class="macro">ensure!</span>(
+			key_len &lt;= &lt;&lt;E <span class="kw">as </span>Ext&gt;::T <span class="kw">as </span>Config&gt;::MaxStorageKeyLen::get(),
+			Error::&lt;E::T&gt;::DecodingFailed
+		);
 		<span class="kw">let </span>key = ctx.read_sandbox_memory(memory, key_ptr, key_len)<span class="question-mark">?</span>;
 		<span class="kw">if let </span><span class="kw">crate</span>::storage::WriteOutcome::Taken(value) = ctx.ext.set_storage(
 			<span class="kw-2">&amp;</span>Key::&lt;E::T&gt;::try_from_var(key).map_err(|<span class="kw">_</span>| Error::&lt;E::T&gt;::DecodingFailed)<span class="question-mark">?</span>,
@@ -5425,7 +5439,13 @@
 		ctx.adjust_gas(charged, RuntimeCosts::CallRuntime(actual_weight));
 		<span class="kw">match </span>result {
 			<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(ReturnCode::Success),
-			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(ReturnCode::CallRuntimeFailed),
+			<span class="prelude-val">Err</span>(e) =&gt; {
+				<span class="kw">if </span>ctx.ext.append_debug_buffer(<span class="string">&quot;&quot;</span>) {
+					ctx.ext.append_debug_buffer(<span class="string">&quot;seal0::call_runtime failed with: &quot;</span>);
+					ctx.ext.append_debug_buffer(e.into());
+				};
+				<span class="prelude-val">Ok</span>(ReturnCode::CallRuntimeFailed)
+			},
 		}
 	}
 
