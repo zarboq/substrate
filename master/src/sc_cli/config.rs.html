@@ -637,6 +637,18 @@
 <a href="#637" id="637">637</a>
 <a href="#638" id="638">638</a>
 <a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -684,6 +696,17 @@
 <span class="doccomment">/// The recommended open file descriptor limit to be configured for the process.
 </span><span class="kw">const </span>RECOMMENDED_OPEN_FILE_DESCRIPTOR_LIMIT: u64 = <span class="number">10_000</span>;
 
+<span class="doccomment">/// The default port.
+</span><span class="kw">pub const </span>RPC_DEFAULT_PORT: u16 = <span class="number">9944</span>;
+<span class="doccomment">/// The default max number of subscriptions per connection.
+</span><span class="kw">pub const </span>RPC_DEFAULT_MAX_SUBS_PER_CONN: u32 = <span class="number">1024</span>;
+<span class="doccomment">/// The default max request size in MB.
+</span><span class="kw">pub const </span>RPC_DEFAULT_MAX_REQUEST_SIZE_MB: u32 = <span class="number">15</span>;
+<span class="doccomment">/// The default max response size in MB.
+</span><span class="kw">pub const </span>RPC_DEFAULT_MAX_RESPONSE_SIZE_MB: u32 = <span class="number">15</span>;
+<span class="doccomment">/// The default number of connection..
+</span><span class="kw">pub const </span>RPC_DEFAULT_MAX_CONNECTIONS: u32 = <span class="number">100</span>;
+
 <span class="doccomment">/// Default configuration values used by Substrate
 ///
 /// These values will be used by [`CliConfiguration`] to set
@@ -700,8 +723,8 @@
 	///
 	/// By default this is `9944`.
 	</span><span class="kw">fn </span>rpc_listen_port() -&gt; u16 {
-		<span class="number">9944
-	</span>}
+		RPC_DEFAULT_PORT
+	}
 
 	<span class="doccomment">/// The port Substrate should listen on for prometheus connections.
 	///
@@ -942,14 +965,14 @@
 	<span class="doccomment">/// Returns the RPC method set to expose.
 	///
 	/// By default this is `RpcMethods::Auto` (unsafe RPCs are denied iff
-	/// `{rpc,ws}_external` returns true, respectively).
+	/// `rpc_external` returns true, respectively).
 	</span><span class="kw">fn </span>rpc_methods(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;RpcMethods&gt; {
 		<span class="prelude-val">Ok</span>(Default::default())
 	}
 
 	<span class="doccomment">/// Get the maximum number of RPC server connections.
 	</span><span class="kw">fn </span>rpc_max_connections(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt; {
-		<span class="prelude-val">Ok</span>(Default::default())
+		<span class="prelude-val">Ok</span>(RPC_DEFAULT_MAX_CONNECTIONS)
 	}
 
 	<span class="doccomment">/// Get the RPC cors (`None` if disabled)
@@ -961,17 +984,17 @@
 
 	<span class="doccomment">/// Get maximum RPC request payload size.
 	</span><span class="kw">fn </span>rpc_max_request_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt; {
-		<span class="prelude-val">Ok</span>(Default::default())
+		<span class="prelude-val">Ok</span>(RPC_DEFAULT_MAX_REQUEST_SIZE_MB)
 	}
 
 	<span class="doccomment">/// Get maximum RPC response payload size.
 	</span><span class="kw">fn </span>rpc_max_response_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt; {
-		<span class="prelude-val">Ok</span>(Default::default())
+		<span class="prelude-val">Ok</span>(RPC_DEFAULT_MAX_RESPONSE_SIZE_MB)
 	}
 
 	<span class="doccomment">/// Get maximum number of subscriptions per connection.
 	</span><span class="kw">fn </span>rpc_max_subscriptions_per_connection(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt; {
-		<span class="prelude-val">Ok</span>(Default::default())
+		<span class="prelude-val">Ok</span>(RPC_DEFAULT_MAX_SUBS_PER_CONN)
 	}
 
 	<span class="doccomment">/// Get the prometheus configuration (`None` if disabled)
@@ -1145,6 +1168,7 @@
 			rpc_max_response_size: <span class="self">self</span>.rpc_max_response_size()<span class="question-mark">?</span>,
 			rpc_id_provider: <span class="prelude-val">None</span>,
 			rpc_max_subs_per_conn: <span class="self">self</span>.rpc_max_subscriptions_per_connection()<span class="question-mark">?</span>,
+			rpc_port: DCV::rpc_listen_port(),
 			prometheus_config: <span class="self">self
 				</span>.prometheus_config(DCV::prometheus_listen_port(), <span class="kw-2">&amp;</span>chain_spec)<span class="question-mark">?</span>,
 			telemetry_endpoints,

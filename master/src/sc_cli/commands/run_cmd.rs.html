@@ -503,6 +503,8 @@
 <a href="#503" id="503">503</a>
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -529,6 +531,8 @@
 		TransactionPoolParams,
 	},
 	CliConfiguration, PrometheusParams, RuntimeParams, TelemetryParams,
+	RPC_DEFAULT_MAX_CONNECTIONS, RPC_DEFAULT_MAX_REQUEST_SIZE_MB, RPC_DEFAULT_MAX_RESPONSE_SIZE_MB,
+	RPC_DEFAULT_MAX_SUBS_PER_CONN,
 };
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>regex::Regex;
@@ -583,23 +587,23 @@
 	</span><span class="kw">pub </span>rpc_methods: RpcMethods,
 
 	<span class="doccomment">/// Set the the maximum RPC request payload size for both HTTP and WS in megabytes.
-	</span><span class="attr">#[arg(long, default_value_t = <span class="number">15</span>)]
+	</span><span class="attr">#[arg(long, default_value_t = RPC_DEFAULT_MAX_REQUEST_SIZE_MB)]
 	</span><span class="kw">pub </span>rpc_max_request_size: u32,
 
 	<span class="doccomment">/// Set the the maximum RPC response payload size for both HTTP and WS in megabytes.
-	</span><span class="attr">#[arg(long, default_value_t = <span class="number">15</span>)]
+	</span><span class="attr">#[arg(long, default_value_t = RPC_DEFAULT_MAX_RESPONSE_SIZE_MB)]
 	</span><span class="kw">pub </span>rpc_max_response_size: u32,
 
 	<span class="doccomment">/// Set the the maximum concurrent subscriptions per connection.
-	</span><span class="attr">#[arg(long, default_value_t = <span class="number">1024</span>)]
+	</span><span class="attr">#[arg(long, default_value_t = RPC_DEFAULT_MAX_SUBS_PER_CONN)]
 	</span><span class="kw">pub </span>rpc_max_subscriptions_per_connection: u32,
 
 	<span class="doccomment">/// Specify JSON-RPC server TCP port.
-	</span><span class="attr">#[arg(long, value_name = <span class="string">&quot;PORT&quot;</span>, default_value_t = <span class="number">9944</span>)]
-	</span><span class="kw">pub </span>rpc_port: u16,
+	</span><span class="attr">#[arg(long, value_name = <span class="string">&quot;PORT&quot;</span>)]
+	</span><span class="kw">pub </span>rpc_port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 
 	<span class="doccomment">/// Maximum number of RPC server connections.
-	</span><span class="attr">#[arg(long, value_name = <span class="string">&quot;COUNT&quot;</span>, default_value_t = <span class="number">100</span>)]
+	</span><span class="attr">#[arg(long, value_name = <span class="string">&quot;COUNT&quot;</span>, default_value_t = RPC_DEFAULT_MAX_CONNECTIONS)]
 	</span><span class="kw">pub </span>rpc_max_connections: u32,
 
 	<span class="doccomment">/// Specify browser Origins allowed to access the HTTP &amp; WS RPC servers.
@@ -841,7 +845,7 @@
 			.into())
 	}
 
-	<span class="kw">fn </span>rpc_addr(<span class="kw-2">&amp;</span><span class="self">self</span>, _default_listen_port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SocketAddr&gt;&gt; {
+	<span class="kw">fn </span>rpc_addr(<span class="kw-2">&amp;</span><span class="self">self</span>, default_listen_port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SocketAddr&gt;&gt; {
 		<span class="kw">let </span>interface = rpc_interface(
 			<span class="self">self</span>.rpc_external,
 			<span class="self">self</span>.unsafe_rpc_external,
@@ -849,7 +853,7 @@
 			<span class="self">self</span>.validator,
 		)<span class="question-mark">?</span>;
 
-		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SocketAddr::new(interface, <span class="self">self</span>.rpc_port)))
+		<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SocketAddr::new(interface, <span class="self">self</span>.rpc_port.unwrap_or(default_listen_port))))
 	}
 
 	<span class="kw">fn </span>rpc_methods(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;sc_service::config::RpcMethods&gt; {
