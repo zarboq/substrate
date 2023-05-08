@@ -235,6 +235,17 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -335,25 +346,36 @@
 
 		<span class="kw">let </span>(level, status, target) =
 			<span class="kw">match </span>(sync_status.state, sync_status.state_sync, sync_status.warp_sync) {
-				(
-					<span class="kw">_</span>,
+				<span class="comment">// Do not set status to &quot;Block history&quot; when we are doing a major sync.
+				//
+				// A node could for example have been warp synced to the tip of the chain and
+				// shutdown. At the next start we still need to download the block history, but
+				// first will sync to the tip of the chain.
+				</span>(
+					sync_status,
 					<span class="kw">_</span>,
 					<span class="prelude-val">Some</span>(WarpSyncProgress { phase: WarpSyncPhase::DownloadingBlocks(n), .. }),
-				) =&gt; (<span class="string">&quot;⏩&quot;</span>, <span class="string">&quot;Block history&quot;</span>.into(), <span class="macro">format!</span>(<span class="string">&quot;, #{}&quot;</span>, n)),
+				) <span class="kw">if </span>!sync_status.is_major_syncing() =&gt; (<span class="string">&quot;⏩&quot;</span>, <span class="string">&quot;Block history&quot;</span>.into(), <span class="macro">format!</span>(<span class="string">&quot;, #{}&quot;</span>, n)),
 				(
 					<span class="kw">_</span>,
 					<span class="kw">_</span>,
 					<span class="prelude-val">Some</span>(WarpSyncProgress { phase: WarpSyncPhase::AwaitingTargetBlock, .. }),
 				) =&gt; (<span class="string">&quot;⏩&quot;</span>, <span class="string">&quot;Waiting for pending target block&quot;</span>.into(), <span class="string">&quot;&quot;</span>.into()),
-				(<span class="kw">_</span>, <span class="kw">_</span>, <span class="prelude-val">Some</span>(warp)) =&gt; (
-					<span class="string">&quot;⏩&quot;</span>,
-					<span class="string">&quot;Warping&quot;</span>.into(),
-					<span class="macro">format!</span>(
-						<span class="string">&quot;, {}, {:.2} Mib&quot;</span>,
+				<span class="comment">// Handle all phases besides the two phases we already handle above.
+				</span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="prelude-val">Some</span>(warp))
+					<span class="kw">if </span>!<span class="macro">matches!</span>(
 						warp.phase,
-						(warp.total_bytes <span class="kw">as </span>f32) / (<span class="number">1024f32 </span>* <span class="number">1024f32</span>)
+						WarpSyncPhase::AwaitingTargetBlock | WarpSyncPhase::DownloadingBlocks(<span class="kw">_</span>)
+					) =&gt;
+					(
+						<span class="string">&quot;⏩&quot;</span>,
+						<span class="string">&quot;Warping&quot;</span>.into(),
+						<span class="macro">format!</span>(
+							<span class="string">&quot;, {}, {:.2} Mib&quot;</span>,
+							warp.phase,
+							(warp.total_bytes <span class="kw">as </span>f32) / (<span class="number">1024f32 </span>* <span class="number">1024f32</span>)
+						),
 					),
-				),
 				(<span class="kw">_</span>, <span class="prelude-val">Some</span>(state), <span class="kw">_</span>) =&gt; (
 					<span class="string">&quot;⚙️ &quot;</span>,
 					<span class="string">&quot;Downloading state&quot;</span>.into(),
