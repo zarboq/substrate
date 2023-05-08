@@ -261,6 +261,64 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -289,8 +347,14 @@
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>DepositBalanceOf&lt;T, I = ()&gt; =
 	&lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Currency <span class="kw">as </span>Currency&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt;&gt;::Balance;
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>AssetAccountOf&lt;T, I&gt; =
-	AssetAccount&lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Balance, DepositBalanceOf&lt;T, I&gt;, &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Extra&gt;;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>AssetAccountOf&lt;T, I&gt; = AssetAccount&lt;
+	&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Balance,
+	DepositBalanceOf&lt;T, I&gt;,
+	&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Extra,
+	&lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId,
+&gt;;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>ExistenceReasonOf&lt;T, I&gt; =
+	ExistenceReason&lt;DepositBalanceOf&lt;T, I&gt;, &lt;T <span class="kw">as </span>SystemConfig&gt;::AccountId&gt;;
 
 <span class="doccomment">/// AssetStatus holds the current state of the asset. It could either be Live and available for use,
 /// or in a Destroying state.
@@ -346,23 +410,35 @@
 
 <span class="attr">#[test]
 </span><span class="kw">fn </span>ensure_bool_decodes_to_consumer_or_sufficient() {
-	<span class="macro">assert_eq!</span>(<span class="bool-val">false</span>.encode(), ExistenceReason::&lt;()&gt;::Consumer.encode());
-	<span class="macro">assert_eq!</span>(<span class="bool-val">true</span>.encode(), ExistenceReason::&lt;()&gt;::Sufficient.encode());
+	<span class="macro">assert_eq!</span>(<span class="bool-val">false</span>.encode(), ExistenceReason::&lt;(), ()&gt;::Consumer.encode());
+	<span class="macro">assert_eq!</span>(<span class="bool-val">true</span>.encode(), ExistenceReason::&lt;(), ()&gt;::Sufficient.encode());
 }
 
-<span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-</span><span class="kw">pub enum </span>ExistenceReason&lt;Balance&gt; {
-	<span class="attr">#[codec(index = <span class="number">0</span>)]
+<span class="doccomment">/// The reason for an account&#39;s existence within an asset class.
+</span><span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+</span><span class="kw">pub enum </span>ExistenceReason&lt;Balance, AccountId&gt; {
+	<span class="doccomment">/// A consumer reference was used to create this account.
+	</span><span class="attr">#[codec(index = <span class="number">0</span>)]
 	</span>Consumer,
-	<span class="attr">#[codec(index = <span class="number">1</span>)]
+	<span class="doccomment">/// The asset class is `sufficient` for account existence.
+	</span><span class="attr">#[codec(index = <span class="number">1</span>)]
 	</span>Sufficient,
-	<span class="attr">#[codec(index = <span class="number">2</span>)]
+	<span class="doccomment">/// The account holder has placed a deposit to exist within an asset class.
+	</span><span class="attr">#[codec(index = <span class="number">2</span>)]
 	</span>DepositHeld(Balance),
-	<span class="attr">#[codec(index = <span class="number">3</span>)]
+	<span class="doccomment">/// A deposit was placed for this account to exist, but it has been refunded.
+	</span><span class="attr">#[codec(index = <span class="number">3</span>)]
 	</span>DepositRefunded,
+	<span class="doccomment">/// Some other `AccountId` has placed a deposit to make this account exist.
+	/// An account with such a reason might not be referenced in `system`.
+	</span><span class="attr">#[codec(index = <span class="number">4</span>)]
+	</span>DepositFrom(AccountId, Balance),
 }
 
-<span class="kw">impl</span>&lt;Balance&gt; ExistenceReason&lt;Balance&gt; {
+<span class="kw">impl</span>&lt;Balance, AccountId&gt; ExistenceReason&lt;Balance, AccountId&gt;
+<span class="kw">where
+	</span>AccountId: Clone,
+{
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>take_deposit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Balance&gt; {
 		<span class="kw">if </span>!<span class="macro">matches!</span>(<span class="self">self</span>, ExistenceReason::DepositHeld(<span class="kw">_</span>)) {
 			<span class="kw">return </span><span class="prelude-val">None
@@ -375,16 +451,56 @@
 			<span class="prelude-val">None
 		</span>}
 	}
+
+	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>take_deposit_from(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(AccountId, Balance)&gt; {
+		<span class="kw">if </span>!<span class="macro">matches!</span>(<span class="self">self</span>, ExistenceReason::DepositFrom(..)) {
+			<span class="kw">return </span><span class="prelude-val">None
+		</span>}
+		<span class="kw">if let </span>ExistenceReason::DepositFrom(depositor, deposit) =
+			sp_std::mem::replace(<span class="self">self</span>, ExistenceReason::DepositRefunded)
+		{
+			<span class="prelude-val">Some</span>((depositor, deposit))
+		} <span class="kw">else </span>{
+			<span class="prelude-val">None
+		</span>}
+	}
+}
+
+<span class="attr">#[test]
+</span><span class="kw">fn </span>ensure_bool_decodes_to_liquid_or_frozen() {
+	<span class="macro">assert_eq!</span>(<span class="bool-val">false</span>.encode(), AccountStatus::Liquid.encode());
+	<span class="macro">assert_eq!</span>(<span class="bool-val">true</span>.encode(), AccountStatus::Frozen.encode());
+}
+
+<span class="doccomment">/// The status of an asset account.
+</span><span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+</span><span class="kw">pub enum </span>AccountStatus {
+	<span class="doccomment">/// Asset account can receive and transfer the assets.
+	</span>Liquid,
+	<span class="doccomment">/// Asset account cannot transfer the assets.
+	</span>Frozen,
+	<span class="doccomment">/// Asset account cannot receive and transfer the assets.
+	</span>Blocked,
+}
+<span class="kw">impl </span>AccountStatus {
+	<span class="doccomment">/// Returns `true` if frozen or blocked.
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>is_frozen(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">matches!</span>(<span class="self">self</span>, AccountStatus::Frozen | AccountStatus::Blocked)
+	}
+	<span class="doccomment">/// Returns `true` if blocked.
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>is_blocked(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">matches!</span>(<span class="self">self</span>, AccountStatus::Blocked)
+	}
 }
 
 <span class="attr">#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-</span><span class="kw">pub struct </span>AssetAccount&lt;Balance, DepositBalance, Extra&gt; {
+</span><span class="kw">pub struct </span>AssetAccount&lt;Balance, DepositBalance, Extra, AccountId&gt; {
 	<span class="doccomment">/// The balance.
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) balance: Balance,
-	<span class="doccomment">/// Whether the account is frozen.
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) is_frozen: bool,
+	<span class="doccomment">/// The status of the account.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) status: AccountStatus,
 	<span class="doccomment">/// The reason for the existence of the account.
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) reason: ExistenceReason&lt;DepositBalance&gt;,
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) reason: ExistenceReason&lt;DepositBalance, AccountId&gt;,
 	<span class="doccomment">/// Additional &quot;sidecar&quot; data, in case some other pallet wants to use this storage item.
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) extra: Extra,
 }

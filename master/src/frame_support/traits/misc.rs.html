@@ -1438,6 +1438,19 @@
 <a href="#1438" id="1438">1438</a>
 <a href="#1439" id="1439">1439</a>
 <a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
+<a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1457,7 +1470,7 @@
 
 </span><span class="doccomment">//! Smaller traits used in FRAME which don&#39;t need their own file.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::dispatch::Parameter;
+</span><span class="kw">use </span><span class="kw">crate</span>::dispatch::{DispatchResult, Parameter};
 <span class="kw">use </span>codec::{CompactLen, Decode, DecodeLimit, Encode, EncodeLike, Input, MaxEncodedLen};
 <span class="kw">use </span>impl_trait_for_tuples::impl_for_tuples;
 <span class="kw">use </span>scale_info::{build::Fields, meta_type, Path, Type, TypeInfo, TypeParameter};
@@ -2592,6 +2605,19 @@
 	<span class="kw">type </span>MaxSize = ();
 	<span class="kw">fn </span>note_preimage(<span class="kw">_</span>: <span class="kw">crate</span>::BoundedVec&lt;u8, <span class="self">Self</span>::MaxSize&gt;) {}
 	<span class="kw">fn </span>unnote_preimage(<span class="kw">_</span>: <span class="kw-2">&amp;</span>Hash) {}
+}
+
+<span class="doccomment">/// Trait for creating an asset account with a deposit taken from a designated depositor specified
+/// by the client.
+</span><span class="kw">pub trait </span>AccountTouch&lt;AssetId, AccountId&gt; {
+	<span class="doccomment">/// The type for currency units of the deposit.
+	</span><span class="kw">type </span>Balance;
+
+	<span class="doccomment">/// The deposit amount of a native currency required for creating an asset account.
+	</span><span class="kw">fn </span>deposit_required() -&gt; <span class="self">Self</span>::Balance;
+
+	<span class="doccomment">/// Create an account for `who` of the `asset` with a deposit taken from the `depositor`.
+	</span><span class="kw">fn </span>touch(asset: AssetId, who: AccountId, depositor: AccountId) -&gt; DispatchResult;
 }
 
 <span class="attr">#[cfg(test)]
