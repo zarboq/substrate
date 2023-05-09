@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Call"],"struct":["Module","PanicPalletInfo","TestRandomness"],"trait":["Config"],"type":["Pallet"]};
+window.SIDEBAR_ITEMS = {"enum":["RawOrigin"],"fn":["ensure_root"],"mod":["pallet","pallet_prelude"],"struct":["TestRandomness"]};

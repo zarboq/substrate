@@ -75,6 +75,71 @@
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -92,46 +157,111 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="doccomment">//! Test crate for frame_support. Allow to make use of `frame_support::decl_storage`.
-//! See tests directory.
+</span><span class="doccomment">//! Minimal pallet without `frame_system::Config`-super trait.
 
 </span><span class="comment">// Make sure we fail compilation on warnings
 </span><span class="attr">#![warn(missing_docs)]
 #![deny(warnings)]
 
-</span><span class="doccomment">/// The configuration trait
-</span><span class="kw">pub trait </span>Config: <span class="lifetime">&#39;static </span>{
-	<span class="doccomment">/// The runtime origin type.
-	</span><span class="kw">type </span>RuntimeOrigin: codec::Codec + codec::EncodeLike + Default + scale_info::TypeInfo;
-	<span class="doccomment">/// The block number type.
-	</span><span class="kw">type </span>BlockNumber: codec::Codec + codec::EncodeLike + Default + scale_info::TypeInfo;
-	<span class="doccomment">/// The information about the pallet setup in the runtime.
-	</span><span class="kw">type </span>PalletInfo: frame_support::traits::PalletInfo;
-	<span class="doccomment">/// The db weights.
-	</span><span class="kw">type </span>DbWeight: frame_support::traits::Get&lt;frame_support::weights::RuntimeDbWeight&gt;;
+</span><span class="kw">pub use </span>frame_support::dispatch::RawOrigin;
+
+<span class="kw">pub use </span><span class="self">self</span>::pallet::<span class="kw-2">*</span>;
+
+<span class="attr">#[frame_support::pallet(dev_mode)]
+</span><span class="kw">pub mod </span>pallet {
+	<span class="kw">use super</span>::<span class="kw-2">*</span>;
+	<span class="kw">use crate</span>::{<span class="self">self </span><span class="kw">as </span>frame_system, pallet_prelude::<span class="kw-2">*</span>};
+	<span class="kw">use </span>frame_support::pallet_prelude::<span class="kw-2">*</span>;
+
+	<span class="attr">#[pallet::pallet]
+	</span><span class="kw">pub struct </span>Pallet&lt;T&gt;(<span class="kw">_</span>);
+
+	<span class="doccomment">/// The configuration trait
+	</span><span class="attr">#[pallet::config]
+	#[pallet::disable_frame_system_supertrait_check]
+	</span><span class="kw">pub trait </span>Config: <span class="lifetime">&#39;static </span>+ Eq + Clone {
+		<span class="doccomment">/// The block number type.
+		</span><span class="kw">type </span>BlockNumber: Parameter + Member + Default + MaybeSerializeDeserialize + MaxEncodedLen;
+		<span class="doccomment">/// The account type.
+		</span><span class="kw">type </span>AccountId: Parameter + Member + MaxEncodedLen;
+		<span class="doccomment">/// The basic call filter to use in Origin.
+		</span><span class="kw">type </span>BaseCallFilter: frame_support::traits::Contains&lt;<span class="self">Self</span>::RuntimeCall&gt;;
+		<span class="doccomment">/// The runtime origin type.
+		</span><span class="kw">type </span>RuntimeOrigin: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;<span class="self">Self</span>::AccountId&gt;, <span class="self">Self</span>::RuntimeOrigin&gt;&gt;
+			+ From&lt;RawOrigin&lt;<span class="self">Self</span>::AccountId&gt;&gt;;
+		<span class="doccomment">/// The runtime call type.
+		</span><span class="kw">type </span>RuntimeCall;
+		<span class="doccomment">/// The runtime event type.
+		</span><span class="kw">type </span>RuntimeEvent: Parameter
+			+ Member
+			+ IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;
+			+ From&lt;Event&lt;<span class="self">Self</span>&gt;&gt;;
+		<span class="doccomment">/// The information about the pallet setup in the runtime.
+		</span><span class="kw">type </span>PalletInfo: frame_support::traits::PalletInfo;
+		<span class="doccomment">/// The db weights.
+		</span><span class="kw">type </span>DbWeight: Get&lt;frame_support::weights::RuntimeDbWeight&gt;;
+	}
+
+	<span class="attr">#[pallet::call]
+	</span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
+		<span class="doccomment">/// A noop call.
+		</span><span class="kw">pub fn </span>noop(_origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
+			<span class="prelude-val">Ok</span>(())
+		}
+	}
+
+	<span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
+		<span class="doccomment">/// A empty method.
+		</span><span class="kw">pub fn </span>deposit_event(_event: <span class="kw">impl </span>Into&lt;T::RuntimeEvent&gt;) {}
+	}
+
+	<span class="doccomment">/// The origin type.
+	</span><span class="attr">#[pallet::origin]
+	</span><span class="kw">pub type </span>Origin&lt;T&gt; = RawOrigin&lt;&lt;T <span class="kw">as </span>Config&gt;::AccountId&gt;;
+
+	<span class="doccomment">/// The error type.
+	</span><span class="attr">#[pallet::error]
+	</span><span class="kw">pub enum </span>Error&lt;T&gt; {
+		<span class="doccomment">/// Test error documentation
+		</span>TestError,
+		<span class="doccomment">/// Error documentation
+		/// with multiple lines
+		</span>AnotherError,
+		<span class="doccomment">/// Required by construct_runtime
+		</span>CallFiltered,
+	}
+
+	<span class="doccomment">/// The event type.
+	</span><span class="attr">#[pallet::event]
+	</span><span class="kw">pub enum </span>Event&lt;T: Config&gt; {
+		<span class="doccomment">/// The extrinsic is successful
+		</span>ExtrinsicSuccess,
+		<span class="doccomment">/// The extrinsic is failed
+		</span>ExtrinsicFailed,
+		<span class="doccomment">/// The ignored error
+		</span>Ignore(&lt;T <span class="kw">as </span>Config&gt;::BlockNumber),
+	}
 }
 
-<span class="macro">frame_support::decl_module! </span>{
-	<span class="doccomment">/// Some test module
-	</span><span class="kw">pub struct </span>Module&lt;T: Config&gt; <span class="kw">for enum </span>Call <span class="kw">where </span>origin: T::RuntimeOrigin, system=<span class="self">self </span>{}
+<span class="doccomment">/// Ensure that the origin `o` represents the root. Returns `Ok` or an `Err` otherwise.
+</span><span class="kw">pub fn </span>ensure_root&lt;OuterOrigin, AccountId&gt;(o: OuterOrigin) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;
+<span class="kw">where
+	</span>OuterOrigin: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;AccountId&gt;, OuterOrigin&gt;&gt;,
+{
+	o.into().map(|<span class="kw">_</span>| ()).map_err(|<span class="kw">_</span>| <span class="string">&quot;bad origin: expected to be a root origin&quot;</span>)
 }
 
-<span class="doccomment">/// A PalletInfo implementation which just panics.
-</span><span class="kw">pub struct </span>PanicPalletInfo;
+<span class="doccomment">/// Same semantic as [`frame_system`].
+</span><span class="comment">// Note: we cannot use [`frame_system`] here since the pallet does not depend on
+// [`frame_system::Config`].
+</span><span class="kw">pub mod </span>pallet_prelude {
+	<span class="kw">pub use </span><span class="kw">crate</span>::ensure_root;
 
-<span class="kw">impl </span>frame_support::traits::PalletInfo <span class="kw">for </span>PanicPalletInfo {
-	<span class="kw">fn </span>index&lt;P: <span class="lifetime">&#39;static</span>&gt;() -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
-		<span class="macro">unimplemented!</span>(<span class="string">&quot;PanicPalletInfo mustn&#39;t be triggered by tests&quot;</span>);
-	}
-	<span class="kw">fn </span>name&lt;P: <span class="lifetime">&#39;static</span>&gt;() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="macro">unimplemented!</span>(<span class="string">&quot;PanicPalletInfo mustn&#39;t be triggered by tests&quot;</span>);
-	}
-	<span class="kw">fn </span>module_name&lt;P: <span class="lifetime">&#39;static</span>&gt;() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="macro">unimplemented!</span>(<span class="string">&quot;PanicPalletInfo mustn&#39;t be triggered by tests&quot;</span>);
-	}
-	<span class="kw">fn </span>crate_version&lt;P: <span class="lifetime">&#39;static</span>&gt;() -&gt; <span class="prelude-ty">Option</span>&lt;frame_support::traits::CrateVersion&gt; {
-		<span class="macro">unimplemented!</span>(<span class="string">&quot;PanicPalletInfo mustn&#39;t be triggered by tests&quot;</span>);
-	}
+	<span class="doccomment">/// Type alias for the `Origin` associated type of system config.
+	</span><span class="kw">pub type </span>OriginFor&lt;T&gt; = &lt;T <span class="kw">as </span><span class="kw">crate</span>::Config&gt;::RuntimeOrigin;
+
+	<span class="doccomment">/// Type alias for the `BlockNumber` associated type of system config.
+	</span><span class="kw">pub type </span>BlockNumberFor&lt;T&gt; = &lt;T <span class="kw">as </span><span class="kw">super</span>::Config&gt;::BlockNumber;
 }
 
 <span class="doccomment">/// Provides an implementation of [`frame_support::traits::Randomness`] that should only be used in
