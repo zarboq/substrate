@@ -205,7 +205,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_consensus_grandpa":["",[],["lib.rs"]],\
 "sp_consensus_pow":["",[],["lib.rs"]],\
 "sp_consensus_slots":["",[],["lib.rs"]],\
-"sp_core":["",[["offchain",[],["mod.rs","storage.rs","testing.rs"]]],["crypto.rs","defer.rs","ecdsa.rs","ed25519.rs","hash.rs","hasher.rs","hashing.rs","hexdisplay.rs","lib.rs","sr25519.rs","testing.rs","traits.rs","uint.rs"]],\
+"sp_core":["",[["offchain",[],["mod.rs","storage.rs","testing.rs"]]],["bls.rs","crypto.rs","defer.rs","ecdsa.rs","ed25519.rs","hash.rs","hasher.rs","hashing.rs","hexdisplay.rs","lib.rs","sr25519.rs","testing.rs","traits.rs","uint.rs"]],\
 "sp_core_hashing":["",[],["lib.rs"]],\
 "sp_core_hashing_proc_macro":["",[],["impls.rs","lib.rs"]],\
 "sp_database":["",[],["error.rs","kvdb.rs","lib.rs","mem.rs"]],\
