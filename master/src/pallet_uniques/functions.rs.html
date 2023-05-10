@@ -281,6 +281,9 @@
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -320,7 +323,7 @@
 		<span class="kw">let </span>collection_details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 		<span class="macro">ensure!</span>(!collection_details.is_frozen, Error::&lt;T, I&gt;::Frozen);
-		<span class="macro">ensure!</span>(!T::Locker::is_locked(collection, item), Error::&lt;T, I&gt;::Locked);
+		<span class="macro">ensure!</span>(!T::Locker::is_locked(collection.clone(), item), Error::&lt;T, I&gt;::Locked);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>details =
 			Item::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
@@ -357,12 +360,12 @@
 		free_holding: bool,
 		event: Event&lt;T, I&gt;,
 	) -&gt; DispatchResult {
-		<span class="macro">ensure!</span>(!Collection::&lt;T, I&gt;::contains_key(collection), Error::&lt;T, I&gt;::InUse);
+		<span class="macro">ensure!</span>(!Collection::&lt;T, I&gt;::contains_key(collection.clone()), Error::&lt;T, I&gt;::InUse);
 
 		T::Currency::reserve(<span class="kw-2">&amp;</span>owner, deposit)<span class="question-mark">?</span>;
 
 		Collection::&lt;T, I&gt;::insert(
-			collection,
+			collection.clone(),
 			CollectionDetails {
 				owner: owner.clone(),
 				issuer: admin.clone(),
@@ -387,7 +390,7 @@
 		witness: DestroyWitness,
 		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;DestroyWitness, DispatchError&gt; {
-		Collection::&lt;T, I&gt;::try_mutate_exists(collection, |maybe_details| {
+		Collection::&lt;T, I&gt;::try_mutate_exists(collection.clone(), |maybe_details| {
 			<span class="kw">let </span>collection_details =
 				maybe_details.take().ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = maybe_check_owner {
@@ -430,7 +433,10 @@
 		owner: T::AccountId,
 		with_details: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span>CollectionDetailsFor&lt;T, I&gt;) -&gt; DispatchResult,
 	) -&gt; DispatchResult {
-		<span class="macro">ensure!</span>(!Item::&lt;T, I&gt;::contains_key(collection, item), Error::&lt;T, I&gt;::AlreadyExists);
+		<span class="macro">ensure!</span>(
+			!Item::&lt;T, I&gt;::contains_key(collection.clone(), item),
+			Error::&lt;T, I&gt;::AlreadyExists
+		);
 
 		Collection::&lt;T, I&gt;::try_mutate(
 			<span class="kw-2">&amp;</span>collection,
@@ -472,7 +478,7 @@
 		item: T::ItemId,
 		with_details: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span>CollectionDetailsFor&lt;T, I&gt;, <span class="kw-2">&amp;</span>ItemDetailsFor&lt;T, I&gt;) -&gt; DispatchResult,
 	) -&gt; DispatchResult {
-		<span class="macro">ensure!</span>(!T::Locker::is_locked(collection, item), Error::&lt;T, I&gt;::Locked);
+		<span class="macro">ensure!</span>(!T::Locker::is_locked(collection.clone(), item), Error::&lt;T, I&gt;::Locked);
 		<span class="kw">let </span>owner = Collection::&lt;T, I&gt;::try_mutate(
 			<span class="kw-2">&amp;</span>collection,
 			|maybe_collection_details| -&gt; <span class="prelude-ty">Result</span>&lt;T::AccountId, DispatchError&gt; {
@@ -551,7 +557,7 @@
 
 		<span class="kw">let </span>old_owner = details.owner.clone();
 
-		<span class="self">Self</span>::do_transfer(collection, item, buyer.clone(), |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))<span class="question-mark">?</span>;
+		<span class="self">Self</span>::do_transfer(collection.clone(), item, buyer.clone(), |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))<span class="question-mark">?</span>;
 
 		<span class="self">Self</span>::deposit_event(Event::ItemBought {
 			collection,

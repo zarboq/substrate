@@ -1531,6 +1531,10 @@
 <a href="#1531" id="1531">1531</a>
 <a href="#1532" id="1532">1532</a>
 <a href="#1533" id="1533">1533</a>
+<a href="#1534" id="1534">1534</a>
+<a href="#1535" id="1535">1535</a>
+<a href="#1536" id="1536">1536</a>
+<a href="#1537" id="1537">1537</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1629,7 +1633,7 @@
 			+ IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
 
 		<span class="doccomment">/// Identifier for the collection of item.
-		</span><span class="kw">type </span>CollectionId: Member + Parameter + MaxEncodedLen + Copy;
+		</span><span class="kw">type </span>CollectionId: Member + Parameter + MaxEncodedLen;
 
 		<span class="doccomment">/// The type used to identify a unique item within a collection.
 		</span><span class="kw">type </span>ItemId: Member + Parameter + MaxEncodedLen + Copy;
@@ -1994,7 +1998,7 @@
 			<span class="kw">let </span>admin = T::Lookup::lookup(admin)<span class="question-mark">?</span>;
 
 			<span class="self">Self</span>::do_create_collection(
-				collection,
+				collection.clone(),
 				owner.clone(),
 				admin.clone(),
 				T::CollectionDeposit::get(),
@@ -2032,7 +2036,7 @@
 			<span class="kw">let </span>owner = T::Lookup::lookup(owner)<span class="question-mark">?</span>;
 
 			<span class="self">Self</span>::do_create_collection(
-				collection,
+				collection.clone(),
 				owner.clone(),
 				owner.clone(),
 				Zero::zero(),
@@ -2332,7 +2336,7 @@
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 
-			Collection::&lt;T, I&gt;::try_mutate(collection, |maybe_details| {
+			Collection::&lt;T, I&gt;::try_mutate(collection.clone(), |maybe_details| {
 				<span class="kw">let </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(origin == details.freezer, Error::&lt;T, I&gt;::NoPermission);
 
@@ -2360,7 +2364,7 @@
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 
-			Collection::&lt;T, I&gt;::try_mutate(collection, |maybe_details| {
+			Collection::&lt;T, I&gt;::try_mutate(collection.clone(), |maybe_details| {
 				<span class="kw">let </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(origin == details.admin, Error::&lt;T, I&gt;::NoPermission);
 
@@ -2395,7 +2399,7 @@
 			<span class="kw">let </span>acceptable_collection = OwnershipAcceptance::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>owner);
 			<span class="macro">ensure!</span>(acceptable_collection.as_ref() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>collection), Error::&lt;T, I&gt;::Unaccepted);
 
-			Collection::&lt;T, I&gt;::try_mutate(collection, |maybe_details| {
+			Collection::&lt;T, I&gt;::try_mutate(collection.clone(), |maybe_details| {
 				<span class="kw">let </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(origin == details.owner, Error::&lt;T, I&gt;::NoPermission);
 				<span class="kw">if </span>details.owner == owner {
@@ -2445,7 +2449,7 @@
 			<span class="kw">let </span>admin = T::Lookup::lookup(admin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>freezer = T::Lookup::lookup(freezer)<span class="question-mark">?</span>;
 
-			Collection::&lt;T, I&gt;::try_mutate(collection, |maybe_details| {
+			Collection::&lt;T, I&gt;::try_mutate(collection.clone(), |maybe_details| {
 				<span class="kw">let </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(origin == details.owner, Error::&lt;T, I&gt;::NoPermission);
 
@@ -2593,7 +2597,7 @@
 		) -&gt; DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 
-			Collection::&lt;T, I&gt;::try_mutate(collection, |maybe_item| {
+			Collection::&lt;T, I&gt;::try_mutate(collection.clone(), |maybe_item| {
 				<span class="kw">let </span><span class="kw-2">mut </span>item = maybe_item.take().ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
 				<span class="kw">let </span>old_owner = item.owner;
 				<span class="kw">let </span>new_owner = T::Lookup::lookup(owner)<span class="question-mark">?</span>;
@@ -2648,12 +2652,13 @@
 				<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
 			}
 			<span class="kw">let </span>maybe_is_frozen = <span class="kw">match </span>maybe_item {
-				<span class="prelude-val">None </span>=&gt; CollectionMetadataOf::&lt;T, I&gt;::get(collection).map(|v| v.is_frozen),
-				<span class="prelude-val">Some</span>(item) =&gt; ItemMetadataOf::&lt;T, I&gt;::get(collection, item).map(|v| v.is_frozen),
+				<span class="prelude-val">None </span>=&gt; CollectionMetadataOf::&lt;T, I&gt;::get(collection.clone()).map(|v| v.is_frozen),
+				<span class="prelude-val">Some</span>(item) =&gt;
+					ItemMetadataOf::&lt;T, I&gt;::get(collection.clone(), item).map(|v| v.is_frozen),
 			};
 			<span class="macro">ensure!</span>(!maybe_is_frozen.unwrap_or(<span class="bool-val">false</span>), Error::&lt;T, I&gt;::Frozen);
 
-			<span class="kw">let </span>attribute = Attribute::&lt;T, I&gt;::get((collection, maybe_item, <span class="kw-2">&amp;</span>key));
+			<span class="kw">let </span>attribute = Attribute::&lt;T, I&gt;::get((collection.clone(), maybe_item, <span class="kw-2">&amp;</span>key));
 			<span class="kw">if </span>attribute.is_none() {
 				collection_details.attributes.saturating_inc();
 			}
@@ -2673,7 +2678,7 @@
 			}
 
 			Attribute::&lt;T, I&gt;::insert((<span class="kw-2">&amp;</span>collection, maybe_item, <span class="kw-2">&amp;</span>key), (<span class="kw-2">&amp;</span>value, deposit));
-			Collection::&lt;T, I&gt;::insert(collection, <span class="kw-2">&amp;</span>collection_details);
+			Collection::&lt;T, I&gt;::insert(collection.clone(), <span class="kw-2">&amp;</span>collection_details);
 			<span class="self">Self</span>::deposit_event(Event::AttributeSet { collection, maybe_item, key, value });
 			<span class="prelude-val">Ok</span>(())
 		}
@@ -2710,16 +2715,19 @@
 				<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
 			}
 			<span class="kw">let </span>maybe_is_frozen = <span class="kw">match </span>maybe_item {
-				<span class="prelude-val">None </span>=&gt; CollectionMetadataOf::&lt;T, I&gt;::get(collection).map(|v| v.is_frozen),
-				<span class="prelude-val">Some</span>(item) =&gt; ItemMetadataOf::&lt;T, I&gt;::get(collection, item).map(|v| v.is_frozen),
+				<span class="prelude-val">None </span>=&gt; CollectionMetadataOf::&lt;T, I&gt;::get(collection.clone()).map(|v| v.is_frozen),
+				<span class="prelude-val">Some</span>(item) =&gt;
+					ItemMetadataOf::&lt;T, I&gt;::get(collection.clone(), item).map(|v| v.is_frozen),
 			};
 			<span class="macro">ensure!</span>(!maybe_is_frozen.unwrap_or(<span class="bool-val">false</span>), Error::&lt;T, I&gt;::Frozen);
 
-			<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, deposit)) = Attribute::&lt;T, I&gt;::take((collection, maybe_item, <span class="kw-2">&amp;</span>key)) {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, deposit)) =
+				Attribute::&lt;T, I&gt;::take((collection.clone(), maybe_item, <span class="kw-2">&amp;</span>key))
+			{
 				collection_details.attributes.saturating_dec();
 				collection_details.total_deposit.saturating_reduce(deposit);
 				T::Currency::unreserve(<span class="kw-2">&amp;</span>collection_details.owner, deposit);
-				Collection::&lt;T, I&gt;::insert(collection, <span class="kw-2">&amp;</span>collection_details);
+				Collection::&lt;T, I&gt;::insert(collection.clone(), <span class="kw-2">&amp;</span>collection_details);
 				<span class="self">Self</span>::deposit_event(Event::AttributeCleared { collection, maybe_item, key });
 			}
 			<span class="prelude-val">Ok</span>(())
@@ -2762,7 +2770,7 @@
 				<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
 			}
 
-			ItemMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection, item, |metadata| {
+			ItemMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection.clone(), item, |metadata| {
 				<span class="kw">let </span>was_frozen = metadata.as_ref().map_or(<span class="bool-val">false</span>, |m| m.is_frozen);
 				<span class="macro">ensure!</span>(maybe_check_owner.is_none() || !was_frozen, Error::&lt;T, I&gt;::Frozen);
 
@@ -2822,7 +2830,7 @@
 				<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>collection_details.owner, Error::&lt;T, I&gt;::NoPermission);
 			}
 
-			ItemMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection, item, |metadata| {
+			ItemMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection.clone(), item, |metadata| {
 				<span class="kw">let </span>was_frozen = metadata.as_ref().map_or(<span class="bool-val">false</span>, |m| m.is_frozen);
 				<span class="macro">ensure!</span>(maybe_check_owner.is_none() || !was_frozen, Error::&lt;T, I&gt;::Frozen);
 
@@ -2873,7 +2881,7 @@
 				<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>details.owner, Error::&lt;T, I&gt;::NoPermission);
 			}
 
-			CollectionMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection, |metadata| {
+			CollectionMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection.clone(), |metadata| {
 				<span class="kw">let </span>was_frozen = metadata.as_ref().map_or(<span class="bool-val">false</span>, |m| m.is_frozen);
 				<span class="macro">ensure!</span>(maybe_check_owner.is_none() || !was_frozen, Error::&lt;T, I&gt;::Frozen);
 
@@ -2929,7 +2937,7 @@
 				<span class="macro">ensure!</span>(check_owner == <span class="kw-2">&amp;</span>details.owner, Error::&lt;T, I&gt;::NoPermission);
 			}
 
-			CollectionMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection, |metadata| {
+			CollectionMetadataOf::&lt;T, I&gt;::try_mutate_exists(collection.clone(), |metadata| {
 				<span class="kw">let </span>was_frozen = metadata.as_ref().map_or(<span class="bool-val">false</span>, |m| m.is_frozen);
 				<span class="macro">ensure!</span>(maybe_check_owner.is_none() || !was_frozen, Error::&lt;T, I&gt;::Frozen);
 

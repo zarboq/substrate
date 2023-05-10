@@ -493,7 +493,7 @@
 	T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, DepositBalanceOf::&lt;T, I&gt;::max_value());
 	<span class="macro">assert!</span>(Uniques::&lt;T, I&gt;::force_create(
 		SystemOrigin::Root.into(),
-		collection,
+		collection.clone(),
 		caller_lookup.clone(),
 		<span class="bool-val">false</span>,
 	)
@@ -622,26 +622,26 @@
 		<span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..a {
 			add_item_attribute::&lt;T, I&gt;(T::Helper::item(i <span class="kw">as </span>u16));
 		}
-		<span class="kw">let </span>witness = Collection::&lt;T, I&gt;::get(collection).unwrap().destroy_witness();
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, witness)
+		<span class="kw">let </span>witness = Collection::&lt;T, I&gt;::get(collection.clone()).unwrap().destroy_witness();
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), witness)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::Destroyed { collection }.into());
+		assert_last_event::&lt;T, I&gt;(Event::Destroyed { collection: collection.clone() }.into());
 	}
 
 	mint {
 		<span class="kw">let </span>(collection, caller, caller_lookup) = create_collection::&lt;T, I&gt;();
 		<span class="kw">let </span>item = T::Helper::item(<span class="number">0</span>);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, item, caller_lookup)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), item, caller_lookup)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::Issued { collection, item, owner: caller }.into());
+		assert_last_event::&lt;T, I&gt;(Event::Issued { collection: collection.clone(), item, owner: caller }.into());
 	}
 
 	burn {
 		<span class="kw">let </span>(collection, caller, caller_lookup) = create_collection::&lt;T, I&gt;();
 		<span class="kw">let </span>(item, ..) = mint_item::&lt;T, I&gt;(<span class="number">0</span>);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, item, <span class="prelude-val">Some</span>(caller_lookup))
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), item, <span class="prelude-val">Some</span>(caller_lookup))
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::Burned { collection, item, owner: caller }.into());
+		assert_last_event::&lt;T, I&gt;(Event::Burned { collection: collection.clone(), item, owner: caller }.into());
 	}
 
 	transfer {
@@ -650,9 +650,9 @@
 
 		<span class="kw">let </span>target: T::AccountId = account(<span class="string">&quot;target&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>target_lookup = T::Lookup::unlookup(target.clone());
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, item, target_lookup)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), item, target_lookup)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::Transferred { collection, item, from: caller, to: target }.into());
+		assert_last_event::&lt;T, I&gt;(Event::Transferred { collection: collection.clone(), item, from: caller, to: target }.into());
 	}
 
 	redeposit {
@@ -661,7 +661,7 @@
 		<span class="kw">let </span>items = (<span class="number">0</span>..i).map(|x| mint_item::&lt;T, I&gt;(x <span class="kw">as </span>u16).<span class="number">0</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		Uniques::&lt;T, I&gt;::force_item_status(
 			SystemOrigin::Root.into(),
-			collection,
+			collection.clone(),
 			caller_lookup.clone(),
 			caller_lookup.clone(),
 			caller_lookup.clone(),
@@ -669,9 +669,9 @@
 			<span class="bool-val">true</span>,
 			<span class="bool-val">false</span>,
 		)<span class="question-mark">?</span>;
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, items.clone())
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), items.clone())
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::Redeposited { collection, successful_items: items }.into());
+		assert_last_event::&lt;T, I&gt;(Event::Redeposited { collection: collection.clone(), successful_items: items }.into());
 	}
 
 	freeze {
@@ -687,28 +687,28 @@
 		<span class="kw">let </span>(item, ..) = mint_item::&lt;T, I&gt;(<span class="number">0</span>);
 		Uniques::&lt;T, I&gt;::freeze(
 			SystemOrigin::Signed(caller.clone()).into(),
-			collection,
+			collection.clone(),
 			item,
 		)<span class="question-mark">?</span>;
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, item)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), item)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::Thawed { collection, item }.into());
+		assert_last_event::&lt;T, I&gt;(Event::Thawed { collection: collection.clone(), item }.into());
 	}
 
 	freeze_collection {
 		<span class="kw">let </span>(collection, caller, caller_lookup) = create_collection::&lt;T, I&gt;();
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone())
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::CollectionFrozen { collection }.into());
+		assert_last_event::&lt;T, I&gt;(Event::CollectionFrozen { collection: collection.clone() }.into());
 	}
 
 	thaw_collection {
 		<span class="kw">let </span>(collection, caller, caller_lookup) = create_collection::&lt;T, I&gt;();
 		<span class="kw">let </span>origin = SystemOrigin::Signed(caller.clone()).into();
-		Uniques::&lt;T, I&gt;::freeze_collection(origin, collection)<span class="question-mark">?</span>;
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection)
+		Uniques::&lt;T, I&gt;::freeze_collection(origin, collection.clone())<span class="question-mark">?</span>;
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone())
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::CollectionThawed { collection }.into());
+		assert_last_event::&lt;T, I&gt;(Event::CollectionThawed { collection: collection.clone() }.into());
 	}
 
 	transfer_ownership {
@@ -717,10 +717,10 @@
 		<span class="kw">let </span>target_lookup = T::Lookup::unlookup(target.clone());
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>target, T::Currency::minimum_balance());
 		<span class="kw">let </span>origin = SystemOrigin::Signed(target.clone()).into();
-		Uniques::&lt;T, I&gt;::set_accept_ownership(origin, <span class="prelude-val">Some</span>(collection))<span class="question-mark">?</span>;
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, target_lookup)
+		Uniques::&lt;T, I&gt;::set_accept_ownership(origin, <span class="prelude-val">Some</span>(collection.clone()))<span class="question-mark">?</span>;
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), target_lookup)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::OwnerChanged { collection, new_owner: target }.into());
+		assert_last_event::&lt;T, I&gt;(Event::OwnerChanged { collection: collection.clone(), new_owner: target }.into());
 	}
 
 	set_team {
@@ -728,10 +728,10 @@
 		<span class="kw">let </span>target0 = T::Lookup::unlookup(account(<span class="string">&quot;target&quot;</span>, <span class="number">0</span>, SEED));
 		<span class="kw">let </span>target1 = T::Lookup::unlookup(account(<span class="string">&quot;target&quot;</span>, <span class="number">1</span>, SEED));
 		<span class="kw">let </span>target2 = T::Lookup::unlookup(account(<span class="string">&quot;target&quot;</span>, <span class="number">2</span>, SEED));
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, target0, target1, target2)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), target0, target1, target2)
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::TeamChanged{
-			collection,
+			collection: collection.clone(),
 			issuer: account(<span class="string">&quot;target&quot;</span>, <span class="number">0</span>, SEED),
 			admin: account(<span class="string">&quot;target&quot;</span>, <span class="number">1</span>, SEED),
 			freezer: account(<span class="string">&quot;target&quot;</span>, <span class="number">2</span>, SEED),
@@ -743,7 +743,7 @@
 		<span class="kw">let </span>origin =
 			T::ForceOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::&lt;T, I&gt;::force_item_status {
-			collection,
+			collection: collection.clone(),
 			owner: caller_lookup.clone(),
 			issuer: caller_lookup.clone(),
 			admin: caller_lookup.clone(),
@@ -753,7 +753,7 @@
 		};
 	}: { call.dispatch_bypass_filter(origin)<span class="question-mark">? </span>}
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::ItemStatusChanged { collection }.into());
+		assert_last_event::&lt;T, I&gt;(Event::ItemStatusChanged { collection: collection.clone() }.into());
 	}
 
 	set_attribute {
@@ -763,9 +763,9 @@
 		<span class="kw">let </span>(collection, caller, <span class="kw">_</span>) = create_collection::&lt;T, I&gt;();
 		<span class="kw">let </span>(item, ..) = mint_item::&lt;T, I&gt;(<span class="number">0</span>);
 		add_item_metadata::&lt;T, I&gt;(item);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, <span class="prelude-val">Some</span>(item), key.clone(), value.clone())
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), <span class="prelude-val">Some</span>(item), key.clone(), value.clone())
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::AttributeSet { collection, maybe_item: <span class="prelude-val">Some</span>(item), key, value }.into());
+		assert_last_event::&lt;T, I&gt;(Event::AttributeSet { collection: collection.clone(), maybe_item: <span class="prelude-val">Some</span>(item), key, value }.into());
 	}
 
 	clear_attribute {
@@ -773,9 +773,9 @@
 		<span class="kw">let </span>(item, ..) = mint_item::&lt;T, I&gt;(<span class="number">0</span>);
 		add_item_metadata::&lt;T, I&gt;(item);
 		<span class="kw">let </span>(key, ..) = add_item_attribute::&lt;T, I&gt;(item);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, <span class="prelude-val">Some</span>(item), key.clone())
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), <span class="prelude-val">Some</span>(item), key.clone())
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::AttributeCleared { collection, maybe_item: <span class="prelude-val">Some</span>(item), key }.into());
+		assert_last_event::&lt;T, I&gt;(Event::AttributeCleared { collection: collection.clone(), maybe_item: <span class="prelude-val">Some</span>(item), key }.into());
 	}
 
 	set_metadata {
@@ -783,35 +783,35 @@
 
 		<span class="kw">let </span>(collection, caller, <span class="kw">_</span>) = create_collection::&lt;T, I&gt;();
 		<span class="kw">let </span>(item, ..) = mint_item::&lt;T, I&gt;(<span class="number">0</span>);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, item, data.clone(), <span class="bool-val">false</span>)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), item, data.clone(), <span class="bool-val">false</span>)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::MetadataSet { collection, item, data, is_frozen: <span class="bool-val">false </span>}.into());
+		assert_last_event::&lt;T, I&gt;(Event::MetadataSet { collection: collection.clone(), item, data, is_frozen: <span class="bool-val">false </span>}.into());
 	}
 
 	clear_metadata {
 		<span class="kw">let </span>(collection, caller, <span class="kw">_</span>) = create_collection::&lt;T, I&gt;();
 		<span class="kw">let </span>(item, ..) = mint_item::&lt;T, I&gt;(<span class="number">0</span>);
 		add_item_metadata::&lt;T, I&gt;(item);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, item)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), item)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::MetadataCleared { collection, item }.into());
+		assert_last_event::&lt;T, I&gt;(Event::MetadataCleared { collection: collection.clone(), item }.into());
 	}
 
 	set_collection_metadata {
 		<span class="kw">let </span>data: BoundedVec&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = <span class="macro">vec!</span>[<span class="number">0u8</span>; T::StringLimit::get() <span class="kw">as </span>usize].try_into().unwrap();
 
 		<span class="kw">let </span>(collection, caller, <span class="kw">_</span>) = create_collection::&lt;T, I&gt;();
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection, data.clone(), <span class="bool-val">false</span>)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone(), data.clone(), <span class="bool-val">false</span>)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::CollectionMetadataSet { collection, data, is_frozen: <span class="bool-val">false </span>}.into());
+		assert_last_event::&lt;T, I&gt;(Event::CollectionMetadataSet { collection: collection.clone(), data, is_frozen: <span class="bool-val">false </span>}.into());
 	}
 
 	clear_collection_metadata {
 		<span class="kw">let </span>(collection, caller, <span class="kw">_</span>) = create_collection::&lt;T, I&gt;();
 		add_collection_metadata::&lt;T, I&gt;();
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller), collection.clone())
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::CollectionMetadataCleared { collection }.into());
+		assert_last_event::&lt;T, I&gt;(Event::CollectionMetadataCleared { collection: collection.clone() }.into());
 	}
 
 	approve_transfer {
@@ -819,9 +819,9 @@
 		<span class="kw">let </span>(item, ..) = mint_item::&lt;T, I&gt;(<span class="number">0</span>);
 		<span class="kw">let </span>delegate: T::AccountId = account(<span class="string">&quot;delegate&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>delegate_lookup = T::Lookup::unlookup(delegate.clone());
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, item, delegate_lookup)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), item, delegate_lookup)
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::ApprovedTransfer { collection, item, owner: caller, delegate }.into());
+		assert_last_event::&lt;T, I&gt;(Event::ApprovedTransfer { collection: collection.clone(), item, owner: caller, delegate }.into());
 	}
 
 	cancel_approval {
@@ -830,17 +830,17 @@
 		<span class="kw">let </span>delegate: T::AccountId = account(<span class="string">&quot;delegate&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>delegate_lookup = T::Lookup::unlookup(delegate.clone());
 		<span class="kw">let </span>origin = SystemOrigin::Signed(caller.clone()).into();
-		Uniques::&lt;T, I&gt;::approve_transfer(origin, collection, item, delegate_lookup.clone())<span class="question-mark">?</span>;
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, item, <span class="prelude-val">Some</span>(delegate_lookup))
+		Uniques::&lt;T, I&gt;::approve_transfer(origin, collection.clone(), item, delegate_lookup.clone())<span class="question-mark">?</span>;
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), item, <span class="prelude-val">Some</span>(delegate_lookup))
 	verify {
-		assert_last_event::&lt;T, I&gt;(Event::ApprovalCancelled { collection, item, owner: caller, delegate }.into());
+		assert_last_event::&lt;T, I&gt;(Event::ApprovalCancelled { collection: collection.clone(), item, owner: caller, delegate }.into());
 	}
 
 	set_accept_ownership {
 		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, DepositBalanceOf::&lt;T, I&gt;::max_value());
 		<span class="kw">let </span>collection = T::Helper::collection(<span class="number">0</span>);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), <span class="prelude-val">Some</span>(collection))
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), <span class="prelude-val">Some</span>(collection.clone()))
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::OwnershipAcceptanceChanged {
 			who: caller,
@@ -850,10 +850,10 @@
 
 	set_collection_max_supply {
 		<span class="kw">let </span>(collection, caller, <span class="kw">_</span>) = create_collection::&lt;T, I&gt;();
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, u32::MAX)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), u32::MAX)
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::CollectionMaxSupplySet {
-			collection,
+			collection: collection.clone(),
 			max_supply: u32::MAX,
 		}.into());
 	}
@@ -864,10 +864,10 @@
 		<span class="kw">let </span>delegate: T::AccountId = account(<span class="string">&quot;delegate&quot;</span>, <span class="number">0</span>, SEED);
 		<span class="kw">let </span>delegate_lookup = T::Lookup::unlookup(delegate.clone());
 		<span class="kw">let </span>price = ItemPrice::&lt;T, I&gt;::from(<span class="number">100u32</span>);
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection, item, <span class="prelude-val">Some</span>(price), <span class="prelude-val">Some</span>(delegate_lookup))
+	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), collection.clone(), item, <span class="prelude-val">Some</span>(price), <span class="prelude-val">Some</span>(delegate_lookup))
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::ItemPriceSet {
-			collection,
+			collection: collection.clone(),
 			item,
 			price,
 			whitelisted_buyer: <span class="prelude-val">Some</span>(delegate),
@@ -881,12 +881,12 @@
 		<span class="kw">let </span>buyer_lookup = T::Lookup::unlookup(buyer.clone());
 		<span class="kw">let </span>price = ItemPrice::&lt;T, I&gt;::from(<span class="number">0u32</span>);
 		<span class="kw">let </span>origin = SystemOrigin::Signed(seller.clone()).into();
-		Uniques::&lt;T, I&gt;::set_price(origin, collection, item, <span class="prelude-val">Some</span>(price.clone()), <span class="prelude-val">Some</span>(buyer_lookup))<span class="question-mark">?</span>;
+		Uniques::&lt;T, I&gt;::set_price(origin, collection.clone(), item, <span class="prelude-val">Some</span>(price.clone()), <span class="prelude-val">Some</span>(buyer_lookup))<span class="question-mark">?</span>;
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>buyer, DepositBalanceOf::&lt;T, I&gt;::max_value());
-	}: <span class="kw">_</span>(SystemOrigin::Signed(buyer.clone()), collection, item, price.clone())
+	}: <span class="kw">_</span>(SystemOrigin::Signed(buyer.clone()), collection.clone(), item, price.clone())
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::ItemBought {
-			collection,
+			collection: collection.clone(),
 			item,
 			price,
 			seller,

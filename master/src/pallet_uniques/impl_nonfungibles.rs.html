@@ -193,6 +193,10 @@
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -289,12 +293,16 @@
 		admin: <span class="kw-2">&amp;</span>T::AccountId,
 	) -&gt; DispatchResult {
 		<span class="self">Self</span>::do_create_collection(
-			<span class="kw-2">*</span>collection,
+			collection.clone(),
 			who.clone(),
 			admin.clone(),
 			T::CollectionDeposit::get(),
 			<span class="bool-val">false</span>,
-			Event::Created { collection: <span class="kw-2">*</span>collection, creator: who.clone(), owner: admin.clone() },
+			Event::Created {
+				collection: collection.clone(),
+				creator: who.clone(),
+				owner: admin.clone(),
+			},
 		)
 	}
 }
@@ -321,7 +329,7 @@
 		item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId,
 		who: <span class="kw-2">&amp;</span>T::AccountId,
 	) -&gt; DispatchResult {
-		<span class="self">Self</span>::do_mint(<span class="kw-2">*</span>collection, <span class="kw-2">*</span>item, who.clone(), |<span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))
+		<span class="self">Self</span>::do_mint(collection.clone(), <span class="kw-2">*</span>item, who.clone(), |<span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))
 	}
 
 	<span class="kw">fn </span>burn(
@@ -329,7 +337,7 @@
 		item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId,
 		maybe_check_owner: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T::AccountId&gt;,
 	) -&gt; DispatchResult {
-		<span class="self">Self</span>::do_burn(<span class="kw-2">*</span>collection, <span class="kw-2">*</span>item, |<span class="kw">_</span>, d| {
+		<span class="self">Self</span>::do_burn(collection.clone(), <span class="kw-2">*</span>item, |<span class="kw">_</span>, d| {
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(check_owner) = maybe_check_owner {
 				<span class="kw">if </span><span class="kw-2">&amp;</span>d.owner != check_owner {
 					<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T, I&gt;::NoPermission.into())
@@ -346,7 +354,7 @@
 		item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId,
 		destination: <span class="kw-2">&amp;</span>T::AccountId,
 	) -&gt; DispatchResult {
-		<span class="self">Self</span>::do_transfer(<span class="kw-2">*</span>collection, <span class="kw-2">*</span>item, destination.clone(), |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))
+		<span class="self">Self</span>::do_transfer(collection.clone(), <span class="kw-2">*</span>item, destination.clone(), |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">Ok</span>(()))
 	}
 }
 

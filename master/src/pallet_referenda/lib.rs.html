@@ -1271,6 +1271,14 @@
 <a href="#1271" id="1271">1271</a>
 <a href="#1272" id="1272">1272</a>
 <a href="#1273" id="1273">1273</a>
+<a href="#1274" id="1274">1274</a>
+<a href="#1275" id="1275">1275</a>
+<a href="#1276" id="1276">1276</a>
+<a href="#1277" id="1277">1277</a>
+<a href="#1278" id="1278">1278</a>
+<a href="#1279" id="1279">1279</a>
+<a href="#1280" id="1280">1280</a>
+<a href="#1281" id="1281">1281</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1352,7 +1360,7 @@
 };
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_runtime::{
-	traits::{AtLeast32BitUnsigned, Dispatchable, One, Saturating, Zero},
+	traits::{AtLeast32BitUnsigned, Bounded, Dispatchable, One, Saturating, Zero},
 	DispatchError, Perbill,
 };
 <span class="kw">use </span>sp_std::{fmt::Debug, prelude::<span class="kw-2">*</span>};
@@ -2327,9 +2335,9 @@
 			<span class="prelude-val">Some</span>(x) =&gt; x,
 			<span class="prelude-val">None </span>=&gt; <span class="kw">return </span>(ReferendumInfo::Ongoing(status), <span class="bool-val">false</span>, ServiceBranch::Fail),
 		};
-		<span class="kw">let </span>timeout = status.submitted + T::UndecidingTimeout::get();
-		<span class="comment">// Default the alarm to the submission timeout.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>alarm = timeout;
+		<span class="comment">// Default the alarm to the end of the world.
+		</span><span class="kw">let </span>timeout = status.submitted + T::UndecidingTimeout::get();
+		<span class="kw">let </span><span class="kw-2">mut </span>alarm = T::BlockNumber::max_value();
 		<span class="kw">let </span>branch;
 		<span class="kw">match </span><span class="kw-2">&amp;mut </span>status.deciding {
 			<span class="prelude-val">None </span>=&gt; {
@@ -2370,11 +2378,12 @@
 							ServiceBranch::Preparing
 						}
 					} <span class="kw">else </span>{
+						alarm = timeout;
 						ServiceBranch::NoDeposit
 					}
 				}
 				<span class="comment">// If we didn&#39;t move into being decided, then check the timeout.
-				</span><span class="kw">if </span>status.deciding.is_none() &amp;&amp; now &gt;= timeout {
+				</span><span class="kw">if </span>status.deciding.is_none() &amp;&amp; now &gt;= timeout &amp;&amp; !status.in_queue {
 					<span class="comment">// Too long without being decided - end it.
 					</span><span class="self">Self</span>::ensure_no_alarm(<span class="kw-2">&amp;mut </span>status);
 					<span class="self">Self</span>::deposit_event(Event::&lt;T, I&gt;::TimedOut { index, tally: status.tally });
@@ -2459,7 +2468,11 @@
 			},
 		}
 
-		<span class="kw">let </span>dirty_alarm = <span class="self">Self</span>::ensure_alarm_at(<span class="kw-2">&amp;mut </span>status, index, alarm);
+		<span class="kw">let </span>dirty_alarm = <span class="kw">if </span>alarm &lt; T::BlockNumber::max_value() {
+			<span class="self">Self</span>::ensure_alarm_at(<span class="kw-2">&amp;mut </span>status, index, alarm)
+		} <span class="kw">else </span>{
+			<span class="self">Self</span>::ensure_no_alarm(<span class="kw-2">&amp;mut </span>status)
+		};
 		(ReferendumInfo::Ongoing(status), dirty_alarm || dirty, branch)
 	}
 
@@ -2483,11 +2496,14 @@
 	}
 
 	<span class="doccomment">/// Cancel the alarm in `status`, if one exists.
-	</span><span class="kw">fn </span>ensure_no_alarm(status: <span class="kw-2">&amp;mut </span>ReferendumStatusOf&lt;T, I&gt;) {
+	</span><span class="kw">fn </span>ensure_no_alarm(status: <span class="kw-2">&amp;mut </span>ReferendumStatusOf&lt;T, I&gt;) -&gt; bool {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, last_alarm)) = status.alarm.take() {
 			<span class="comment">// Incorrect alarm - cancel it.
 			</span><span class="kw">let _ </span>= T::Scheduler::cancel(last_alarm);
-		}
+			<span class="bool-val">true
+		</span>} <span class="kw">else </span>{
+			<span class="bool-val">false
+		</span>}
 	}
 
 	<span class="doccomment">/// Reserve a deposit and return the `Deposit` instance.
