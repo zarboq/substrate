@@ -38,6 +38,7 @@ var sourcesIndex = JSON.parse('{\
 "node_rpc":["",[],["lib.rs"]],\
 "node_runtime_generate_bags":["",[],["main.rs"]],\
 "node_template":["",[],["benchmarking.rs","chain_spec.rs","cli.rs","command.rs","main.rs","rpc.rs","service.rs"]],\
+"node_template_release":["",[],["main.rs"]],\
 "node_template_runtime":["",[],["lib.rs"]],\
 "node_testing":["",[],["bench.rs","client.rs","genesis.rs","keyring.rs","lib.rs"]],\
 "normalize":["",[],["normalize.rs"]],\
