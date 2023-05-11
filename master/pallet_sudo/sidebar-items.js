@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["pallet"],"struct":["CheckOnlySudoAccount"]};
+window.SIDEBAR_ITEMS = {"mod":["pallet","weights"],"struct":["CheckOnlySudoAccount"]};

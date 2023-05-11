@@ -294,6 +294,15 @@
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
 <a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -406,6 +415,11 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
 
+<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
+</span><span class="kw">mod </span>benchmarking;
+<span class="kw">pub mod </span>weights;
+<span class="kw">pub use </span>weights::WeightInfo;
+
 <span class="kw">pub use </span>extension::CheckOnlySudoAccount;
 <span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
 
@@ -426,6 +440,9 @@
 		</span><span class="kw">type </span>RuntimeCall: Parameter
 			+ UnfilteredDispatchable&lt;RuntimeOrigin = <span class="self">Self</span>::RuntimeOrigin&gt;
 			+ GetDispatchInfo;
+
+		<span class="doccomment">/// Type representing the weight of this pallet
+		</span><span class="kw">type </span>WeightInfo: WeightInfo;
 	}
 
 	<span class="attr">#[pallet::pallet]
@@ -442,7 +459,10 @@
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
 		#[pallet::weight({
 			<span class="kw">let </span>dispatch_info = call.get_dispatch_info();
-			(dispatch_info.weight, dispatch_info.class)
+			(
+				T::WeightInfo::sudo().saturating_add(dispatch_info.weight),
+				dispatch_info.class
+			)
 		})]
 		</span><span class="kw">pub fn </span>sudo(
 			origin: OriginFor&lt;T&gt;,
@@ -491,7 +511,7 @@
 		/// ## Complexity
 		/// - O(1).
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
-		#[pallet::weight({<span class="number">0</span>})] </span><span class="comment">// FIXME
+		#[pallet::weight(T::WeightInfo::set_key())]
 		</span><span class="kw">pub fn </span>set_key(
 			origin: OriginFor&lt;T&gt;,
 			new: AccountIdLookupOf&lt;T&gt;,
@@ -518,9 +538,7 @@
 		#[pallet::weight({
 			<span class="kw">let </span>dispatch_info = call.get_dispatch_info();
 			(
-				dispatch_info.weight
-					<span class="comment">// AccountData for inner call origin accountdata.
-					</span>.saturating_add(T::DbWeight::get().reads_writes(<span class="number">1</span>, <span class="number">1</span>)),
+				T::WeightInfo::sudo_as().saturating_add(dispatch_info.weight),
 				dispatch_info.class,
 			)
 		})]
