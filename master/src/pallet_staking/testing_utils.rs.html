@@ -229,6 +229,15 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -307,16 +316,36 @@
 	balance_factor: u32,
 	destination: RewardDestination&lt;T::AccountId&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(T::AccountId, T::AccountId), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-	<span class="kw">let </span>stash = create_funded_user::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, n, balance_factor);
-	<span class="kw">let </span>controller = create_funded_user::&lt;T&gt;(<span class="string">&quot;controller&quot;</span>, n, balance_factor);
-	<span class="kw">let </span>controller_lookup = T::Lookup::unlookup(controller.clone());
+	<span class="kw">let </span>staker = create_funded_user::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, n, balance_factor);
 	<span class="kw">let </span>amount = T::Currency::minimum_balance() * (balance_factor / <span class="number">10</span>).max(<span class="number">1</span>).into();
-	Staking::&lt;T&gt;::bond(
-		RawOrigin::Signed(stash.clone()).into(),
-		controller_lookup,
-		amount,
-		destination,
-	)<span class="question-mark">?</span>;
+	Staking::&lt;T&gt;::bond(RawOrigin::Signed(staker.clone()).into(), amount, destination)<span class="question-mark">?</span>;
+	<span class="prelude-val">Ok</span>((staker.clone(), staker))
+}
+
+<span class="doccomment">/// Create a unique stash and controller pair.
+</span><span class="kw">pub fn </span>create_unique_stash_controller&lt;T: Config&gt;(
+	n: u32,
+	balance_factor: u32,
+	destination: RewardDestination&lt;T::AccountId&gt;,
+	dead_controller: bool,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(T::AccountId, T::AccountId), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	<span class="kw">let </span>stash = create_funded_user::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, n, balance_factor);
+
+	<span class="kw">let </span>controller = <span class="kw">if </span>dead_controller {
+		create_funded_user::&lt;T&gt;(<span class="string">&quot;controller&quot;</span>, n, <span class="number">0</span>)
+	} <span class="kw">else </span>{
+		create_funded_user::&lt;T&gt;(<span class="string">&quot;controller&quot;</span>, n, balance_factor)
+	};
+	<span class="kw">let </span>amount = T::Currency::minimum_balance() * (balance_factor / <span class="number">10</span>).max(<span class="number">1</span>).into();
+	Staking::&lt;T&gt;::bond(RawOrigin::Signed(stash.clone()).into(), amount, destination)<span class="question-mark">?</span>;
+
+	<span class="comment">// update ledger to be a *different* controller to stash
+	</span><span class="kw">if let </span><span class="prelude-val">Some</span>(l) = Ledger::&lt;T&gt;::take(<span class="kw-2">&amp;</span>stash) {
+		&lt;Ledger&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>controller, l);
+	}
+	<span class="comment">// update bonded account to be unique controller
+	</span>&lt;Bonded&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>stash, <span class="kw-2">&amp;</span>controller);
+
 	<span class="prelude-val">Ok</span>((stash, controller))
 }
 
@@ -326,38 +355,27 @@
 	balance: <span class="kw">crate</span>::BalanceOf&lt;T&gt;,
 	destination: RewardDestination&lt;T::AccountId&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(T::AccountId, T::AccountId), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-	<span class="kw">let </span>stash = create_funded_user_with_balance::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, n, balance);
-	<span class="kw">let </span>controller = create_funded_user_with_balance::&lt;T&gt;(<span class="string">&quot;controller&quot;</span>, n, balance);
-	<span class="kw">let </span>controller_lookup = T::Lookup::unlookup(controller.clone());
-
-	Staking::&lt;T&gt;::bond(
-		RawOrigin::Signed(stash.clone()).into(),
-		controller_lookup,
-		balance,
-		destination,
-	)<span class="question-mark">?</span>;
-	<span class="prelude-val">Ok</span>((stash, controller))
+	<span class="kw">let </span>staker = create_funded_user_with_balance::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, n, balance);
+	Staking::&lt;T&gt;::bond(RawOrigin::Signed(staker.clone()).into(), balance, destination)<span class="question-mark">?</span>;
+	<span class="prelude-val">Ok</span>((staker.clone(), staker))
 }
 
-<span class="doccomment">/// Create a stash and controller pair, where the controller is dead, and payouts go to controller.
-/// This is used to test worst case payout scenarios.
-</span><span class="kw">pub fn </span>create_stash_and_dead_controller&lt;T: Config&gt;(
+<span class="doccomment">/// Create a stash and controller pair, where payouts go to a dead payee account. This is used to
+/// test worst case payout scenarios.
+</span><span class="kw">pub fn </span>create_stash_and_dead_payee&lt;T: Config&gt;(
 	n: u32,
 	balance_factor: u32,
-	destination: RewardDestination&lt;T::AccountId&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(T::AccountId, T::AccountId), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-	<span class="kw">let </span>stash = create_funded_user::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, n, balance_factor);
-	<span class="comment">// controller has no funds
-	</span><span class="kw">let </span>controller = create_funded_user::&lt;T&gt;(<span class="string">&quot;controller&quot;</span>, n, <span class="number">0</span>);
-	<span class="kw">let </span>controller_lookup = T::Lookup::unlookup(controller.clone());
+	<span class="kw">let </span>staker = create_funded_user::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, n, <span class="number">0</span>);
+	<span class="comment">// payee has no funds
+	</span><span class="kw">let </span>payee = create_funded_user::&lt;T&gt;(<span class="string">&quot;payee&quot;</span>, n, <span class="number">0</span>);
 	<span class="kw">let </span>amount = T::Currency::minimum_balance() * (balance_factor / <span class="number">10</span>).max(<span class="number">1</span>).into();
 	Staking::&lt;T&gt;::bond(
-		RawOrigin::Signed(stash.clone()).into(),
-		controller_lookup,
+		RawOrigin::Signed(staker.clone()).into(),
 		amount,
-		destination,
+		RewardDestination::Account(payee),
 	)<span class="question-mark">?</span>;
-	<span class="prelude-val">Ok</span>((stash, controller))
+	<span class="prelude-val">Ok</span>((staker.clone(), staker))
 }
 
 <span class="doccomment">/// create `max` validators.

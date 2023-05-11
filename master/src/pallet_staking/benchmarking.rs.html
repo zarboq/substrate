@@ -1053,6 +1053,17 @@
 <a href="#1053" id="1053">1053</a>
 <a href="#1054" id="1054">1054</a>
 <a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1126,7 +1137,8 @@
 </span><span class="kw">pub fn </span>create_validator_with_nominators&lt;T: Config&gt;(
 	n: u32,
 	upper_bound: u32,
-	dead: bool,
+	dead_controller: bool,
+	unique_controller: bool,
 	destination: RewardDestination&lt;T::AccountId&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(T::AccountId, Vec&lt;(T::AccountId, T::AccountId)&gt;), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 	<span class="comment">// Clean up any existing state.
@@ -1134,7 +1146,12 @@
 	<span class="kw">let </span><span class="kw-2">mut </span>points_total = <span class="number">0</span>;
 	<span class="kw">let </span><span class="kw-2">mut </span>points_individual = Vec::new();
 
-	<span class="kw">let </span>(v_stash, v_controller) = create_stash_controller::&lt;T&gt;(<span class="number">0</span>, <span class="number">100</span>, destination.clone())<span class="question-mark">?</span>;
+	<span class="kw">let </span>(v_stash, v_controller) = <span class="kw">if </span>unique_controller {
+		create_unique_stash_controller::&lt;T&gt;(<span class="number">0</span>, <span class="number">100</span>, destination.clone(), <span class="bool-val">false</span>)<span class="question-mark">?
+	</span>} <span class="kw">else </span>{
+		create_stash_controller::&lt;T&gt;(<span class="number">0</span>, <span class="number">100</span>, destination.clone())<span class="question-mark">?
+	</span>};
+
 	<span class="kw">let </span>validator_prefs =
 		ValidatorPrefs { commission: Perbill::from_percent(<span class="number">50</span>), ..Default::default() };
 	Staking::&lt;T&gt;::validate(RawOrigin::Signed(v_controller).into(), validator_prefs)<span class="question-mark">?</span>;
@@ -1148,10 +1165,10 @@
 
 	<span class="comment">// Give the validator n nominators, but keep total users in the system the same.
 	</span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..upper_bound {
-		<span class="kw">let </span>(n_stash, n_controller) = <span class="kw">if </span>!dead {
+		<span class="kw">let </span>(n_stash, n_controller) = <span class="kw">if </span>!dead_controller {
 			create_stash_controller::&lt;T&gt;(u32::MAX - i, <span class="number">100</span>, destination.clone())<span class="question-mark">?
 		</span>} <span class="kw">else </span>{
-			create_stash_and_dead_controller::&lt;T&gt;(u32::MAX - i, <span class="number">100</span>, destination.clone())<span class="question-mark">?
+			create_unique_stash_controller::&lt;T&gt;(u32::MAX - i, <span class="number">100</span>, destination.clone(), <span class="bool-val">true</span>)<span class="question-mark">?
 		</span>};
 		<span class="kw">if </span>i &lt; n {
 			Staking::&lt;T&gt;::nominate(
@@ -1272,15 +1289,13 @@
 <span class="macro">benchmarks! </span>{
 	bond {
 		<span class="kw">let </span>stash = create_funded_user::&lt;T&gt;(<span class="string">&quot;stash&quot;</span>, USER_SEED, <span class="number">100</span>);
-		<span class="kw">let </span>controller = create_funded_user::&lt;T&gt;(<span class="string">&quot;controller&quot;</span>, USER_SEED, <span class="number">100</span>);
-		<span class="kw">let </span>controller_lookup = T::Lookup::unlookup(controller.clone());
 		<span class="kw">let </span>reward_destination = RewardDestination::Staked;
 		<span class="kw">let </span>amount = T::Currency::minimum_balance() * <span class="number">10u32</span>.into();
 		<span class="macro">whitelist_account!</span>(stash);
-	}: <span class="kw">_</span>(RawOrigin::Signed(stash.clone()), controller_lookup, amount, reward_destination)
+	}: <span class="kw">_</span>(RawOrigin::Signed(stash.clone()), amount, reward_destination)
 	verify {
-		<span class="macro">assert!</span>(Bonded::&lt;T&gt;::contains_key(stash));
-		<span class="macro">assert!</span>(Ledger::&lt;T&gt;::contains_key(controller));
+		<span class="macro">assert!</span>(Bonded::&lt;T&gt;::contains_key(stash.clone()));
+		<span class="macro">assert!</span>(Ledger::&lt;T&gt;::contains_key(stash));
 	}
 
 	bond_extra {
@@ -1525,13 +1540,16 @@
 	}
 
 	set_controller {
-		<span class="kw">let </span>(stash, <span class="kw">_</span>) = create_stash_controller::&lt;T&gt;(USER_SEED, <span class="number">100</span>, Default::default())<span class="question-mark">?</span>;
-		<span class="kw">let </span>new_controller = create_funded_user::&lt;T&gt;(<span class="string">&quot;new_controller&quot;</span>, USER_SEED, <span class="number">100</span>);
-		<span class="kw">let </span>new_controller_lookup = T::Lookup::unlookup(new_controller.clone());
+		<span class="kw">let </span>(stash, ctlr) = create_unique_stash_controller::&lt;T&gt;(<span class="number">9000</span>, <span class="number">100</span>, Default::default(), <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+		<span class="comment">// ensure `ctlr` is the currently stored controller.
+		</span><span class="macro">assert!</span>(!Ledger::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>stash));
+		<span class="macro">assert!</span>(Ledger::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>ctlr));
+		<span class="macro">assert_eq!</span>(Bonded::&lt;T&gt;::get(<span class="kw-2">&amp;</span>stash), <span class="prelude-val">Some</span>(ctlr.clone()));
+
 		<span class="macro">whitelist_account!</span>(stash);
-	}: <span class="kw">_</span>(RawOrigin::Signed(stash), new_controller_lookup)
+	}: <span class="kw">_</span>(RawOrigin::Signed(stash.clone()))
 	verify {
-		<span class="macro">assert!</span>(Ledger::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>new_controller));
+		<span class="macro">assert!</span>(Ledger::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>stash));
 	}
 
 	set_validator_count {
@@ -1606,6 +1624,7 @@
 			n,
 			T::MaxNominatorRewardedPerValidator::get() <span class="kw">as </span>u32,
 			<span class="bool-val">true</span>,
+			<span class="bool-val">true</span>,
 			RewardDestination::Controller,
 		)<span class="question-mark">?</span>;
 
@@ -1639,6 +1658,7 @@
 			n,
 			T::MaxNominatorRewardedPerValidator::get() <span class="kw">as </span>u32,
 			<span class="bool-val">false</span>,
+			<span class="bool-val">true</span>,
 			RewardDestination::Staked,
 		)<span class="question-mark">?</span>;
 
@@ -2033,6 +2053,7 @@
 				n,
 				&lt;&lt;Test <span class="kw">as </span>Config&gt;::MaxNominatorRewardedPerValidator <span class="kw">as </span>Get&lt;<span class="kw">_</span>&gt;&gt;::get(),
 				<span class="bool-val">false</span>,
+				<span class="bool-val">false</span>,
 				RewardDestination::Staked,
 			)
 			.unwrap();
@@ -2061,6 +2082,7 @@
 			<span class="kw">let </span>(validator_stash, _nominators) = create_validator_with_nominators::&lt;Test&gt;(
 				n,
 				&lt;&lt;Test <span class="kw">as </span>Config&gt;::MaxNominatorRewardedPerValidator <span class="kw">as </span>Get&lt;<span class="kw">_</span>&gt;&gt;::get(),
+				<span class="bool-val">false</span>,
 				<span class="bool-val">false</span>,
 				RewardDestination::Staked,
 			)

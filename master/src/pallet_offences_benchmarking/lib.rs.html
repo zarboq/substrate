@@ -474,13 +474,6 @@
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
-<a href="#478" id="478">478</a>
-<a href="#479" id="479">479</a>
-<a href="#480" id="480">480</a>
-<a href="#481" id="481">481</a>
-<a href="#482" id="482">482</a>
-<a href="#483" id="483">483</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -590,8 +583,7 @@
 
 <span class="kw">fn </span>create_offender&lt;T: Config&gt;(n: u32, nominators: u32) -&gt; <span class="prelude-ty">Result</span>&lt;Offender&lt;T&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 	<span class="kw">let </span>stash: T::AccountId = account(<span class="string">&quot;stash&quot;</span>, n, SEED);
-	<span class="kw">let </span>controller: T::AccountId = account(<span class="string">&quot;controller&quot;</span>, n, SEED);
-	<span class="kw">let </span>controller_lookup: LookupSourceOf&lt;T&gt; = T::Lookup::unlookup(controller.clone());
+	<span class="kw">let </span>stash_lookup: LookupSourceOf&lt;T&gt; = T::Lookup::unlookup(stash.clone());
 	<span class="kw">let </span>reward_destination = RewardDestination::Staked;
 	<span class="kw">let </span>amount = bond_amount::&lt;T&gt;();
 	<span class="comment">// add twice as much balance to prevent the account from being killed.
@@ -599,14 +591,13 @@
 	T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>stash, free_amount);
 	Staking::&lt;T&gt;::bond(
 		RawOrigin::Signed(stash.clone()).into(),
-		controller_lookup.clone(),
 		amount,
 		reward_destination.clone(),
 	)<span class="question-mark">?</span>;
 
 	<span class="kw">let </span>validator_prefs =
 		ValidatorPrefs { commission: Perbill::from_percent(<span class="number">50</span>), ..Default::default() };
-	Staking::&lt;T&gt;::validate(RawOrigin::Signed(controller.clone()).into(), validator_prefs)<span class="question-mark">?</span>;
+	Staking::&lt;T&gt;::validate(RawOrigin::Signed(stash.clone()).into(), validator_prefs)<span class="question-mark">?</span>;
 
 	<span class="kw">let </span><span class="kw-2">mut </span>individual_exposures = <span class="macro">vec!</span>[];
 	<span class="kw">let </span><span class="kw-2">mut </span>nominator_stashes = <span class="macro">vec!</span>[];
@@ -614,22 +605,17 @@
 	</span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..nominators {
 		<span class="kw">let </span>nominator_stash: T::AccountId =
 			account(<span class="string">&quot;nominator stash&quot;</span>, n * MAX_NOMINATORS + i, SEED);
-		<span class="kw">let </span>nominator_controller: T::AccountId =
-			account(<span class="string">&quot;nominator controller&quot;</span>, n * MAX_NOMINATORS + i, SEED);
-		<span class="kw">let </span>nominator_controller_lookup: LookupSourceOf&lt;T&gt; =
-			T::Lookup::unlookup(nominator_controller.clone());
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>nominator_stash, free_amount);
 
 		Staking::&lt;T&gt;::bond(
 			RawOrigin::Signed(nominator_stash.clone()).into(),
-			nominator_controller_lookup.clone(),
 			amount,
 			reward_destination.clone(),
 		)<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>selected_validators: Vec&lt;LookupSourceOf&lt;T&gt;&gt; = <span class="macro">vec!</span>[controller_lookup.clone()];
+		<span class="kw">let </span>selected_validators: Vec&lt;LookupSourceOf&lt;T&gt;&gt; = <span class="macro">vec!</span>[stash_lookup.clone()];
 		Staking::&lt;T&gt;::nominate(
-			RawOrigin::Signed(nominator_controller.clone()).into(),
+			RawOrigin::Signed(nominator_stash.clone()).into(),
 			selected_validators,
 		)<span class="question-mark">?</span>;
 
@@ -642,7 +628,7 @@
 	<span class="kw">let </span>current_era = <span class="number">0u32</span>;
 	Staking::&lt;T&gt;::add_era_stakers(current_era, stash.clone(), exposure);
 
-	<span class="prelude-val">Ok</span>(Offender { controller, stash, nominator_stashes })
+	<span class="prelude-val">Ok</span>(Offender { controller: stash.clone(), stash, nominator_stashes })
 }
 
 <span class="kw">fn </span>make_offenders&lt;T: Config&gt;(

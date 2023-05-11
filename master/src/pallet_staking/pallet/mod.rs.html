@@ -1779,9 +1779,6 @@
 <a href="#1779" id="1779">1779</a>
 <a href="#1780" id="1780">1780</a>
 <a href="#1781" id="1781">1781</a>
-<a href="#1782" id="1782">1782</a>
-<a href="#1783" id="1783">1783</a>
-<a href="#1784" id="1784">1784</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2429,7 +2426,6 @@
 				</span>);
 				<span class="macro">frame_support::assert_ok!</span>(&lt;Pallet&lt;T&gt;&gt;::bond(
 					T::RuntimeOrigin::from(<span class="prelude-val">Some</span>(stash.clone()).into()),
-					T::Lookup::unlookup(controller.clone()),
 					balance,
 					RewardDestination::Staked,
 				));
@@ -2634,19 +2630,17 @@
 		#[pallet::weight(T::WeightInfo::bond())]
 		</span><span class="kw">pub fn </span>bond(
 			origin: OriginFor&lt;T&gt;,
-			controller: AccountIdLookupOf&lt;T&gt;,
 			<span class="attr">#[pallet::compact] </span>value: BalanceOf&lt;T&gt;,
 			payee: RewardDestination&lt;T::AccountId&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>stash = ensure_signed(origin)<span class="question-mark">?</span>;
+			<span class="kw">let </span>controller_to_be_deprecated = stash.clone();
 
 			<span class="kw">if </span>&lt;Bonded&lt;T&gt;&gt;::contains_key(<span class="kw-2">&amp;</span>stash) {
 				<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::AlreadyBonded.into())
 			}
 
-			<span class="kw">let </span>controller = T::Lookup::lookup(controller)<span class="question-mark">?</span>;
-
-			<span class="kw">if </span>&lt;Ledger&lt;T&gt;&gt;::contains_key(<span class="kw-2">&amp;</span>controller) {
+			<span class="kw">if </span>&lt;Ledger&lt;T&gt;&gt;::contains_key(<span class="kw-2">&amp;</span>controller_to_be_deprecated) {
 				<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::AlreadyPaired.into())
 			}
 
@@ -2659,7 +2653,7 @@
 
 			<span class="comment">// You&#39;re auto-bonded forever, here. We might improve this by only bonding when
 			// you actually validate/nominate and remove once you unbond __everything__.
-			</span>&lt;Bonded&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>stash, <span class="kw-2">&amp;</span>controller);
+			</span>&lt;Bonded&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>stash, <span class="kw-2">&amp;</span>stash);
 			&lt;Payee&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>stash, payee);
 
 			<span class="kw">let </span>current_era = CurrentEra::&lt;T&gt;::get().unwrap_or(<span class="number">0</span>);
@@ -2670,7 +2664,7 @@
 			<span class="kw">let </span>value = value.min(stash_balance);
 			<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::Bonded { stash: stash.clone(), amount: value });
 			<span class="kw">let </span>item = StakingLedger {
-				stash,
+				stash: stash.clone(),
 				total: value,
 				active: value,
 				unlocking: Default::default(),
@@ -2681,7 +2675,7 @@
 					// satisfied.
 					</span>.defensive_map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::BoundNotMet)<span class="question-mark">?</span>,
 			};
-			<span class="self">Self</span>::update_ledger(<span class="kw-2">&amp;</span>controller, <span class="kw-2">&amp;</span>item);
+			<span class="self">Self</span>::update_ledger(<span class="kw-2">&amp;</span>controller_to_be_deprecated, <span class="kw-2">&amp;</span>item);
 			<span class="prelude-val">Ok</span>(())
 		}
 
@@ -3021,7 +3015,10 @@
 			<span class="prelude-val">Ok</span>(())
 		}
 
-		<span class="doccomment">/// (Re-)set the controller of a stash.
+		<span class="doccomment">/// (Re-)sets the controller of a stash to the stash itself. This function previously
+		/// accepted a `controller` argument to set the controller to an account other than the
+		/// stash itself. This functionality has now been removed, now only setting the controller
+		/// to the stash, if it is not already.
 		///
 		/// Effects will be felt instantly (as soon as this function is completed successfully).
 		///
@@ -3034,20 +3031,17 @@
 		/// - Writes are limited to the `origin` account key.
 		</span><span class="attr">#[pallet::call_index(<span class="number">8</span>)]
 		#[pallet::weight(T::WeightInfo::set_controller())]
-		</span><span class="kw">pub fn </span>set_controller(
-			origin: OriginFor&lt;T&gt;,
-			controller: AccountIdLookupOf&lt;T&gt;,
-		) -&gt; DispatchResult {
+		</span><span class="kw">pub fn </span>set_controller(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>stash = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>old_controller = <span class="self">Self</span>::bonded(<span class="kw-2">&amp;</span>stash).ok_or(Error::&lt;T&gt;::NotStash)<span class="question-mark">?</span>;
-			<span class="kw">let </span>controller = T::Lookup::lookup(controller)<span class="question-mark">?</span>;
-			<span class="kw">if </span>&lt;Ledger&lt;T&gt;&gt;::contains_key(<span class="kw-2">&amp;</span>controller) {
+
+			<span class="kw">if </span>&lt;Ledger&lt;T&gt;&gt;::contains_key(<span class="kw-2">&amp;</span>stash) {
 				<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::AlreadyPaired.into())
 			}
-			<span class="kw">if </span>controller != old_controller {
-				&lt;Bonded&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>stash, <span class="kw-2">&amp;</span>controller);
+			<span class="kw">if </span>old_controller != stash {
+				&lt;Bonded&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>stash, <span class="kw-2">&amp;</span>stash);
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(l) = &lt;Ledger&lt;T&gt;&gt;::take(<span class="kw-2">&amp;</span>old_controller) {
-					&lt;Ledger&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>controller, l);
+					&lt;Ledger&lt;T&gt;&gt;::insert(<span class="kw-2">&amp;</span>stash, l);
 				}
 			}
 			<span class="prelude-val">Ok</span>(())
