@@ -860,6 +860,8 @@
 <a href="#860" id="860">860</a>
 <a href="#861" id="861">861</a>
 <a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1178,7 +1180,7 @@
 
 <span class="doccomment">/// Creates a full service from the configuration.
 </span><span class="kw">pub fn </span>new_full_base(
-	<span class="kw-2">mut </span>config: Configuration,
+	config: Configuration,
 	disable_hardware_benchmarks: bool,
 	with_startup_data: <span class="kw">impl </span>FnOnce(
 		<span class="kw-2">&amp;</span>sc_consensus_babe::BabeBlockImport&lt;Block, FullClient, FullGrandpaBlockImport&gt;,
@@ -1205,10 +1207,15 @@
 
 	<span class="kw">let </span>shared_voter_state = rpc_setup;
 	<span class="kw">let </span>auth_disc_publish_non_global_ips = config.network.allow_non_globals_in_dht;
+	<span class="kw">let </span><span class="kw-2">mut </span>net_config = sc_network::config::FullNetworkConfiguration::new(<span class="kw-2">&amp;</span>config.network);
+
 	<span class="kw">let </span>grandpa_protocol_name = grandpa::protocol_standard_name(
 		<span class="kw-2">&amp;</span>client.block_hash(<span class="number">0</span>).ok().flatten().expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>),
 		<span class="kw-2">&amp;</span>config.chain_spec,
 	);
+	net_config.add_notification_protocol(grandpa::grandpa_peers_set_config(
+		grandpa_protocol_name.clone(),
+	));
 
 	<span class="kw">let </span>statement_handler_proto = sc_network_statement::StatementHandlerPrototype::new(
 		client
@@ -1218,12 +1225,8 @@
 			.expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>),
 		config.chain_spec.fork_id(),
 	);
-	config.network.extra_sets.push(statement_handler_proto.set_config());
+	net_config.add_notification_protocol(statement_handler_proto.set_config());
 
-	config
-		.network
-		.extra_sets
-		.push(grandpa::grandpa_peers_set_config(grandpa_protocol_name.clone()));
 	<span class="kw">let </span>warp_sync = Arc::new(grandpa::warp_proof::NetworkProvider::new(
 		backend.clone(),
 		import_setup.<span class="number">1</span>.shared_authority_set().clone(),
@@ -1233,6 +1236,7 @@
 	<span class="kw">let </span>(network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: <span class="kw-2">&amp;</span>config,
+			net_config,
 			client: client.clone(),
 			transaction_pool: transaction_pool.clone(),
 			spawn_handle: task_manager.spawn_handle(),

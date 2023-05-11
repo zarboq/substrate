@@ -1027,6 +1027,12 @@
 <a href="#1027" id="1027">1027</a>
 <a href="#1028" id="1028">1028</a>
 <a href="#1029" id="1029">1029</a>
+<a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1070,7 +1076,10 @@
 	NativeExecutionDispatch, RuntimeVersionOf, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
 };
 <span class="kw">use </span>sc_keystore::LocalKeystore;
-<span class="kw">use </span>sc_network::{config::SyncMode, NetworkService, NetworkStateInfo, NetworkStatusProvider};
+<span class="kw">use </span>sc_network::{
+	config::{FullNetworkConfiguration, SyncMode},
+	NetworkService, NetworkStateInfo, NetworkStatusProvider,
+};
 <span class="kw">use </span>sc_network_bitswap::BitswapRequestHandler;
 <span class="kw">use </span>sc_network_common::{role::Roles, sync::warp::WarpSyncParams};
 <span class="kw">use </span>sc_network_light::light_client_requests::handler::LightClientRequestHandler;
@@ -1759,6 +1768,8 @@
 </span><span class="kw">pub struct </span>BuildNetworkParams&lt;<span class="lifetime">&#39;a</span>, TBl: BlockT, TExPool, TImpQu, TCl&gt; {
 	<span class="doccomment">/// The service configuration.
 	</span><span class="kw">pub </span>config: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Configuration,
+	<span class="doccomment">/// Full network configuration.
+	</span><span class="kw">pub </span>net_config: FullNetworkConfiguration,
 	<span class="doccomment">/// A shared client returned by `new_full_parts`.
 	</span><span class="kw">pub </span>client: Arc&lt;TCl&gt;,
 	<span class="doccomment">/// A shared transaction pool.
@@ -1802,6 +1813,7 @@
 {
 	<span class="kw">let </span>BuildNetworkParams {
 		config,
+		<span class="kw-2">mut </span>net_config,
 		client,
 		transaction_pool,
 		spawn_handle,
@@ -1809,8 +1821,6 @@
 		block_announce_validator_builder,
 		warp_sync_params,
 	} = params;
-
-	<span class="kw">let </span><span class="kw-2">mut </span>request_response_protocol_configs = Vec::new();
 
 	<span class="kw">if </span>warp_sync_params.is_none() &amp;&amp; config.network.sync_mode.is_warp() {
 		<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Warp sync enabled, but no warp sync provider configured.&quot;</span>.into())
@@ -1832,32 +1842,35 @@
 		Box::new(DefaultBlockAnnounceValidator)
 	};
 
-	<span class="kw">let </span>block_request_protocol_config = {
+	<span class="kw">let </span>(block_request_protocol_config, block_request_protocol_name) = {
 		<span class="comment">// Allow both outgoing and incoming requests.
 		</span><span class="kw">let </span>(handler, protocol_config) = BlockRequestHandler::new(
 			<span class="kw-2">&amp;</span>protocol_id,
 			config.chain_spec.fork_id(),
 			client.clone(),
-			config.network.default_peers_set.in_peers <span class="kw">as </span>usize +
-				config.network.default_peers_set.out_peers <span class="kw">as </span>usize,
+			net_config.network_config.default_peers_set.in_peers <span class="kw">as </span>usize +
+				net_config.network_config.default_peers_set.out_peers <span class="kw">as </span>usize,
 		);
+		<span class="kw">let </span>config_name = protocol_config.name.clone();
 		spawn_handle.spawn(<span class="string">&quot;block-request-handler&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), handler.run());
-		protocol_config
+		(protocol_config, config_name)
 	};
 
-	<span class="kw">let </span>state_request_protocol_config = {
+	<span class="kw">let </span>(state_request_protocol_config, state_request_protocol_name) = {
 		<span class="comment">// Allow both outgoing and incoming requests.
 		</span><span class="kw">let </span>(handler, protocol_config) = StateRequestHandler::new(
 			<span class="kw-2">&amp;</span>protocol_id,
 			config.chain_spec.fork_id(),
 			client.clone(),
-			config.network.default_peers_set_num_full <span class="kw">as </span>usize,
+			net_config.network_config.default_peers_set_num_full <span class="kw">as </span>usize,
 		);
+		<span class="kw">let </span>config_name = protocol_config.name.clone();
+
 		spawn_handle.spawn(<span class="string">&quot;state-request-handler&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), handler.run());
-		protocol_config
+		(protocol_config, config_name)
 	};
 
-	<span class="kw">let </span>warp_sync_protocol_config = <span class="kw">match </span>warp_sync_params.as_ref() {
+	<span class="kw">let </span>(warp_sync_protocol_config, warp_request_protocol_name) = <span class="kw">match </span>warp_sync_params.as_ref() {
 		<span class="prelude-val">Some</span>(WarpSyncParams::WithProvider(warp_with_provider)) =&gt; {
 			<span class="comment">// Allow both outgoing and incoming requests.
 			</span><span class="kw">let </span>(handler, protocol_config) = WarpSyncRequestHandler::new(
@@ -1870,10 +1883,12 @@
 				config.chain_spec.fork_id(),
 				warp_with_provider.clone(),
 			);
+			<span class="kw">let </span>config_name = protocol_config.name.clone();
+
 			spawn_handle.spawn(<span class="string">&quot;warp-sync-request-handler&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), handler.run());
-			<span class="prelude-val">Some</span>(protocol_config)
+			(<span class="prelude-val">Some</span>(protocol_config), <span class="prelude-val">Some</span>(config_name))
 		},
-		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+		<span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
 	};
 
 	<span class="kw">let </span>light_client_request_protocol_config = {
@@ -1887,62 +1902,23 @@
 		protocol_config
 	};
 
-	<span class="kw">let </span>(tx, rx) = sc_utils::mpsc::tracing_unbounded(<span class="string">&quot;mpsc_syncing_engine_protocol&quot;</span>, <span class="number">100_000</span>);
-	<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) = NetworkServiceProvider::new();
-	<span class="kw">let </span>(engine, sync_service, block_announce_config) = SyncingEngine::new(
-		Roles::from(<span class="kw-2">&amp;</span>config.role),
-		client.clone(),
-		config.prometheus_config.as_ref().map(|config| config.registry.clone()).as_ref(),
-		<span class="kw-2">&amp;</span>config.network,
-		protocol_id.clone(),
-		<span class="kw-2">&amp;</span>config.chain_spec.fork_id().map(ToOwned::to_owned),
-		block_announce_validator,
-		warp_sync_params,
-		chain_sync_network_handle,
-		import_queue.service(),
-		block_request_protocol_config.name.clone(),
-		state_request_protocol_config.name.clone(),
-		warp_sync_protocol_config.as_ref().map(|config| config.name.clone()),
-		rx,
-	)<span class="question-mark">?</span>;
-	<span class="kw">let </span>sync_service_import_queue = sync_service.clone();
-	<span class="kw">let </span>sync_service = Arc::new(sync_service);
+	<span class="comment">// install request handlers to `FullNetworkConfiguration`
+	</span>net_config.add_request_response_protocol(block_request_protocol_config);
+	net_config.add_request_response_protocol(state_request_protocol_config);
+	net_config.add_request_response_protocol(light_client_request_protocol_config);
 
-	request_response_protocol_configs.push(config.network.ipfs_server.then(|| {
+	<span class="kw">if let </span><span class="prelude-val">Some</span>(config) = warp_sync_protocol_config {
+		net_config.add_request_response_protocol(config);
+	}
+
+	<span class="kw">if </span>config.network.ipfs_server {
 		<span class="kw">let </span>(handler, protocol_config) = BitswapRequestHandler::new(client.clone());
 		spawn_handle.spawn(<span class="string">&quot;bitswap-request-handler&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), handler.run());
-		protocol_config
-	}));
+		net_config.add_request_response_protocol(protocol_config);
+	}
 
-	<span class="kw">let </span>genesis_hash = client.hash(Zero::zero()).ok().flatten().expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>);
-	<span class="kw">let </span><span class="kw-2">mut </span>network_params = sc_network::config::Params::&lt;TBl&gt; {
-		role: config.role.clone(),
-		executor: {
-			<span class="kw">let </span>spawn_handle = Clone::clone(<span class="kw-2">&amp;</span>spawn_handle);
-			Box::new(<span class="kw">move </span>|fut| {
-				spawn_handle.spawn(<span class="string">&quot;libp2p-node&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), fut);
-			})
-		},
-		network_config: config.network.clone(),
-		genesis_hash,
-		protocol_id: protocol_id.clone(),
-		fork_id: config.chain_spec.fork_id().map(ToOwned::to_owned),
-		metrics_registry: config.prometheus_config.as_ref().map(|config| config.registry.clone()),
-		block_announce_config,
-		tx,
-		request_response_protocol_configs: request_response_protocol_configs
-			.into_iter()
-			.chain([
-				<span class="prelude-val">Some</span>(block_request_protocol_config),
-				<span class="prelude-val">Some</span>(state_request_protocol_config),
-				<span class="prelude-val">Some</span>(light_client_request_protocol_config),
-				warp_sync_protocol_config,
-			])
-			.flatten()
-			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-	};
-
-	<span class="comment">// crate transactions protocol and add it to the list of supported protocols of `network_params`
+	<span class="comment">// create transactions protocol and add it to the list of supported protocols of
+	// `network_params`
 	</span><span class="kw">let </span>transactions_handler_proto = sc_network_transactions::TransactionsHandlerPrototype::new(
 		protocol_id.clone(),
 		client
@@ -1952,12 +1928,48 @@
 			.expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>),
 		config.chain_spec.fork_id(),
 	);
-	network_params
-		.network_config
-		.extra_sets
-		.insert(<span class="number">0</span>, transactions_handler_proto.set_config());
+	net_config.add_notification_protocol(transactions_handler_proto.set_config());
 
-	<span class="kw">let </span>has_bootnodes = !network_params.network_config.boot_nodes.is_empty();
+	<span class="kw">let </span>(tx, rx) = sc_utils::mpsc::tracing_unbounded(<span class="string">&quot;mpsc_syncing_engine_protocol&quot;</span>, <span class="number">100_000</span>);
+	<span class="kw">let </span>(chain_sync_network_provider, chain_sync_network_handle) = NetworkServiceProvider::new();
+	<span class="kw">let </span>(engine, sync_service, block_announce_config) = SyncingEngine::new(
+		Roles::from(<span class="kw-2">&amp;</span>config.role),
+		client.clone(),
+		config.prometheus_config.as_ref().map(|config| config.registry.clone()).as_ref(),
+		<span class="kw-2">&amp;</span>net_config,
+		protocol_id.clone(),
+		<span class="kw-2">&amp;</span>config.chain_spec.fork_id().map(ToOwned::to_owned),
+		block_announce_validator,
+		warp_sync_params,
+		chain_sync_network_handle,
+		import_queue.service(),
+		block_request_protocol_name,
+		state_request_protocol_name,
+		warp_request_protocol_name,
+		rx,
+	)<span class="question-mark">?</span>;
+	<span class="kw">let </span>sync_service_import_queue = sync_service.clone();
+	<span class="kw">let </span>sync_service = Arc::new(sync_service);
+
+	<span class="kw">let </span>genesis_hash = client.hash(Zero::zero()).ok().flatten().expect(<span class="string">&quot;Genesis block exists; qed&quot;</span>);
+	<span class="kw">let </span>network_params = sc_network::config::Params::&lt;TBl&gt; {
+		role: config.role.clone(),
+		executor: {
+			<span class="kw">let </span>spawn_handle = Clone::clone(<span class="kw-2">&amp;</span>spawn_handle);
+			Box::new(<span class="kw">move </span>|fut| {
+				spawn_handle.spawn(<span class="string">&quot;libp2p-node&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;networking&quot;</span>), fut);
+			})
+		},
+		network_config: net_config,
+		genesis_hash,
+		protocol_id: protocol_id.clone(),
+		fork_id: config.chain_spec.fork_id().map(ToOwned::to_owned),
+		metrics_registry: config.prometheus_config.as_ref().map(|config| config.registry.clone()),
+		block_announce_config,
+		tx,
+	};
+
+	<span class="kw">let </span>has_bootnodes = !network_params.network_config.network_config.boot_nodes.is_empty();
 	<span class="kw">let </span>network_mut = sc_network::NetworkWorker::new(network_params)<span class="question-mark">?</span>;
 	<span class="kw">let </span>network = network_mut.service().clone();
 

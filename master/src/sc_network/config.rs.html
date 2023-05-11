@@ -771,6 +771,34 @@
 <a href="#771" id="771">771</a>
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -805,15 +833,16 @@
 <span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>libp2p::{identity::Keypair, multiaddr, Multiaddr, PeerId};
 <span class="kw">use </span>prometheus_endpoint::Registry;
+<span class="kw">use </span>zeroize::Zeroize;
+
 <span class="kw">pub use </span>sc_network_common::{
 	role::{Role, Roles},
 	sync::warp::WarpSyncProvider,
 	ExHashT,
 };
 <span class="kw">use </span>sc_utils::mpsc::TracingUnboundedSender;
-<span class="kw">use </span>zeroize::Zeroize;
-
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
+
 <span class="kw">use </span>std::{
 	error::Error,
 	fmt, fs,
@@ -1337,9 +1366,6 @@
 	<span class="doccomment">/// The node key configuration, which determines the node&#39;s network identity keypair.
 	</span><span class="kw">pub </span>node_key: NodeKeyConfig,
 
-	<span class="doccomment">/// List of request-response protocols that the node supports.
-	</span><span class="kw">pub </span>request_response_protocols: Vec&lt;RequestResponseConfig&gt;,
-
 	<span class="doccomment">/// Configuration for the default set of nodes used for block syncing and transactions.
 	</span><span class="kw">pub </span>default_peers_set: SetConfig,
 
@@ -1348,9 +1374,6 @@
 	///
 	/// This value is implicitly capped to `default_set.out_peers + default_set.in_peers`.
 	</span><span class="kw">pub </span>default_peers_set_num_full: u32,
-
-	<span class="doccomment">/// Configuration for extra sets of nodes.
-	</span><span class="kw">pub </span>extra_sets: Vec&lt;NonDefaultSetConfig&gt;,
 
 	<span class="doccomment">/// Client identifier. Sent over the wire for debugging purposes.
 	</span><span class="kw">pub </span>client_version: String,
@@ -1422,10 +1445,8 @@
 			public_addresses: Vec::new(),
 			boot_nodes: Vec::new(),
 			node_key,
-			request_response_protocols: Vec::new(),
 			default_peers_set_num_full: default_peers_set.in_peers + default_peers_set.out_peers,
 			default_peers_set,
-			extra_sets: Vec::new(),
 			client_version: client_version.into(),
 			node_name: node_name.into(),
 			transport: TransportConfig::Normal { enable_mdns: <span class="bool-val">false</span>, allow_private_ip: <span class="bool-val">true </span>},
@@ -1480,7 +1501,7 @@
 	</span><span class="kw">pub </span>executor: Box&lt;<span class="kw">dyn </span>Fn(Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = ()&gt; + Send&gt;&gt;) + Send&gt;,
 
 	<span class="doccomment">/// Network layer configuration.
-	</span><span class="kw">pub </span>network_config: NetworkConfiguration,
+	</span><span class="kw">pub </span>network_config: FullNetworkConfiguration,
 
 	<span class="doccomment">/// Legacy name of the protocol to use on the wire. Should be different for each chain.
 	</span><span class="kw">pub </span>protocol_id: ProtocolId,
@@ -1500,9 +1521,44 @@
 
 	<span class="doccomment">/// TX channel for direct communication with `SyncingEngine` and `Protocol`.
 	</span><span class="kw">pub </span>tx: TracingUnboundedSender&lt;<span class="kw">crate</span>::event::SyncEvent&lt;Block&gt;&gt;,
+}
 
-	<span class="doccomment">/// Request response protocol configurations
-	</span><span class="kw">pub </span>request_response_protocol_configs: Vec&lt;RequestResponseConfig&gt;,
+<span class="doccomment">/// Full network configuration.
+</span><span class="kw">pub struct </span>FullNetworkConfiguration {
+	<span class="doccomment">/// Installed notification protocols.
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) notification_protocols: Vec&lt;NonDefaultSetConfig&gt;,
+
+	<span class="doccomment">/// List of request-response protocols that the node supports.
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) request_response_protocols: Vec&lt;RequestResponseConfig&gt;,
+
+	<span class="doccomment">/// Network configuration.
+	</span><span class="kw">pub </span>network_config: NetworkConfiguration,
+}
+
+<span class="kw">impl </span>FullNetworkConfiguration {
+	<span class="doccomment">/// Create new [`FullNetworkConfiguration`].
+	</span><span class="kw">pub fn </span>new(network_config: <span class="kw-2">&amp;</span>NetworkConfiguration) -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{
+			notification_protocols: Vec::new(),
+			request_response_protocols: Vec::new(),
+			network_config: network_config.clone(),
+		}
+	}
+
+	<span class="doccomment">/// Add a notification protocol.
+	</span><span class="kw">pub fn </span>add_notification_protocol(<span class="kw-2">&amp;mut </span><span class="self">self</span>, config: NonDefaultSetConfig) {
+		<span class="self">self</span>.notification_protocols.push(config);
+	}
+
+	<span class="doccomment">/// Get reference to installed notification protocols.
+	</span><span class="kw">pub fn </span>notification_protocols(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;NonDefaultSetConfig&gt; {
+		<span class="kw-2">&amp;</span><span class="self">self</span>.notification_protocols
+	}
+
+	<span class="doccomment">/// Add a request-response protocol.
+	</span><span class="kw">pub fn </span>add_request_response_protocol(<span class="kw-2">&amp;mut </span><span class="self">self</span>, config: RequestResponseConfig) {
+		<span class="self">self</span>.request_response_protocols.push(config);
+	}
 }
 
 <span class="attr">#[cfg(test)]

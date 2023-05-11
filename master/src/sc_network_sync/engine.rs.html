@@ -925,6 +925,11 @@
 <a href="#925" id="925">925</a>
 <a href="#926" id="926">926</a>
 <a href="#927" id="927">927</a>
+<a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
+<a href="#930" id="930">930</a>
+<a href="#931" id="931">931</a>
+<a href="#932" id="932">932</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2023 Parity Technologies (UK) Ltd.
@@ -964,7 +969,7 @@
 <span class="kw">use </span>sc_consensus::import_queue::ImportQueueService;
 <span class="kw">use </span>sc_network::{
 	config::{
-		NetworkConfiguration, NonDefaultSetConfig, ProtocolId, SyncMode <span class="kw">as </span>SyncOperationMode,
+		FullNetworkConfiguration, NonDefaultSetConfig, ProtocolId, SyncMode <span class="kw">as </span>SyncOperationMode,
 	},
 	utils::LruHashSet,
 	NotificationsSink, ProtocolName,
@@ -1187,7 +1192,7 @@
 		roles: Roles,
 		client: Arc&lt;Client&gt;,
 		metrics_registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Registry&gt;,
-		network_config: <span class="kw-2">&amp;</span>NetworkConfiguration,
+		net_config: <span class="kw-2">&amp;</span>FullNetworkConfiguration,
 		protocol_id: ProtocolId,
 		fork_id: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
 		block_announce_validator: Box&lt;<span class="kw">dyn </span>BlockAnnounceValidator&lt;B&gt; + Send&gt;,
@@ -1199,52 +1204,56 @@
 		warp_sync_protocol_name: <span class="prelude-ty">Option</span>&lt;ProtocolName&gt;,
 		rx: sc_utils::mpsc::TracingUnboundedReceiver&lt;sc_network::SyncEvent&lt;B&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, SyncingService&lt;B&gt;, NonDefaultSetConfig), ClientError&gt; {
-		<span class="kw">let </span>mode = <span class="kw">match </span>network_config.sync_mode {
+		<span class="kw">let </span>mode = <span class="kw">match </span>net_config.network_config.sync_mode {
 			SyncOperationMode::Full =&gt; SyncMode::Full,
 			SyncOperationMode::Fast { skip_proofs, storage_chain_mode } =&gt;
 				SyncMode::LightState { skip_proofs, storage_chain_mode },
 			SyncOperationMode::Warp =&gt; SyncMode::Warp,
 		};
-		<span class="kw">let </span>max_parallel_downloads = network_config.max_parallel_downloads;
-		<span class="kw">let </span>max_blocks_per_request = <span class="kw">if </span>network_config.max_blocks_per_request &gt;
+		<span class="kw">let </span>max_parallel_downloads = net_config.network_config.max_parallel_downloads;
+		<span class="kw">let </span>max_blocks_per_request = <span class="kw">if </span>net_config.network_config.max_blocks_per_request &gt;
 			<span class="kw">crate</span>::MAX_BLOCKS_IN_RESPONSE <span class="kw">as </span>u32
 		{
 			<span class="macro">log::info!</span>(target: <span class="string">&quot;sync&quot;</span>, <span class="string">&quot;clamping maximum blocks per request to {}&quot;</span>, <span class="kw">crate</span>::MAX_BLOCKS_IN_RESPONSE);
 			<span class="kw">crate</span>::MAX_BLOCKS_IN_RESPONSE <span class="kw">as </span>u32
 		} <span class="kw">else </span>{
-			network_config.max_blocks_per_request
+			net_config.network_config.max_blocks_per_request
 		};
 		<span class="kw">let </span>cache_capacity = NonZeroUsize::new(
-			(network_config.default_peers_set.in_peers <span class="kw">as </span>usize +
-				network_config.default_peers_set.out_peers <span class="kw">as </span>usize)
+			(net_config.network_config.default_peers_set.in_peers <span class="kw">as </span>usize +
+				net_config.network_config.default_peers_set.out_peers <span class="kw">as </span>usize)
 				.max(<span class="number">1</span>),
 		)
 		.expect(<span class="string">&quot;cache capacity is not zero&quot;</span>);
 		<span class="kw">let </span>important_peers = {
 			<span class="kw">let </span><span class="kw-2">mut </span>imp_p = HashSet::new();
-			<span class="kw">for </span>reserved <span class="kw">in </span><span class="kw-2">&amp;</span>network_config.default_peers_set.reserved_nodes {
+			<span class="kw">for </span>reserved <span class="kw">in </span><span class="kw-2">&amp;</span>net_config.network_config.default_peers_set.reserved_nodes {
 				imp_p.insert(reserved.peer_id);
 			}
-			<span class="kw">for </span>reserved <span class="kw">in </span>network_config
-				.extra_sets
-				.iter()
-				.flat_map(|s| s.set_config.reserved_nodes.iter())
-			{
-				imp_p.insert(reserved.peer_id);
+			<span class="kw">for </span>config <span class="kw">in </span>net_config.notification_protocols() {
+				<span class="kw">let </span>peer_ids = config
+					.set_config
+					.reserved_nodes
+					.iter()
+					.map(|info| info.peer_id)
+					.collect::&lt;Vec&lt;PeerId&gt;&gt;();
+				imp_p.extend(peer_ids);
 			}
+
 			imp_p.shrink_to_fit();
 			imp_p
 		};
 		<span class="kw">let </span>boot_node_ids = {
 			<span class="kw">let </span><span class="kw-2">mut </span>list = HashSet::new();
-			<span class="kw">for </span>node <span class="kw">in </span><span class="kw-2">&amp;</span>network_config.boot_nodes {
+			<span class="kw">for </span>node <span class="kw">in </span><span class="kw-2">&amp;</span>net_config.network_config.boot_nodes {
 				list.insert(node.peer_id);
 			}
 			list.shrink_to_fit();
 			list
 		};
 		<span class="kw">let </span>default_peers_set_no_slot_peers = {
-			<span class="kw">let </span><span class="kw-2">mut </span>no_slot_p: HashSet&lt;PeerId&gt; = network_config
+			<span class="kw">let </span><span class="kw-2">mut </span>no_slot_p: HashSet&lt;PeerId&gt; = net_config
+				.network_config
 				.default_peers_set
 				.reserved_nodes
 				.iter()
@@ -1253,11 +1262,12 @@
 			no_slot_p.shrink_to_fit();
 			no_slot_p
 		};
-		<span class="kw">let </span>default_peers_set_num_full = network_config.default_peers_set_num_full <span class="kw">as </span>usize;
+		<span class="kw">let </span>default_peers_set_num_full =
+			net_config.network_config.default_peers_set_num_full <span class="kw">as </span>usize;
 		<span class="kw">let </span>default_peers_set_num_light = {
-			<span class="kw">let </span>total = network_config.default_peers_set.out_peers +
-				network_config.default_peers_set.in_peers;
-			total.saturating_sub(network_config.default_peers_set_num_full) <span class="kw">as </span>usize
+			<span class="kw">let </span>total = net_config.network_config.default_peers_set.out_peers +
+				net_config.network_config.default_peers_set.in_peers;
+			total.saturating_sub(net_config.network_config.default_peers_set_num_full) <span class="kw">as </span>usize
 		};
 
 		<span class="kw">let </span>(chain_sync, block_announce_config) = ChainSync::new(
