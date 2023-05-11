@@ -139,6 +139,9 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -189,11 +192,14 @@
 	set_heap_pages {
 	}: <span class="kw">_</span>(RawOrigin::Root, Default::default())
 
-	<span class="comment">// `set_code` was not benchmarked because it is pretty hard to come up with a real
-	// Wasm runtime to test the upgrade with. But this is okay because we will make
-	// `set_code` take a full block anyway.
+	set_code {
+		<span class="kw">let </span>runtime_blob = <span class="macro">include_bytes!</span>(<span class="string">&quot;../res/kitchensink_runtime.compact.compressed.wasm&quot;</span>).to_vec();
+	}: <span class="kw">_</span>(RawOrigin::Root, runtime_blob)
+	verify {
+		System::&lt;T&gt;::assert_last_event(frame_system::Event::&lt;T&gt;::CodeUpdated.into());
+	}
 
-	</span><span class="attr">#[extra]
+	<span class="attr">#[extra]
 	</span>set_code_without_checks {
 		<span class="comment">// Assume Wasm ~4MB
 		</span><span class="kw">let </span>code = <span class="macro">vec!</span>[<span class="number">1</span>; <span class="number">4_000_000 </span><span class="kw">as </span>usize];
