@@ -1662,6 +1662,17 @@
 <a href="#1662" id="1662">1662</a>
 <a href="#1663" id="1663">1663</a>
 <a href="#1664" id="1664">1664</a>
+<a href="#1665" id="1665">1665</a>
+<a href="#1666" id="1666">1666</a>
+<a href="#1667" id="1667">1667</a>
+<a href="#1668" id="1668">1668</a>
+<a href="#1669" id="1669">1669</a>
+<a href="#1670" id="1670">1670</a>
+<a href="#1671" id="1671">1671</a>
+<a href="#1672" id="1672">1672</a>
+<a href="#1673" id="1673">1673</a>
+<a href="#1674" id="1674">1674</a>
+<a href="#1675" id="1675">1675</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1866,7 +1877,10 @@
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, traits::AccountTouch};
+	<span class="kw">use </span>frame_support::{
+		pallet_prelude::<span class="kw-2">*</span>,
+		traits::{AccountTouch, ContainsPair},
+	};
 	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
 
 	<span class="doccomment">/// The current storage version.
@@ -3309,7 +3323,7 @@
 		}
 	}
 
-	<span class="doccomment">/// Implements [AccountTouch] trait.
+	<span class="doccomment">/// Implements [`AccountTouch`] trait.
 	/// Note that a depositor can be any account, without any specific privilege.
 	/// This implementation is supposed to be used only for creation of system accounts.
 	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; AccountTouch&lt;T::AssetId, T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
@@ -3321,6 +3335,14 @@
 
 		<span class="kw">fn </span>touch(asset: T::AssetId, who: T::AccountId, depositor: T::AccountId) -&gt; DispatchResult {
 			<span class="self">Self</span>::do_touch(asset, who, depositor, <span class="bool-val">false</span>)
+		}
+	}
+
+	<span class="doccomment">/// Implements [`ContainsPair`] trait for a pair of asset and account IDs.
+	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; ContainsPair&lt;T::AssetId, T::AccountId&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
+		<span class="doccomment">/// Check if an account with the given asset ID and account address exists.
+		</span><span class="kw">fn </span>contains(asset: <span class="kw-2">&amp;</span>T::AssetId, who: <span class="kw-2">&amp;</span>T::AccountId) -&gt; bool {
+			Account::&lt;T, I&gt;::contains_key(asset, who)
 		}
 	}
 }
