@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["StorageMonitorParams","StorageMonitorService"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["StorageMonitorParams","StorageMonitorService"],"type":["Result"]};

@@ -145,6 +145,8 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -174,12 +176,15 @@
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;storage-monitor&quot;</span>;
 
+<span class="doccomment">/// Result type used in this crate.
+</span><span class="kw">pub type </span><span class="prelude-ty">Result</span>&lt;T&gt; = std::result::Result&lt;T, Error&gt;;
+
 <span class="doccomment">/// Error type used in this crate.
 </span><span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error {
 	<span class="attr">#[error(<span class="string">&quot;IO Error&quot;</span>)]
 	</span>IOError(<span class="attr">#[from] </span>io::Error),
-	<span class="attr">#[error(<span class="string">&quot;Out of storage space: available {0}MB, required {1}MB&quot;</span>)]
+	<span class="attr">#[error(<span class="string">&quot;Out of storage space: available {0}MiB, required {1}MiB&quot;</span>)]
 	</span>StorageOutOfSpace(u64, u64),
 }
 
@@ -189,7 +194,7 @@
 	<span class="doccomment">/// Required available space on database storage. If available space for DB storage drops below
 	/// the given threshold, node will be gracefully terminated. If `0` is given monitoring will be
 	/// disabled.
-	</span><span class="attr">#[arg(long = <span class="string">&quot;db-storage-threshold&quot;</span>, value_name = <span class="string">&quot;MB&quot;</span>, default_value_t = <span class="number">1000</span>)]
+	</span><span class="attr">#[arg(long = <span class="string">&quot;db-storage-threshold&quot;</span>, value_name = <span class="string">&quot;MiB&quot;</span>, default_value_t = <span class="number">1024</span>)]
 	</span><span class="kw">pub </span>threshold: u64,
 
 	<span class="doccomment">/// How often available space is polled.
@@ -197,14 +202,14 @@
 	</span><span class="kw">pub </span>polling_period: u32,
 }
 
-<span class="doccomment">/// Storage monitor service: checks the available space for the filesystem for fiven path.
+<span class="doccomment">/// Storage monitor service: checks the available space for the filesystem for given path.
 </span><span class="kw">pub struct </span>StorageMonitorService {
 	<span class="doccomment">/// watched path
 	</span>path: PathBuf,
 	<span class="doccomment">/// number of megabytes that shall be free on the filesystem for watched path
 	</span>threshold: u64,
-	<span class="doccomment">/// storage space polling period (seconds)
-	</span>polling_period: u32,
+	<span class="doccomment">/// storage space polling period
+	</span>polling_period: Duration,
 }
 
 <span class="kw">impl </span>StorageMonitorService {
@@ -213,7 +218,7 @@
 		parameters: StorageMonitorParams,
 		database: DatabaseSource,
 		spawner: <span class="kw-2">&amp;</span><span class="kw">impl </span>SpawnEssentialNamed,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+	) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 		<span class="prelude-val">Ok</span>(<span class="kw">match </span>(parameters.threshold, database.path()) {
 			(<span class="number">0</span>, <span class="kw">_</span>) =&gt; {
 				<span class="macro">log::info!</span>(
@@ -230,8 +235,7 @@
 			(threshold, <span class="prelude-val">Some</span>(path)) =&gt; {
 				<span class="macro">log::debug!</span>(
 					target: LOG_TARGET,
-					<span class="string">&quot;Initializing StorageMonitorService for db path: {:?}&quot;</span>,
-					path,
+					<span class="string">&quot;Initializing StorageMonitorService for db path: {path:?}&quot;</span>,
 				);
 
 				<span class="self">Self</span>::check_free_space(<span class="kw-2">&amp;</span>path, threshold)<span class="question-mark">?</span>;
@@ -239,7 +243,7 @@
 				<span class="kw">let </span>storage_monitor_service = StorageMonitorService {
 					path: path.to_path_buf(),
 					threshold,
-					polling_period: parameters.polling_period,
+					polling_period: Duration::from_secs(parameters.polling_period.into()),
 				};
 
 				spawner.spawn_essential(
@@ -255,22 +259,22 @@
 	/// below threshold.
 	</span><span class="kw">async fn </span>run(<span class="self">self</span>) {
 		<span class="kw">loop </span>{
-			tokio::time::sleep(Duration::from_secs(<span class="self">self</span>.polling_period.into())).<span class="kw">await</span>;
+			tokio::time::sleep(<span class="self">self</span>.polling_period).<span class="kw">await</span>;
 			<span class="kw">if </span><span class="self">Self</span>::check_free_space(<span class="kw-2">&amp;</span><span class="self">self</span>.path, <span class="self">self</span>.threshold).is_err() {
 				<span class="kw">break
 			</span>};
 		}
 	}
 
-	<span class="doccomment">/// Returns free space in MB, or error if statvfs failed.
-	</span><span class="kw">fn </span>free_space(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
-		<span class="prelude-val">Ok</span>(fs4::available_space(path).map(|s| s / <span class="number">1_000_000</span>)<span class="question-mark">?</span>)
+	<span class="doccomment">/// Returns free space in MiB, or error if statvfs failed.
+	</span><span class="kw">fn </span>free_space(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
+		<span class="prelude-val">Ok</span>(fs4::available_space(path).map(|s| s / <span class="number">1024 </span>/ <span class="number">1024</span>)<span class="question-mark">?</span>)
 	}
 
-	<span class="doccomment">/// Checks if the amount of free space for given `path` is above given `threshold`.
+	<span class="doccomment">/// Checks if the amount of free space for given `path` is above given `threshold` in MiB.
 	/// If it dropped below, error is returned.
 	/// System errors are silently ignored.
-	</span><span class="kw">fn </span>check_free_space(path: <span class="kw-2">&amp;</span>Path, threshold: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+	</span><span class="kw">fn </span>check_free_space(path: <span class="kw-2">&amp;</span>Path, threshold: u64) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 		<span class="kw">match </span>StorageMonitorService::free_space(path) {
 			<span class="prelude-val">Ok</span>(available_space) =&gt; {
 				<span class="macro">log::trace!</span>(
@@ -279,14 +283,14 @@
 				);
 
 				<span class="kw">if </span>available_space &lt; threshold {
-					<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;Available space {available_space}MB for path `{}` dropped below threshold: {threshold}MB , terminating...&quot;</span>, path.display());
+					<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;Available space {available_space}MiB for path `{}` dropped below threshold: {threshold}MiB , terminating...&quot;</span>, path.display());
 					<span class="prelude-val">Err</span>(Error::StorageOutOfSpace(available_space, threshold))
 				} <span class="kw">else </span>{
 					<span class="prelude-val">Ok</span>(())
 				}
 			},
 			<span class="prelude-val">Err</span>(e) =&gt; {
-				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;Could not read available space: {:?}.&quot;</span>, e);
+				<span class="macro">log::error!</span>(target: LOG_TARGET, <span class="string">&quot;Could not read available space: {e:?}.&quot;</span>);
 				<span class="prelude-val">Err</span>(e)
 			},
 		}
