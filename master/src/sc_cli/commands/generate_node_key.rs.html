@@ -107,7 +107,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::Error;
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>libp2p::identity::{ed25519 <span class="kw">as </span>libp2p_ed25519, PublicKey};
+<span class="kw">use </span>libp2p_identity::{ed25519, Keypair};
 <span class="kw">use </span>std::{
 	fs,
 	io::{<span class="self">self</span>, Write},
@@ -136,7 +136,7 @@
 <span class="kw">impl </span>GenerateNodeKeyCmd {
 	<span class="doccomment">/// Run the command
 	</span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-		<span class="kw">let </span>keypair = libp2p_ed25519::Keypair::generate();
+		<span class="kw">let </span>keypair = ed25519::Keypair::generate();
 
 		<span class="kw">let </span>secret = keypair.secret();
 
@@ -151,7 +151,7 @@
 			<span class="prelude-val">None </span>=&gt; io::stdout().lock().write_all(<span class="kw-2">&amp;</span>file_data)<span class="question-mark">?</span>,
 		}
 
-		<span class="macro">eprintln!</span>(<span class="string">&quot;{}&quot;</span>, PublicKey::Ed25519(keypair.public()).to_peer_id());
+		<span class="macro">eprintln!</span>(<span class="string">&quot;{}&quot;</span>, Keypair::from(keypair).public().to_peer_id());
 
 		<span class="prelude-val">Ok</span>(())
 	}

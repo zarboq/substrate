@@ -4467,6 +4467,31 @@
 <a href="#4467" id="4467">4467</a>
 <a href="#4468" id="4468">4468</a>
 <a href="#4469" id="4469">4469</a>
+<a href="#4470" id="4470">4470</a>
+<a href="#4471" id="4471">4471</a>
+<a href="#4472" id="4472">4472</a>
+<a href="#4473" id="4473">4473</a>
+<a href="#4474" id="4474">4474</a>
+<a href="#4475" id="4475">4475</a>
+<a href="#4476" id="4476">4476</a>
+<a href="#4477" id="4477">4477</a>
+<a href="#4478" id="4478">4478</a>
+<a href="#4479" id="4479">4479</a>
+<a href="#4480" id="4480">4480</a>
+<a href="#4481" id="4481">4481</a>
+<a href="#4482" id="4482">4482</a>
+<a href="#4483" id="4483">4483</a>
+<a href="#4484" id="4484">4484</a>
+<a href="#4485" id="4485">4485</a>
+<a href="#4486" id="4486">4486</a>
+<a href="#4487" id="4487">4487</a>
+<a href="#4488" id="4488">4488</a>
+<a href="#4489" id="4489">4489</a>
+<a href="#4490" id="4490">4490</a>
+<a href="#4491" id="4491">4491</a>
+<a href="#4492" id="4492">4492</a>
+<a href="#4493" id="4493">4493</a>
+<a href="#4494" id="4494">4494</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4487,7 +4512,7 @@
 
 </span><span class="kw">use crate</span>::{
 	protocol::notifications::handler::{
-		<span class="self">self</span>, NotificationsSink, NotifsHandlerIn, NotifsHandlerOut, NotifsHandlerProto,
+		<span class="self">self</span>, NotificationsSink, NotifsHandler, NotifsHandlerIn, NotifsHandlerOut,
 	},
 	types::ProtocolName,
 };
@@ -4496,13 +4521,13 @@
 <span class="kw">use </span>fnv::FnvHashMap;
 <span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>libp2p::{
-	core::{connection::ConnectionId, Multiaddr, PeerId},
+	core::{ConnectedPoint, Endpoint, Multiaddr},
 	swarm::{
 		behaviour::{ConnectionClosed, ConnectionEstablished, DialFailure, FromSwarm},
-		handler::ConnectionHandler,
-		DialError, IntoConnectionHandler, NetworkBehaviour, NetworkBehaviourAction, NotifyHandler,
-		PollParameters,
+		ConnectionDenied, ConnectionId, DialError, NetworkBehaviour, NotifyHandler, PollParameters,
+		THandler, THandlerInEvent, THandlerOutEvent, ToSwarm,
 	},
+	PeerId,
 };
 <span class="kw">use </span>log::{error, trace, warn};
 <span class="kw">use </span>parking_lot::RwLock;
@@ -4605,7 +4630,7 @@
 	</span>next_incoming_index: sc_peerset::IncomingIndex,
 
 	<span class="doccomment">/// Events to produce from `poll()`.
-	</span>events: VecDeque&lt;NetworkBehaviourAction&lt;NotificationsOut, NotifsHandlerProto&gt;&gt;,
+	</span>events: VecDeque&lt;ToSwarm&lt;NotificationsOut, NotifsHandlerIn&gt;&gt;,
 }
 
 <span class="doccomment">/// Configuration for a notifications protocol.
@@ -4923,14 +4948,14 @@
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Closed({}, {:?})&quot;</span>, peer_id, set_id);
 					<span class="kw">let </span>event =
 						NotificationsOut::CustomProtocolClosed { peer_id: <span class="kw-2">*</span>peer_id, set_id };
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
+					<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 				}
 
 				<span class="kw">for </span>(connec_id, connec_state) <span class="kw">in
 					</span>connections.iter_mut().filter(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::Open(<span class="kw">_</span>)))
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Close({:?})&quot;</span>, peer_id, <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: <span class="kw-2">*</span>peer_id,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Close { protocol_index: set_id.into() },
@@ -4942,7 +4967,7 @@
 					</span>connections.iter_mut().filter(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::Opening))
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Close({:?})&quot;</span>, peer_id, <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: <span class="kw-2">*</span>peer_id,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Close { protocol_index: set_id.into() },
@@ -4984,7 +5009,7 @@
 					.filter(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote))
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Close({:?})&quot;</span>, peer_id, <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: <span class="kw-2">*</span>peer_id,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Close { protocol_index: set_id.into() },
@@ -5017,8 +5042,7 @@
 	<span class="doccomment">/// Function that is called when the peerset wants us to connect to a peer.
 	</span><span class="kw">fn </span>peerset_report_connect(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer_id: PeerId, set_id: sc_peerset::SetId) {
 		<span class="comment">// If `PeerId` is unknown to us, insert an entry, start dialing, and return early.
-		</span><span class="kw">let </span>handler = <span class="self">self</span>.new_handler();
-		<span class="kw">let </span><span class="kw-2">mut </span>occ_entry = <span class="kw">match </span><span class="self">self</span>.peers.entry((peer_id, set_id)) {
+		</span><span class="kw">let </span><span class="kw-2">mut </span>occ_entry = <span class="kw">match </span><span class="self">self</span>.peers.entry((peer_id, set_id)) {
 			Entry::Occupied(entry) =&gt; entry,
 			Entry::Vacant(entry) =&gt; {
 				<span class="comment">// If there&#39;s no entry in `self.peers`, start dialing.
@@ -5029,10 +5053,7 @@
 					set_id,
 				);
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p &lt;= Dial {}&quot;</span>, entry.key().<span class="number">0</span>);
-				<span class="self">self</span>.events.push_back(NetworkBehaviourAction::Dial {
-					opts: entry.key().<span class="number">0</span>.into(),
-					handler,
-				});
+				<span class="self">self</span>.events.push_back(ToSwarm::Dial { opts: entry.key().<span class="number">0</span>.into() });
 				entry.insert(PeerState::Requested);
 				<span class="kw">return
 			</span>},
@@ -5064,10 +5085,7 @@
 					set_id,
 				);
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p &lt;= Dial {:?}&quot;</span>, occ_entry.key());
-				<span class="self">self</span>.events.push_back(NetworkBehaviourAction::Dial {
-					opts: occ_entry.key().<span class="number">0</span>.into(),
-					handler,
-				});
+				<span class="self">self</span>.events.push_back(ToSwarm::Dial { opts: occ_entry.key().<span class="number">0</span>.into() });
 				<span class="kw-2">*</span>occ_entry.into_mut() = PeerState::Requested;
 			},
 
@@ -5115,7 +5133,7 @@
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM =&gt; Connect({}, {:?}): Enabling connections.&quot;</span>,
 						occ_entry.key().<span class="number">0</span>, set_id);
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>, peer_id, <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
@@ -5189,7 +5207,7 @@
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>,
 						occ_entry.key(), <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: occ_entry.key().<span class="number">0</span>,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
@@ -5272,7 +5290,7 @@
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Closed({}, {:?})&quot;</span>, entry.key().<span class="number">0</span>, set_id);
 					<span class="kw">let </span>event =
 						NotificationsOut::CustomProtocolClosed { peer_id: entry.key().<span class="number">0</span>, set_id };
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
+					<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 				}
 
 				<span class="kw">for </span>(connec_id, connec_state) <span class="kw">in
@@ -5280,7 +5298,7 @@
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Close({:?})&quot;</span>,
 						entry.key(), <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: entry.key().<span class="number">0</span>,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Close { protocol_index: set_id.into() },
@@ -5293,7 +5311,7 @@
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Close({:?})&quot;</span>,
 						entry.key(), <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: entry.key().<span class="number">0</span>,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Close { protocol_index: set_id.into() },
@@ -5384,7 +5402,7 @@
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>,
 						incoming.peer_id, <span class="kw-2">*</span>connec_id, incoming.set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: incoming.peer_id,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Open { protocol_index: incoming.set_id.into() },
@@ -5444,7 +5462,7 @@
 				{
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Close({:?})&quot;</span>,
 						incoming.peer_id, connec_id, incoming.set_id);
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 						peer_id: incoming.peer_id,
 						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 						event: NotifsHandlerIn::Close { protocol_index: incoming.set_id.into() },
@@ -5462,15 +5480,57 @@
 }
 
 <span class="kw">impl </span>NetworkBehaviour <span class="kw">for </span>Notifications {
-	<span class="kw">type </span>ConnectionHandler = NotifsHandlerProto;
+	<span class="kw">type </span>ConnectionHandler = NotifsHandler;
 	<span class="kw">type </span>OutEvent = NotificationsOut;
 
-	<span class="kw">fn </span>new_handler(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::ConnectionHandler {
-		NotifsHandlerProto::new(<span class="self">self</span>.notif_protocols.clone())
+	<span class="kw">fn </span>handle_pending_inbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		_connection_id: ConnectionId,
+		_local_addr: <span class="kw-2">&amp;</span>Multiaddr,
+		_remote_addr: <span class="kw-2">&amp;</span>Multiaddr,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), ConnectionDenied&gt; {
+		<span class="prelude-val">Ok</span>(())
 	}
 
-	<span class="kw">fn </span>addresses_of_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>PeerId) -&gt; Vec&lt;Multiaddr&gt; {
-		Vec::new()
+	<span class="kw">fn </span>handle_pending_outbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		_connection_id: ConnectionId,
+		_maybe_peer: <span class="prelude-ty">Option</span>&lt;PeerId&gt;,
+		_addresses: <span class="kw-2">&amp;</span>[Multiaddr],
+		_effective_role: Endpoint,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Multiaddr&gt;, ConnectionDenied&gt; {
+		<span class="prelude-val">Ok</span>(Vec::new())
+	}
+
+	<span class="kw">fn </span>handle_established_inbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		_connection_id: ConnectionId,
+		peer: PeerId,
+		local_addr: <span class="kw-2">&amp;</span>Multiaddr,
+		remote_addr: <span class="kw-2">&amp;</span>Multiaddr,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;THandler&lt;<span class="self">Self</span>&gt;, ConnectionDenied&gt; {
+		<span class="prelude-val">Ok</span>(NotifsHandler::new(
+			peer,
+			ConnectedPoint::Listener {
+				local_addr: local_addr.clone(),
+				send_back_addr: remote_addr.clone(),
+			},
+			<span class="self">self</span>.notif_protocols.clone(),
+		))
+	}
+
+	<span class="kw">fn </span>handle_established_outbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		_connection_id: ConnectionId,
+		peer: PeerId,
+		addr: <span class="kw-2">&amp;</span>Multiaddr,
+		role_override: Endpoint,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;THandler&lt;<span class="self">Self</span>&gt;, ConnectionDenied&gt; {
+		<span class="prelude-val">Ok</span>(NotifsHandler::new(
+			peer,
+			ConnectedPoint::Dialer { address: addr.clone(), role_override },
+			<span class="self">self</span>.notif_protocols.clone(),
+		))
 	}
 
 	<span class="kw">fn </span>on_swarm_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: FromSwarm&lt;<span class="self">Self</span>::ConnectionHandler&gt;) {
@@ -5491,7 +5551,7 @@
 								peer_id, set_id, endpoint
 							);
 							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>, peer_id, connection_id, set_id);
-							<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+							<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 								peer_id,
 								handler: NotifyHandler::One(connection_id),
 								event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
@@ -5745,9 +5805,7 @@
 												set_id,
 												notifications_sink: replacement_sink,
 											};
-											<span class="self">self</span>.events.push_back(
-												NetworkBehaviourAction::GenerateEvent(event),
-											);
+											<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 										}
 									} <span class="kw">else </span>{
 										<span class="macro">trace!</span>(
@@ -5758,9 +5816,7 @@
 											peer_id,
 											set_id,
 										};
-										<span class="self">self</span>.events.push_back(
-											NetworkBehaviourAction::GenerateEvent(event),
-										);
+										<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 									}
 								}
 							} <span class="kw">else </span>{
@@ -5903,8 +5959,7 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		peer_id: PeerId,
 		connection_id: ConnectionId,
-		event: &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as
-		</span>ConnectionHandler&gt;::OutEvent,
+		event: THandlerOutEvent&lt;<span class="self">Self</span>&gt;,
 	) {
 		<span class="kw">match </span>event {
 			NotifsHandlerOut::OpenDesiredByRemote { protocol_index } =&gt; {
@@ -5971,7 +6026,7 @@
 							<span class="kw">if let </span>ConnectionState::Closed = <span class="kw-2">*</span>connec_state {
 								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>,
 									peer_id, connection_id, set_id);
-								<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+								<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 									peer_id,
 									handler: NotifyHandler::One(connection_id),
 									event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
@@ -6052,7 +6107,7 @@
 							<span class="kw">if let </span>ConnectionState::Closed = <span class="kw-2">*</span>connec_state {
 								<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>,
 									peer_id, connection_id, set_id);
-								<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+								<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 									peer_id,
 									handler: NotifyHandler::One(connection_id),
 									event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
@@ -6137,7 +6192,7 @@
 						connections[pos].<span class="number">1 </span>= ConnectionState::Closing;
 
 						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({}, {:?}) &lt;= Close({:?})&quot;</span>, peer_id, connection_id, set_id);
-						<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+						<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 							peer_id,
 							handler: NotifyHandler::One(connection_id),
 							event: NotifsHandlerIn::Close { protocol_index: set_id.into() },
@@ -6155,7 +6210,7 @@
 									set_id,
 									notifications_sink: replacement_sink,
 								};
-								<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
+								<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 							}
 
 							<span class="kw-2">*</span>entry.into_mut() = PeerState::Enabled { connections };
@@ -6175,7 +6230,7 @@
 
 							<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;External API &lt;= Closed({}, {:?})&quot;</span>, peer_id, set_id);
 							<span class="kw">let </span>event = NotificationsOut::CustomProtocolClosed { peer_id, set_id };
-							<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
+							<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 						}
 					},
 
@@ -6259,7 +6314,7 @@
 									received_handshake,
 									notifications_sink: notifications_sink.clone(),
 								};
-								<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
+								<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 							}
 							<span class="kw-2">*</span>connec_state = ConnectionState::Open(notifications_sink);
 						} <span class="kw">else if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, connec_state)) =
@@ -6406,7 +6461,7 @@
 					);
 					<span class="kw">let </span>event = NotificationsOut::Notification { peer_id, set_id, message };
 
-					<span class="self">self</span>.events.push_back(NetworkBehaviourAction::GenerateEvent(event));
+					<span class="self">self</span>.events.push_back(ToSwarm::GenerateEvent(event));
 				} <span class="kw">else </span>{
 					<span class="macro">trace!</span>(
 						target: <span class="string">&quot;sub-libp2p&quot;</span>,
@@ -6425,7 +6480,7 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		cx: <span class="kw-2">&amp;mut </span>Context,
 		_params: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>PollParameters,
-	) -&gt; Poll&lt;NetworkBehaviourAction&lt;<span class="self">Self</span>::OutEvent, <span class="self">Self</span>::ConnectionHandler&gt;&gt; {
+	) -&gt; Poll&lt;ToSwarm&lt;<span class="self">Self</span>::OutEvent, THandlerInEvent&lt;<span class="self">Self</span>&gt;&gt;&gt; {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(event) = <span class="self">self</span>.events.pop_front() {
 			<span class="kw">return </span>Poll::Ready(event)
 		}
@@ -6457,8 +6512,6 @@
 		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>((delay_id, peer_id, set_id))) =
 			Pin::new(<span class="kw-2">&amp;mut </span><span class="self">self</span>.delays).poll_next(cx)
 		{
-			<span class="kw">let </span>handler = <span class="self">self</span>.new_handler();
-
 			<span class="kw">let </span>peer_state = <span class="kw">match </span><span class="self">self</span>.peers.get_mut(<span class="kw-2">&amp;</span>(peer_id, set_id)) {
 				<span class="prelude-val">Some</span>(s) =&gt; s,
 				<span class="comment">// We intentionally never remove elements from `delays`, and it may
@@ -6474,8 +6527,7 @@
 
 				PeerState::PendingRequest { timer, .. } <span class="kw">if </span><span class="kw-2">*</span>timer == delay_id =&gt; {
 					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p &lt;= Dial {:?} now that ban has expired&quot;</span>, peer_id);
-					<span class="self">self</span>.events
-						.push_back(NetworkBehaviourAction::Dial { opts: peer_id.into(), handler });
+					<span class="self">self</span>.events.push_back(ToSwarm::Dial { opts: peer_id.into() });
 					<span class="kw-2">*</span>peer_state = PeerState::Requested;
 				},
 
@@ -6488,7 +6540,7 @@
 					{
 						<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({}, {:?}) &lt;= Open({:?}) (ban expired)&quot;</span>,
 							peer_id, <span class="kw-2">*</span>connec_id, set_id);
-						<span class="self">self</span>.events.push_back(NetworkBehaviourAction::NotifyHandler {
+						<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
 							peer_id,
 							handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
 							event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
@@ -6524,13 +6576,11 @@
 }
 
 <span class="attr">#[cfg(test)]
+#[allow(deprecated)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span><span class="kw">crate</span>::protocol::notifications::handler::tests::<span class="kw-2">*</span>;
-	<span class="kw">use </span>libp2p::{
-		core::ConnectedPoint,
-		swarm::{behaviour::FromSwarm, AddressRecord},
-	};
+	<span class="kw">use </span>libp2p::swarm::AddressRecord;
 	<span class="kw">use </span>std::{collections::HashSet, iter};
 
 	<span class="kw">impl </span>PartialEq <span class="kw">for </span>ConnectionState {
@@ -6692,7 +6742,7 @@
 	</span><span class="kw">fn </span>remote_opens_connection_and_substream() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -6742,7 +6792,7 @@
 	</span><span class="kw">async fn </span>disconnect_remote_substream_before_handled_by_peerset() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -6779,7 +6829,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -6813,8 +6863,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -6843,7 +6893,7 @@
 	</span><span class="kw">fn </span>peerset_connect_incoming() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -6878,7 +6928,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -6924,7 +6974,7 @@
 	</span><span class="kw">fn </span>peerset_disconnect_enabled() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -6974,7 +7024,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -7003,8 +7053,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7026,7 +7076,7 @@
 	</span><span class="kw">fn </span>peerset_accept_peer_not_alive() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7073,8 +7123,8 @@
 	</span><span class="kw">fn </span>secondary_connection_peer_state_incoming() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn2 = ConnectionId::new(<span class="number">1usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn2 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7128,7 +7178,7 @@
 	</span><span class="kw">fn </span>close_connection_for_disabled_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7150,8 +7200,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7162,7 +7212,7 @@
 	</span><span class="kw">fn </span>close_connection_for_incoming_peer_one_connection() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7191,8 +7241,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7207,8 +7257,8 @@
 	</span><span class="kw">fn </span>close_connection_for_incoming_peer_two_connections() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn1 = ConnectionId::new(<span class="number">1usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn1 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7258,8 +7308,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7276,7 +7326,7 @@
 	</span><span class="kw">fn </span>connection_and_substream_open() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7320,7 +7370,7 @@
 
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(
 			notif.events[notif.events.len() - <span class="number">1</span>],
-			NetworkBehaviourAction::GenerateEvent(NotificationsOut::CustomProtocolOpen { .. })
+			ToSwarm::GenerateEvent(NotificationsOut::CustomProtocolOpen { .. })
 		));
 	}
 
@@ -7328,8 +7378,8 @@
 	</span><span class="kw">fn </span>connection_closed_sink_replaced() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn1 = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn2 = ConnectionId::new(<span class="number">1usize</span>);
+		<span class="kw">let </span>conn1 = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn2 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7400,8 +7450,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn1,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7416,7 +7466,7 @@
 
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(
 			notif.events[notif.events.len() - <span class="number">1</span>],
-			NetworkBehaviourAction::GenerateEvent(NotificationsOut::CustomProtocolReplaced { .. })
+			ToSwarm::GenerateEvent(NotificationsOut::CustomProtocolReplaced { .. })
 		));
 	}
 
@@ -7432,8 +7482,8 @@
 
 		notif.on_swarm_event(FromSwarm::DialFailure(libp2p::swarm::behaviour::DialFailure {
 			peer_id: <span class="prelude-val">Some</span>(peer),
-			handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]),
 			error: <span class="kw-2">&amp;</span>libp2p::swarm::DialError::Banned,
+			connection_id: ConnectionId::new_unchecked(<span class="number">1337</span>),
 		}));
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(PeerState::Backoff { timer_deadline, .. }) = notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)) {
@@ -7447,7 +7497,7 @@
 	</span><span class="kw">async fn </span>write_notification() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7497,7 +7547,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -7526,8 +7576,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7545,7 +7595,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -7571,7 +7621,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -7600,8 +7650,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7617,8 +7667,8 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn1 = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn2 = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn1 = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn2 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -7663,8 +7713,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn1,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected.clone(), <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7677,8 +7727,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn2,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7690,7 +7740,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -7728,8 +7778,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7740,8 +7790,8 @@
 	</span><span class="kw">fn </span>two_connections_inactive_connection_gets_closed_peer_state_is_still_incoming() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn1 = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn2 = ConnectionId::new(<span class="number">1usize</span>);
+		<span class="kw">let </span>conn1 = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn2 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7783,8 +7833,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn2,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7795,8 +7845,8 @@
 	</span><span class="kw">fn </span>two_connections_active_connection_gets_closed_peer_state_is_disabled() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn1 = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn2 = ConnectionId::new(<span class="number">1usize</span>);
+		<span class="kw">let </span>conn1 = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn2 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7841,8 +7891,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn1,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7853,8 +7903,8 @@
 	</span><span class="kw">fn </span>inject_connection_closed_for_active_connection() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn1 = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn2 = ConnectionId::new(<span class="number">1usize</span>);
+		<span class="kw">let </span>conn1 = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn2 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -7910,8 +7960,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn1,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7922,7 +7972,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -7951,8 +8001,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -7969,8 +8019,8 @@
 		<span class="kw">let </span>now = Instant::now();
 		notif.on_swarm_event(FromSwarm::DialFailure(libp2p::swarm::behaviour::DialFailure {
 			peer_id: <span class="prelude-val">Some</span>(peer),
-			handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]),
 			error: <span class="kw-2">&amp;</span>libp2p::swarm::DialError::Banned,
+			connection_id: ConnectionId::new_unchecked(<span class="number">0</span>),
 		}));
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(PeerState::PendingRequest { <span class="kw-2">ref </span>timer_deadline, .. }) =
@@ -7985,8 +8035,8 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
-		<span class="kw">let </span>conn1 = ConnectionId::new(<span class="number">0usize</span>);
-		<span class="kw">let </span>conn2 = ConnectionId::new(<span class="number">1usize</span>);
+		<span class="kw">let </span>conn1 = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>conn2 = ConnectionId::new_unchecked(<span class="number">1</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8039,7 +8089,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8068,8 +8118,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8116,7 +8166,7 @@
 	</span><span class="kw">async fn </span>reschedule_disabled_pending_enable_when_connection_not_closed() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8232,7 +8282,7 @@
 	</span><span class="kw">fn </span>peerset_report_connect_with_enabled_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8284,7 +8334,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8341,7 +8391,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8370,8 +8420,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8394,7 +8444,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8429,7 +8479,7 @@
 	</span><span class="kw">fn </span>peerset_report_accept_incoming_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8470,7 +8520,7 @@
 	</span><span class="kw">fn </span>peerset_report_accept_not_incoming_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8527,9 +8577,9 @@
 		notif.on_swarm_event(FromSwarm::ConnectionClosed(
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
-				connection_id: ConnectionId::new(<span class="number">0usize</span>),
-				endpoint: <span class="kw-2">&amp;</span>endpoint,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>endpoint),
+				connection_id: ConnectionId::new_unchecked(<span class="number">0</span>),
+				endpoint: <span class="kw-2">&amp;</span>endpoint.clone(),
+				handler: NotifsHandler::new(peer, endpoint, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8571,7 +8621,7 @@
 	</span><span class="kw">fn </span>reject_non_active_connection() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8609,7 +8659,7 @@
 	</span><span class="kw">fn </span>reject_non_existent_peer_but_alive_connection() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8649,7 +8699,7 @@
 	</span><span class="kw">fn </span>inject_non_existent_connection_closed_for_incoming_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8678,9 +8728,9 @@
 		notif.on_swarm_event(FromSwarm::ConnectionClosed(
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
-				connection_id: ConnectionId::new(<span class="number">1337usize</span>),
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				connection_id: ConnectionId::new_unchecked(<span class="number">1337</span>),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8693,7 +8743,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8713,9 +8763,9 @@
 		notif.on_swarm_event(FromSwarm::ConnectionClosed(
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
-				connection_id: ConnectionId::new(<span class="number">1337usize</span>),
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				connection_id: ConnectionId::new_unchecked(<span class="number">1337</span>),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8728,7 +8778,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8764,9 +8814,9 @@
 		notif.on_swarm_event(FromSwarm::ConnectionClosed(
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
-				connection_id: ConnectionId::new(<span class="number">1337usize</span>),
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				connection_id: ConnectionId::new_unchecked(<span class="number">1337</span>),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8778,7 +8828,7 @@
 	</span><span class="kw">fn </span>inject_connection_closed_for_incoming_peer_state_mismatch() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8809,8 +8859,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8822,7 +8872,7 @@
 	</span><span class="kw">fn </span>inject_connection_closed_for_enabled_state_mismatch() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
@@ -8855,9 +8905,9 @@
 		notif.on_swarm_event(FromSwarm::ConnectionClosed(
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
-				connection_id: ConnectionId::new(<span class="number">1337usize</span>),
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				connection_id: ConnectionId::new_unchecked(<span class="number">1337</span>),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8870,7 +8920,7 @@
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
 		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
 		<span class="kw">let </span>peer = PeerId::random();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),
@@ -8899,8 +8949,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected.clone(), <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8910,8 +8960,8 @@
 			libp2p::swarm::behaviour::ConnectionClosed {
 				peer_id: peer,
 				connection_id: conn,
-				endpoint: <span class="kw-2">&amp;</span>connected,
-				handler: NotifsHandlerProto::new(<span class="macro">vec!</span>[]).into_handler(<span class="kw-2">&amp;</span>peer, <span class="kw-2">&amp;</span>connected),
+				endpoint: <span class="kw-2">&amp;</span>connected.clone(),
+				handler: NotifsHandler::new(peer, connected, <span class="macro">vec!</span>[]),
 				remaining_established: <span class="number">0usize</span>,
 			},
 		));
@@ -8922,7 +8972,7 @@
 	#[cfg(debug_assertions)]
 	</span><span class="kw">fn </span>open_result_ok_non_existent_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
-		<span class="kw">let </span>conn = ConnectionId::new(<span class="number">0usize</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
 		<span class="kw">let </span>connected = ConnectedPoint::Listener {
 			local_addr: Multiaddr::empty(),
 			send_back_addr: Multiaddr::empty(),

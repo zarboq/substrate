@@ -799,6 +799,12 @@
 <a href="#799" id="799">799</a>
 <a href="#800" id="800">800</a>
 <a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -830,8 +836,9 @@
 	types::ProtocolName,
 };
 
+<span class="kw">pub use </span>libp2p::{identity::Keypair, multiaddr, Multiaddr, PeerId};
+
 <span class="kw">use </span>codec::Encode;
-<span class="kw">use </span>libp2p::{identity::Keypair, multiaddr, Multiaddr, PeerId};
 <span class="kw">use </span>prometheus_endpoint::Registry;
 <span class="kw">use </span>zeroize::Zeroize;
 
@@ -1168,7 +1175,7 @@
 		<span class="kw">match </span><span class="self">self </span>{
 			Ed25519(Secret::New) =&gt; <span class="prelude-val">Ok</span>(Keypair::generate_ed25519()),
 
-			Ed25519(Secret::Input(k)) =&gt; <span class="prelude-val">Ok</span>(Keypair::Ed25519(k.into())),
+			Ed25519(Secret::Input(k)) =&gt; <span class="prelude-val">Ok</span>(ed25519::Keypair::from(k).into()),
 
 			Ed25519(Secret::File(f)) =&gt; get_secret(
 				f,
@@ -1179,14 +1186,14 @@
 						<span class="prelude-val">None
 					</span>}
 				}) {
-					<span class="prelude-val">Some</span>(s) =&gt; ed25519::SecretKey::from_bytes(s),
-					<span class="kw">_ </span>=&gt; ed25519::SecretKey::from_bytes(<span class="kw-2">&amp;mut </span>b),
+					<span class="prelude-val">Some</span>(s) =&gt; ed25519::SecretKey::try_from_bytes(s),
+					<span class="kw">_ </span>=&gt; ed25519::SecretKey::try_from_bytes(<span class="kw-2">&amp;mut </span>b),
 				},
 				ed25519::SecretKey::generate,
 				|b| b.as_ref().to_vec(),
 			)
 			.map(ed25519::Keypair::from)
-			.map(Keypair::Ed25519),
+			.map(Keypair::from),
 		}
 	}
 }
@@ -1570,9 +1577,14 @@
 		tempfile::Builder::new().prefix(prefix).tempdir().unwrap()
 	}
 
-	<span class="kw">fn </span>secret_bytes(kp: <span class="kw-2">&amp;</span>Keypair) -&gt; Vec&lt;u8&gt; {
-		<span class="kw">let </span>Keypair::Ed25519(p) = kp;
-		p.secret().as_ref().iter().cloned().collect()
+	<span class="kw">fn </span>secret_bytes(kp: Keypair) -&gt; Vec&lt;u8&gt; {
+		kp.try_into_ed25519()
+			.expect(<span class="string">&quot;ed25519 keypair&quot;</span>)
+			.secret()
+			.as_ref()
+			.iter()
+			.cloned()
+			.collect()
 	}
 
 	<span class="attr">#[test]
@@ -1582,7 +1594,7 @@
 		</span><span class="kw">let </span>file = tmp.path().join(<span class="string">&quot;x&quot;</span>).to_path_buf();
 		<span class="kw">let </span>kp1 = NodeKeyConfig::Ed25519(Secret::File(file.clone())).into_keypair().unwrap();
 		<span class="kw">let </span>kp2 = NodeKeyConfig::Ed25519(Secret::File(file.clone())).into_keypair().unwrap();
-		<span class="macro">assert!</span>(file.is_file() &amp;&amp; secret_bytes(<span class="kw-2">&amp;</span>kp1) == secret_bytes(<span class="kw-2">&amp;</span>kp2))
+		<span class="macro">assert!</span>(file.is_file() &amp;&amp; secret_bytes(kp1) == secret_bytes(kp2))
 	}
 
 	<span class="attr">#[test]
@@ -1590,14 +1602,14 @@
 		<span class="kw">let </span>sk = ed25519::SecretKey::generate();
 		<span class="kw">let </span>kp1 = NodeKeyConfig::Ed25519(Secret::Input(sk.clone())).into_keypair().unwrap();
 		<span class="kw">let </span>kp2 = NodeKeyConfig::Ed25519(Secret::Input(sk)).into_keypair().unwrap();
-		<span class="macro">assert!</span>(secret_bytes(<span class="kw-2">&amp;</span>kp1) == secret_bytes(<span class="kw-2">&amp;</span>kp2));
+		<span class="macro">assert!</span>(secret_bytes(kp1) == secret_bytes(kp2));
 	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>test_secret_new() {
 		<span class="kw">let </span>kp1 = NodeKeyConfig::Ed25519(Secret::New).into_keypair().unwrap();
 		<span class="kw">let </span>kp2 = NodeKeyConfig::Ed25519(Secret::New).into_keypair().unwrap();
-		<span class="macro">assert!</span>(secret_bytes(<span class="kw-2">&amp;</span>kp1) != secret_bytes(<span class="kw-2">&amp;</span>kp2));
+		<span class="macro">assert!</span>(secret_bytes(kp1) != secret_bytes(kp2));
 	}
 }
 </code></pre></div>

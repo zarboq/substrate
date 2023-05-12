@@ -93,8 +93,6 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -116,7 +114,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::Error;
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>libp2p::identity::{ed25519, PublicKey};
+<span class="kw">use </span>libp2p_identity::Keypair;
 <span class="kw">use </span>std::{
 	fs,
 	io::{<span class="self">self</span>, Read},
@@ -165,12 +163,10 @@
 				.map_err(|<span class="kw">_</span>| <span class="string">&quot;failed to decode secret as hex&quot;</span>)<span class="question-mark">?</span>;
 		}
 
-		<span class="kw">let </span>secret =
-			ed25519::SecretKey::from_bytes(<span class="kw-2">&amp;mut </span>file_data).map_err(|<span class="kw">_</span>| <span class="string">&quot;Bad node key file&quot;</span>)<span class="question-mark">?</span>;
+		<span class="kw">let </span>keypair =
+			Keypair::ed25519_from_bytes(<span class="kw-2">&amp;mut </span>file_data).map_err(|<span class="kw">_</span>| <span class="string">&quot;Bad node key file&quot;</span>)<span class="question-mark">?</span>;
 
-		<span class="kw">let </span>keypair = ed25519::Keypair::from(secret);
-
-		<span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, PublicKey::Ed25519(keypair.public()).to_peer_id());
+		<span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, keypair.public().to_peer_id());
 
 		<span class="prelude-val">Ok</span>(())
 	}

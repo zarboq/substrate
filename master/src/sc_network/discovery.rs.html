@@ -1144,6 +1144,36 @@
 <a href="#1144" id="1144">1144</a>
 <a href="#1145" id="1145">1145</a>
 <a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
+<a href="#1152" id="1152">1152</a>
+<a href="#1153" id="1153">1153</a>
+<a href="#1154" id="1154">1154</a>
+<a href="#1155" id="1155">1155</a>
+<a href="#1156" id="1156">1156</a>
+<a href="#1157" id="1157">1157</a>
+<a href="#1158" id="1158">1158</a>
+<a href="#1159" id="1159">1159</a>
+<a href="#1160" id="1160">1160</a>
+<a href="#1161" id="1161">1161</a>
+<a href="#1162" id="1162">1162</a>
+<a href="#1163" id="1163">1163</a>
+<a href="#1164" id="1164">1164</a>
+<a href="#1165" id="1165">1165</a>
+<a href="#1166" id="1166">1166</a>
+<a href="#1167" id="1167">1167</a>
+<a href="#1168" id="1168">1168</a>
+<a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
+<a href="#1171" id="1171">1171</a>
+<a href="#1172" id="1172">1172</a>
+<a href="#1173" id="1173">1173</a>
+<a href="#1174" id="1174">1174</a>
+<a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1199,26 +1229,24 @@
 <span class="kw">use </span>futures_timer::Delay;
 <span class="kw">use </span>ip_network::IpNetwork;
 <span class="kw">use </span>libp2p::{
-	core::{connection::ConnectionId, Multiaddr, PeerId, PublicKey},
+	core::{Endpoint, Multiaddr},
 	kad::{
-		handler::KademliaHandlerProto,
-		record::{
-			<span class="self">self</span>,
-			store::{MemoryStore, RecordStore},
-		},
+		handler::KademliaHandler,
+		record::store::{MemoryStore, RecordStore},
 		GetClosestPeersError, GetRecordOk, Kademlia, KademliaBucketInserts, KademliaConfig,
-		KademliaEvent, QueryId, QueryResult, Quorum, Record,
+		KademliaEvent, QueryId, QueryResult, Quorum, Record, RecordKey,
 	},
 	mdns::{<span class="self">self</span>, tokio::Behaviour <span class="kw">as </span>TokioMdns},
 	multiaddr::Protocol,
 	swarm::{
 		behaviour::{
-			toggle::{Toggle, ToggleIntoConnectionHandler},
+			toggle::{Toggle, ToggleConnectionHandler},
 			DialFailure, FromSwarm, NewExternalAddr,
 		},
-		ConnectionHandler, DialError, IntoConnectionHandler, NetworkBehaviour,
-		NetworkBehaviourAction, PollParameters,
+		ConnectionDenied, ConnectionId, DialError, NetworkBehaviour, PollParameters, THandler,
+		THandlerInEvent, THandlerOutEvent, ToSwarm,
 	},
+	PeerId,
 };
 <span class="kw">use </span>log::{debug, info, trace, warn};
 <span class="kw">use </span>sp_core::hexdisplay::HexDisplay;
@@ -1253,9 +1281,9 @@
 
 <span class="kw">impl </span>DiscoveryConfig {
 	<span class="doccomment">/// Create a default configuration with the given public key.
-	</span><span class="kw">pub fn </span>new(local_public_key: PublicKey) -&gt; <span class="self">Self </span>{
+	</span><span class="kw">pub fn </span>new(local_peer_id: PeerId) -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{
-			local_peer_id: local_public_key.to_peer_id(),
+			local_peer_id,
 			permanent_addresses: Vec::new(),
 			dht_random_walk: <span class="bool-val">true</span>,
 			allow_private_ip: <span class="bool-val">true</span>,
@@ -1381,7 +1409,7 @@
 			allow_private_ip,
 			discovery_only_if_under_num,
 			mdns: <span class="kw">if </span>enable_mdns {
-				<span class="kw">match </span>TokioMdns::new(mdns::Config::default()) {
+				<span class="kw">match </span>TokioMdns::new(mdns::Config::default(), local_peer_id) {
 					<span class="prelude-val">Ok</span>(mdns) =&gt; <span class="prelude-val">Some</span>(mdns),
 					<span class="prelude-val">Err</span>(err) =&gt; {
 						<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Failed to initialize mDNS: {:?}&quot;</span>, err);
@@ -1520,7 +1548,7 @@
 	<span class="doccomment">/// Start fetching a record from the DHT.
 	///
 	/// A corresponding `ValueFound` or `ValueNotFound` event will later be generated.
-	</span><span class="kw">pub fn </span>get_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: record::Key) {
+	</span><span class="kw">pub fn </span>get_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: RecordKey) {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(k) = <span class="self">self</span>.kademlia.as_mut() {
 			k.get_record(key.clone());
 		}
@@ -1530,7 +1558,7 @@
 	/// `get_value`.
 	///
 	/// A corresponding `ValuePut` or `ValuePutFailed` event will later be generated.
-	</span><span class="kw">pub fn </span>put_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: record::Key, value: Vec&lt;u8&gt;) {
+	</span><span class="kw">pub fn </span>put_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: RecordKey, value: Vec&lt;u8&gt;) {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(k) = <span class="self">self</span>.kademlia.as_mut() {
 			<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = k.put_record(Record::new(key.clone(), value.clone()), Quorum::All) {
 				<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Failed to put record: {:?}&quot;</span>, e);
@@ -1606,22 +1634,22 @@
 	<span class="doccomment">/// The DHT yielded results for the record request.
 	///
 	/// Returning the result grouped in (key, value) pairs as well as the request duration.
-	</span>ValueFound(Vec&lt;(record::Key, Vec&lt;u8&gt;)&gt;, Duration),
+	</span>ValueFound(Vec&lt;(RecordKey, Vec&lt;u8&gt;)&gt;, Duration),
 
 	<span class="doccomment">/// The record requested was not found in the DHT.
 	///
 	/// Returning the corresponding key as well as the request duration.
-	</span>ValueNotFound(record::Key, Duration),
+	</span>ValueNotFound(RecordKey, Duration),
 
 	<span class="doccomment">/// The record with a given key was successfully inserted into the DHT.
 	///
 	/// Returning the corresponding key as well as the request duration.
-	</span>ValuePut(record::Key, Duration),
+	</span>ValuePut(RecordKey, Duration),
 
 	<span class="doccomment">/// Inserting a value into the DHT failed.
 	///
 	/// Returning the corresponding key as well as the request duration.
-	</span>ValuePutFailed(record::Key, Duration),
+	</span>ValuePutFailed(RecordKey, Duration),
 
 	<span class="doccomment">/// Started a random Kademlia query.
 	///
@@ -1630,29 +1658,83 @@
 }
 
 <span class="kw">impl </span>NetworkBehaviour <span class="kw">for </span>DiscoveryBehaviour {
-	<span class="kw">type </span>ConnectionHandler = ToggleIntoConnectionHandler&lt;KademliaHandlerProto&lt;QueryId&gt;&gt;;
+	<span class="kw">type </span>ConnectionHandler = ToggleConnectionHandler&lt;KademliaHandler&lt;QueryId&gt;&gt;;
 	<span class="kw">type </span>OutEvent = DiscoveryOut;
 
-	<span class="kw">fn </span>new_handler(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::ConnectionHandler {
-		<span class="self">self</span>.kademlia.new_handler()
+	<span class="kw">fn </span>handle_established_inbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		connection_id: ConnectionId,
+		peer: PeerId,
+		local_addr: <span class="kw-2">&amp;</span>Multiaddr,
+		remote_addr: <span class="kw-2">&amp;</span>Multiaddr,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;THandler&lt;<span class="self">Self</span>&gt;, ConnectionDenied&gt; {
+		<span class="self">self</span>.kademlia.handle_established_inbound_connection(
+			connection_id,
+			peer,
+			local_addr,
+			remote_addr,
+		)
 	}
 
-	<span class="kw">fn </span>addresses_of_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer_id: <span class="kw-2">&amp;</span>PeerId) -&gt; Vec&lt;Multiaddr&gt; {
+	<span class="kw">fn </span>handle_established_outbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		connection_id: ConnectionId,
+		peer: PeerId,
+		addr: <span class="kw-2">&amp;</span>Multiaddr,
+		role_override: Endpoint,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;THandler&lt;<span class="self">Self</span>&gt;, ConnectionDenied&gt; {
+		<span class="self">self</span>.kademlia.handle_established_outbound_connection(
+			connection_id,
+			peer,
+			addr,
+			role_override,
+		)
+	}
+
+	<span class="kw">fn </span>handle_pending_inbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		connection_id: ConnectionId,
+		local_addr: <span class="kw-2">&amp;</span>Multiaddr,
+		remote_addr: <span class="kw-2">&amp;</span>Multiaddr,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), ConnectionDenied&gt; {
+		<span class="self">self</span>.kademlia
+			.handle_pending_inbound_connection(connection_id, local_addr, remote_addr)
+	}
+
+	<span class="kw">fn </span>handle_pending_outbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		connection_id: ConnectionId,
+		maybe_peer: <span class="prelude-ty">Option</span>&lt;PeerId&gt;,
+		addresses: <span class="kw-2">&amp;</span>[Multiaddr],
+		effective_role: Endpoint,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Multiaddr&gt;, ConnectionDenied&gt; {
+		<span class="kw">let </span><span class="prelude-val">Some</span>(peer_id) = maybe_peer <span class="kw">else </span>{ <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()); };
+
 		<span class="kw">let </span><span class="kw-2">mut </span>list = <span class="self">self
 			</span>.permanent_addresses
 			.iter()
-			.filter_map(|(p, a)| <span class="kw">if </span>p == peer_id { <span class="prelude-val">Some</span>(a.clone()) } <span class="kw">else </span>{ <span class="prelude-val">None </span>})
+			.filter_map(|(p, a)| (<span class="kw-2">*</span>p == peer_id).then_some(a.clone()))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(ephemeral_addresses) = <span class="self">self</span>.ephemeral_addresses.get(peer_id) {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(ephemeral_addresses) = <span class="self">self</span>.ephemeral_addresses.get(<span class="kw-2">&amp;</span>peer_id) {
 			list.extend(ephemeral_addresses.clone());
 		}
 
 		{
-			<span class="kw">let </span><span class="kw-2">mut </span>list_to_filter = <span class="self">self</span>.kademlia.addresses_of_peer(peer_id);
+			<span class="kw">let </span><span class="kw-2">mut </span>list_to_filter = <span class="self">self</span>.kademlia.handle_pending_outbound_connection(
+				connection_id,
+				maybe_peer,
+				addresses,
+				effective_role,
+			)<span class="question-mark">?</span>;
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mdns) = <span class="self">self</span>.mdns {
-				list_to_filter.extend(mdns.addresses_of_peer(peer_id));
+				list_to_filter.extend(mdns.handle_pending_outbound_connection(
+					connection_id,
+					maybe_peer,
+					addresses,
+					effective_role,
+				)<span class="question-mark">?</span>);
 			}
 
 			<span class="kw">if </span>!<span class="self">self</span>.allow_private_ip {
@@ -1668,7 +1750,7 @@
 
 		<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Addresses of {:?}: {:?}&quot;</span>, peer_id, list);
 
-		list
+		<span class="prelude-val">Ok</span>(list)
 	}
 
 	<span class="kw">fn </span>on_swarm_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: FromSwarm&lt;<span class="self">Self</span>::ConnectionHandler&gt;) {
@@ -1749,8 +1831,7 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		peer_id: PeerId,
 		connection_id: ConnectionId,
-		event: &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as
-      </span>ConnectionHandler&gt;::OutEvent,
+		event: THandlerOutEvent&lt;<span class="self">Self</span>&gt;,
 	) {
 		<span class="self">self</span>.kademlia.on_connection_handler_event(peer_id, connection_id, event);
 	}
@@ -1759,10 +1840,10 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		cx: <span class="kw-2">&amp;mut </span>Context,
 		params: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>PollParameters,
-	) -&gt; Poll&lt;NetworkBehaviourAction&lt;<span class="self">Self</span>::OutEvent, <span class="self">Self</span>::ConnectionHandler&gt;&gt; {
+	) -&gt; Poll&lt;ToSwarm&lt;<span class="self">Self</span>::OutEvent, THandlerInEvent&lt;<span class="self">Self</span>&gt;&gt;&gt; {
 		<span class="comment">// Immediately process the content of `discovered`.
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(ev) = <span class="self">self</span>.pending_events.pop_front() {
-			<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+			<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 		}
 
 		<span class="comment">// Poll the stream that fires when we need to start a random Kademlia query.
@@ -1796,7 +1877,7 @@
 
 					<span class="kw">if </span>actually_started {
 						<span class="kw">let </span>ev = DiscoveryOut::RandomKademliaStarted;
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+						<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 					}
 				}
 			}
@@ -1804,18 +1885,18 @@
 
 		<span class="kw">while let </span>Poll::Ready(ev) = <span class="self">self</span>.kademlia.poll(cx, params) {
 			<span class="kw">match </span>ev {
-				NetworkBehaviourAction::GenerateEvent(ev) =&gt; <span class="kw">match </span>ev {
+				ToSwarm::GenerateEvent(ev) =&gt; <span class="kw">match </span>ev {
 					KademliaEvent::RoutingUpdated { peer, .. } =&gt; {
 						<span class="kw">let </span>ev = DiscoveryOut::Discovered(peer);
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+						<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 					},
 					KademliaEvent::UnroutablePeer { peer, .. } =&gt; {
 						<span class="kw">let </span>ev = DiscoveryOut::UnroutablePeer(peer);
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+						<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 					},
 					KademliaEvent::RoutablePeer { peer, .. } =&gt; {
 						<span class="kw">let </span>ev = DiscoveryOut::Discovered(peer);
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+						<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 					},
 					KademliaEvent::PendingRoutablePeer { .. } |
 					KademliaEvent::InboundRequest { .. } =&gt; {
@@ -1923,7 +2004,7 @@
 								)
 							},
 						};
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+						<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 					},
 					KademliaEvent::OutboundQueryProgressed {
 						result: QueryResult::PutRecord(res),
@@ -1945,7 +2026,7 @@
 								)
 							},
 						};
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+						<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 					},
 					KademliaEvent::OutboundQueryProgressed {
 						result: QueryResult::RepublishRecord(res),
@@ -1967,24 +2048,13 @@
 						<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Libp2p =&gt; Unhandled Kademlia event: {:?}&quot;</span>, e)
 					},
 				},
-				NetworkBehaviourAction::Dial { opts, handler } =&gt;
-					<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::Dial { opts, handler }),
-				NetworkBehaviourAction::NotifyHandler { peer_id, handler, event } =&gt;
-					<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::NotifyHandler {
-						peer_id,
-						handler,
-						event,
-					}),
-				NetworkBehaviourAction::ReportObservedAddr { address, score } =&gt;
-					<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::ReportObservedAddr {
-						address,
-						score,
-					}),
-				NetworkBehaviourAction::CloseConnection { peer_id, connection } =&gt;
-					<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::CloseConnection {
-						peer_id,
-						connection,
-					}),
+				ToSwarm::Dial { opts } =&gt; <span class="kw">return </span>Poll::Ready(ToSwarm::Dial { opts }),
+				ToSwarm::NotifyHandler { peer_id, handler, event } =&gt;
+					<span class="kw">return </span>Poll::Ready(ToSwarm::NotifyHandler { peer_id, handler, event }),
+				ToSwarm::ReportObservedAddr { address, score } =&gt;
+					<span class="kw">return </span>Poll::Ready(ToSwarm::ReportObservedAddr { address, score }),
+				ToSwarm::CloseConnection { peer_id, connection } =&gt;
+					<span class="kw">return </span>Poll::Ready(ToSwarm::CloseConnection { peer_id, connection }),
 			}
 		}
 
@@ -1992,7 +2062,7 @@
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mdns) = <span class="self">self</span>.mdns {
 			<span class="kw">while let </span>Poll::Ready(ev) = mdns.poll(cx, params) {
 				<span class="kw">match </span>ev {
-					NetworkBehaviourAction::GenerateEvent(event) =&gt; <span class="kw">match </span>event {
+					ToSwarm::GenerateEvent(event) =&gt; <span class="kw">match </span>event {
 						mdns::Event::Discovered(list) =&gt; {
 							<span class="kw">if </span><span class="self">self</span>.num_connections &gt;= <span class="self">self</span>.discovery_only_if_under_num {
 								<span class="kw">continue
@@ -2001,25 +2071,21 @@
 							<span class="self">self</span>.pending_events
 								.extend(list.map(|(peer_id, <span class="kw">_</span>)| DiscoveryOut::Discovered(peer_id)));
 							<span class="kw">if let </span><span class="prelude-val">Some</span>(ev) = <span class="self">self</span>.pending_events.pop_front() {
-								<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(ev))
+								<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(ev))
 							}
 						},
 						mdns::Event::Expired(<span class="kw">_</span>) =&gt; {},
 					},
-					NetworkBehaviourAction::Dial { .. } =&gt; {
+					ToSwarm::Dial { .. } =&gt; {
 						<span class="macro">unreachable!</span>(<span class="string">&quot;mDNS never dials!&quot;</span>);
 					},
-					NetworkBehaviourAction::NotifyHandler { event, .. } =&gt; <span class="kw">match </span>event {}, <span class="comment">/* `event` is an enum with no variant */
-					</span>NetworkBehaviourAction::ReportObservedAddr { address, score } =&gt;
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::ReportObservedAddr {
-							address,
-							score,
-						}),
-					NetworkBehaviourAction::CloseConnection { peer_id, connection } =&gt;
-						<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::CloseConnection {
-							peer_id,
-							connection,
-						}),
+					ToSwarm::NotifyHandler { event, .. } =&gt; <span class="kw">match </span>event {}, <span class="comment">/* `event` is an */
+					// enum with no
+					// variant
+					</span>ToSwarm::ReportObservedAddr { address, score } =&gt;
+						<span class="kw">return </span>Poll::Ready(ToSwarm::ReportObservedAddr { address, score }),
+					ToSwarm::CloseConnection { peer_id, connection } =&gt;
+						<span class="kw">return </span>Poll::Ready(ToSwarm::CloseConnection { peer_id, connection }),
 				}
 			}
 		}
@@ -2058,9 +2124,9 @@
 			transport::{MemoryTransport, Transport},
 			upgrade,
 		},
-		identity::{ed25519, Keypair},
+		identity::Keypair,
 		noise,
-		swarm::{Executor, Swarm, SwarmEvent},
+		swarm::{Executor, Swarm, SwarmBuilder, SwarmEvent},
 		yamux, Multiaddr,
 	};
 	<span class="kw">use </span>sp_core::hash::H256;
@@ -2087,17 +2153,14 @@
 			.map(|i| {
 				<span class="kw">let </span>keypair = Keypair::generate_ed25519();
 
-				<span class="kw">let </span>noise_keys =
-					noise::Keypair::&lt;noise::X25519Spec&gt;::new().into_authentic(<span class="kw-2">&amp;</span>keypair).unwrap();
-
 				<span class="kw">let </span>transport = MemoryTransport::new()
 					.upgrade(upgrade::Version::V1)
-					.authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-					.multiplex(yamux::YamuxConfig::default())
+					.authenticate(noise::Config::new(<span class="kw-2">&amp;</span>keypair).unwrap())
+					.multiplex(yamux::Config::default())
 					.boxed();
 
 				<span class="kw">let </span>behaviour = {
-					<span class="kw">let </span><span class="kw-2">mut </span>config = DiscoveryConfig::new(keypair.public());
+					<span class="kw">let </span><span class="kw-2">mut </span>config = DiscoveryConfig::new(keypair.public().to_peer_id());
 					config
 						.with_permanent_addresses(first_swarm_peer_id_and_addr.clone())
 						.allow_private_ip(<span class="bool-val">true</span>)
@@ -2109,12 +2172,13 @@
 				};
 
 				<span class="kw">let </span>runtime = tokio::runtime::Runtime::new().unwrap();
-				<span class="kw">let </span><span class="kw-2">mut </span>swarm = Swarm::with_executor(
+				<span class="kw">let </span><span class="kw-2">mut </span>swarm = SwarmBuilder::with_executor(
 					transport,
 					behaviour,
 					keypair.public().to_peer_id(),
 					TokioExecutor(runtime),
-				);
+				)
+				.build();
 				<span class="kw">let </span>listen_addr: Multiaddr =
 					<span class="macro">format!</span>(<span class="string">&quot;/memory/{}&quot;</span>, rand::random::&lt;u64&gt;()).parse().unwrap();
 
@@ -2216,7 +2280,7 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>discovery = {
 			<span class="kw">let </span>keypair = Keypair::generate_ed25519();
-			<span class="kw">let </span><span class="kw-2">mut </span>config = DiscoveryConfig::new(keypair.public());
+			<span class="kw">let </span><span class="kw-2">mut </span>config = DiscoveryConfig::new(keypair.public().to_peer_id());
 			config
 				.allow_private_ip(<span class="bool-val">true</span>)
 				.allow_non_globals_in_dht(<span class="bool-val">true</span>)
@@ -2226,11 +2290,7 @@
 		};
 
 		<span class="kw">let </span>predictable_peer_id = |bytes: <span class="kw-2">&amp;</span>[u8; <span class="number">32</span>]| {
-			Keypair::Ed25519(ed25519::Keypair::from(
-				ed25519::SecretKey::from_bytes(bytes.to_owned()).unwrap(),
-			))
-			.public()
-			.to_peer_id()
+			Keypair::ed25519_from_bytes(bytes.to_owned()).unwrap().public().to_peer_id()
 		};
 
 		<span class="kw">let </span>remote_peer_id = predictable_peer_id(<span class="string">b&quot;00000000000000000000000000000001&quot;</span>);

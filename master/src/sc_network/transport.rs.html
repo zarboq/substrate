@@ -102,34 +102,6 @@
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -148,20 +120,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;.
 
-</span><span class="kw">use </span>libp2p::{
-	bandwidth,
+</span><span class="kw">use </span>either::Either;
+<span class="kw">use </span>libp2p::{
 	core::{
-		<span class="self">self</span>,
-		either::EitherTransport,
 		muxing::StreamMuxerBox,
 		transport::{Boxed, OptionalTransport},
 		upgrade,
 	},
-	dns, identity, mplex, noise, tcp, websocket, PeerId, Transport,
+	dns, identity, noise, tcp, websocket, PeerId, Transport, TransportExt,
 };
 <span class="kw">use </span>std::{sync::Arc, time::Duration};
 
-<span class="kw">pub use </span><span class="self">self</span>::bandwidth::BandwidthSinks;
+<span class="kw">pub use </span>libp2p::bandwidth::BandwidthSinks;
 
 <span class="doccomment">/// Builds the transport that serves as a common ground for all connections.
 ///
@@ -191,7 +161,7 @@
 		<span class="kw">let </span>tcp_trans = tcp::tokio::Transport::new(tcp_config.clone());
 		<span class="kw">let </span>dns_init = dns::TokioDnsConfig::system(tcp_trans);
 
-		EitherTransport::Left(<span class="kw">if let </span><span class="prelude-val">Ok</span>(dns) = dns_init {
+		Either::Left(<span class="kw">if let </span><span class="prelude-val">Ok</span>(dns) = dns_init {
 			<span class="comment">// WS + WSS transport
 			//
 			// Main transport can&#39;t be used for `/wss` addresses because WSS transport needs
@@ -200,47 +170,21 @@
 			</span><span class="kw">let </span>tcp_trans = tcp::tokio::Transport::new(tcp_config);
 			<span class="kw">let </span>dns_for_wss = dns::TokioDnsConfig::system(tcp_trans)
 				.expect(<span class="string">&quot;same system_conf &amp; resolver to work&quot;</span>);
-			EitherTransport::Left(websocket::WsConfig::new(dns_for_wss).or_transport(dns))
+			Either::Left(websocket::WsConfig::new(dns_for_wss).or_transport(dns))
 		} <span class="kw">else </span>{
 			<span class="comment">// In case DNS can&#39;t be constructed, fallback to TCP + WS (WSS won&#39;t work)
 			</span><span class="kw">let </span>tcp_trans = tcp::tokio::Transport::new(tcp_config.clone());
 			<span class="kw">let </span>desktop_trans = websocket::WsConfig::new(tcp_trans)
 				.or_transport(tcp::tokio::Transport::new(tcp_config));
-			EitherTransport::Right(desktop_trans)
+			Either::Right(desktop_trans)
 		})
 	} <span class="kw">else </span>{
-		EitherTransport::Right(OptionalTransport::some(
-			libp2p::core::transport::MemoryTransport::default(),
-		))
+		Either::Right(OptionalTransport::some(libp2p::core::transport::MemoryTransport::default()))
 	};
 
-	<span class="kw">let </span>(transport, bandwidth) = bandwidth::BandwidthLogging::new(transport);
-
-	<span class="kw">let </span>authentication_config =
-		{
-			<span class="comment">// For more information about these two panics, see in &quot;On the Importance of
-			// Checking Cryptographic Protocols for Faults&quot; by Dan Boneh, Richard A. DeMillo,
-			// and Richard J. Lipton.
-			</span><span class="kw">let </span>noise_keypair = noise::Keypair::&lt;noise::X25519Spec&gt;::new().into_authentic(<span class="kw-2">&amp;</span>keypair)
-			.expect(<span class="string">&quot;can only fail in case of a hardware bug; since this signing is performed only \
-				once and at initialization, we&#39;re taking the bet that the inconvenience of a very \
-				rare panic here is basically zero&quot;</span>);
-
-			<span class="comment">// Legacy noise configurations for backward compatibility.
-			</span><span class="kw">let </span>noise_legacy =
-				noise::LegacyConfig { recv_legacy_handshake: <span class="bool-val">true</span>, ..Default::default() };
-
-			<span class="kw">let </span><span class="kw-2">mut </span>xx_config = noise::NoiseConfig::xx(noise_keypair);
-			xx_config.set_legacy_config(noise_legacy);
-			xx_config.into_authenticated()
-		};
-
+	<span class="kw">let </span>authentication_config = noise::Config::new(<span class="kw-2">&amp;</span>keypair).expect(<span class="string">&quot;Can create noise config. qed&quot;</span>);
 	<span class="kw">let </span>multiplexing_config = {
-		<span class="kw">let </span><span class="kw-2">mut </span>mplex_config = mplex::MplexConfig::new();
-		mplex_config.set_max_buffer_behaviour(mplex::MaxBufferBehaviour::Block);
-		mplex_config.set_max_buffer_size(usize::MAX);
-
-		<span class="kw">let </span><span class="kw-2">mut </span>yamux_config = libp2p::yamux::YamuxConfig::default();
+		<span class="kw">let </span><span class="kw-2">mut </span>yamux_config = libp2p::yamux::Config::default();
 		<span class="comment">// Enable proper flow-control: window updates are only sent when
 		// buffered data has been consumed.
 		</span>yamux_config.set_window_update_mode(libp2p::yamux::WindowUpdateMode::on_read());
@@ -250,7 +194,7 @@
 			yamux_config.set_receive_window_size(yamux_window_size);
 		}
 
-		core::upgrade::SelectUpgrade::new(yamux_config, mplex_config)
+		yamux_config
 	};
 
 	<span class="kw">let </span>transport = transport
@@ -260,7 +204,7 @@
 		.timeout(Duration::from_secs(<span class="number">20</span>))
 		.boxed();
 
-	(transport, bandwidth)
+	transport.with_bandwidth_logging()
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sc_network" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

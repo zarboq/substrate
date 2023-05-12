@@ -1481,14 +1481,6 @@
 <a href="#1481" id="1481">1481</a>
 <a href="#1482" id="1482">1482</a>
 <a href="#1483" id="1483">1483</a>
-<a href="#1484" id="1484">1484</a>
-<a href="#1485" id="1485">1485</a>
-<a href="#1486" id="1486">1486</a>
-<a href="#1487" id="1487">1487</a>
-<a href="#1488" id="1488">1488</a>
-<a href="#1489" id="1489">1489</a>
-<a href="#1490" id="1490">1490</a>
-<a href="#1491" id="1491">1491</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1509,8 +1501,8 @@
 
 </span><span class="doccomment">//! Collection of request-response protocols.
 //!
-//! The [`RequestResponse`] struct defined in this module provides support for zero or more
-//! so-called &quot;request-response&quot; protocols.
+//! The [`RequestResponsesBehaviour`] struct defined in this module provides support for zero or
+//! more so-called &quot;request-response&quot; protocols.
 //!
 //! A request-response protocol works in the following way:
 //!
@@ -1532,17 +1524,15 @@
 	prelude::<span class="kw-2">*</span>,
 };
 <span class="kw">use </span>libp2p::{
-	core::{connection::ConnectionId, Multiaddr, PeerId},
-	request_response::{
-		handler::RequestResponseHandler, ProtocolSupport, RequestResponse, RequestResponseCodec,
-		RequestResponseEvent, RequestResponseMessage, ResponseChannel,
-	},
+	core::{Endpoint, Multiaddr},
+	request_response::{<span class="self">self</span>, Behaviour, Codec, Message, ProtocolSupport, ResponseChannel},
 	swarm::{
-		behaviour::{ConnectionClosed, DialFailure, FromSwarm, ListenFailure},
+		behaviour::{ConnectionClosed, FromSwarm},
 		handler::multi::MultiHandler,
-		ConnectionHandler, IntoConnectionHandler, NetworkBehaviour, NetworkBehaviourAction,
-		PollParameters,
+		ConnectionDenied, ConnectionId, NetworkBehaviour, PollParameters, THandler,
+		THandlerInEvent, THandlerOutEvent, ToSwarm,
 	},
+	PeerId,
 };
 
 <span class="kw">use </span>sc_peerset::{PeersetHandle, BANNED_THRESHOLD};
@@ -1555,9 +1545,7 @@
 	time::{Duration, Instant},
 };
 
-<span class="kw">pub use </span>libp2p::request_response::{
-	InboundFailure, OutboundFailure, RequestId, RequestResponseConfig,
-};
+<span class="kw">pub use </span>libp2p::request_response::{Config, InboundFailure, OutboundFailure, RequestId};
 
 <span class="doccomment">/// Error in a request.
 </span><span class="attr">#[derive(Debug, thiserror::Error)]
@@ -1751,14 +1739,13 @@
 <span class="doccomment">/// Implementation of `NetworkBehaviour` that provides support for request-response protocols.
 </span><span class="kw">pub struct </span>RequestResponsesBehaviour {
 	<span class="doccomment">/// The multiple sub-protocols, by name.
-	/// Contains the underlying libp2p `RequestResponse` behaviour, plus an optional
+	///
+	/// Contains the underlying libp2p request-response [`Behaviour`], plus an optional
 	/// &quot;response builder&quot; used to build responses for incoming requests.
-	</span>protocols: HashMap&lt;
-		ProtocolName,
-		(RequestResponse&lt;GenericCodec&gt;, <span class="prelude-ty">Option</span>&lt;mpsc::Sender&lt;IncomingRequest&gt;&gt;),
-	&gt;,
+	</span>protocols:
+		HashMap&lt;ProtocolName, (Behaviour&lt;GenericCodec&gt;, <span class="prelude-ty">Option</span>&lt;mpsc::Sender&lt;IncomingRequest&gt;&gt;)&gt;,
 
-	<span class="doccomment">/// Pending requests, passed down to a [`RequestResponse`] behaviour, awaiting a reply.
+	<span class="doccomment">/// Pending requests, passed down to a request-response [`Behaviour`], awaiting a reply.
 	</span>pending_requests:
 		HashMap&lt;ProtocolRequestId, (Instant, oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, RequestFailure&gt;&gt;)&gt;,
 
@@ -1815,7 +1802,7 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, RegisterError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>protocols = HashMap::new();
 		<span class="kw">for </span>protocol <span class="kw">in </span>list {
-			<span class="kw">let </span><span class="kw-2">mut </span>cfg = RequestResponseConfig::default();
+			<span class="kw">let </span><span class="kw-2">mut </span>cfg = Config::default();
 			cfg.set_connection_keep_alive(Duration::from_secs(<span class="number">10</span>));
 			cfg.set_request_timeout(protocol.request_timeout);
 
@@ -1825,7 +1812,7 @@
 				ProtocolSupport::Outbound
 			};
 
-			<span class="kw">let </span>rq_rp = RequestResponse::new(
+			<span class="kw">let </span>rq_rp = Behaviour::new(
 				GenericCodec {
 					max_request_size: protocol.max_request_size,
 					max_response_size: protocol.max_response_size,
@@ -1892,50 +1879,79 @@
 			);
 		}
 	}
-
-	<span class="kw">fn </span>new_handler_with_replacement(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		protocol: String,
-		handler: RequestResponseHandler&lt;GenericCodec&gt;,
-	) -&gt; &lt;RequestResponsesBehaviour <span class="kw">as </span>NetworkBehaviour&gt;::ConnectionHandler {
-		<span class="kw">let </span><span class="kw-2">mut </span>handlers: HashMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = <span class="self">self
-			</span>.protocols
-			.iter_mut()
-			.map(|(p, (r, <span class="kw">_</span>))| (p.to_string(), NetworkBehaviour::new_handler(r)))
-			.collect();
-
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(h) = handlers.get_mut(<span class="kw-2">&amp;</span>protocol) {
-			<span class="kw-2">*</span>h = handler
-		}
-
-		MultiHandler::try_from_iter(handlers).expect(
-			<span class="string">&quot;Protocols are in a HashMap and there can be at most one handler per protocol name, \
-			 which is the only possible error; qed&quot;</span>,
-		)
-	}
 }
 
 <span class="kw">impl </span>NetworkBehaviour <span class="kw">for </span>RequestResponsesBehaviour {
-	<span class="kw">type </span>ConnectionHandler = MultiHandler&lt;
-		String,
-		&lt;RequestResponse&lt;GenericCodec&gt; <span class="kw">as </span>NetworkBehaviour&gt;::ConnectionHandler,
-	&gt;;
+	<span class="kw">type </span>ConnectionHandler =
+		MultiHandler&lt;String, &lt;Behaviour&lt;GenericCodec&gt; <span class="kw">as </span>NetworkBehaviour&gt;::ConnectionHandler&gt;;
 	<span class="kw">type </span>OutEvent = Event;
 
-	<span class="kw">fn </span>new_handler(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="self">Self</span>::ConnectionHandler {
-		<span class="kw">let </span>iter = <span class="self">self
-			</span>.protocols
-			.iter_mut()
-			.map(|(p, (r, <span class="kw">_</span>))| (p.to_string(), NetworkBehaviour::new_handler(r)));
-
-		MultiHandler::try_from_iter(iter).expect(
-			<span class="string">&quot;Protocols are in a HashMap and there can be at most one handler per protocol name, \
-			 which is the only possible error; qed&quot;</span>,
-		)
+	<span class="kw">fn </span>handle_pending_inbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		_connection_id: ConnectionId,
+		_local_addr: <span class="kw-2">&amp;</span>Multiaddr,
+		_remote_addr: <span class="kw-2">&amp;</span>Multiaddr,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), ConnectionDenied&gt; {
+		<span class="prelude-val">Ok</span>(())
 	}
 
-	<span class="kw">fn </span>addresses_of_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>PeerId) -&gt; Vec&lt;Multiaddr&gt; {
-		Vec::new()
+	<span class="kw">fn </span>handle_pending_outbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		_connection_id: ConnectionId,
+		_maybe_peer: <span class="prelude-ty">Option</span>&lt;PeerId&gt;,
+		_addresses: <span class="kw-2">&amp;</span>[Multiaddr],
+		_effective_role: Endpoint,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Multiaddr&gt;, ConnectionDenied&gt; {
+		<span class="prelude-val">Ok</span>(Vec::new())
+	}
+
+	<span class="kw">fn </span>handle_established_inbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		connection_id: ConnectionId,
+		peer: PeerId,
+		local_addr: <span class="kw-2">&amp;</span>Multiaddr,
+		remote_addr: <span class="kw-2">&amp;</span>Multiaddr,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;THandler&lt;<span class="self">Self</span>&gt;, ConnectionDenied&gt; {
+		<span class="kw">let </span>iter = <span class="self">self</span>.protocols.iter_mut().filter_map(|(p, (r, <span class="kw">_</span>))| {
+			<span class="kw">if let </span><span class="prelude-val">Ok</span>(handler) = r.handle_established_inbound_connection(
+				connection_id,
+				peer,
+				local_addr,
+				remote_addr,
+			) {
+				<span class="prelude-val">Some</span>((p.to_string(), handler))
+			} <span class="kw">else </span>{
+				<span class="prelude-val">None
+			</span>}
+		});
+
+		<span class="prelude-val">Ok</span>(MultiHandler::try_from_iter(iter).expect(
+			<span class="string">&quot;Protocols are in a HashMap and there can be at most one handler per protocol name, \
+			 which is the only possible error; qed&quot;</span>,
+		))
+	}
+
+	<span class="kw">fn </span>handle_established_outbound_connection(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		connection_id: ConnectionId,
+		peer: PeerId,
+		addr: <span class="kw-2">&amp;</span>Multiaddr,
+		role_override: Endpoint,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;THandler&lt;<span class="self">Self</span>&gt;, ConnectionDenied&gt; {
+		<span class="kw">let </span>iter = <span class="self">self</span>.protocols.iter_mut().filter_map(|(p, (r, <span class="kw">_</span>))| {
+			<span class="kw">if let </span><span class="prelude-val">Ok</span>(handler) =
+				r.handle_established_outbound_connection(connection_id, peer, addr, role_override)
+			{
+				<span class="prelude-val">Some</span>((p.to_string(), handler))
+			} <span class="kw">else </span>{
+				<span class="prelude-val">None
+			</span>}
+		});
+
+		<span class="prelude-val">Ok</span>(MultiHandler::try_from_iter(iter).expect(
+			<span class="string">&quot;Protocols are in a HashMap and there can be at most one handler per protocol name, \
+			 which is the only possible error; qed&quot;</span>,
+		))
 	}
 
 	<span class="kw">fn </span>on_swarm_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: FromSwarm&lt;<span class="self">Self</span>::ConnectionHandler&gt;) {
@@ -1968,42 +1984,17 @@
 						)
 					}
 				},
-			FromSwarm::DialFailure(DialFailure { peer_id, error, handler }) =&gt; {
-				<span class="kw">for </span>(p_name, p_handler) <span class="kw">in </span>handler.into_iter() {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>((proto, <span class="kw">_</span>)) = <span class="self">self</span>.protocols.get_mut(p_name.as_str()) {
-						proto.on_swarm_event(FromSwarm::DialFailure(DialFailure {
-							peer_id,
-							handler: p_handler,
-							error,
-						}));
-					} <span class="kw">else </span>{
-						<span class="macro">log::error!</span>(
-						  target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						  <span class="string">&quot;on_swarm_event/dial_failure: no request-response instance registered for protocol {:?}&quot;</span>,
-						  p_name,
-						)
-					}
-				}
-			},
+			FromSwarm::DialFailure(e) =&gt;
+				<span class="kw">for </span>(p, <span class="kw">_</span>) <span class="kw">in </span><span class="self">self</span>.protocols.values_mut() {
+					NetworkBehaviour::on_swarm_event(p, FromSwarm::DialFailure(e));
+				},
 			FromSwarm::ListenerClosed(e) =&gt;
 				<span class="kw">for </span>(p, <span class="kw">_</span>) <span class="kw">in </span><span class="self">self</span>.protocols.values_mut() {
 					NetworkBehaviour::on_swarm_event(p, FromSwarm::ListenerClosed(e));
 				},
-			FromSwarm::ListenFailure(ListenFailure { local_addr, send_back_addr, handler }) =&gt;
-				<span class="kw">for </span>(p_name, p_handler) <span class="kw">in </span>handler.into_iter() {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>((proto, <span class="kw">_</span>)) = <span class="self">self</span>.protocols.get_mut(p_name.as_str()) {
-						proto.on_swarm_event(FromSwarm::ListenFailure(ListenFailure {
-							local_addr,
-							send_back_addr,
-							handler: p_handler,
-						}));
-					} <span class="kw">else </span>{
-						<span class="macro">log::error!</span>(
-						  target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						  <span class="string">&quot;on_swarm_event/listen_failure: no request-response instance registered for protocol {:?}&quot;</span>,
-						  p_name,
-						)
-					}
+			FromSwarm::ListenFailure(e) =&gt;
+				<span class="kw">for </span>(p, <span class="kw">_</span>) <span class="kw">in </span><span class="self">self</span>.protocols.values_mut() {
+					NetworkBehaviour::on_swarm_event(p, FromSwarm::ListenFailure(e));
 				},
 			FromSwarm::ListenerError(e) =&gt;
 				<span class="kw">for </span>(p, <span class="kw">_</span>) <span class="kw">in </span><span class="self">self</span>.protocols.values_mut() {
@@ -2040,25 +2031,25 @@
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		peer_id: PeerId,
 		connection_id: ConnectionId,
-		(p_name, event): &lt;&lt;<span class="self">Self</span>::ConnectionHandler <span class="kw">as </span>IntoConnectionHandler&gt;::Handler <span class="kw">as
-      </span>ConnectionHandler&gt;::OutEvent,
+		event: THandlerOutEvent&lt;<span class="self">Self</span>&gt;,
 	) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>((proto, <span class="kw">_</span>)) = <span class="self">self</span>.protocols.get_mut(<span class="kw-2">&amp;*</span>p_name) {
-			<span class="kw">return </span>proto.on_connection_handler_event(peer_id, connection_id, event)
+		<span class="kw">let </span>p_name = event.<span class="number">0</span>;
+		<span class="kw">if let </span><span class="prelude-val">Some</span>((proto, <span class="kw">_</span>)) = <span class="self">self</span>.protocols.get_mut(p_name.as_str()) {
+			<span class="kw">return </span>proto.on_connection_handler_event(peer_id, connection_id, event.<span class="number">1</span>)
+		} <span class="kw">else </span>{
+			<span class="macro">log::warn!</span>(
+				target: <span class="string">&quot;sub-libp2p&quot;</span>,
+				<span class="string">&quot;on_connection_handler_event: no request-response instance registered for protocol {:?}&quot;</span>,
+				p_name
+			);
 		}
-
-		<span class="macro">log::warn!</span>(
-			target: <span class="string">&quot;sub-libp2p&quot;</span>,
-			<span class="string">&quot;on_connection_handler_event: no request-response instance registered for protocol {:?}&quot;</span>,
-			p_name
-		);
 	}
 
 	<span class="kw">fn </span>poll(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		cx: <span class="kw-2">&amp;mut </span>Context,
 		params: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>PollParameters,
-	) -&gt; Poll&lt;NetworkBehaviourAction&lt;<span class="self">Self</span>::OutEvent, <span class="self">Self</span>::ConnectionHandler&gt;&gt; {
+	) -&gt; Poll&lt;ToSwarm&lt;<span class="self">Self</span>::OutEvent, THandlerInEvent&lt;<span class="self">Self</span>&gt;&gt;&gt; {
 		<span class="lifetime">&#39;poll_all</span>: <span class="kw">loop </span>{
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(message_request) = <span class="self">self</span>.message_request.take() {
 				<span class="comment">// Now we can can poll `MessageRequest` until we get the reputation
@@ -2112,8 +2103,8 @@
 						// initialization.
 						</span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>resp_builder) = resp_builder {
 							<span class="comment">// If the response builder is too busy, silently drop `tx`. This
-							// will be reported by the corresponding `RequestResponse` through
-							// an `InboundFailure::Omission` event.
+							// will be reported by the corresponding request-response [`Behaviour`]
+							// through an `InboundFailure::Omission` event.
 							</span><span class="kw">let _ </span>= resp_builder.try_send(IncomingRequest {
 								peer,
 								payload: request,
@@ -2165,7 +2156,7 @@
 					<span class="kw">if let </span><span class="prelude-val">Some</span>((protocol, <span class="kw">_</span>)) = <span class="self">self</span>.protocols.get_mut(<span class="kw-2">&amp;*</span>protocol_name) {
 						<span class="kw">if </span>protocol.send_response(inner_channel, <span class="prelude-val">Ok</span>(payload)).is_err() {
 							<span class="comment">// Note: Failure is handled further below when receiving
-							// `InboundFailure` event from `RequestResponse` behaviour.
+							// `InboundFailure` event from request-response [`Behaviour`].
 							</span><span class="macro">log::debug!</span>(
 								target: <span class="string">&quot;sub-libp2p&quot;</span>,
 								<span class="string">&quot;Failed to send response for {:?} on protocol {:?} due to a \
@@ -2181,9 +2172,10 @@
 				}
 
 				<span class="kw">if </span>!reputation_changes.is_empty() {
-					<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(
-						Event::ReputationChanges { peer, changes: reputation_changes },
-					))
+					<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(Event::ReputationChanges {
+						peer,
+						changes: reputation_changes,
+					}))
 				}
 			}
 
@@ -2192,44 +2184,35 @@
 				<span class="kw">while let </span>Poll::Ready(ev) = behaviour.poll(cx, params) {
 					<span class="kw">let </span>ev = <span class="kw">match </span>ev {
 						<span class="comment">// Main events we are interested in.
-						</span>NetworkBehaviourAction::GenerateEvent(ev) =&gt; ev,
+						</span>ToSwarm::GenerateEvent(ev) =&gt; ev,
 
 						<span class="comment">// Other events generated by the underlying behaviour are transparently
 						// passed through.
-						</span>NetworkBehaviourAction::Dial { opts, handler } =&gt; {
+						</span>ToSwarm::Dial { opts } =&gt; {
 							<span class="kw">if </span>opts.get_peer_id().is_none() {
 								<span class="macro">log::error!</span>(
 									<span class="string">&quot;The request-response isn&#39;t supposed to start dialing addresses&quot;
 								</span>);
 							}
-							<span class="kw">let </span>protocol = protocol.to_string();
-							<span class="kw">let </span>handler = <span class="self">self</span>.new_handler_with_replacement(protocol, handler);
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::Dial { opts, handler })
+							<span class="kw">return </span>Poll::Ready(ToSwarm::Dial { opts })
 						},
-						NetworkBehaviourAction::NotifyHandler { peer_id, handler, event } =&gt;
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::NotifyHandler {
+						ToSwarm::NotifyHandler { peer_id, handler, event } =&gt;
+							<span class="kw">return </span>Poll::Ready(ToSwarm::NotifyHandler {
 								peer_id,
 								handler,
 								event: ((<span class="kw-2">*</span>protocol).to_string(), event),
 							}),
-						NetworkBehaviourAction::ReportObservedAddr { address, score } =&gt;
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::ReportObservedAddr {
-								address,
-								score,
-							}),
-						NetworkBehaviourAction::CloseConnection { peer_id, connection } =&gt;
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::CloseConnection {
-								peer_id,
-								connection,
-							}),
+						ToSwarm::ReportObservedAddr { address, score } =&gt;
+							<span class="kw">return </span>Poll::Ready(ToSwarm::ReportObservedAddr { address, score }),
+						ToSwarm::CloseConnection { peer_id, connection } =&gt;
+							<span class="kw">return </span>Poll::Ready(ToSwarm::CloseConnection { peer_id, connection }),
 					};
 
 					<span class="kw">match </span>ev {
 						<span class="comment">// Received a request from a remote.
-						</span>RequestResponseEvent::Message {
+						</span>request_response::Event::Message {
 							peer,
-							message:
-								RequestResponseMessage::Request { request_id, request, channel, .. },
+							message: Message::Request { request_id, request, channel, .. },
 						} =&gt; {
 							<span class="self">self</span>.pending_responses_arrival_time
 								.insert((protocol.clone(), request_id).into(), Instant::now());
@@ -2256,9 +2239,9 @@
 						</span>},
 
 						<span class="comment">// Received a response from a remote to one of our requests.
-						</span>RequestResponseEvent::Message {
+						</span>request_response::Event::Message {
 							peer,
-							message: RequestResponseMessage::Response { request_id, response },
+							message: Message::Response { request_id, response },
 							..
 						} =&gt; {
 							<span class="kw">let </span>(started, delivered) = <span class="kw">match </span><span class="self">self
@@ -2289,12 +2272,15 @@
 								result: delivered,
 							};
 
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(out))
+							<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(out))
 						},
 
 						<span class="comment">// One of our requests has failed.
-						</span>RequestResponseEvent::OutboundFailure {
-							peer, request_id, error, ..
+						</span>request_response::Event::OutboundFailure {
+							peer,
+							request_id,
+							error,
+							..
 						} =&gt; {
 							<span class="kw">let </span>started = <span class="kw">match </span><span class="self">self
 								</span>.pending_requests
@@ -2332,12 +2318,12 @@
 								result: <span class="prelude-val">Err</span>(RequestFailure::Network(error)),
 							};
 
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(out))
+							<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(out))
 						},
 
 						<span class="comment">// An inbound request failed, either while reading the request or due to
 						// failing to send a response.
-						</span>RequestResponseEvent::InboundFailure {
+						</span>request_response::Event::InboundFailure {
 							request_id, peer, error, ..
 						} =&gt; {
 							<span class="self">self</span>.pending_responses_arrival_time
@@ -2348,11 +2334,11 @@
 								protocol: protocol.clone(),
 								result: <span class="prelude-val">Err</span>(ResponseFailure::Network(error)),
 							};
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(out))
+							<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(out))
 						},
 
 						<span class="comment">// A response to an inbound request has been sent.
-						</span>RequestResponseEvent::ResponseSent { request_id, peer } =&gt; {
+						</span>request_response::Event::ResponseSent { request_id, peer } =&gt; {
 							<span class="kw">let </span>arrival_time = <span class="self">self
 								</span>.pending_responses_arrival_time
 								.remove(<span class="kw-2">&amp;</span>(protocol.clone(), request_id).into())
@@ -2377,7 +2363,7 @@
 								result: <span class="prelude-val">Ok</span>(arrival_time),
 							};
 
-							<span class="kw">return </span>Poll::Ready(NetworkBehaviourAction::GenerateEvent(out))
+							<span class="kw">return </span>Poll::Ready(ToSwarm::GenerateEvent(out))
 						},
 					};
 				}
@@ -2404,7 +2390,7 @@
 	</span>Network(InboundFailure),
 }
 
-<span class="doccomment">/// Implements the libp2p [`RequestResponseCodec`] trait. Defines how streams of bytes are turned
+<span class="doccomment">/// Implements the libp2p [`Codec`] trait. Defines how streams of bytes are turned
 /// into requests and responses and vice-versa.
 </span><span class="attr">#[derive(Debug, Clone)]
 #[doc(hidden)] </span><span class="comment">// Needs to be public in order to satisfy the Rust compiler.
@@ -2414,7 +2400,7 @@
 }
 
 <span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>RequestResponseCodec <span class="kw">for </span>GenericCodec {
+</span><span class="kw">impl </span>Codec <span class="kw">for </span>GenericCodec {
 	<span class="kw">type </span>Protocol = Vec&lt;u8&gt;;
 	<span class="kw">type </span>Request = Vec&lt;u8&gt;;
 	<span class="kw">type </span>Response = <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, ()&gt;;
@@ -2545,7 +2531,7 @@
 		},
 		identity::Keypair,
 		noise,
-		swarm::{Executor, Swarm, SwarmEvent},
+		swarm::{Executor, Swarm, SwarmBuilder, SwarmEvent},
 		Multiaddr,
 	};
 	<span class="kw">use </span>sc_peerset::{Peerset, PeersetConfig, SetConfig};
@@ -2563,13 +2549,10 @@
 	) -&gt; (Swarm&lt;RequestResponsesBehaviour&gt;, Multiaddr, Peerset) {
 		<span class="kw">let </span>keypair = Keypair::generate_ed25519();
 
-		<span class="kw">let </span>noise_keys =
-			noise::Keypair::&lt;noise::X25519Spec&gt;::new().into_authentic(<span class="kw-2">&amp;</span>keypair).unwrap();
-
 		<span class="kw">let </span>transport = MemoryTransport::new()
 			.upgrade(upgrade::Version::V1)
-			.authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
-			.multiplex(libp2p::yamux::YamuxConfig::default())
+			.authenticate(noise::Config::new(<span class="kw-2">&amp;</span>keypair).unwrap())
+			.multiplex(libp2p::yamux::Config::default())
 			.boxed();
 
 		<span class="kw">let </span>config = PeersetConfig {
@@ -2587,12 +2570,13 @@
 		<span class="kw">let </span>behaviour = RequestResponsesBehaviour::new(list, handle).unwrap();
 
 		<span class="kw">let </span>runtime = tokio::runtime::Runtime::new().unwrap();
-		<span class="kw">let </span><span class="kw-2">mut </span>swarm = Swarm::with_executor(
+		<span class="kw">let </span><span class="kw-2">mut </span>swarm = SwarmBuilder::with_executor(
 			transport,
 			behaviour,
 			keypair.public().to_peer_id(),
 			TokioExecutor(runtime),
-		);
+		)
+		.build();
 		<span class="kw">let </span>listen_addr: Multiaddr = <span class="macro">format!</span>(<span class="string">&quot;/memory/{}&quot;</span>, rand::random::&lt;u64&gt;()).parse().unwrap();
 
 		swarm.listen_on(listen_addr.clone()).unwrap();
@@ -2608,7 +2592,7 @@
 		<span class="kw">let </span>protocol_name = <span class="string">&quot;/test/req-resp/1&quot;</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>pool = LocalPool::new();
 
-		<span class="comment">// Build swarms whose behaviour is `RequestResponsesBehaviour`.
+		<span class="comment">// Build swarms whose behaviour is [`RequestResponsesBehaviour`].
 		</span><span class="kw">let </span><span class="kw-2">mut </span>swarms = (<span class="number">0</span>..<span class="number">2</span>)
 			.map(|<span class="kw">_</span>| {
 				<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = mpsc::channel::&lt;IncomingRequest&gt;(<span class="number">64</span>);
@@ -2711,7 +2695,7 @@
 		<span class="kw">let </span>protocol_name = <span class="string">&quot;/test/req-resp/1&quot;</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>pool = LocalPool::new();
 
-		<span class="comment">// Build swarms whose behaviour is `RequestResponsesBehaviour`.
+		<span class="comment">// Build swarms whose behaviour is [`RequestResponsesBehaviour`].
 		</span><span class="kw">let </span><span class="kw-2">mut </span>swarms = (<span class="number">0</span>..<span class="number">2</span>)
 			.map(|<span class="kw">_</span>| {
 				<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = mpsc::channel::&lt;IncomingRequest&gt;(<span class="number">64</span>);
@@ -2813,10 +2797,10 @@
 	}
 
 	<span class="doccomment">/// A [`RequestId`] is a unique identifier among either all inbound or all outbound requests for
-	/// a single [`RequestResponse`] behaviour. It is not guaranteed to be unique across multiple
-	/// [`RequestResponse`] behaviours. Thus when handling [`RequestId`] in the context of multiple
-	/// [`RequestResponse`] behaviours, one needs to couple the protocol name with the [`RequestId`]
-	/// to get a unique request identifier.
+	/// a single [`RequestResponsesBehaviour`] behaviour. It is not guaranteed to be unique across
+	/// multiple [`RequestResponsesBehaviour`] behaviours. Thus when handling [`RequestId`] in the
+	/// context of multiple [`RequestResponsesBehaviour`] behaviours, one needs to couple the
+	/// protocol name with the [`RequestId`] to get a unique request identifier.
 	///
 	/// This test ensures that two requests on different protocols can be handled concurrently
 	/// without a [`RequestId`] collision.

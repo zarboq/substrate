@@ -775,10 +775,6 @@
 <a href="#775" id="775">775</a>
 <a href="#776" id="776">776</a>
 <a href="#777" id="777">777</a>
-<a href="#778" id="778">778</a>
-<a href="#779" id="779">779</a>
-<a href="#780" id="780">780</a>
-<a href="#781" id="781">781</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -815,11 +811,9 @@
 <span class="kw">use </span>addr_cache::AddrCache;
 <span class="kw">use </span>codec::{Decode, Encode};
 <span class="kw">use </span>ip_network::IpNetwork;
-<span class="kw">use </span>libp2p::{
-	core::multiaddr,
-	multihash::{Multihash, MultihashDigest},
-	Multiaddr, PeerId,
-};
+<span class="kw">use </span>libp2p::{core::multiaddr, identity::PublicKey, multihash::Multihash, Multiaddr, PeerId};
+<span class="kw">use </span>multihash::{Code, MultihashDigest};
+
 <span class="kw">use </span>log::{debug, error, log_enabled};
 <span class="kw">use </span>prometheus_endpoint::{register, Counter, CounterVec, Gauge, Opts, U64};
 <span class="kw">use </span>prost::Message;
@@ -1332,10 +1326,8 @@
 				// properly signed by the owner of the PeerId
 
 				</span><span class="kw">if let </span><span class="prelude-val">Some</span>(peer_signature) = peer_signature {
-					<span class="kw">let </span>public_key = libp2p::identity::PublicKey::from_protobuf_encoding(
-						<span class="kw-2">&amp;</span>peer_signature.public_key,
-					)
-					.map_err(Error::ParsingLibp2pIdentity)<span class="question-mark">?</span>;
+					<span class="kw">let </span>public_key = PublicKey::try_decode_protobuf(<span class="kw-2">&amp;</span>peer_signature.public_key)
+						.map_err(Error::ParsingLibp2pIdentity)<span class="question-mark">?</span>;
 					<span class="kw">let </span>signature = Signature { public_key, bytes: peer_signature.signature };
 
 					<span class="kw">if </span>!signature.verify(record, <span class="kw-2">&amp;</span>remote_peer_id) {
@@ -1406,7 +1398,7 @@
 <span class="kw">impl</span>&lt;T&gt; NetworkProvider <span class="kw">for </span>T <span class="kw">where </span>T: NetworkDHTProvider + NetworkStateInfo + NetworkSigner {}
 
 <span class="kw">fn </span>hash_authority_id(id: <span class="kw-2">&amp;</span>[u8]) -&gt; KademliaKey {
-	KademliaKey::new(<span class="kw-2">&amp;</span>libp2p::multihash::Code::Sha2_256.digest(id).digest())
+	KademliaKey::new(<span class="kw-2">&amp;</span>Code::Sha2_256.digest(id).digest())
 }
 
 <span class="comment">// Makes sure all values are the same and returns it
@@ -1443,7 +1435,7 @@
 	<span class="kw">let </span>signature = network
 		.sign_with_local_identity(serialized_record)
 		.map_err(|e| Error::CannotSign(<span class="macro">format!</span>(<span class="string">&quot;{} (network packet)&quot;</span>, e)))<span class="question-mark">?</span>;
-	<span class="kw">let </span>public_key = signature.public_key.to_protobuf_encoding();
+	<span class="kw">let </span>public_key = signature.public_key.encode_protobuf();
 	<span class="kw">let </span>signature = signature.bytes;
 	<span class="prelude-val">Ok</span>(schema::PeerSignature { signature, public_key })
 }
