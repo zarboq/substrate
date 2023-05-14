@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["encode","from_reader","from_slice","from_str","to_string_pretty","to_writer"],"struct":["Error"],"type":["Result"]};

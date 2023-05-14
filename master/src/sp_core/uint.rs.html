@@ -88,6 +88,8 @@
 <a href="#88" id="88">88</a>
 <a href="#89" id="89">89</a>
 <a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -113,7 +115,6 @@
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>codec::{Decode, Encode};
-	<span class="kw">use </span>sp_serializer <span class="kw">as </span>ser;
 
 	<span class="macro">macro_rules! </span>test {
 		(<span class="macro-nonterminal">$name</span>: ident, <span class="macro-nonterminal">$test_name</span>: ident) =&gt; {
@@ -133,14 +134,17 @@
 				];
 
 				<span class="kw">for </span>(number, expected) <span class="kw">in </span>tests {
-					<span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, expected), ser::to_string_pretty(<span class="kw-2">&amp;</span>number));
-					<span class="macro">assert_eq!</span>(number, ser::from_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, expected)).unwrap());
+					<span class="macro">assert_eq!</span>(
+						<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, expected),
+						serde_json::to_string_pretty(<span class="kw-2">&amp;</span>number).expect(<span class="string">&quot;Json pretty print failed&quot;</span>)
+					);
+					<span class="macro">assert_eq!</span>(number, serde_json::from_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, expected)).unwrap());
 				}
 
 				<span class="comment">// Invalid examples
-				</span><span class="macro">assert!</span>(ser::from_str::&lt;<span class="macro-nonterminal">$name</span>&gt;(<span class="string">&quot;\&quot;0x\&quot;&quot;</span>).unwrap_err().is_data());
-				<span class="macro">assert!</span>(ser::from_str::&lt;<span class="macro-nonterminal">$name</span>&gt;(<span class="string">&quot;\&quot;0xg\&quot;&quot;</span>).unwrap_err().is_data());
-				<span class="macro">assert!</span>(ser::from_str::&lt;<span class="macro-nonterminal">$name</span>&gt;(<span class="string">&quot;\&quot;\&quot;&quot;</span>).unwrap_err().is_data());
+				</span><span class="macro">assert!</span>(serde_json::from_str::&lt;<span class="macro-nonterminal">$name</span>&gt;(<span class="string">&quot;\&quot;0x\&quot;&quot;</span>).unwrap_err().is_data());
+				<span class="macro">assert!</span>(serde_json::from_str::&lt;<span class="macro-nonterminal">$name</span>&gt;(<span class="string">&quot;\&quot;0xg\&quot;&quot;</span>).unwrap_err().is_data());
+				<span class="macro">assert!</span>(serde_json::from_str::&lt;<span class="macro-nonterminal">$name</span>&gt;(<span class="string">&quot;\&quot;\&quot;&quot;</span>).unwrap_err().is_data());
 			}
 		};
 	}
@@ -168,10 +172,10 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>test_large_values() {
 		<span class="macro">assert_eq!</span>(
-			ser::to_string_pretty(<span class="kw-2">&amp;</span>!U256::zero()),
+			serde_json::to_string_pretty(<span class="kw-2">&amp;</span>!U256::zero()).expect(<span class="string">&quot;Json pretty print failed&quot;</span>),
 			<span class="string">&quot;\&quot;0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\&quot;&quot;
 		</span>);
-		<span class="macro">assert!</span>(ser::from_str::&lt;U256&gt;(
+		<span class="macro">assert!</span>(serde_json::from_str::&lt;U256&gt;(
 			<span class="string">&quot;\&quot;0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\&quot;&quot;
 		</span>)
 		.unwrap_err()
