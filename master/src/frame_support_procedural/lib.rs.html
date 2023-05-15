@@ -1420,10 +1420,6 @@
 <a href="#1420" id="1420">1420</a>
 <a href="#1421" id="1421">1421</a>
 <a href="#1422" id="1422">1422</a>
-<a href="#1423" id="1423">1423</a>
-<a href="#1424" id="1424">1424</a>
-<a href="#1425" id="1425">1425</a>
-<a href="#1426" id="1426">1426</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2074,12 +2070,13 @@
 }
 
 <span class="doccomment">/// Derive [`Debug`], if `std` is enabled it uses `frame_support::DebugNoBound`, if `std` is not
-/// enabled it just returns `&quot;&lt;stripped&gt;&quot;`.
+/// enabled it just returns `&quot;&lt;wasm:stripped&gt;&quot;`.
 /// This behaviour is useful to prevent bloating the runtime WASM blob from unneeded code.
 </span><span class="attr">#[proc_macro_derive(RuntimeDebugNoBound)]
 </span><span class="kw">pub fn </span>derive_runtime_debug_no_bound(input: TokenStream) -&gt; TokenStream {
-	<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
-	</span>{
+	<span class="kw">if </span><span class="macro">cfg!</span>(any(feature = <span class="string">&quot;std&quot;</span>, feature = <span class="string">&quot;try-runtime&quot;</span>)) {
+		debug_no_bound::derive_debug_no_bound(input)
+	} <span class="kw">else </span>{
 		<span class="kw">let </span>input: syn::DeriveInput = <span class="kw">match </span>syn::parse(input) {
 			<span class="prelude-val">Ok</span>(input) =&gt; input,
 			<span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span>e.to_compile_error().into(),
@@ -2092,17 +2089,12 @@
 			<span class="kw">const _</span>: () = {
 				<span class="kw">impl </span>#impl_generics core::fmt::Debug <span class="kw">for </span>#name #ty_generics #where_clause {
 					<span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, fmt: <span class="kw-2">&amp;mut </span>core::fmt::Formatter) -&gt; core::fmt::Result {
-						fmt.write_str(<span class="string">&quot;&lt;stripped&gt;&quot;</span>)
+						fmt.write_str(<span class="string">&quot;&lt;wasm:stripped&gt;&quot;</span>)
 					}
 				}
 			};
 		)
 		.into()
-	}
-
-	<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-	</span>{
-		debug_no_bound::derive_debug_no_bound(input)
 	}
 }
 
