@@ -155,6 +155,21 @@
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -175,8 +190,7 @@
 </span><span class="doccomment">//! Tool for creating the genesis block.
 
 </span><span class="kw">use super</span>::{
-	currency, substrate_test_pallet, wasm_binary_unwrap, AccountId, AuthorityId, Balance,
-	GenesisConfig,
+	currency, substrate_test_pallet, wasm_binary_unwrap, AccountId, Balance, GenesisConfig,
 };
 <span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>sc_service::construct_genesis_block;
@@ -191,15 +205,20 @@
 	BuildStorage,
 };
 
-<span class="doccomment">/// Builder for generating storage from substrate-test-runtime genesis config. Default storage can
-/// be extended with additional key-value pairs.
+<span class="doccomment">/// Builder for generating storage from substrate-test-runtime genesis config.
+///
+/// Default storage can be extended with additional key-value pairs.
 </span><span class="kw">pub struct </span>GenesisStorageBuilder {
-	authorities: Vec&lt;AuthorityId&gt;,
-	balances: Vec&lt;(AccountId, u64)&gt;,
-	heap_pages_override: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+	<span class="doccomment">/// Authorities accounts used by any component requiring an authority set (e.g. babe).
+	</span>authorities: Vec&lt;AccountId&gt;,
+	<span class="doccomment">/// Accounts to be endowed with some funds.
+	</span>balances: Vec&lt;(AccountId, u64)&gt;,
+	<span class="doccomment">/// Override default number of heap pages.
+	</span>heap_pages_override: <span class="prelude-ty">Option</span>&lt;u64&gt;,
 	<span class="doccomment">/// Additional storage key pairs that will be added to the genesis map.
 	</span>extra_storage: Storage,
-	wasm_code: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+	<span class="doccomment">/// Optional wasm code override.
+	</span>wasm_code: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>GenesisStorageBuilder {
@@ -207,9 +226,9 @@
 	</span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
 		<span class="self">Self</span>::new(
 			<span class="macro">vec!</span>[
-				sr25519::Public::from(Sr25519Keyring::Alice).into(),
-				sr25519::Public::from(Sr25519Keyring::Bob).into(),
-				sr25519::Public::from(Sr25519Keyring::Charlie).into(),
+				Sr25519Keyring::Alice.into(),
+				Sr25519Keyring::Bob.into(),
+				Sr25519Keyring::Charlie.into(),
 			],
 			(<span class="number">0</span>..<span class="number">16_usize</span>)
 				.into_iter()
@@ -231,7 +250,7 @@
 	/// from `extra_storage` will be injected into built storage. `HEAP_PAGES` key and value will
 	/// also be placed into storage.
 	</span><span class="kw">pub fn </span>new(
-		authorities: Vec&lt;AuthorityId&gt;,
+		authorities: Vec&lt;AccountId&gt;,
 		endowed_accounts: Vec&lt;AccountId&gt;,
 		balance: Balance,
 	) -&gt; <span class="self">Self </span>{
@@ -261,17 +280,28 @@
 	</span>}
 
 	<span class="doccomment">/// Builds the `GenesisConfig` and returns its storage.
-	</span><span class="kw">pub fn </span>build_storage(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Storage {
+	</span><span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; Storage {
+		<span class="kw">let </span>authorities_sr25519: Vec&lt;<span class="kw">_</span>&gt; = <span class="self">self
+			</span>.authorities
+			.clone()
+			.into_iter()
+			.map(|id| sr25519::Public::from(id))
+			.collect();
+
 		<span class="kw">let </span>genesis_config = GenesisConfig {
 			system: frame_system::GenesisConfig {
 				code: <span class="self">self</span>.wasm_code.clone().unwrap_or(wasm_binary_unwrap().to_vec()),
 			},
 			babe: pallet_babe::GenesisConfig {
-				authorities: <span class="self">self</span>.authorities.clone().into_iter().map(|x| (x, <span class="number">1</span>)).collect(),
+				authorities: authorities_sr25519
+					.clone()
+					.into_iter()
+					.map(|x| (x.into(), <span class="number">1</span>))
+					.collect(),
 				epoch_config: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::TEST_RUNTIME_BABE_EPOCH_CONFIGURATION),
 			},
 			substrate_test: substrate_test_pallet::GenesisConfig {
-				authorities: <span class="self">self</span>.authorities.clone(),
+				authorities: authorities_sr25519.clone(),
 			},
 			balances: pallet_balances::GenesisConfig { balances: <span class="self">self</span>.balances.clone() },
 		};

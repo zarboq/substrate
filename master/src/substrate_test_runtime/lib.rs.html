@@ -1198,12 +1198,6 @@
 <a href="#1198" id="1198">1198</a>
 <a href="#1199" id="1199">1199</a>
 <a href="#1200" id="1200">1200</a>
-<a href="#1201" id="1201">1201</a>
-<a href="#1202" id="1202">1202</a>
-<a href="#1203" id="1203">1203</a>
-<a href="#1204" id="1204">1204</a>
-<a href="#1205" id="1205">1205</a>
-<a href="#1206" id="1206">1206</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1270,13 +1264,11 @@
 </span><span class="kw">use </span>sp_version::NativeVersion;
 <span class="kw">use </span>sp_version::RuntimeVersion;
 
-<span class="comment">// Ensure Babe and Aura use the same crypto to simplify things a bit.
-</span><span class="kw">pub use </span>sp_consensus_babe::{AllowedSlots, AuthorityId, BabeEpochConfiguration, Slot};
+<span class="kw">pub use </span>sp_consensus_babe::{AllowedSlots, BabeEpochConfiguration, Slot};
 
 <span class="kw">pub use </span>pallet_balances::Call <span class="kw">as </span>BalancesCall;
 
 <span class="kw">pub type </span>AuraId = sp_consensus_aura::sr25519::AuthorityId;
-
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">pub use </span>extrinsic::{ExtrinsicBuilder, Transfer};
 
@@ -1822,10 +1814,7 @@
 		}
 
 		<span class="kw">fn </span>authorities() -&gt; Vec&lt;AuraId&gt; {
-			SubstrateTest::authorities().into_iter().map(|a| {
-				<span class="kw">let </span>authority: sr25519::Public = a.into();
-				AuraId::from(authority)
-			}).collect()
+			SubstrateTest::authorities().into_iter().map(|auth| AuraId::from(auth)).collect()
 		}
 	}
 
@@ -1836,10 +1825,9 @@
 				slot_duration: Babe::slot_duration(),
 				epoch_length: EpochDuration::get(),
 				c: epoch_config.c,
-				authorities: SubstrateTest::authorities()
-					.into_iter().map(|x|(x, <span class="number">1</span>)).collect(),
-					randomness: Babe::randomness(),
-					allowed_slots: epoch_config.allowed_slots,
+				authorities: Babe::authorities().to_vec(),
+				randomness: Babe::randomness(),
+				allowed_slots: epoch_config.allowed_slots,
 			}
 		}
 
@@ -2293,7 +2281,7 @@
 			<span class="macro">vec!</span>[AccountKeyring::One.into(), AccountKeyring::Two.into()],
 			<span class="number">1000 </span>* currency::DOLLARS,
 		)
-		.build_storage()
+		.build()
 		.into()
 	}
 
@@ -2301,7 +2289,7 @@
 	</span><span class="kw">fn </span>validate_storage_keys() {
 		<span class="macro">assert_eq!</span>(
 			genesismap::GenesisStorageBuilder::default()
-				.build_storage()
+				.build()
 				.top
 				.keys()
 				.cloned()
