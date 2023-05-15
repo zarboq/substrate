@@ -1745,6 +1745,20 @@
 <a href="#1745" id="1745">1745</a>
 <a href="#1746" id="1746">1746</a>
 <a href="#1747" id="1747">1747</a>
+<a href="#1748" id="1748">1748</a>
+<a href="#1749" id="1749">1749</a>
+<a href="#1750" id="1750">1750</a>
+<a href="#1751" id="1751">1751</a>
+<a href="#1752" id="1752">1752</a>
+<a href="#1753" id="1753">1753</a>
+<a href="#1754" id="1754">1754</a>
+<a href="#1755" id="1755">1755</a>
+<a href="#1756" id="1756">1756</a>
+<a href="#1757" id="1757">1757</a>
+<a href="#1758" id="1758">1758</a>
+<a href="#1759" id="1759">1759</a>
+<a href="#1760" id="1760">1760</a>
+<a href="#1761" id="1761">1761</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1813,6 +1827,7 @@
 
 #[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>serde::Serialize;
+<span class="kw">use </span>sp_io::hashing::blake2_256;
 <span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 </span><span class="kw">use </span>sp_runtime::traits::TrailingZeroInput;
 <span class="kw">use </span>sp_runtime::{
@@ -3063,6 +3078,8 @@
 		<span class="comment">// populate environment
 		</span>ExecutionPhase::&lt;T&gt;::put(Phase::Initialization);
 		storage::unhashed::put(well_known_keys::EXTRINSIC_INDEX, <span class="kw-2">&amp;</span><span class="number">0u32</span>);
+		<span class="kw">let </span>entropy = (<span class="string">b&quot;frame_system::initialize&quot;</span>, parent_hash).using_encoded(blake2_256);
+		storage::unhashed::put(well_known_keys::INTRABLOCK_ENTROPY, <span class="kw-2">&amp;</span>entropy[..]);
 		&lt;Number&lt;T&gt;&gt;::put(number);
 		&lt;Digest&lt;T&gt;&gt;::put(digest);
 		&lt;ParentHash&lt;T&gt;&gt;::put(parent_hash);
@@ -3112,6 +3129,7 @@
 		);
 		ExecutionPhase::&lt;T&gt;::kill();
 		AllExtrinsicsLen::&lt;T&gt;::kill();
+		storage::unhashed::kill(well_known_keys::INTRABLOCK_ENTROPY);
 
 		<span class="comment">// The following fields
 		//
@@ -3378,6 +3396,16 @@
 			  }
 		}
 	}
+}
+
+<span class="doccomment">/// Returns a 32 byte datum which is guaranteed to be universally unique. `entropy` is provided
+/// as a facility to reduce the potential for precalculating results.
+</span><span class="kw">pub fn </span>unique(entropy: <span class="kw">impl </span>Encode) -&gt; [u8; <span class="number">32</span>] {
+	<span class="kw">let </span><span class="kw-2">mut </span>last = [<span class="number">0u8</span>; <span class="number">32</span>];
+	sp_io::storage::read(well_known_keys::INTRABLOCK_ENTROPY, <span class="kw-2">&amp;mut </span>last[..], <span class="number">0</span>);
+	<span class="kw">let </span>next = (<span class="string">b&quot;frame_system::unique&quot;</span>, entropy, last).using_encoded(blake2_256);
+	sp_io::storage::set(well_known_keys::INTRABLOCK_ENTROPY, <span class="kw-2">&amp;</span>next.encode());
+	next
 }
 
 <span class="doccomment">/// Event handler which registers a provider when created.
