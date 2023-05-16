@@ -3379,21 +3379,21 @@
 			.ok_or(Error::&lt;T&gt;::FailedToExtractRuntimeVersion)<span class="question-mark">?</span>;
 
 		<span class="macro">cfg_if::cfg_if! </span>{
-			 <span class="kw">if </span><span class="attr">#[cfg(all(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, not(test)))] </span>{
+			<span class="kw">if </span><span class="attr">#[cfg(all(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, not(test)))] </span>{
 					<span class="comment">// Let&#39;s ensure the compiler doesn&#39;t optimize our fetching of the runtime version away.
 					</span>core::hint::black_box((new_version, current_version));
 					<span class="prelude-val">Ok</span>(())
-			  } <span class="kw">else </span>{
-				  <span class="kw">if </span>new_version.spec_name != current_version.spec_name {
-					  <span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::InvalidSpecName.into())
-				   }
+			} <span class="kw">else </span>{
+				<span class="kw">if </span>new_version.spec_name != current_version.spec_name {
+					<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::InvalidSpecName.into())
+				}
 
-				   <span class="kw">if </span>new_version.spec_version &lt;= current_version.spec_version {
-						<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::SpecVersionNeedsToIncrease.into())
-				   }
+				<span class="kw">if </span>new_version.spec_version &lt;= current_version.spec_version {
+					<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T&gt;::SpecVersionNeedsToIncrease.into())
+				}
 
-				   <span class="prelude-val">Ok</span>(())
-			  }
+				<span class="prelude-val">Ok</span>(())
+			}
 		}
 	}
 }
@@ -3404,7 +3404,7 @@
 	<span class="kw">let </span><span class="kw-2">mut </span>last = [<span class="number">0u8</span>; <span class="number">32</span>];
 	sp_io::storage::read(well_known_keys::INTRABLOCK_ENTROPY, <span class="kw-2">&amp;mut </span>last[..], <span class="number">0</span>);
 	<span class="kw">let </span>next = (<span class="string">b&quot;frame_system::unique&quot;</span>, entropy, last).using_encoded(blake2_256);
-	sp_io::storage::set(well_known_keys::INTRABLOCK_ENTROPY, <span class="kw-2">&amp;</span>next.encode());
+	sp_io::storage::set(well_known_keys::INTRABLOCK_ENTROPY, <span class="kw-2">&amp;</span>next);
 	next
 }
 
