@@ -1448,6 +1448,12 @@
 <a href="#1448" id="1448">1448</a>
 <a href="#1449" id="1449">1449</a>
 <a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
+<a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
+<a href="#1454" id="1454">1454</a>
+<a href="#1455" id="1455">1455</a>
+<a href="#1456" id="1456">1456</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1483,12 +1489,15 @@
 <span class="kw">use </span>sp_runtime_interface::pass_by::PassByInner;
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub use </span>sp_std::ops::Deref;
+<span class="attr">#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
+</span><span class="kw">use </span>sp_std::{
+	alloc::{format, string::String},
+	vec,
+};
 <span class="kw">use </span>sp_std::{hash::Hash, str, vec::Vec};
+<span class="kw">pub use </span>ss58_registry::{from_known_address_format, Ss58AddressFormat, Ss58AddressFormatRegistry};
 <span class="doccomment">/// Trait to zeroize a memory buffer.
 </span><span class="kw">pub use </span>zeroize::Zeroize;
-
-<span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
-</span><span class="kw">pub use </span>ss58_registry::{from_known_address_format, Ss58AddressFormat, Ss58AddressFormatRegistry};
 
 <span class="doccomment">/// The root phrase for our publicly known keys.
 </span><span class="kw">pub const </span>DEV_PHRASE: <span class="kw-2">&amp;</span>str =
@@ -1499,7 +1508,6 @@
 
 <span class="doccomment">/// The length of the junction identifier. Note that this is also referred to as the
 /// `CHAIN_CODE_LENGTH` in the context of Schnorrkel.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
 </span><span class="kw">pub const </span>JUNCTION_ID_LEN: usize = <span class="number">32</span>;
 
 <span class="doccomment">/// Similar to `From`, except that the onus is on the part of the caller to ensure
@@ -1563,7 +1571,7 @@
 /// a new secret key from an existing secret key and, in the case of `SoftRaw` and `SoftIndex`
 /// a new public key from an existing public key.
 </span><span class="attr">#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Encode, Decode)]
-#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
+#[cfg(any(feature = <span class="string">&quot;full_crypto&quot;</span>, feature = <span class="string">&quot;serde&quot;</span>))]
 </span><span class="kw">pub enum </span>DeriveJunction {
 	<span class="doccomment">/// Soft (vanilla) derivation. Public keys have a correspondent derivation.
 	</span>Soft([u8; JUNCTION_ID_LEN]),
@@ -1571,7 +1579,7 @@
 	</span>Hard([u8; JUNCTION_ID_LEN]),
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;full_crypto&quot;</span>, feature = <span class="string">&quot;serde&quot;</span>))]
 </span><span class="kw">impl </span>DeriveJunction {
 	<span class="doccomment">/// Consume self to return a soft derive junction with the same chain code.
 	</span><span class="kw">pub fn </span>soften(<span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -1630,7 +1638,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;full_crypto&quot;</span>, feature = <span class="string">&quot;serde&quot;</span>))]
 </span><span class="kw">impl</span>&lt;T: AsRef&lt;str&gt;&gt; From&lt;T&gt; <span class="kw">for </span>DeriveJunction {
 	<span class="kw">fn </span>from(j: T) -&gt; DeriveJunction {
 		<span class="kw">let </span>j = j.as_ref();
@@ -1658,7 +1666,7 @@
 #[cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), derive(Debug))]
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[allow(missing_docs)]
-#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
+#[cfg(any(feature = <span class="string">&quot;full_crypto&quot;</span>, feature = <span class="string">&quot;serde&quot;</span>))]
 </span><span class="kw">pub enum </span>PublicError {
 	<span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, error(<span class="string">&quot;Base 58 requirement is violated&quot;</span>))]
 	</span>BadBase58,
@@ -1697,7 +1705,6 @@
 ///
 /// See &lt;https://docs.substrate.io/v3/advanced/ss58/&gt;
 /// for information on the codec.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
 </span><span class="kw">pub trait </span>Ss58Codec: Sized + AsMut&lt;[u8]&gt; + AsRef&lt;[u8]&gt; + ByteArray {
 	<span class="doccomment">/// A format filterer, can be used to ensure that `from_ss58check` family only decode for
 	/// allowed identifiers. By default just refuses the two reserved identifiers.
@@ -1706,7 +1713,7 @@
 	}
 
 	<span class="doccomment">/// Some if the string is a properly encoded SS58Check address.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 	</span><span class="kw">fn </span>from_ss58check(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PublicError&gt; {
 		<span class="self">Self</span>::from_ss58check_with_version(s).and_then(|(r, v)| <span class="kw">match </span>v {
 			v <span class="kw">if </span>!v.is_custom() =&gt; <span class="prelude-val">Ok</span>(r),
@@ -1716,7 +1723,7 @@
 	}
 
 	<span class="doccomment">/// Some if the string is a properly encoded SS58Check address.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 	</span><span class="kw">fn </span>from_ss58check_with_version(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, Ss58AddressFormat), PublicError&gt; {
 		<span class="kw">const </span>CHECKSUM_LEN: usize = <span class="number">2</span>;
 		<span class="kw">let </span>body_len = <span class="self">Self</span>::LEN;
@@ -1771,7 +1778,7 @@
 	}
 
 	<span class="doccomment">/// Return the ss58-check string for this key.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 	</span><span class="kw">fn </span>to_ss58check_with_version(<span class="kw-2">&amp;</span><span class="self">self</span>, version: Ss58AddressFormat) -&gt; String {
 		<span class="comment">// We mask out the upper two bits of the ident - SS58 Prefix currently only supports 14-bits
 		</span><span class="kw">let </span>ident: u16 = u16::from(version) &amp; <span class="number">0b0011_1111_1111_1111</span>;
@@ -1794,7 +1801,7 @@
 	}
 
 	<span class="doccomment">/// Return the ss58-check string for this key.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 	</span><span class="kw">fn </span>to_ss58check(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
 		<span class="self">self</span>.to_ss58check_with_version(default_ss58_version())
 	}
@@ -1812,16 +1819,16 @@
 	<span class="doccomment">/// Derive a child key from a series of given junctions.
 	///
 	/// Will be `None` for public keys if there are any hard junctions in there.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 	</span><span class="kw">fn </span>derive&lt;Iter: Iterator&lt;Item = DeriveJunction&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, _path: Iter) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
 		<span class="prelude-val">None
 	</span>}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">const </span>PREFIX: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;SS58PRE&quot;</span>;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">fn </span>ss58hash(data: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
 	<span class="kw">use </span>blake2::{Blake2b512, Digest};
 
@@ -1832,19 +1839,19 @@
 }
 
 <span class="doccomment">/// Default prefix number
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-</span><span class="kw">static </span>DEFAULT_VERSION: core::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
+</span><span class="kw">static </span>DEFAULT_VERSION: core::sync::atomic::AtomicU16 = core::sync::atomic::AtomicU16::new(
 	from_known_address_format(Ss58AddressFormatRegistry::SubstrateAccount),
 );
 
 <span class="doccomment">/// Returns default SS58 format used by the current active process.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">pub fn </span>default_ss58_version() -&gt; Ss58AddressFormat {
-	DEFAULT_VERSION.load(std::sync::atomic::Ordering::Relaxed).into()
+	DEFAULT_VERSION.load(core::sync::atomic::Ordering::Relaxed).into()
 }
 
 <span class="doccomment">/// Returns either the input address format or the default.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">pub fn </span>unwrap_or_default_ss58_version(network: <span class="prelude-ty">Option</span>&lt;Ss58AddressFormat&gt;) -&gt; Ss58AddressFormat {
 	network.unwrap_or_else(default_ss58_version)
 }
@@ -1858,9 +1865,9 @@
 /// This will enable the node to decode ss58 addresses with this prefix.
 ///
 /// This SS58 version/format is also only used by the node and not by the runtime.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">pub fn </span>set_default_ss58_version(new_default: Ss58AddressFormat) {
-	DEFAULT_VERSION.store(new_default.into(), std::sync::atomic::Ordering::Relaxed);
+	DEFAULT_VERSION.store(new_default.into(), core::sync::atomic::Ordering::Relaxed);
 }
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
@@ -1907,6 +1914,11 @@
 		}
 	}
 }
+
+<span class="comment">// Use the default implementations of the trait in serde feature.
+// The std implementation is not available because of std only crate Regex.
+</span><span class="attr">#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
+</span><span class="kw">impl</span>&lt;T: Sized + AsMut&lt;[u8]&gt; + AsRef&lt;[u8]&gt; + Public + Derive&gt; Ss58Codec <span class="kw">for </span>T {}
 
 <span class="doccomment">/// Trait used for types that are really just a fixed-length array.
 </span><span class="kw">pub trait </span>ByteArray: AsRef&lt;[u8]&gt; + AsMut&lt;[u8]&gt; + <span class="kw">for</span>&lt;<span class="lifetime">&#39;a</span>&gt; TryFrom&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], Error = ()&gt; {
@@ -1957,7 +1969,7 @@
 	<span class="kw">const </span>LEN: usize = <span class="number">32</span>;
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl </span>Ss58Codec <span class="kw">for </span>AccountId32 {}
 
 <span class="kw">impl </span>AsRef&lt;[u8]&gt; <span class="kw">for </span>AccountId32 {
@@ -2041,7 +2053,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl </span>serde::Serialize <span class="kw">for </span>AccountId32 {
 	<span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
 	<span class="kw">where
@@ -2051,7 +2063,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>AccountId32 {
 	<span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
 	<span class="kw">where
@@ -2513,7 +2525,7 @@
 	<span class="kw">crate</span>::RuntimeDebug,
 	TypeInfo,
 )]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
 </span><span class="kw">pub struct </span>KeyTypeId(<span class="kw">pub </span>[u8; <span class="number">4</span>]);
 
 <span class="kw">impl </span>From&lt;u32&gt; <span class="kw">for </span>KeyTypeId {
@@ -2571,7 +2583,7 @@
 
 <span class="doccomment">/// An identifier for a specific cryptographic algorithm used by a key pair
 </span><span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Encode, Decode)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(serde::Serialize, serde::Deserialize))]
 </span><span class="kw">pub struct </span>CryptoTypeId(<span class="kw">pub </span>[u8; <span class="number">4</span>]);
 
 <span class="doccomment">/// Known key types; this also functions as a global registry of key types for projects wishing to

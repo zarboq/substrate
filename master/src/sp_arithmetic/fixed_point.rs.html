@@ -2211,6 +2211,7 @@
 <a href="#2211" id="2211">2211</a>
 <a href="#2212" id="2212">2212</a>
 <a href="#2213" id="2213">2213</a>
+<a href="#2214" id="2214">2214</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2245,8 +2246,11 @@
 	prelude::<span class="kw-2">*</span>,
 };
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+
+<span class="attr">#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
+</span><span class="kw">use </span>sp_std::alloc::string::{String, ToString};
 
 <span class="doccomment">/// Integer types that can be used to interact with `FixedPointNumber` implementations.
 </span><span class="kw">pub trait </span>FixedPointOperand:
@@ -3141,15 +3145,13 @@
 			}
 		}
 
-		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-		</span><span class="kw">impl </span>sp_std::fmt::Display <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
+		<span class="kw">impl </span>sp_std::fmt::Display <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
 			<span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>sp_std::fmt::Formatter) -&gt; sp_std::fmt::Result {
 				<span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
 			}
 		}
 
-		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-		</span><span class="kw">impl </span>sp_std::str::FromStr <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
+		<span class="kw">impl </span>sp_std::str::FromStr <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
 			<span class="kw">type </span><span class="prelude-val">Err </span>= <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
 
 			<span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
@@ -3161,7 +3163,7 @@
 
 		<span class="comment">// Manual impl `Serialize` as serde_json does not support i128.
 		// TODO: remove impl if issue https://github.com/serde-rs/json/issues/548 fixed.
-		</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+		</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 		</span><span class="kw">impl </span>Serialize <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
 			<span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
 			<span class="kw">where
@@ -3173,7 +3175,7 @@
 
 		<span class="comment">// Manual impl `Deserialize` as serde_json does not support i128.
 		// TODO: remove impl if issue https://github.com/serde-rs/json/issues/548 fixed.
-		</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+		</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 		</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">$name </span>{
 			<span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
 			<span class="kw">where

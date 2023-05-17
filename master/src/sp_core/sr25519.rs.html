@@ -1131,6 +1131,13 @@
 <a href="#1131" id="1131">1131</a>
 <a href="#1132" id="1132">1132</a>
 <a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1152,15 +1159,20 @@
 //!
 //! Note: `CHAIN_CODE_LENGTH` must be equal to `crate::crypto::JUNCTION_ID_LEN`
 //! for this to work.
-
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;full_crypto&quot;</span>, feature = <span class="string">&quot;serde&quot;</span>))]
+</span><span class="kw">use </span><span class="kw">crate</span>::crypto::DeriveJunction;
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::crypto::Ss58Codec;
 <span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
-</span><span class="kw">use </span><span class="kw">crate</span>::crypto::{DeriveError, DeriveJunction, Pair <span class="kw">as </span>TraitPair, SecretStringError};
+</span><span class="kw">use </span><span class="kw">crate</span>::crypto::{DeriveError, Pair <span class="kw">as </span>TraitPair, SecretStringError};
 <span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
 </span><span class="kw">use </span>schnorrkel::{
-	derive::{ChainCode, Derivation, CHAIN_CODE_LENGTH},
-	signing_context, ExpansionMode, Keypair, MiniSecretKey, PublicKey, SecretKey,
+	derive::CHAIN_CODE_LENGTH, signing_context, ExpansionMode, Keypair, MiniSecretKey, SecretKey,
+};
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;full_crypto&quot;</span>, feature = <span class="string">&quot;serde&quot;</span>))]
+</span><span class="kw">use </span>schnorrkel::{
+	derive::{ChainCode, Derivation},
+	PublicKey,
 };
 <span class="kw">use </span>sp_std::vec::Vec;
 
@@ -1174,9 +1186,11 @@
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
 </span><span class="kw">use </span>schnorrkel::keys::{MINI_SECRET_KEY_LENGTH, SECRET_KEY_LENGTH};
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 <span class="kw">use </span>sp_runtime_interface::pass_by::PassByInner;
+<span class="attr">#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
+</span><span class="kw">use </span>sp_std::alloc::{format, string::String};
 
 <span class="comment">// signing context
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;full_crypto&quot;</span>)]
@@ -1309,7 +1323,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl </span>Serialize <span class="kw">for </span>Public {
 	<span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
 	<span class="kw">where
@@ -1319,7 +1333,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>Public {
 	<span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
 	<span class="kw">where
@@ -1349,7 +1363,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl </span>Serialize <span class="kw">for </span>Signature {
 	<span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
 	<span class="kw">where
@@ -1359,7 +1373,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>Signature {
 	<span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
 	<span class="kw">where
@@ -1472,7 +1486,7 @@
 	<span class="doccomment">/// Derive a child key from a series of given junctions.
 	///
 	/// `None` if there are any hard junctions in there.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 	</span><span class="kw">fn </span>derive&lt;Iter: Iterator&lt;Item = DeriveJunction&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, path: Iter) -&gt; <span class="prelude-ty">Option</span>&lt;Public&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>acc = PublicKey::from_bytes(<span class="self">self</span>.as_ref()).ok()<span class="question-mark">?</span>;
 		<span class="kw">for </span>j <span class="kw">in </span>path {

@@ -455,6 +455,7 @@
 <a href="#455" id="455">455</a>
 <a href="#456" id="456">456</a>
 <a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -490,7 +491,7 @@
 
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 
-#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>std::collections::HashSet;
@@ -613,8 +614,8 @@
 /// `authoring_version`, absolutely not `impl_version` since they change the semantics of the
 /// runtime.
 </span><span class="attr">#[derive(Clone, PartialEq, Eq, Encode, Default, sp_runtime::RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, serde(rename_all = <span class="string">&quot;camelCase&quot;</span>))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;camelCase&quot;</span>))]
 </span><span class="kw">pub struct </span>RuntimeVersion {
 	<span class="doccomment">/// Identifies the different Substrate runtimes. There&#39;ll be at least polkadot and node.
 	/// A different on-chain spec_name to that of the native runtime would normally result
@@ -647,7 +648,7 @@
 
 	<span class="doccomment">/// List of supported API &quot;features&quot; along with their versions.
 	</span><span class="attr">#[cfg_attr(
-		feature = <span class="string">&quot;std&quot;</span>,
+		feature = <span class="string">&quot;serde&quot;</span>,
 		serde(
 			serialize_with = <span class="string">&quot;apis_serialize::serialize&quot;</span>,
 			deserialize_with = <span class="string">&quot;apis_serialize::deserialize&quot;</span>,
@@ -846,11 +847,12 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">mod </span>apis_serialize {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>impl_serde::serialize <span class="kw">as </span>bytes;
 	<span class="kw">use </span>serde::{de, ser::SerializeTuple, Serializer};
+	<span class="kw">use </span>sp_std::vec::Vec;
 
 	<span class="attr">#[derive(Serialize)]
 	</span><span class="kw">struct </span>ApiId&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="attr">#[serde(serialize_with = <span class="string">&quot;serialize_bytesref&quot;</span>)] </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">super</span>::ApiId, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32);
@@ -885,7 +887,7 @@
 		<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; de::Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>Visitor {
 			<span class="kw">type </span>Value = ApisVec;
 
-			<span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+			<span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>sp_std::fmt::Formatter) -&gt; sp_std::fmt::Result {
 				formatter.write_str(<span class="string">&quot;a sequence of api id and version tuples&quot;</span>)
 			}
 

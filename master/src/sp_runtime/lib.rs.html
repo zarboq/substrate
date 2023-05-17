@@ -1081,6 +1081,8 @@
 <a href="#1081" id="1081">1081</a>
 <a href="#1082" id="1082">1082</a>
 <a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1107,7 +1109,7 @@
 </span><span class="kw">pub use </span>codec;
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub use </span>scale_info;
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 #[doc(hidden)]
 </span><span class="kw">pub use </span>serde;
 <span class="attr">#[doc(hidden)]
@@ -1135,6 +1137,8 @@
 
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>scale_info::TypeInfo;
+<span class="attr">#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
+</span><span class="kw">use </span>sp_std::alloc::format;
 
 <span class="kw">pub mod </span>curve;
 <span class="kw">pub mod </span>generic;
@@ -1205,7 +1209,7 @@
 
 <span class="doccomment">/// Collection of justifications for a given block, multiple justifications may
 /// be provided by different consensus engines for the same block.
-</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
 </span><span class="kw">pub struct </span>Justifications(Vec&lt;Justification&gt;);
 
@@ -1262,7 +1266,7 @@
 <span class="kw">use </span>traits::{Lazy, Verify};
 
 <span class="kw">use </span><span class="kw">crate</span>::traits::IdentifyAccount;
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">pub use </span>serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 <span class="doccomment">/// Complex storage builder stuff.
@@ -1318,7 +1322,7 @@
 </span><span class="kw">pub type </span>ConsensusEngineId = [u8; <span class="number">4</span>];
 
 <span class="doccomment">/// Signature verify that can work with any known signature types.
-</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+</span><span class="attr">#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 #[derive(Eq, PartialEq, Clone, Encode, Decode, MaxEncodedLen, RuntimeDebug, TypeInfo)]
 </span><span class="kw">pub enum </span>MultiSignature {
 	<span class="doccomment">/// An Ed25519 signature.
@@ -1382,7 +1386,7 @@
 
 <span class="doccomment">/// Public key for any known crypto algorithm.
 </span><span class="attr">#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>MultiSigner {
 	<span class="doccomment">/// An Ed25519 identity.
 	</span>Ed25519(ed25519::Public),
@@ -1510,7 +1514,7 @@
 
 <span class="doccomment">/// Signature verify that can work with any known signature types..
 </span><span class="attr">#[derive(Eq, PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub struct </span>AnySignature(H512);
 
 <span class="kw">impl </span>Verify <span class="kw">for </span>AnySignature {
@@ -1558,7 +1562,7 @@
 
 <span class="doccomment">/// Reason why a pallet call failed.
 </span><span class="attr">#[derive(Eq, Clone, Copy, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub struct </span>ModuleError {
 	<span class="doccomment">/// Module index, matching the metadata module index.
 	</span><span class="kw">pub </span>index: u8,
@@ -1566,7 +1570,7 @@
 	</span><span class="kw">pub </span>error: [u8; MAX_MODULE_ERROR_ENCODED_SIZE],
 	<span class="doccomment">/// Optional error message.
 	</span><span class="attr">#[codec(skip)]
-	#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, serde(skip_deserializing))]
+	#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip_deserializing))]
 	</span><span class="kw">pub </span>message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
 }
 
@@ -1578,7 +1582,7 @@
 
 <span class="doccomment">/// Errors related to transactional storage layers.
 </span><span class="attr">#[derive(Eq, PartialEq, Clone, Copy, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>TransactionalError {
 	<span class="doccomment">/// Too many transactional layers have been spawned.
 	</span>LimitReached,
@@ -1603,12 +1607,12 @@
 
 <span class="doccomment">/// Reason why a dispatch call failed.
 </span><span class="attr">#[derive(Eq, Clone, Copy, Encode, Decode, Debug, TypeInfo, PartialEq, MaxEncodedLen)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>DispatchError {
 	<span class="doccomment">/// Some error occurred.
 	</span>Other(
 		<span class="attr">#[codec(skip)]
-		#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, serde(skip_deserializing))]
+		#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(skip_deserializing))]
 		</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 	),
 	<span class="doccomment">/// Failed to lookup some data.
@@ -1688,7 +1692,7 @@
 
 <span class="doccomment">/// Description of what went wrong when trying to complete an operation on a token.
 </span><span class="attr">#[derive(Eq, PartialEq, Clone, Copy, Encode, Decode, Debug, TypeInfo, MaxEncodedLen)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize, Deserialize))]
+#[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 </span><span class="kw">pub enum </span>TokenError {
 	<span class="doccomment">/// Funds are unavailable.
 	</span>FundsUnavailable,
@@ -1962,7 +1966,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl </span>::serde::Serialize <span class="kw">for </span>OpaqueExtrinsic {
 	<span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, seq: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
 	<span class="kw">where
@@ -1972,7 +1976,7 @@
 	}
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; ::serde::Deserialize&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>OpaqueExtrinsic {
 	<span class="kw">fn </span>deserialize&lt;D&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
 	<span class="kw">where
