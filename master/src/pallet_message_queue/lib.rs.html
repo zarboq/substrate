@@ -1331,8 +1331,6 @@
 <a href="#1331" id="1331">1331</a>
 <a href="#1332" id="1332">1332</a>
 <a href="#1333" id="1333">1333</a>
-<a href="#1334" id="1334">1334</a>
-<a href="#1335" id="1335">1335</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1539,7 +1537,7 @@
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 <span class="kw">use </span>sp_runtime::{
-	traits::{Hash, One, Zero},
+	traits::{One, Zero},
 	SaturatedConversion, Saturating,
 };
 <span class="kw">use </span>sp_std::{fmt::Debug, ops::Deref, prelude::<span class="kw-2">*</span>, vec};
@@ -1834,16 +1832,13 @@
 	<span class="attr">#[pallet::event]
 	#[pallet::generate_deposit(<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>deposit_event)]
 	</span><span class="kw">pub enum </span>Event&lt;T: Config&gt; {
-		<span class="doccomment">/// Message discarded due to an inability to decode the item. Usually caused by state
-		/// corruption.
-		</span>Discarded { hash: T::Hash },
 		<span class="doccomment">/// Message discarded due to an error in the `MessageProcessor` (usually a format error).
-		</span>ProcessingFailed { hash: T::Hash, origin: MessageOriginOf&lt;T&gt;, error: ProcessMessageError },
+		</span>ProcessingFailed { id: [u8; <span class="number">32</span>], origin: MessageOriginOf&lt;T&gt;, error: ProcessMessageError },
 		<span class="doccomment">/// Message is processed.
-		</span>Processed { hash: T::Hash, origin: MessageOriginOf&lt;T&gt;, weight_used: Weight, success: bool },
+		</span>Processed { id: [u8; <span class="number">32</span>], origin: MessageOriginOf&lt;T&gt;, weight_used: Weight, success: bool },
 		<span class="doccomment">/// Message placed in overweight queue.
 		</span>OverweightEnqueued {
-			hash: T::Hash,
+			id: [u8; <span class="number">32</span>],
 			origin: MessageOriginOf&lt;T&gt;,
 			page_index: PageIndex,
 			message_index: T::Size,
@@ -2482,15 +2477,16 @@
 		meter: <span class="kw-2">&amp;mut </span>WeightMeter,
 		overweight_limit: Weight,
 	) -&gt; MessageExecutionStatus {
-		<span class="kw">let </span>hash = T::Hashing::hash(message);
+		<span class="kw">let </span>hash = sp_io::hashing::blake2_256(message);
 		<span class="kw">use </span>ProcessMessageError::<span class="kw-2">*</span>;
 		<span class="kw">let </span>prev_consumed = meter.consumed;
+		<span class="kw">let </span><span class="kw-2">mut </span>id = hash;
 
-		<span class="kw">match </span>T::MessageProcessor::process_message(message, origin.clone(), meter) {
+		<span class="kw">match </span>T::MessageProcessor::process_message(message, origin.clone(), meter, <span class="kw-2">&amp;mut </span>id) {
 			<span class="prelude-val">Err</span>(Overweight(w)) <span class="kw">if </span>w.any_gt(overweight_limit) =&gt; {
 				<span class="comment">// Permanently overweight.
 				</span><span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::OverweightEnqueued {
-					hash,
+					id,
 					origin,
 					page_index,
 					message_index,
@@ -2508,13 +2504,13 @@
 			},
 			<span class="prelude-val">Err</span>(error @ BadFormat | error @ Corrupt | error @ Unsupported) =&gt; {
 				<span class="comment">// Permanent error - drop
-				</span><span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::ProcessingFailed { hash, origin, error });
+				</span><span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::ProcessingFailed { id, origin, error });
 				MessageExecutionStatus::Unprocessable { permanent: <span class="bool-val">true </span>}
 			},
 			<span class="prelude-val">Ok</span>(success) =&gt; {
 				<span class="comment">// Success
 				</span><span class="kw">let </span>weight_used = meter.consumed.saturating_sub(prev_consumed);
-				<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::Processed { hash, origin, weight_used, success });
+				<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::Processed { id, origin, weight_used, success });
 				MessageExecutionStatus::Processed
 			},
 		}
