@@ -1018,6 +1018,13 @@
 <a href="#1018" id="1018">1018</a>
 <a href="#1019" id="1019">1019</a>
 <a href="#1020" id="1020">1020</a>
+<a href="#1021" id="1021">1021</a>
+<a href="#1022" id="1022">1022</a>
+<a href="#1023" id="1023">1023</a>
+<a href="#1024" id="1024">1024</a>
+<a href="#1025" id="1025">1025</a>
+<a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1268,7 +1275,7 @@
 //! # assuming there&#39;s `./substrate --dev --tmp --ws-port 9999` or similar running.
 //! ./substrate-try-runtime \
 //!     try-runtime \
-//!     --runtime kitchensink_runtime.wasm \
+//!     --runtime runtime-try-runtime.wasm \
 //!     -lruntime=debug \
 //!     on-runtime-upgrade \
 //!     live --uri ws://localhost:9999
@@ -1280,7 +1287,7 @@
 //! ```bash
 //! ./substrate-try-runtime \
 //!     try-runtime \
-//!     --runtime kitchensink_runtime.wasm \
+//!     --runtime runtime-try-runtime.wasm \
 //!     -lruntime=debug \
 //!     on-runtime-upgrade \
 //!     live --uri ws://localhost:9999 \
@@ -1315,7 +1322,7 @@
 //! Then, we can use it to have the same command as before, `on-runtime-upgrade`
 //!
 //! ```bash
-//! try-runtime \
+//! ./substrate-try-runtime try-runtime \
 //!     --runtime runtime-try-runtime.wasm \
 //!     -lruntime=debug \
 //!     on-runtime-upgrade \
@@ -1329,7 +1336,7 @@
 //!     --runtime runtime-try-runtime.wasm \
 //!     -lruntime=debug \
 //!     execute-block live \
-//!     --uri ws://localhost:999
+//!     --uri ws://localhost:9999
 //! ```
 //!
 //! This can still be customized at a given block with `--at`. If you want to use a snapshot, you
@@ -1340,15 +1347,22 @@
 //!
 //! ```bash
 //! ./substrate-try-runtime try-runtime \
-//!     --runtime runtime-try-runtime.wasm \
-//!     -lruntime=debug \
-//!     execute-block live \
-//!     --try-state System,Staking \
-//!     --uri ws://localhost:999
+//!    --runtime runtime-try-runtime.wasm \
+//!    -lruntime=debug \
+//!    execute-block \
+//!    --try-state System,Staking \
+//!    live \
+//!    --uri ws://localhost:9999 \
+//!    --pallet System Staking
 //! ```
 //!
-//! Will only run the `try-state` of the two given pallets. See
-//! [`frame_try_runtime::TryStateSelect`] for more information.
+//! Will only run the `try-state` of the two given pallets. When running `try-state` against
+//! some real chain data it can take a long time for the command to execute since it has to
+//! query all the key-value pairs. In scenarios like above where we only want to run the
+//! `try-state` for some specific pallets, we can use the `--pallet` option to specify from
+//! which pallets we want to query the state. This will greatly decrease the execution time.
+//!
+//! See [`frame_try_runtime::TryStateSelect`] for more information.
 //!
 //! * Follow our live chain&#39;s blocks using `follow-chain`, whilst running the try-state of 3 pallets
 //!   in a round robin fashion
