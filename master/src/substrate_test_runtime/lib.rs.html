@@ -1180,24 +1180,6 @@
 <a href="#1180" id="1180">1180</a>
 <a href="#1181" id="1181">1181</a>
 <a href="#1182" id="1182">1182</a>
-<a href="#1183" id="1183">1183</a>
-<a href="#1184" id="1184">1184</a>
-<a href="#1185" id="1185">1185</a>
-<a href="#1186" id="1186">1186</a>
-<a href="#1187" id="1187">1187</a>
-<a href="#1188" id="1188">1188</a>
-<a href="#1189" id="1189">1189</a>
-<a href="#1190" id="1190">1190</a>
-<a href="#1191" id="1191">1191</a>
-<a href="#1192" id="1192">1192</a>
-<a href="#1193" id="1193">1193</a>
-<a href="#1194" id="1194">1194</a>
-<a href="#1195" id="1195">1195</a>
-<a href="#1196" id="1196">1196</a>
-<a href="#1197" id="1197">1197</a>
-<a href="#1198" id="1198">1198</a>
-<a href="#1199" id="1199">1199</a>
-<a href="#1200" id="1200">1200</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2195,7 +2177,10 @@
 	<span class="kw">use </span>sp_consensus::BlockOrigin;
 	<span class="kw">use </span>sp_core::{storage::well_known_keys::HEAP_PAGES, ExecutionContext};
 	<span class="kw">use </span>sp_keyring::AccountKeyring;
-	<span class="kw">use </span>sp_runtime::{traits::SignedExtension, transaction_validity::InvalidTransaction};
+	<span class="kw">use </span>sp_runtime::{
+		traits::{Hash <span class="kw">as _</span>, SignedExtension},
+		transaction_validity::{InvalidTransaction, ValidTransaction},
+	};
 	<span class="kw">use </span>sp_state_machine::ExecutionStrategy;
 	<span class="kw">use </span>substrate_test_runtime_client::{
 		prelude::<span class="kw-2">*</span>, runtime::TestAPI, DefaultTestClientBuilderExt, TestClientBuilder,
@@ -2303,63 +2288,42 @@
 	</span><span class="kw">fn </span>validate_unsigned_works() {
 		sp_tracing::try_init_simple();
 		new_test_ext().execute_with(|| {
-			<span class="macro">assert_eq!</span>(
-				&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
-					TransactionSource::External,
-					<span class="kw-2">&amp;</span>substrate_test_pallet::Call::bench_call { transfer: Default::default() },
-				),
-				InvalidTransaction::Call.into(),
-			);
+			<span class="kw">let </span>failing_calls = <span class="macro">vec!</span>[
+				substrate_test_pallet::Call::bench_call { transfer: Default::default() },
+				substrate_test_pallet::Call::include_data { data: <span class="macro">vec!</span>[] },
+				substrate_test_pallet::Call::fill_block { ratio: Perbill::from_percent(<span class="number">50</span>) },
+			];
+			<span class="kw">let </span>succeeding_calls = <span class="macro">vec!</span>[
+				substrate_test_pallet::Call::deposit_log_digest_item {
+					log: DigestItem::Other(<span class="macro">vec!</span>[]),
+				},
+				substrate_test_pallet::Call::storage_change { key: <span class="macro">vec!</span>[], value: <span class="prelude-val">None </span>},
+				substrate_test_pallet::Call::read { count: <span class="number">0 </span>},
+				substrate_test_pallet::Call::read_and_panic { count: <span class="number">0 </span>},
+			];
 
-			<span class="macro">assert_eq!</span>(
-				&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
-					TransactionSource::External,
-					<span class="kw-2">&amp;</span>substrate_test_pallet::Call::include_data { data: <span class="macro">vec!</span>[] },
-				),
-				InvalidTransaction::Call.into(),
-			);
+			<span class="kw">for </span>call <span class="kw">in </span>failing_calls {
+				<span class="macro">assert_eq!</span>(
+					&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
+						TransactionSource::External,
+						<span class="kw-2">&amp;</span>call,
+					),
+					InvalidTransaction::Call.into(),
+				);
+			}
 
-			<span class="macro">assert_eq!</span>(
-				&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
-					TransactionSource::External,
-					<span class="kw-2">&amp;</span>substrate_test_pallet::Call::fill_block { ratio: Perbill::from_percent(<span class="number">50</span>) },
-				),
-				InvalidTransaction::Call.into(),
-			);
-
-			<span class="macro">assert_eq!</span>(
-				&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
-					TransactionSource::External,
-					<span class="kw-2">&amp;</span>substrate_test_pallet::Call::deposit_log_digest_item {
-						log: DigestItem::Other(<span class="macro">vec!</span>[])
-					},
-				),
-				<span class="prelude-val">Ok</span>(Default::default()),
-			);
-
-			<span class="macro">assert_eq!</span>(
-				&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
-					TransactionSource::External,
-					<span class="kw-2">&amp;</span>substrate_test_pallet::Call::storage_change { key: <span class="macro">vec!</span>[], value: <span class="prelude-val">None </span>},
-				),
-				<span class="prelude-val">Ok</span>(Default::default()),
-			);
-
-			<span class="macro">assert_eq!</span>(
-				&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
-					TransactionSource::External,
-					<span class="kw-2">&amp;</span>substrate_test_pallet::Call::read { count: <span class="number">0 </span>},
-				),
-				<span class="prelude-val">Ok</span>(Default::default()),
-			);
-
-			<span class="macro">assert_eq!</span>(
-				&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
-					TransactionSource::External,
-					<span class="kw-2">&amp;</span>substrate_test_pallet::Call::read_and_panic { count: <span class="number">0 </span>},
-				),
-				<span class="prelude-val">Ok</span>(Default::default()),
-			);
+			<span class="kw">for </span>call <span class="kw">in </span>succeeding_calls {
+				<span class="macro">assert_eq!</span>(
+					&lt;SubstrateTest <span class="kw">as </span>sp_runtime::traits::ValidateUnsigned&gt;::validate_unsigned(
+						TransactionSource::External,
+						<span class="kw-2">&amp;</span>call,
+					),
+					<span class="prelude-val">Ok</span>(ValidTransaction {
+						provides: <span class="macro">vec!</span>[BlakeTwo256::hash_of(<span class="kw-2">&amp;</span>call).encode()],
+						..Default::default()
+					})
+				);
+			}
 		});
 	}
 
