@@ -109,6 +109,7 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
@@ -183,7 +184,7 @@
 </span><span class="attr">#[derive(Clone, Eq, PartialEq, Debug)]
 </span><span class="kw">pub enum </span>WarpSyncPhase&lt;Block: BlockT&gt; {
 	<span class="doccomment">/// Waiting for peers to connect.
-	</span>AwaitingPeers,
+	</span>AwaitingPeers { required_peers: usize },
 	<span class="doccomment">/// Waiting for target block to be received.
 	</span>AwaitingTargetBlock,
 	<span class="doccomment">/// Downloading and verifying grandpa warp proofs.
@@ -201,7 +202,8 @@
 <span class="kw">impl</span>&lt;Block: BlockT&gt; fmt::Display <span class="kw">for </span>WarpSyncPhase&lt;Block&gt; {
 	<span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
 		<span class="kw">match </span><span class="self">self </span>{
-			<span class="self">Self</span>::AwaitingPeers =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Waiting for peers&quot;</span>),
+			<span class="self">Self</span>::AwaitingPeers { required_peers } =&gt;
+				<span class="macro">write!</span>(f, <span class="string">&quot;Waiting for {required_peers} peers to be connected&quot;</span>),
 			<span class="self">Self</span>::AwaitingTargetBlock =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Waiting for target block to be received&quot;</span>),
 			<span class="self">Self</span>::DownloadingWarpProofs =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Downloading finality proofs&quot;</span>),
 			<span class="self">Self</span>::DownloadingTargetBlock =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Downloading target block&quot;</span>),
