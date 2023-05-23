@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["pallet","weights"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_TRASH_DATA_ENTRIES","VALUE_SIZE"],"mod":["pallet","weights"]};
