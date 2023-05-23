@@ -160,7 +160,7 @@
 		id: T::AssetId,
 		who: <span class="kw">impl </span>sp_std::borrow::Borrow&lt;T::AccountId&gt;,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;ExtraMutator&lt;T, I&gt;&gt; {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(a) = Account::&lt;T, I&gt;::get(id, who.borrow()) {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(a) = Account::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id, who.borrow()) {
 			<span class="prelude-val">Some</span>(ExtraMutator::&lt;T, I&gt; {
 				id,
 				who: who.borrow().clone(),
@@ -175,7 +175,7 @@
 	<span class="doccomment">/// Commit any changes to storage.
 	</span><span class="kw">pub fn </span>commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(extra) = <span class="self">self</span>.pending.take() {
-			Account::&lt;T, I&gt;::try_mutate(<span class="self">self</span>.id, <span class="self">self</span>.who.borrow(), |maybe_account| {
+			Account::&lt;T, I&gt;::try_mutate(<span class="kw-2">&amp;</span><span class="self">self</span>.id, <span class="kw-2">&amp;</span><span class="self">self</span>.who, |maybe_account| {
 				maybe_account.as_mut().ok_or(()).map(|account| account.extra = extra)
 			})
 		} <span class="kw">else </span>{
@@ -186,7 +186,7 @@
 	<span class="doccomment">/// Revert any changes, even those already committed by `self` and drop self.
 	</span><span class="kw">pub fn </span>revert(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
 		<span class="self">self</span>.pending = <span class="prelude-val">None</span>;
-		Account::&lt;T, I&gt;::try_mutate(<span class="self">self</span>.id, <span class="self">self</span>.who.borrow(), |maybe_account| {
+		Account::&lt;T, I&gt;::try_mutate(<span class="kw-2">&amp;</span><span class="self">self</span>.id, <span class="kw-2">&amp;</span><span class="self">self</span>.who, |maybe_account| {
 			maybe_account
 				.as_mut()
 				.ok_or(())

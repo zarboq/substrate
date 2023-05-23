@@ -387,6 +387,12 @@
 <a href="#387" id="387">387</a>
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -630,13 +636,19 @@
 			<span class="kw">let </span>deposit = T::Deposit::get();
 			T::Currency::hold(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>nft_owner, deposit)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_lock_nft(nft_collection_id, nft_id)<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_create_asset(asset_id, pallet_account.clone())<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_mint_asset(asset_id, <span class="kw-2">&amp;</span>beneficiary, fractions)<span class="question-mark">?</span>;
-			<span class="self">Self</span>::do_set_metadata(asset_id, <span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;</span>pallet_account, <span class="kw-2">&amp;</span>nft_collection_id, <span class="kw-2">&amp;</span>nft_id)<span class="question-mark">?</span>;
+			<span class="self">Self</span>::do_create_asset(asset_id.clone(), pallet_account.clone())<span class="question-mark">?</span>;
+			<span class="self">Self</span>::do_mint_asset(asset_id.clone(), <span class="kw-2">&amp;</span>beneficiary, fractions)<span class="question-mark">?</span>;
+			<span class="self">Self</span>::do_set_metadata(
+				asset_id.clone(),
+				<span class="kw-2">&amp;</span>who,
+				<span class="kw-2">&amp;</span>pallet_account,
+				<span class="kw-2">&amp;</span>nft_collection_id,
+				<span class="kw-2">&amp;</span>nft_id,
+			)<span class="question-mark">?</span>;
 
 			NftToAsset::&lt;T&gt;::insert(
 				(nft_collection_id, nft_id),
-				Details { asset: asset_id, fractions, asset_creator: nft_owner, deposit },
+				Details { asset: asset_id.clone(), fractions, asset_creator: nft_owner, deposit },
 			);
 
 			<span class="self">Self</span>::deposit_event(Event::NftFractionalized {
@@ -684,7 +696,7 @@
 
 				<span class="kw">let </span>deposit = details.deposit;
 				<span class="kw">let </span>asset_creator = details.asset_creator;
-				<span class="self">Self</span>::do_burn_asset(asset_id, <span class="kw-2">&amp;</span>who, details.fractions)<span class="question-mark">?</span>;
+				<span class="self">Self</span>::do_burn_asset(asset_id.clone(), <span class="kw-2">&amp;</span>who, details.fractions)<span class="question-mark">?</span>;
 				<span class="self">Self</span>::do_unlock_nft(nft_collection_id, nft_id, <span class="kw-2">&amp;</span>beneficiary)<span class="question-mark">?</span>;
 				T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>asset_creator, deposit, BestEffort)<span class="question-mark">?</span>;
 
@@ -745,7 +757,7 @@
 			account: <span class="kw-2">&amp;</span>T::AccountId,
 			amount: AssetBalanceOf&lt;T&gt;,
 		) -&gt; DispatchResult {
-			T::Assets::burn_from(asset_id, account, amount, Exact, Polite)<span class="question-mark">?</span>;
+			T::Assets::burn_from(asset_id.clone(), account, amount, Exact, Polite)<span class="question-mark">?</span>;
 			T::Assets::start_destroy(asset_id, <span class="prelude-val">None</span>)
 		}
 

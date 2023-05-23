@@ -1827,7 +1827,7 @@
 	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero},
 	ArithmeticError, TokenError,
 };
-<span class="kw">use </span>sp_std::{borrow::Borrow, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>frame_support::{
 	dispatch::{DispatchError, DispatchResult},
@@ -1915,7 +1915,7 @@
 		</span><span class="kw">type </span>RemoveItemsLimit: Get&lt;u32&gt;;
 
 		<span class="doccomment">/// Identifier for the class of asset.
-		</span><span class="kw">type </span>AssetId: Member + Parameter + Copy + MaybeSerializeDeserialize + MaxEncodedLen;
+		</span><span class="kw">type </span>AssetId: Member + Parameter + Clone + MaybeSerializeDeserialize + MaxEncodedLen;
 
 		<span class="doccomment">/// Wrapper around `Self::AssetId` to use in dispatchable call signatures. Allows the use
 		/// of compact encoding in instances of the pallet, which will prevent breaking changes
@@ -2089,7 +2089,7 @@
 
 			<span class="kw">for </span>(id, account_id, amount) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.accounts {
 				<span class="kw">let </span>result = &lt;Pallet&lt;T, I&gt;&gt;::increase_balance(
-					<span class="kw-2">*</span>id,
+					id.clone(),
 					account_id,
 					<span class="kw-2">*</span>amount,
 					|details| -&gt; DispatchResult {
@@ -2270,14 +2270,14 @@
 			<span class="kw">let </span>owner = T::CreateOrigin::ensure_origin(origin, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
 			<span class="kw">let </span>admin = T::Lookup::lookup(admin)<span class="question-mark">?</span>;
 
-			<span class="macro">ensure!</span>(!Asset::&lt;T, I&gt;::contains_key(id), Error::&lt;T, I&gt;::InUse);
+			<span class="macro">ensure!</span>(!Asset::&lt;T, I&gt;::contains_key(<span class="kw-2">&amp;</span>id), Error::&lt;T, I&gt;::InUse);
 			<span class="macro">ensure!</span>(!min_balance.is_zero(), Error::&lt;T, I&gt;::MinBalanceZero);
 
 			<span class="kw">let </span>deposit = T::AssetDeposit::get();
 			T::Currency::reserve(<span class="kw-2">&amp;</span>owner, deposit)<span class="question-mark">?</span>;
 
 			Asset::&lt;T, I&gt;::insert(
-				id,
+				id.clone(),
 				AssetDetails {
 					owner: owner.clone(),
 					issuer: admin.clone(),
@@ -2602,7 +2602,7 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(
 				d.status == AssetStatus::Live || d.status == AssetStatus::Frozen,
 				Error::&lt;T, I&gt;::AssetNotLive
@@ -2610,7 +2610,7 @@
 			<span class="macro">ensure!</span>(origin == d.freezer, Error::&lt;T, I&gt;::NoPermission);
 			<span class="kw">let </span>who = T::Lookup::lookup(who)<span class="question-mark">?</span>;
 
-			Account::&lt;T, I&gt;::try_mutate(id, <span class="kw-2">&amp;</span>who, |maybe_account| -&gt; DispatchResult {
+			Account::&lt;T, I&gt;::try_mutate(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>who, |maybe_account| -&gt; DispatchResult {
 				maybe_account.as_mut().ok_or(Error::&lt;T, I&gt;::NoAccount)<span class="question-mark">?</span>.status =
 					AccountStatus::Frozen;
 				<span class="prelude-val">Ok</span>(())
@@ -2639,7 +2639,7 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			<span class="kw">let </span>details = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span>details = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(
 				details.status == AssetStatus::Live || details.status == AssetStatus::Frozen,
 				Error::&lt;T, I&gt;::AssetNotLive
@@ -2647,7 +2647,7 @@
 			<span class="macro">ensure!</span>(origin == details.admin, Error::&lt;T, I&gt;::NoPermission);
 			<span class="kw">let </span>who = T::Lookup::lookup(who)<span class="question-mark">?</span>;
 
-			Account::&lt;T, I&gt;::try_mutate(id, <span class="kw-2">&amp;</span>who, |maybe_account| -&gt; DispatchResult {
+			Account::&lt;T, I&gt;::try_mutate(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>who, |maybe_account| -&gt; DispatchResult {
 				maybe_account.as_mut().ok_or(Error::&lt;T, I&gt;::NoAccount)<span class="question-mark">?</span>.status =
 					AccountStatus::Liquid;
 				<span class="prelude-val">Ok</span>(())
@@ -2671,7 +2671,7 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			Asset::&lt;T, I&gt;::try_mutate(id, |maybe_details| {
+			Asset::&lt;T, I&gt;::try_mutate(id.clone(), |maybe_details| {
 				<span class="kw">let </span>d = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(d.status == AssetStatus::Live, Error::&lt;T, I&gt;::AssetNotLive);
 				<span class="macro">ensure!</span>(origin == d.freezer, Error::&lt;T, I&gt;::NoPermission);
@@ -2697,7 +2697,7 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			Asset::&lt;T, I&gt;::try_mutate(id, |maybe_details| {
+			Asset::&lt;T, I&gt;::try_mutate(id.clone(), |maybe_details| {
 				<span class="kw">let </span>d = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(origin == d.admin, Error::&lt;T, I&gt;::NoPermission);
 				<span class="macro">ensure!</span>(d.status == AssetStatus::Frozen, Error::&lt;T, I&gt;::NotFrozen);
@@ -2729,7 +2729,7 @@
 			<span class="kw">let </span>owner = T::Lookup::lookup(owner)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			Asset::&lt;T, I&gt;::try_mutate(id, |maybe_details| {
+			Asset::&lt;T, I&gt;::try_mutate(id.clone(), |maybe_details| {
 				<span class="kw">let </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(details.status == AssetStatus::Live, Error::&lt;T, I&gt;::LiveAsset);
 				<span class="macro">ensure!</span>(origin == details.owner, Error::&lt;T, I&gt;::NoPermission);
@@ -2737,7 +2737,7 @@
 					<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 				}
 
-				<span class="kw">let </span>metadata_deposit = Metadata::&lt;T, I&gt;::get(id).deposit;
+				<span class="kw">let </span>metadata_deposit = Metadata::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).deposit;
 				<span class="kw">let </span>deposit = details.deposit + metadata_deposit;
 
 				<span class="comment">// Move the deposit to the new owner.
@@ -2776,7 +2776,7 @@
 			<span class="kw">let </span>freezer = T::Lookup::lookup(freezer)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			Asset::&lt;T, I&gt;::try_mutate(id, |maybe_details| {
+			Asset::&lt;T, I&gt;::try_mutate(id.clone(), |maybe_details| {
 				<span class="kw">let </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(details.status == AssetStatus::Live, Error::&lt;T, I&gt;::AssetNotLive);
 				<span class="macro">ensure!</span>(origin == details.owner, Error::&lt;T, I&gt;::NoPermission);
@@ -2836,11 +2836,11 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(d.status == AssetStatus::Live, Error::&lt;T, I&gt;::AssetNotLive);
 			<span class="macro">ensure!</span>(origin == d.owner, Error::&lt;T, I&gt;::NoPermission);
 
-			Metadata::&lt;T, I&gt;::try_mutate_exists(id, |metadata| {
+			Metadata::&lt;T, I&gt;::try_mutate_exists(id.clone(), |metadata| {
 				<span class="kw">let </span>deposit = metadata.take().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>.deposit;
 				T::Currency::unreserve(<span class="kw-2">&amp;</span>d.owner, deposit);
 				<span class="self">Self</span>::deposit_event(Event::MetadataCleared { asset_id: id });
@@ -2881,8 +2881,8 @@
 			<span class="kw">let </span>bounded_symbol: BoundedVec&lt;u8, T::StringLimit&gt; =
 				symbol.clone().try_into().map_err(|<span class="kw">_</span>| Error::&lt;T, I&gt;::BadMetadata)<span class="question-mark">?</span>;
 
-			<span class="macro">ensure!</span>(Asset::&lt;T, I&gt;::contains_key(id), Error::&lt;T, I&gt;::Unknown);
-			Metadata::&lt;T, I&gt;::try_mutate_exists(id, |metadata| {
+			<span class="macro">ensure!</span>(Asset::&lt;T, I&gt;::contains_key(<span class="kw-2">&amp;</span>id), Error::&lt;T, I&gt;::Unknown);
+			Metadata::&lt;T, I&gt;::try_mutate_exists(id.clone(), |metadata| {
 				<span class="kw">let </span>deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
 				<span class="kw-2">*</span>metadata = <span class="prelude-val">Some</span>(AssetMetadata {
 					deposit,
@@ -2922,8 +2922,8 @@
 			T::ForceOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
-			Metadata::&lt;T, I&gt;::try_mutate_exists(id, |metadata| {
+			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			Metadata::&lt;T, I&gt;::try_mutate_exists(id.clone(), |metadata| {
 				<span class="kw">let </span>deposit = metadata.take().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>.deposit;
 				T::Currency::unreserve(<span class="kw-2">&amp;</span>d.owner, deposit);
 				<span class="self">Self</span>::deposit_event(Event::MetadataCleared { asset_id: id });
@@ -2968,7 +2968,7 @@
 			T::ForceOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			Asset::&lt;T, I&gt;::try_mutate(id, |maybe_asset| {
+			Asset::&lt;T, I&gt;::try_mutate(id.clone(), |maybe_asset| {
 				<span class="kw">let </span><span class="kw-2">mut </span>asset = maybe_asset.take().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 				<span class="macro">ensure!</span>(asset.status != AssetStatus::Destroying, Error::&lt;T, I&gt;::AssetNotLive);
 				asset.owner = T::Lookup::lookup(owner)<span class="question-mark">?</span>;
@@ -3044,15 +3044,15 @@
 			<span class="kw">let </span>owner = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>delegate = T::Lookup::lookup(delegate)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
-			<span class="kw">let </span><span class="kw-2">mut </span>d = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span><span class="kw-2">mut </span>d = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(d.status == AssetStatus::Live, Error::&lt;T, I&gt;::AssetNotLive);
 
-			<span class="kw">let </span>approval =
-				Approvals::&lt;T, I&gt;::take((id, <span class="kw-2">&amp;</span>owner, <span class="kw-2">&amp;</span>delegate)).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span>approval = Approvals::&lt;T, I&gt;::take((id.clone(), <span class="kw-2">&amp;</span>owner, <span class="kw-2">&amp;</span>delegate))
+				.ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			T::Currency::unreserve(<span class="kw-2">&amp;</span>owner, approval.deposit);
 
 			d.approvals.saturating_dec();
-			Asset::&lt;T, I&gt;::insert(id, d);
+			Asset::&lt;T, I&gt;::insert(id.clone(), d);
 
 			<span class="self">Self</span>::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
 			<span class="prelude-val">Ok</span>(())
@@ -3079,7 +3079,7 @@
 			delegate: AccountIdLookupOf&lt;T&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>id: T::AssetId = id.into();
-			<span class="kw">let </span><span class="kw-2">mut </span>d = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span><span class="kw-2">mut </span>d = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(d.status == AssetStatus::Live, Error::&lt;T, I&gt;::AssetNotLive);
 			T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| ())
@@ -3092,11 +3092,11 @@
 			<span class="kw">let </span>owner = T::Lookup::lookup(owner)<span class="question-mark">?</span>;
 			<span class="kw">let </span>delegate = T::Lookup::lookup(delegate)<span class="question-mark">?</span>;
 
-			<span class="kw">let </span>approval =
-				Approvals::&lt;T, I&gt;::take((id, <span class="kw-2">&amp;</span>owner, <span class="kw-2">&amp;</span>delegate)).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span>approval = Approvals::&lt;T, I&gt;::take((id.clone(), <span class="kw-2">&amp;</span>owner, <span class="kw-2">&amp;</span>delegate))
+				.ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			T::Currency::unreserve(<span class="kw-2">&amp;</span>owner, approval.deposit);
 			d.approvals.saturating_dec();
-			Asset::&lt;T, I&gt;::insert(id, d);
+			Asset::&lt;T, I&gt;::insert(id.clone(), d);
 
 			<span class="self">Self</span>::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
 			<span class="prelude-val">Ok</span>(())
@@ -3194,7 +3194,7 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			<span class="kw">let </span><span class="kw-2">mut </span>details = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span><span class="kw-2">mut </span>details = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(origin == details.owner, Error::&lt;T, I&gt;::NoPermission);
 
 			<span class="kw">let </span>old_min_balance = details.min_balance;
@@ -3284,7 +3284,7 @@
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>id: T::AssetId = id.into();
 
-			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
+			<span class="kw">let </span>d = Asset::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>id).ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(
 				d.status == AssetStatus::Live || d.status == AssetStatus::Frozen,
 				Error::&lt;T, I&gt;::AssetNotLive
@@ -3292,7 +3292,7 @@
 			<span class="macro">ensure!</span>(origin == d.freezer, Error::&lt;T, I&gt;::NoPermission);
 			<span class="kw">let </span>who = T::Lookup::lookup(who)<span class="question-mark">?</span>;
 
-			Account::&lt;T, I&gt;::try_mutate(id, <span class="kw-2">&amp;</span>who, |maybe_account| -&gt; DispatchResult {
+			Account::&lt;T, I&gt;::try_mutate(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>who, |maybe_account| -&gt; DispatchResult {
 				maybe_account.as_mut().ok_or(Error::&lt;T, I&gt;::NoAccount)<span class="question-mark">?</span>.status =
 					AccountStatus::Blocked;
 				<span class="prelude-val">Ok</span>(())

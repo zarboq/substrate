@@ -237,7 +237,7 @@
 {
 	<span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
 		<span class="kw">if </span>!<span class="self">self</span>.amount.is_zero() {
-			OnDrop::handle(<span class="self">self</span>.asset, <span class="self">self</span>.amount)
+			OnDrop::handle(<span class="self">self</span>.asset.clone(), <span class="self">self</span>.amount)
 		}
 	}
 }
@@ -282,9 +282,9 @@
 	<span class="kw">pub fn </span>split(<span class="self">self</span>, amount: B) -&gt; (<span class="self">Self</span>, <span class="self">Self</span>) {
 		<span class="kw">let </span>first = <span class="self">self</span>.amount.min(amount);
 		<span class="kw">let </span>second = <span class="self">self</span>.amount - first;
-		<span class="kw">let </span>asset = <span class="self">self</span>.asset;
+		<span class="kw">let </span>asset = <span class="self">self</span>.asset.clone();
 		sp_std::mem::forget(<span class="self">self</span>);
-		(Imbalance::new(asset, first), Imbalance::new(asset, second))
+		(Imbalance::new(asset.clone(), first), Imbalance::new(asset, second))
 	}
 	<span class="kw">pub fn </span>merge(<span class="kw-2">mut </span><span class="self">self</span>, other: <span class="self">Self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, (<span class="self">Self</span>, <span class="self">Self</span>)&gt; {
 		<span class="kw">if </span><span class="self">self</span>.asset == other.asset {
@@ -313,7 +313,7 @@
 	&gt; {
 		<span class="kw">if </span><span class="self">self</span>.asset == other.asset {
 			<span class="kw">let </span>(a, b) = (<span class="self">self</span>.amount, other.amount);
-			<span class="kw">let </span>asset = <span class="self">self</span>.asset;
+			<span class="kw">let </span>asset = <span class="self">self</span>.asset.clone();
 			sp_std::mem::forget((<span class="self">self</span>, other));
 
 			<span class="kw">if </span>a == b {
@@ -332,7 +332,7 @@
 	}
 
 	<span class="kw">pub fn </span>asset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; A {
-		<span class="self">self</span>.asset
+		<span class="self">self</span>.asset.clone()
 	}
 }
 

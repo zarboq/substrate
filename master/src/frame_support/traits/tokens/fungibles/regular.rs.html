@@ -568,6 +568,21 @@
 <a href="#568" id="568">568</a>
 <a href="#569" id="569">569</a>
 <a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
@@ -716,7 +731,7 @@
 	/// This should not be reimplemented.
 	</span><span class="kw">fn </span>handle_raw_dust(asset: <span class="self">Self</span>::AssetId, amount: <span class="self">Self</span>::Balance) {
 		<span class="self">Self</span>::handle_dust(Dust(
-			asset,
+			asset.clone(),
 			amount.min(<span class="self">Self</span>::minimum_balance(asset).saturating_sub(One::one())),
 		))
 	}
@@ -763,13 +778,13 @@
 		preservation: Preservation,
 		force: Fortitude,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>old_balance = <span class="self">Self</span>::balance(asset, who);
-		<span class="kw">let </span>free = <span class="self">Self</span>::reducible_balance(asset, who, preservation, force);
+		<span class="kw">let </span>old_balance = <span class="self">Self</span>::balance(asset.clone(), who);
+		<span class="kw">let </span>free = <span class="self">Self</span>::reducible_balance(asset.clone(), who, preservation, force);
 		<span class="kw">if let </span>BestEffort = precision {
 			amount = amount.min(free);
 		}
 		<span class="kw">let </span>new_balance = old_balance.checked_sub(<span class="kw-2">&amp;</span>amount).ok_or(TokenError::FundsUnavailable)<span class="question-mark">?</span>;
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(dust) = <span class="self">Self</span>::write_balance(asset, who, new_balance)<span class="question-mark">? </span>{
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(dust) = <span class="self">Self</span>::write_balance(asset.clone(), who, new_balance)<span class="question-mark">? </span>{
 			<span class="self">Self</span>::handle_dust(Dust(asset, dust));
 		}
 		<span class="prelude-val">Ok</span>(old_balance.saturating_sub(new_balance))
@@ -787,13 +802,13 @@
 		amount: <span class="self">Self</span>::Balance,
 		precision: Precision,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>old_balance = <span class="self">Self</span>::balance(asset, who);
+		<span class="kw">let </span>old_balance = <span class="self">Self</span>::balance(asset.clone(), who);
 		<span class="kw">let </span>new_balance = <span class="kw">if let </span>BestEffort = precision {
 			old_balance.saturating_add(amount)
 		} <span class="kw">else </span>{
 			old_balance.checked_add(<span class="kw-2">&amp;</span>amount).ok_or(ArithmeticError::Overflow)<span class="question-mark">?
 		</span>};
-		<span class="kw">if </span>new_balance &lt; <span class="self">Self</span>::minimum_balance(asset) {
+		<span class="kw">if </span>new_balance &lt; <span class="self">Self</span>::minimum_balance(asset.clone()) {
 			<span class="comment">// Attempt to increase from 0 to below minimum -&gt; stays at zero.
 			</span><span class="kw">if let </span>BestEffort = precision {
 				<span class="prelude-val">Ok</span>(<span class="self">Self</span>::Balance::default())
@@ -804,7 +819,7 @@
 			<span class="kw">if </span>new_balance == old_balance {
 				<span class="prelude-val">Ok</span>(<span class="self">Self</span>::Balance::default())
 			} <span class="kw">else </span>{
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(dust) = <span class="self">Self</span>::write_balance(asset, who, new_balance)<span class="question-mark">? </span>{
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(dust) = <span class="self">Self</span>::write_balance(asset.clone(), who, new_balance)<span class="question-mark">? </span>{
 					<span class="self">Self</span>::handle_dust(Dust(asset, dust));
 				}
 				<span class="prelude-val">Ok</span>(new_balance.saturating_sub(old_balance))
@@ -828,11 +843,14 @@
 		who: <span class="kw-2">&amp;</span>AccountId,
 		amount: <span class="self">Self</span>::Balance,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="self">Self</span>::total_issuance(asset)
+		<span class="self">Self</span>::total_issuance(asset.clone())
 			.checked_add(<span class="kw-2">&amp;</span>amount)
 			.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>;
-		<span class="kw">let </span>actual = <span class="self">Self</span>::increase_balance(asset, who, amount, Exact)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::set_total_issuance(asset, <span class="self">Self</span>::total_issuance(asset).saturating_add(actual));
+		<span class="kw">let </span>actual = <span class="self">Self</span>::increase_balance(asset.clone(), who, amount, Exact)<span class="question-mark">?</span>;
+		<span class="self">Self</span>::set_total_issuance(
+			asset.clone(),
+			<span class="self">Self</span>::total_issuance(asset.clone()).saturating_add(actual),
+		);
 		<span class="self">Self</span>::done_mint_into(asset, who, amount);
 		<span class="prelude-val">Ok</span>(actual)
 	}
@@ -847,13 +865,17 @@
 		precision: Precision,
 		force: Fortitude,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>actual = <span class="self">Self</span>::reducible_balance(asset, who, Expendable, force).min(amount);
+		<span class="kw">let </span>actual = <span class="self">Self</span>::reducible_balance(asset.clone(), who, Expendable, force).min(amount);
 		<span class="macro">ensure!</span>(actual == amount || precision == BestEffort, TokenError::FundsUnavailable);
-		<span class="self">Self</span>::total_issuance(asset)
+		<span class="self">Self</span>::total_issuance(asset.clone())
 			.checked_sub(<span class="kw-2">&amp;</span>actual)
 			.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>;
-		<span class="kw">let </span>actual = <span class="self">Self</span>::decrease_balance(asset, who, actual, BestEffort, Expendable, force)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::set_total_issuance(asset, <span class="self">Self</span>::total_issuance(asset).saturating_sub(actual));
+		<span class="kw">let </span>actual =
+			<span class="self">Self</span>::decrease_balance(asset.clone(), who, actual, BestEffort, Expendable, force)<span class="question-mark">?</span>;
+		<span class="self">Self</span>::set_total_issuance(
+			asset.clone(),
+			<span class="self">Self</span>::total_issuance(asset.clone()).saturating_sub(actual),
+		);
 		<span class="self">Self</span>::done_burn_from(asset, who, actual);
 		<span class="prelude-val">Ok</span>(actual)
 	}
@@ -873,13 +895,17 @@
 		who: <span class="kw-2">&amp;</span>AccountId,
 		amount: <span class="self">Self</span>::Balance,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>actual = <span class="self">Self</span>::reducible_balance(asset, who, Expendable, Polite).min(amount);
+		<span class="kw">let </span>actual = <span class="self">Self</span>::reducible_balance(asset.clone(), who, Expendable, Polite).min(amount);
 		<span class="macro">ensure!</span>(actual == amount, TokenError::FundsUnavailable);
-		<span class="self">Self</span>::total_issuance(asset)
+		<span class="self">Self</span>::total_issuance(asset.clone())
 			.checked_sub(<span class="kw-2">&amp;</span>actual)
 			.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>;
-		<span class="kw">let </span>actual = <span class="self">Self</span>::decrease_balance(asset, who, actual, BestEffort, Expendable, Polite)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::set_total_issuance(asset, <span class="self">Self</span>::total_issuance(asset).saturating_sub(actual));
+		<span class="kw">let </span>actual =
+			<span class="self">Self</span>::decrease_balance(asset.clone(), who, actual, BestEffort, Expendable, Polite)<span class="question-mark">?</span>;
+		<span class="self">Self</span>::set_total_issuance(
+			asset.clone(),
+			<span class="self">Self</span>::total_issuance(asset.clone()).saturating_sub(actual),
+		);
 		<span class="self">Self</span>::done_shelve(asset, who, actual);
 		<span class="prelude-val">Ok</span>(actual)
 	}
@@ -899,11 +925,14 @@
 		who: <span class="kw-2">&amp;</span>AccountId,
 		amount: <span class="self">Self</span>::Balance,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="self">Self</span>::total_issuance(asset)
+		<span class="self">Self</span>::total_issuance(asset.clone())
 			.checked_add(<span class="kw-2">&amp;</span>amount)
 			.ok_or(ArithmeticError::Overflow)<span class="question-mark">?</span>;
-		<span class="kw">let </span>actual = <span class="self">Self</span>::increase_balance(asset, who, amount, Exact)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::set_total_issuance(asset, <span class="self">Self</span>::total_issuance(asset).saturating_add(actual));
+		<span class="kw">let </span>actual = <span class="self">Self</span>::increase_balance(asset.clone(), who, amount, Exact)<span class="question-mark">?</span>;
+		<span class="self">Self</span>::set_total_issuance(
+			asset.clone(),
+			<span class="self">Self</span>::total_issuance(asset.clone()).saturating_add(actual),
+		);
 		<span class="self">Self</span>::done_restore(asset, who, amount);
 		<span class="prelude-val">Ok</span>(actual)
 	}
@@ -916,13 +945,13 @@
 		amount: <span class="self">Self</span>::Balance,
 		preservation: Preservation,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Balance, DispatchError&gt; {
-		<span class="kw">let </span>_extra =
-			<span class="self">Self</span>::can_withdraw(asset, source, amount).into_result(preservation != Expendable)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::can_deposit(asset, dest, amount, Extant).into_result()<span class="question-mark">?</span>;
-		<span class="self">Self</span>::decrease_balance(asset, source, amount, BestEffort, preservation, Polite)<span class="question-mark">?</span>;
+		<span class="kw">let </span>_extra = <span class="self">Self</span>::can_withdraw(asset.clone(), source, amount)
+			.into_result(preservation != Expendable)<span class="question-mark">?</span>;
+		<span class="self">Self</span>::can_deposit(asset.clone(), dest, amount, Extant).into_result()<span class="question-mark">?</span>;
+		<span class="self">Self</span>::decrease_balance(asset.clone(), source, amount, BestEffort, preservation, Polite)<span class="question-mark">?</span>;
 		<span class="comment">// This should never fail as we checked `can_deposit` earlier. But we do a best-effort
 		// anyway.
-		</span><span class="kw">let _ </span>= <span class="self">Self</span>::increase_balance(asset, dest, amount, BestEffort);
+		</span><span class="kw">let _ </span>= <span class="self">Self</span>::increase_balance(asset.clone(), dest, amount, BestEffort);
 		<span class="self">Self</span>::done_transfer(asset, source, dest, amount);
 		<span class="prelude-val">Ok</span>(amount)
 	}
@@ -933,7 +962,7 @@
 	///
 	/// Returns the new balance.
 	</span><span class="kw">fn </span>set_balance(asset: <span class="self">Self</span>::AssetId, who: <span class="kw-2">&amp;</span>AccountId, amount: <span class="self">Self</span>::Balance) -&gt; <span class="self">Self</span>::Balance {
-		<span class="kw">let </span>b = <span class="self">Self</span>::balance(asset, who);
+		<span class="kw">let </span>b = <span class="self">Self</span>::balance(asset.clone(), who);
 		<span class="kw">if </span>b &gt; amount {
 			<span class="self">Self</span>::burn_from(asset, who, b - amount, BestEffort, Force).map(|d| b.saturating_sub(d))
 		} <span class="kw">else </span>{
@@ -961,7 +990,7 @@
 	<span class="kw">for </span>IncreaseIssuance&lt;AccountId, U&gt;
 {
 	<span class="kw">fn </span>handle(asset: U::AssetId, amount: U::Balance) {
-		U::set_total_issuance(asset, U::total_issuance(asset).saturating_add(amount))
+		U::set_total_issuance(asset.clone(), U::total_issuance(asset).saturating_add(amount))
 	}
 }
 
@@ -972,7 +1001,7 @@
 	<span class="kw">for </span>DecreaseIssuance&lt;AccountId, U&gt;
 {
 	<span class="kw">fn </span>handle(asset: U::AssetId, amount: U::Balance) {
-		U::set_total_issuance(asset, U::total_issuance(asset).saturating_sub(amount))
+		U::set_total_issuance(asset.clone(), U::total_issuance(asset).saturating_sub(amount))
 	}
 }
 
@@ -993,11 +1022,11 @@
 	/// This is infallible, but doesn&#39;t guarantee that the entire `amount` is burnt, for example
 	/// in the case of underflow.
 	</span><span class="kw">fn </span>rescind(asset: <span class="self">Self</span>::AssetId, amount: <span class="self">Self</span>::Balance) -&gt; Debt&lt;AccountId, <span class="self">Self</span>&gt; {
-		<span class="kw">let </span>old = <span class="self">Self</span>::total_issuance(asset);
+		<span class="kw">let </span>old = <span class="self">Self</span>::total_issuance(asset.clone());
 		<span class="kw">let </span>new = old.saturating_sub(amount);
-		<span class="self">Self</span>::set_total_issuance(asset, new);
+		<span class="self">Self</span>::set_total_issuance(asset.clone(), new);
 		<span class="kw">let </span>delta = old - new;
-		<span class="self">Self</span>::done_rescind(asset, delta);
+		<span class="self">Self</span>::done_rescind(asset.clone(), delta);
 		Imbalance::&lt;<span class="self">Self</span>::AssetId, <span class="self">Self</span>::Balance, <span class="self">Self</span>::OnDropDebt, <span class="self">Self</span>::OnDropCredit&gt;::new(
 			asset, delta,
 		)
@@ -1010,11 +1039,11 @@
 	/// This is infallible, but doesn&#39;t guarantee that the entire `amount` is issued, for example
 	/// in the case of overflow.
 	</span><span class="kw">fn </span>issue(asset: <span class="self">Self</span>::AssetId, amount: <span class="self">Self</span>::Balance) -&gt; Credit&lt;AccountId, <span class="self">Self</span>&gt; {
-		<span class="kw">let </span>old = <span class="self">Self</span>::total_issuance(asset);
+		<span class="kw">let </span>old = <span class="self">Self</span>::total_issuance(asset.clone());
 		<span class="kw">let </span>new = old.saturating_add(amount);
-		<span class="self">Self</span>::set_total_issuance(asset, new);
+		<span class="self">Self</span>::set_total_issuance(asset.clone(), new);
 		<span class="kw">let </span>delta = new - old;
-		<span class="self">Self</span>::done_issue(asset, delta);
+		<span class="self">Self</span>::done_issue(asset.clone(), delta);
 		Imbalance::&lt;<span class="self">Self</span>::AssetId, <span class="self">Self</span>::Balance, <span class="self">Self</span>::OnDropCredit, <span class="self">Self</span>::OnDropDebt&gt;::new(
 			asset, delta,
 		)
@@ -1028,7 +1057,7 @@
 		asset: <span class="self">Self</span>::AssetId,
 		amount: <span class="self">Self</span>::Balance,
 	) -&gt; (Debt&lt;AccountId, <span class="self">Self</span>&gt;, Credit&lt;AccountId, <span class="self">Self</span>&gt;) {
-		(<span class="self">Self</span>::rescind(asset, amount), <span class="self">Self</span>::issue(asset, amount))
+		(<span class="self">Self</span>::rescind(asset.clone(), amount), <span class="self">Self</span>::issue(asset, amount))
 	}
 
 	<span class="doccomment">/// Mints `value` into the account of `who`, creating it as needed.
@@ -1046,8 +1075,8 @@
 		value: <span class="self">Self</span>::Balance,
 		precision: Precision,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Debt&lt;AccountId, <span class="self">Self</span>&gt;, DispatchError&gt; {
-		<span class="kw">let </span>increase = <span class="self">Self</span>::increase_balance(asset, who, value, precision)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::done_deposit(asset, who, increase);
+		<span class="kw">let </span>increase = <span class="self">Self</span>::increase_balance(asset.clone(), who, value, precision)<span class="question-mark">?</span>;
+		<span class="self">Self</span>::done_deposit(asset.clone(), who, increase);
 		<span class="prelude-val">Ok</span>(Imbalance::&lt;<span class="self">Self</span>::AssetId, <span class="self">Self</span>::Balance, <span class="self">Self</span>::OnDropDebt, <span class="self">Self</span>::OnDropCredit&gt;::new(
 			asset, increase,
 		))
@@ -1074,8 +1103,9 @@
 		preservation: Preservation,
 		force: Fortitude,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Credit&lt;AccountId, <span class="self">Self</span>&gt;, DispatchError&gt; {
-		<span class="kw">let </span>decrease = <span class="self">Self</span>::decrease_balance(asset, who, value, precision, preservation, force)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::done_withdraw(asset, who, decrease);
+		<span class="kw">let </span>decrease =
+			<span class="self">Self</span>::decrease_balance(asset.clone(), who, value, precision, preservation, force)<span class="question-mark">?</span>;
+		<span class="self">Self</span>::done_withdraw(asset.clone(), who, decrease);
 		<span class="prelude-val">Ok</span>(Imbalance::&lt;<span class="self">Self</span>::AssetId, <span class="self">Self</span>::Balance, <span class="self">Self</span>::OnDropCredit, <span class="self">Self</span>::OnDropDebt&gt;::new(
 			asset, decrease,
 		))
@@ -1115,7 +1145,7 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Credit&lt;AccountId, <span class="self">Self</span>&gt;, Debt&lt;AccountId, <span class="self">Self</span>&gt;&gt; {
 		<span class="kw">let </span>amount = debt.peek();
 		<span class="kw">let </span>asset = debt.asset();
-		<span class="kw">let </span>credit = <span class="kw">match </span><span class="self">Self</span>::withdraw(asset, who, amount, Exact, preservation, Polite) {
+		<span class="kw">let </span>credit = <span class="kw">match </span><span class="self">Self</span>::withdraw(asset.clone(), who, amount, Exact, preservation, Polite) {
 			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(debt),
 			<span class="prelude-val">Ok</span>(d) =&gt; d,
 		};
