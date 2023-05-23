@@ -1222,6 +1222,9 @@
 <a href="#1222" id="1222">1222</a>
 <a href="#1223" id="1223">1223</a>
 <a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1283,6 +1286,9 @@
 	},
 	weights::Weight,
 };
+
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;try-runtime&quot;</span>, test))]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
@@ -1570,9 +1576,8 @@
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>try_state(_n: BlockNumberFor&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-			<span class="self">Self</span>::do_try_state()<span class="question-mark">?</span>;
-			<span class="prelude-val">Ok</span>(())
+		</span><span class="kw">fn </span>try_state(_n: BlockNumberFor&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+			<span class="self">Self</span>::do_try_state()
 		}
 	}
 
@@ -2191,77 +2196,78 @@
 	/// Looking at prime account:
 	/// * The prime account must be a member of the collective.
 	</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;try-runtime&quot;</span>, test))]
-	</span><span class="kw">fn </span>do_try_state() -&gt; DispatchResult {
-		<span class="self">Self</span>::proposals().into_iter().try_for_each(|proposal| -&gt; DispatchResult {
-			<span class="macro">ensure!</span>(
-				<span class="self">Self</span>::proposal_of(proposal).is_some(),
-				DispatchError::Other(
+	</span><span class="kw">fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+		<span class="self">Self</span>::proposals()
+			.into_iter()
+			.try_for_each(|proposal| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+				<span class="macro">ensure!</span>(
+					<span class="self">Self</span>::proposal_of(proposal).is_some(),
 					<span class="string">&quot;Proposal hash from `Proposals` is not found inside the `ProposalOf` mapping.&quot;
-				</span>)
-			);
-			<span class="prelude-val">Ok</span>(())
-		})<span class="question-mark">?</span>;
+				</span>);
+				<span class="prelude-val">Ok</span>(())
+			})<span class="question-mark">?</span>;
 
 		<span class="macro">ensure!</span>(
 			<span class="self">Self</span>::proposals().into_iter().count() &lt;= <span class="self">Self</span>::proposal_count() <span class="kw">as </span>usize,
-			DispatchError::Other(<span class="string">&quot;The actual number of proposals is greater than `ProposalCount`&quot;</span>)
-		);
+			<span class="string">&quot;The actual number of proposals is greater than `ProposalCount`&quot;
+		</span>);
 		<span class="macro">ensure!</span>(
 			<span class="self">Self</span>::proposals().into_iter().count() == &lt;ProposalOf&lt;T, I&gt;&gt;::iter_keys().count(),
-			DispatchError::Other(<span class="string">&quot;Proposal count inside `Proposals` is not equal to the proposal count in `ProposalOf`&quot;</span>)
-		);
+			<span class="string">&quot;Proposal count inside `Proposals` is not equal to the proposal count in `ProposalOf`&quot;
+		</span>);
 
-		<span class="self">Self</span>::proposals().into_iter().try_for_each(|proposal| -&gt; DispatchResult {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(votes) = <span class="self">Self</span>::voting(proposal) {
-				<span class="kw">let </span>ayes = votes.ayes.len();
-				<span class="kw">let </span>nays = votes.nays.len();
+		<span class="self">Self</span>::proposals()
+			.into_iter()
+			.try_for_each(|proposal| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(votes) = <span class="self">Self</span>::voting(proposal) {
+					<span class="kw">let </span>ayes = votes.ayes.len();
+					<span class="kw">let </span>nays = votes.nays.len();
 
-				<span class="macro">ensure!</span>(
-					ayes.saturating_add(nays) &lt;= T::MaxMembers::get() <span class="kw">as </span>usize,
-					DispatchError::Other(<span class="string">&quot;The sum of ayes and nays is greater than `MaxMembers`&quot;</span>)
-				);
-			}
-			<span class="prelude-val">Ok</span>(())
-		})<span class="question-mark">?</span>;
+					<span class="macro">ensure!</span>(
+						ayes.saturating_add(nays) &lt;= T::MaxMembers::get() <span class="kw">as </span>usize,
+						<span class="string">&quot;The sum of ayes and nays is greater than `MaxMembers`&quot;
+					</span>);
+				}
+				<span class="prelude-val">Ok</span>(())
+			})<span class="question-mark">?</span>;
 
 		<span class="kw">let </span><span class="kw-2">mut </span>proposal_indices = <span class="macro">vec!</span>[];
-		<span class="self">Self</span>::proposals().into_iter().try_for_each(|proposal| -&gt; DispatchResult {
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(votes) = <span class="self">Self</span>::voting(proposal) {
-				<span class="kw">let </span>proposal_index = votes.index;
-				<span class="macro">ensure!</span>(
-					!proposal_indices.contains(<span class="kw-2">&amp;</span>proposal_index),
-					DispatchError::Other(<span class="string">&quot;The proposal index is not unique.&quot;</span>)
-				);
-				proposal_indices.push(proposal_index);
-			}
-			<span class="prelude-val">Ok</span>(())
-		})<span class="question-mark">?</span>;
+		<span class="self">Self</span>::proposals()
+			.into_iter()
+			.try_for_each(|proposal| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(votes) = <span class="self">Self</span>::voting(proposal) {
+					<span class="kw">let </span>proposal_index = votes.index;
+					<span class="macro">ensure!</span>(
+						!proposal_indices.contains(<span class="kw-2">&amp;</span>proposal_index),
+						<span class="string">&quot;The proposal index is not unique.&quot;
+					</span>);
+					proposal_indices.push(proposal_index);
+				}
+				<span class="prelude-val">Ok</span>(())
+			})<span class="question-mark">?</span>;
 
-		&lt;Voting&lt;T, I&gt;&gt;::iter_keys().try_for_each(|proposal_hash| -&gt; DispatchResult {
-			<span class="macro">ensure!</span>(
-				<span class="self">Self</span>::proposals().contains(<span class="kw-2">&amp;</span>proposal_hash),
-				DispatchError::Other(
+		&lt;Voting&lt;T, I&gt;&gt;::iter_keys().try_for_each(
+			|proposal_hash| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+				<span class="macro">ensure!</span>(
+					<span class="self">Self</span>::proposals().contains(<span class="kw-2">&amp;</span>proposal_hash),
 					<span class="string">&quot;`Proposals` doesn&#39;t contain the proposal hash from the `Voting` storage map.&quot;
-				</span>)
-			);
-			<span class="prelude-val">Ok</span>(())
-		})<span class="question-mark">?</span>;
+				</span>);
+				<span class="prelude-val">Ok</span>(())
+			},
+		)<span class="question-mark">?</span>;
 
 		<span class="macro">ensure!</span>(
 			<span class="self">Self</span>::members().len() &lt;= T::MaxMembers::get() <span class="kw">as </span>usize,
-			DispatchError::Other(<span class="string">&quot;The member count is greater than `MaxMembers`.&quot;</span>)
-		);
+			<span class="string">&quot;The member count is greater than `MaxMembers`.&quot;
+		</span>);
 
 		<span class="macro">ensure!</span>(
 			<span class="self">Self</span>::members().windows(<span class="number">2</span>).all(|members| members[<span class="number">0</span>] &lt;= members[<span class="number">1</span>]),
-			DispatchError::Other(<span class="string">&quot;The members are not sorted by value.&quot;</span>)
-		);
+			<span class="string">&quot;The members are not sorted by value.&quot;
+		</span>);
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(prime) = <span class="self">Self</span>::prime() {
-			<span class="macro">ensure!</span>(
-				<span class="self">Self</span>::members().contains(<span class="kw-2">&amp;</span>prime),
-				DispatchError::Other(<span class="string">&quot;Prime account is not a member.&quot;</span>)
-			);
+			<span class="macro">ensure!</span>(<span class="self">Self</span>::members().contains(<span class="kw-2">&amp;</span>prime), <span class="string">&quot;Prime account is not a member.&quot;</span>);
 		}
 
 		<span class="prelude-val">Ok</span>(())

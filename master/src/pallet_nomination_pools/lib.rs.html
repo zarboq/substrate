@@ -3255,6 +3255,33 @@
 <a href="#3255" id="3255">3255</a>
 <a href="#3256" id="3256">3256</a>
 <a href="#3257" id="3257">3257</a>
+<a href="#3258" id="3258">3258</a>
+<a href="#3259" id="3259">3259</a>
+<a href="#3260" id="3260">3260</a>
+<a href="#3261" id="3261">3261</a>
+<a href="#3262" id="3262">3262</a>
+<a href="#3263" id="3263">3263</a>
+<a href="#3264" id="3264">3264</a>
+<a href="#3265" id="3265">3265</a>
+<a href="#3266" id="3266">3266</a>
+<a href="#3267" id="3267">3267</a>
+<a href="#3268" id="3268">3268</a>
+<a href="#3269" id="3269">3269</a>
+<a href="#3270" id="3270">3270</a>
+<a href="#3271" id="3271">3271</a>
+<a href="#3272" id="3272">3272</a>
+<a href="#3273" id="3273">3273</a>
+<a href="#3274" id="3274">3274</a>
+<a href="#3275" id="3275">3275</a>
+<a href="#3276" id="3276">3276</a>
+<a href="#3277" id="3277">3277</a>
+<a href="#3278" id="3278">3278</a>
+<a href="#3279" id="3279">3279</a>
+<a href="#3280" id="3280">3280</a>
+<a href="#3281" id="3281">3281</a>
+<a href="#3282" id="3282">3282</a>
+<a href="#3283" id="3283">3283</a>
+<a href="#3284" id="3284">3284</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3634,6 +3661,9 @@
 };
 <span class="kw">use </span>sp_staking::{EraIndex, OnStakerSlash, StakingInterface};
 <span class="kw">use </span>sp_std::{collections::btree_map::BTreeMap, fmt::Debug, ops::Div, vec::Vec};
+
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzzing&quot;</span>, test, debug_assertions))]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 <span class="doccomment">/// The log target of this pallet.
 </span><span class="kw">pub const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;runtime::nomination-pools&quot;</span>;
@@ -5883,7 +5913,7 @@
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>try_state(_n: BlockNumberFor&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>try_state(_n: BlockNumberFor&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="self">Self</span>::do_try_state(u8::MAX)
 		}
 
@@ -6312,7 +6342,7 @@
 	/// multiple `level`s, where the higher the level, the more checks we performs. So,
 	/// `try_state(255)` is the strongest sanity check, and `0` performs no checks.
 	</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzzing&quot;</span>, test, debug_assertions))]
-	</span><span class="kw">pub fn </span>do_try_state(level: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">pub fn </span>do_try_state(level: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">if </span>level.is_zero() {
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 		}
@@ -6320,12 +6350,24 @@
 		// result in the same set of keys, in the same order.
 		</span><span class="kw">let </span>bonded_pools = BondedPools::&lt;T&gt;::iter_keys().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		<span class="kw">let </span>reward_pools = RewardPools::&lt;T&gt;::iter_keys().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-		<span class="macro">assert_eq!</span>(bonded_pools, reward_pools);
+		<span class="macro">ensure!</span>(
+			bonded_pools == reward_pools,
+			<span class="string">&quot;`BondedPools` and `RewardPools` must all have the EXACT SAME key-set.&quot;
+		</span>);
 
-		<span class="macro">assert!</span>(Metadata::&lt;T&gt;::iter_keys().all(|k| bonded_pools.contains(<span class="kw-2">&amp;</span>k)));
-		<span class="macro">assert!</span>(SubPoolsStorage::&lt;T&gt;::iter_keys().all(|k| bonded_pools.contains(<span class="kw-2">&amp;</span>k)));
+		<span class="macro">ensure!</span>(
+			SubPoolsStorage::&lt;T&gt;::iter_keys().all(|k| bonded_pools.contains(<span class="kw-2">&amp;</span>k)),
+			<span class="string">&quot;`SubPoolsStorage` must be a subset of the above superset.&quot;
+		</span>);
+		<span class="macro">ensure!</span>(
+			Metadata::&lt;T&gt;::iter_keys().all(|k| bonded_pools.contains(<span class="kw-2">&amp;</span>k)),
+			<span class="string">&quot;`Metadata` keys must be a subset of the above superset.&quot;
+		</span>);
 
-		<span class="macro">assert!</span>(MaxPools::&lt;T&gt;::get().map_or(<span class="bool-val">true</span>, |max| bonded_pools.len() &lt;= (max <span class="kw">as </span>usize)));
+		<span class="macro">ensure!</span>(
+			MaxPools::&lt;T&gt;::get().map_or(<span class="bool-val">true</span>, |max| bonded_pools.len() &lt;= (max <span class="kw">as </span>usize)),
+			Error::&lt;T&gt;::MaxPools
+		);
 
 		<span class="kw">for </span>id <span class="kw">in </span>reward_pools {
 			<span class="kw">let </span>account = <span class="self">Self</span>::create_reward_account(id);
@@ -6345,9 +6387,9 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>pools_members = BTreeMap::&lt;PoolId, u32&gt;::new();
 		<span class="kw">let </span><span class="kw-2">mut </span>pools_members_pending_rewards = BTreeMap::&lt;PoolId, BalanceOf&lt;T&gt;&gt;::new();
 		<span class="kw">let </span><span class="kw-2">mut </span>all_members = <span class="number">0u32</span>;
-		PoolMembers::&lt;T&gt;::iter().for_each(|(<span class="kw">_</span>, d)| {
+		PoolMembers::&lt;T&gt;::iter().try_for_each(|(<span class="kw">_</span>, d)| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="kw">let </span>bonded_pool = BondedPools::&lt;T&gt;::get(d.pool_id).unwrap();
-			<span class="macro">assert!</span>(!d.total_points().is_zero(), <span class="string">&quot;no member should have zero points: {d:?}&quot;</span>);
+			<span class="macro">ensure!</span>(!d.total_points().is_zero(), <span class="string">&quot;No member should have zero points&quot;</span>);
 			<span class="kw-2">*</span>pools_members.entry(d.pool_id).or_default() += <span class="number">1</span>;
 			all_members += <span class="number">1</span>;
 
@@ -6360,9 +6402,11 @@
 				<span class="kw">let </span>pending_rewards = d.pending_rewards(current_rc).unwrap();
 				<span class="kw-2">*</span>pools_members_pending_rewards.entry(d.pool_id).or_default() += pending_rewards;
 			} <span class="comment">// else this pool has been heavily slashed and cannot have any rewards anymore.
-		</span>});
 
-		RewardPools::&lt;T&gt;::iter_keys().for_each(|id| {
+			</span><span class="prelude-val">Ok</span>(())
+		})<span class="question-mark">?</span>;
+
+		RewardPools::&lt;T&gt;::iter_keys().try_for_each(|id| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="comment">// the sum of the pending rewards must be less than the leftover balance. Since the
 			// reward math rounds down, we might accumulate some dust here.
 			</span><span class="macro">log!</span>(
@@ -6372,30 +6416,40 @@
 				pools_members_pending_rewards.get(<span class="kw-2">&amp;</span>id),
 				RewardPool::&lt;T&gt;::current_balance(id)
 			);
-			<span class="macro">assert!</span>(
+			<span class="macro">ensure!</span>(
 				RewardPool::&lt;T&gt;::current_balance(id) &gt;=
-					pools_members_pending_rewards.get(<span class="kw-2">&amp;</span>id).copied().unwrap_or_default()
-			)
-		});
+					pools_members_pending_rewards.get(<span class="kw-2">&amp;</span>id).copied().unwrap_or_default(),
+				<span class="string">&quot;The sum of the pending rewards must be less than the leftover balance.&quot;
+			</span>);
+			<span class="prelude-val">Ok</span>(())
+		})<span class="question-mark">?</span>;
 
-		BondedPools::&lt;T&gt;::iter().for_each(|(id, inner)| {
+		BondedPools::&lt;T&gt;::iter().try_for_each(|(id, inner)| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="kw">let </span>bonded_pool = BondedPool { id, inner };
-			<span class="macro">assert_eq!</span>(
-				pools_members.get(<span class="kw-2">&amp;</span>id).copied().unwrap_or_default(),
-				bonded_pool.member_counter
+			<span class="macro">ensure!</span>(
+				pools_members.get(<span class="kw-2">&amp;</span>id).copied().unwrap_or_default() ==
+				bonded_pool.member_counter,
+				<span class="string">&quot;Each `BondedPool.member_counter` must be equal to the actual count of members of this pool&quot;
+			</span>);
+			<span class="macro">ensure!</span>(
+				MaxPoolMembersPerPool::&lt;T&gt;::get()
+					.map_or(<span class="bool-val">true</span>, |max| bonded_pool.member_counter &lt;= max),
+				Error::&lt;T&gt;::MaxPoolMembers
 			);
-			<span class="macro">assert!</span>(MaxPoolMembersPerPool::&lt;T&gt;::get()
-				.map_or(<span class="bool-val">true</span>, |max| bonded_pool.member_counter &lt;= max));
 
 			<span class="kw">let </span>depositor = PoolMembers::&lt;T&gt;::get(<span class="kw-2">&amp;</span>bonded_pool.roles.depositor).unwrap();
-			<span class="macro">assert!</span>(
+			<span class="macro">ensure!</span>(
 				bonded_pool.is_destroying_and_only_depositor(depositor.active_points()) ||
 					depositor.active_points() &gt;= MinCreateBond::&lt;T&gt;::get(),
 				<span class="string">&quot;depositor must always have MinCreateBond stake in the pool, except for when the \
 				pool is being destroyed and the depositor is the last member&quot;</span>,
 			);
-		});
-		<span class="macro">assert!</span>(MaxPoolMembers::&lt;T&gt;::get().map_or(<span class="bool-val">true</span>, |max| all_members &lt;= max));
+			<span class="prelude-val">Ok</span>(())
+		})<span class="question-mark">?</span>;
+		<span class="macro">ensure!</span>(
+			MaxPoolMembers::&lt;T&gt;::get().map_or(<span class="bool-val">true</span>, |max| all_members &lt;= max),
+			Error::&lt;T&gt;::MaxPoolMembers
+		);
 
 		<span class="kw">if </span>level &lt;= <span class="number">1 </span>{
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())

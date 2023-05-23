@@ -3319,6 +3319,11 @@
 <a href="#3319" id="3319">3319</a>
 <a href="#3320" id="3320">3320</a>
 <a href="#3321" id="3321">3321</a>
+<a href="#3322" id="3322">3322</a>
+<a href="#3323" id="3323">3323</a>
+<a href="#3324" id="3324">3324</a>
+<a href="#3325" id="3325">3325</a>
+<a href="#3326" id="3326">3326</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3435,6 +3440,9 @@
 	DispatchError, Perbill, RuntimeDebug,
 };
 <span class="kw">use </span>sp_std::{cmp::Ordering, prelude::<span class="kw-2">*</span>};
+
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;try-runtime&quot;</span>, test))]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 <span class="kw">mod </span>benchmarking;
 <span class="kw">pub mod </span>weights;
@@ -3648,7 +3656,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="self">Self</span>::do_try_state()
 		}
 	}
@@ -4514,7 +4522,7 @@
 
 <span class="attr">#[cfg(any(feature = <span class="string">&quot;try-runtime&quot;</span>, test))]
 </span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
-	<span class="kw">fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	<span class="kw">fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="self">Self</span>::try_state_members()<span class="question-mark">?</span>;
 		<span class="self">Self</span>::try_state_runners_up()<span class="question-mark">?</span>;
 		<span class="self">Self</span>::try_state_candidates()<span class="question-mark">?</span>;
@@ -4525,20 +4533,20 @@
 
 	<span class="doccomment">/// [`Members`] state checks. Invariants:
 	///  - Members are always sorted based on account ID.
-	</span><span class="kw">fn </span>try_state_members() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_members() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>members = Members::&lt;T&gt;::get().clone();
 		members.sort_by_key(|m| m.who.clone());
 
 		<span class="kw">if </span>Members::&lt;T&gt;::get() == members {
 			<span class="prelude-val">Ok</span>(())
 		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(<span class="string">&quot;try_state checks: Members must be always sorted by account ID&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;try_state checks: Members must be always sorted by account ID&quot;</span>.into())
 		}
 	}
 
 	<span class="comment">// [`RunnersUp`] state checks. Invariants:
 	//  - Elements are sorted based on weight (worst to best).
-	</span><span class="kw">fn </span>try_state_runners_up() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_runners_up() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>sorted = RunnersUp::&lt;T&gt;::get();
 		<span class="comment">// worst stake first
 		</span>sorted.sort_by(|a, b| a.stake.cmp(<span class="kw-2">&amp;</span>b.stake));
@@ -4546,27 +4554,28 @@
 		<span class="kw">if </span>RunnersUp::&lt;T&gt;::get() == sorted {
 			<span class="prelude-val">Ok</span>(())
 		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(<span class="string">&quot;try_state checks: Runners Up must always be sorted by stake (worst to best)&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;try_state checks: Runners Up must always be sorted by stake (worst to best)&quot;
+				</span>.into())
 		}
 	}
 
 	<span class="comment">// [`Candidates`] state checks. Invariants:
 	//  - Always sorted based on account ID.
-	</span><span class="kw">fn </span>try_state_candidates() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_candidates() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>candidates = Candidates::&lt;T&gt;::get().clone();
 		candidates.sort_by_key(|(c, <span class="kw">_</span>)| c.clone());
 
 		<span class="kw">if </span>Candidates::&lt;T&gt;::get() == candidates {
 			<span class="prelude-val">Ok</span>(())
 		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(<span class="string">&quot;try_state checks: Candidates must be always sorted by account ID&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;try_state checks: Candidates must be always sorted by account ID&quot;</span>.into())
 		}
 	}
 	<span class="comment">// [`Candidates`] and [`RunnersUp`] state checks. Invariants:
 	//  - Candidates and runners-ups sets are disjoint.
-	</span><span class="kw">fn </span>try_state_candidates_runners_up_disjoint() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_candidates_runners_up_disjoint() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">match </span><span class="self">Self</span>::intersects(<span class="kw-2">&amp;</span><span class="self">Self</span>::candidates_ids(), <span class="kw-2">&amp;</span><span class="self">Self</span>::runners_up_ids()) {
-			<span class="bool-val">true </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Candidates and runners up sets should always be disjoint&quot;</span>),
+			<span class="bool-val">true </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Candidates and runners up sets should always be disjoint&quot;</span>.into()),
 			<span class="bool-val">false </span>=&gt; <span class="prelude-val">Ok</span>(()),
 		}
 	}
@@ -4574,11 +4583,12 @@
 	<span class="comment">// [`Members`], [`Candidates`] and [`RunnersUp`] state checks. Invariants:
 	//  - Members and candidates sets are disjoint;
 	//  - Members and runners-ups sets are disjoint.
-	</span><span class="kw">fn </span>try_state_members_disjoint() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_members_disjoint() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">match </span><span class="self">Self</span>::intersects(<span class="kw-2">&amp;</span>Pallet::&lt;T&gt;::members_ids(), <span class="kw-2">&amp;</span><span class="self">Self</span>::candidates_ids()) &amp;&amp;
 			<span class="self">Self</span>::intersects(<span class="kw-2">&amp;</span>Pallet::&lt;T&gt;::members_ids(), <span class="kw-2">&amp;</span><span class="self">Self</span>::runners_up_ids())
 		{
-			<span class="bool-val">true </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Members set should be disjoint from candidates and runners-up sets&quot;</span>),
+			<span class="bool-val">true </span>=&gt;
+				<span class="prelude-val">Err</span>(<span class="string">&quot;Members set should be disjoint from candidates and runners-up sets&quot;</span>.into()),
 			<span class="bool-val">false </span>=&gt; <span class="prelude-val">Ok</span>(()),
 		}
 	}
@@ -4586,14 +4596,14 @@
 	<span class="comment">// [`Members`], [`RunnersUp`] and approval stake state checks. Invariants:
 	// - Selected members should have approval stake;
 	// - Selected RunnersUp should have approval stake.
-	</span><span class="kw">fn </span>try_state_members_approval_stake() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_members_approval_stake() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">match </span>Members::&lt;T&gt;::get()
 			.iter()
 			.chain(RunnersUp::&lt;T&gt;::get().iter())
 			.all(|s| s.stake != BalanceOf::&lt;T&gt;::zero())
 		{
 			<span class="bool-val">true </span>=&gt; <span class="prelude-val">Ok</span>(()),
-			<span class="bool-val">false </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Members and RunnersUp must have approval stake&quot;</span>),
+			<span class="bool-val">false </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Members and RunnersUp must have approval stake&quot;</span>.into()),
 		}
 	}
 

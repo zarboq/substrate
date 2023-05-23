@@ -525,6 +525,9 @@
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -548,6 +551,9 @@
 <span class="kw">use </span>impl_trait_for_tuples::impl_for_tuples;
 <span class="kw">use </span>sp_runtime::traits::AtLeast32BitUnsigned;
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 <span class="doccomment">/// The block initialization trait.
 ///
@@ -663,7 +669,7 @@
 	<span class="doccomment">/// Same as `on_runtime_upgrade`, but perform the optional `pre_upgrade` and `post_upgrade` as
 	/// well.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>try_on_runtime_upgrade(checks: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_on_runtime_upgrade(checks: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, TryRuntimeError&gt; {
 		<span class="kw">let </span>maybe_state = <span class="kw">if </span>checks {
 			<span class="kw">let </span>_guard = frame_support::StorageNoopGuard::default();
 			<span class="kw">let </span>state = <span class="self">Self</span>::pre_upgrade()<span class="question-mark">?</span>;
@@ -694,7 +700,7 @@
 	/// This hook must not write to any state, as it would make the main `on_runtime_upgrade` path
 	/// inaccurate.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 		<span class="prelude-val">Ok</span>(Vec::new())
 	}
 
@@ -709,7 +715,7 @@
 	/// This hook must not write to any state, as it would make the main `on_runtime_upgrade` path
 	/// inaccurate.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="prelude-val">Ok</span>(())
 	}
 }
@@ -728,7 +734,7 @@
 	/// consecutive migrations for the same pallet without errors. Therefore pre and post upgrade
 	/// hooks for tuples are a noop.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>try_on_runtime_upgrade(checks: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_on_runtime_upgrade(checks: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>weight = Weight::zero();
 
 		<span class="kw">let </span><span class="kw-2">mut </span>errors = Vec::new();
@@ -751,12 +757,12 @@
 			errors.iter().for_each(|err| {
 				<span class="macro">log::error!</span>(
 					target: <span class="string">&quot;try-runtime&quot;</span>,
-					<span class="string">&quot;{}&quot;</span>,
+					<span class="string">&quot;{:?}&quot;</span>,
 					err
 				);
 			});
 
-			<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Detected multiple errors while executing `try_on_runtime_upgrade`, check the logs!&quot;</span>)
+			<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Detected multiple errors while executing `try_on_runtime_upgrade`, check the logs!&quot;</span>.into())
 		}
 
 		<span class="prelude-val">Ok</span>(weight)
@@ -832,7 +838,7 @@
 	///
 	/// This hook should not alter any storage.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>try_state(_n: BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state(_n: BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -844,7 +850,7 @@
 	///
 	/// This hook is never meant to be executed on-chain but is meant to be used by testing tools.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 		<span class="prelude-val">Ok</span>(Vec::new())
 	}
 
@@ -856,7 +862,7 @@
 	///
 	/// This hook is never meant to be executed on-chain but is meant to be used by testing tools.
 	</span><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="prelude-val">Ok</span>(())
 	}
 
@@ -938,13 +944,13 @@
 					}
 
 					<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-					</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+					</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 						Pre::mutate(|s| s.push(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)));
 						<span class="prelude-val">Ok</span>(Vec::new())
 					}
 
 					<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-					</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+					</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 						Post::mutate(|s| s.push(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>)));
 						<span class="prelude-val">Ok</span>(())
 					}

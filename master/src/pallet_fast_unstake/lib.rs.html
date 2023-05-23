@@ -538,6 +538,9 @@
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
 <a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -630,6 +633,9 @@
 	<span class="kw">use </span>sp_staking::{EraIndex, StakingInterface};
 	<span class="kw">use </span>sp_std::{prelude::<span class="kw-2">*</span>, vec::Vec};
 	<span class="kw">pub use </span>weights::WeightInfo;
+
+	<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+	</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 	<span class="attr">#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
 	#[codec(mel_bound(T: Config))]
@@ -768,10 +774,10 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="comment">// ensure that the value of `ErasToCheckPerBlock` is less than
 			// `T::MaxErasToCheckPerBlock`.
-			</span><span class="macro">assert!</span>(
+			</span><span class="macro">ensure!</span>(
 				ErasToCheckPerBlock::&lt;T&gt;::get() &lt;= T::MaxErasToCheckPerBlock::get(),
 				<span class="string">&quot;the value of `ErasToCheckPerBlock` is greater than `T::MaxErasToCheckPerBlock`&quot;</span>,
 			);

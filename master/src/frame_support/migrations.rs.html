@@ -395,7 +395,7 @@
 	}
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_runtime::TryRuntimeError&gt; {
 		<span class="kw">let </span>hashed_prefix = twox_128(P::get().as_bytes());
 		<span class="kw">match </span>contains_prefixed_key(<span class="kw-2">&amp;</span>hashed_prefix) {
 			<span class="bool-val">true </span>=&gt; <span class="macro">log::info!</span>(<span class="string">&quot;Found {} keys pre-removal 👀&quot;</span>, P::get()),
@@ -408,12 +408,12 @@
 	}
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-	</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_runtime::TryRuntimeError&gt; {
 		<span class="kw">let </span>hashed_prefix = twox_128(P::get().as_bytes());
 		<span class="kw">match </span>contains_prefixed_key(<span class="kw-2">&amp;</span>hashed_prefix) {
 			<span class="bool-val">true </span>=&gt; {
 				<span class="macro">log::error!</span>(<span class="string">&quot;{} has keys remaining post-removal ❗&quot;</span>, P::get());
-				<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Keys remaining post-removal, this should never happen 🚨&quot;</span>)
+				<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Keys remaining post-removal, this should never happen 🚨&quot;</span>.into())
 			},
 			<span class="bool-val">false </span>=&gt; <span class="macro">log::info!</span>(<span class="string">&quot;No {} keys found post-removal 🎉&quot;</span>, P::get()),
 		};

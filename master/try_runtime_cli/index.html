@@ -93,10 +93,10 @@ or manually in a runtime, to define a migration. In both cases, these functions 
 given the right flag:</p>
 
 <div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {}
+</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {}
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-</span><span class="kw">fn </span>post_upgrade(state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {}</code></pre></div>
+</span><span class="kw">fn </span>post_upgrade(state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {}</code></pre></div>
 <p>(The pallet macro syntax will support this simply as a part of <code>#[pallet::hooks]</code>).</p>
 <p>These hooks allow you to execute some code, only within the <code>on-runtime-upgrade</code> command, before
 and after the migration. Moreover, <code>pre_upgrade</code> can return a <code>Vec&lt;u8&gt;</code> that contains arbitrary
@@ -106,7 +106,7 @@ upgrading and used for post checking.</p>
 <p>Similarly, each pallet can expose a function in <code>#[pallet::hooks]</code> section as follows:</p>
 
 <div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-</span><span class="kw">fn </span>try_state(<span class="kw">_</span>: BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {}</code></pre></div>
+</span><span class="kw">fn </span>try_state(<span class="kw">_</span>: BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {}</code></pre></div>
 <p>which is called on numerous code paths in the try-runtime tool. These checks should ensure that
 the state of the pallet is consistent and correct. See <code>frame_support::try_runtime::TryState</code>
 for more info.</p>

@@ -2655,6 +2655,16 @@
 <a href="#2655" id="2655">2655</a>
 <a href="#2656" id="2656">2656</a>
 <a href="#2657" id="2657">2657</a>
+<a href="#2658" id="2658">2658</a>
+<a href="#2659" id="2659">2659</a>
+<a href="#2660" id="2660">2660</a>
+<a href="#2661" id="2661">2661</a>
+<a href="#2662" id="2662">2662</a>
+<a href="#2663" id="2663">2663</a>
+<a href="#2664" id="2664">2664</a>
+<a href="#2665" id="2665">2665</a>
+<a href="#2666" id="2666">2666</a>
+<a href="#2667" id="2667">2667</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2913,6 +2923,9 @@
 	DispatchError, ModuleError, PerThing, Perbill, RuntimeDebug, SaturatedConversion,
 };
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 </span><span class="kw">mod </span>benchmarking;
@@ -3540,7 +3553,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="self">Self</span>::do_try_state()
 		}
 	}
@@ -4236,7 +4249,7 @@
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
 </span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
-	<span class="kw">fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	<span class="kw">fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="self">Self</span>::try_state_snapshot()<span class="question-mark">?</span>;
 		<span class="self">Self</span>::try_state_signed_submissions_map()<span class="question-mark">?</span>;
 		<span class="self">Self</span>::try_state_phase_off()
@@ -4245,7 +4258,7 @@
 	<span class="comment">// [`Snapshot`] state check. Invariants:
 	// - [`DesiredTargets`] exists if and only if [`Snapshot`] is present.
 	// - [`SnapshotMetadata`] exist if and only if [`Snapshot`] is present.
-	</span><span class="kw">fn </span>try_state_snapshot() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_snapshot() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">if </span>&lt;Snapshot&lt;T&gt;&gt;::exists() &amp;&amp;
 			&lt;SnapshotMetadata&lt;T&gt;&gt;::exists() &amp;&amp;
 			&lt;DesiredTargets&lt;T&gt;&gt;::exists()
@@ -4257,7 +4270,7 @@
 		{
 			<span class="prelude-val">Ok</span>(())
 		} <span class="kw">else </span>{
-			<span class="prelude-val">Err</span>(<span class="string">&quot;If snapshot exists, metadata and desired targets should be set too. Otherwise, none should be set.&quot;</span>)
+			<span class="prelude-val">Err</span>(<span class="string">&quot;If snapshot exists, metadata and desired targets should be set too. Otherwise, none should be set.&quot;</span>.into())
 		}
 	}
 
@@ -4265,28 +4278,34 @@
 	// - All [`SignedSubmissionIndices`] are present in [`SignedSubmissionsMap`], and no more;
 	// - [`SignedSubmissionNextIndex`] is not present in [`SignedSubmissionsMap`];
 	// - [`SignedSubmissionIndices`] is sorted by election score.
-	</span><span class="kw">fn </span>try_state_signed_submissions_map() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_signed_submissions_map() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>last_score: ElectionScore = Default::default();
 		<span class="kw">let </span>indices = &lt;SignedSubmissionIndices&lt;T&gt;&gt;::get();
 
 		<span class="kw">for </span>(i, indice) <span class="kw">in </span>indices.iter().enumerate() {
 			<span class="kw">let </span>submission = &lt;SignedSubmissionsMap&lt;T&gt;&gt;::get(indice.<span class="number">2</span>);
 			<span class="kw">if </span>submission.is_none() {
-				<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;All signed submissions indices must be part of the submissions map&quot;</span>)
+				<span class="kw">return </span><span class="prelude-val">Err</span>(
+					<span class="string">&quot;All signed submissions indices must be part of the submissions map&quot;</span>.into()
+				)
 			}
 
 			<span class="kw">if </span>i == <span class="number">0 </span>{
 				last_score = indice.<span class="number">0
 			</span>} <span class="kw">else </span>{
 				<span class="kw">if </span>last_score.strict_threshold_better(indice.<span class="number">0</span>, Perbill::zero()) {
-					<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Signed submission indices vector must be ordered by election score&quot;</span>)
+					<span class="kw">return </span><span class="prelude-val">Err</span>(
+						<span class="string">&quot;Signed submission indices vector must be ordered by election score&quot;</span>.into()
+					)
 				}
 				last_score = indice.<span class="number">0</span>;
 			}
 		}
 
 		<span class="kw">if </span>&lt;SignedSubmissionsMap&lt;T&gt;&gt;::iter().nth(indices.len()).is_some() {
-			<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Signed submissions map length should be the same as the indices vec length&quot;</span>)
+			<span class="kw">return </span><span class="prelude-val">Err</span>(
+				<span class="string">&quot;Signed submissions map length should be the same as the indices vec length&quot;</span>.into()
+			)
 		}
 
 		<span class="kw">match </span>&lt;SignedSubmissionNextIndex&lt;T&gt;&gt;::get() {
@@ -4294,7 +4313,8 @@
 			next =&gt;
 				<span class="kw">if </span>&lt;SignedSubmissionsMap&lt;T&gt;&gt;::get(next).is_some() {
 					<span class="kw">return </span><span class="prelude-val">Err</span>(
-						<span class="string">&quot;The next submissions index should not be in the submissions maps already&quot;</span>,
+						<span class="string">&quot;The next submissions index should not be in the submissions maps already&quot;
+							</span>.into(),
 					)
 				} <span class="kw">else </span>{
 					<span class="prelude-val">Ok</span>(())
@@ -4304,12 +4324,12 @@
 
 	<span class="comment">// [`Phase::Off`] state check. Invariants:
 	// - If phase is `Phase::Off`, [`Snapshot`] must be none.
-	</span><span class="kw">fn </span>try_state_phase_off() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>try_state_phase_off() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">match </span><span class="self">Self</span>::current_phase().is_off() {
 			<span class="bool-val">false </span>=&gt; <span class="prelude-val">Ok</span>(()),
 			<span class="bool-val">true </span>=&gt;
 				<span class="kw">if </span>&lt;Snapshot&lt;T&gt;&gt;::get().is_some() {
-					<span class="prelude-val">Err</span>(<span class="string">&quot;Snapshot must be none when in Phase::Off&quot;</span>)
+					<span class="prelude-val">Err</span>(<span class="string">&quot;Snapshot must be none when in Phase::Off&quot;</span>.into())
 				} <span class="kw">else </span>{
 					<span class="prelude-val">Ok</span>(())
 				},

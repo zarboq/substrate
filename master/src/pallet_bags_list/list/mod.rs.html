@@ -962,6 +962,9 @@
 	prelude::<span class="kw-2">*</span>,
 };
 
+<span class="attr">#[cfg(any(test, feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzz&quot;</span>))]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
+
 <span class="attr">#[derive(Debug, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo, PalletError)]
 </span><span class="kw">pub enum </span>ListError {
 	<span class="doccomment">/// A duplicate id has been detected.
@@ -1432,12 +1435,12 @@
 	/// * and sanity-checks all bags and nodes. This will cascade down all the checks and makes sure
 	/// all bags and nodes are checked per *any* update to `List`.
 	</span><span class="attr">#[cfg(any(test, feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzz&quot;</span>))]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_try_state() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>seen_in_list = BTreeSet::new();
 		<span class="macro">ensure!</span>(
 			<span class="self">Self</span>::iter().map(|node| node.id).all(|id| seen_in_list.insert(id)),
-			<span class="string">&quot;duplicate identified&quot;</span>,
-		);
+			<span class="string">&quot;duplicate identified&quot;
+		</span>);
 
 		<span class="kw">let </span>iter_count = <span class="self">Self</span>::iter().count() <span class="kw">as </span>u32;
 		<span class="kw">let </span>stored_count = <span class="kw">crate</span>::ListNodes::&lt;T, I&gt;::count();
@@ -1670,7 +1673,7 @@
 	/// * Ensures tail has no next.
 	/// * Ensures there are no loops, traversal from head to tail is correct.
 	</span><span class="attr">#[cfg(any(test, feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzz&quot;</span>))]
-	</span><span class="kw">fn </span>do_try_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>do_try_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="macro">frame_support::ensure!</span>(
 			<span class="self">self</span>.head()
 				.map(|head| head.prev().is_none())
@@ -1815,15 +1818,12 @@
 	}
 
 	<span class="attr">#[cfg(any(test, feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzz&quot;</span>))]
-	</span><span class="kw">fn </span>do_try_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>do_try_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span>expected_bag = Bag::&lt;T, I&gt;::get(<span class="self">self</span>.bag_upper).ok_or(<span class="string">&quot;bag not found for node&quot;</span>)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>id = <span class="self">self</span>.id();
 
-		<span class="macro">frame_support::ensure!</span>(
-			expected_bag.contains(id),
-			<span class="string">&quot;node does not exist in the expected bag&quot;
-		</span>);
+		<span class="macro">frame_support::ensure!</span>(expected_bag.contains(id), <span class="string">&quot;node does not exist in the bag&quot;</span>);
 
 		<span class="kw">let </span>non_terminal_check = !<span class="self">self</span>.is_terminal() &amp;&amp;
 			expected_bag.head.as_ref() != <span class="prelude-val">Some</span>(id) &amp;&amp;

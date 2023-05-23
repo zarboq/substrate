@@ -297,12 +297,12 @@
 
 	<span class="kw">impl</span>&lt;T: Config + frame_system::Config&lt;Hash = H256&gt;&gt; OnRuntimeUpgrade <span class="kw">for </span>Migration&lt;T&gt; {
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-			<span class="macro">assert_eq!</span>(StorageVersion::get::&lt;Pallet&lt;T&gt;&gt;(), <span class="number">0</span>, <span class="string">&quot;can only upgrade from version 0&quot;</span>);
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, sp_runtime::TryRuntimeError&gt; {
+			<span class="macro">ensure!</span>(StorageVersion::get::&lt;Pallet&lt;T&gt;&gt;() == <span class="number">0</span>, <span class="string">&quot;can only upgrade from version 0&quot;</span>);
 
 			<span class="kw">let </span>props_count = v0::PublicProps::&lt;T&gt;::get().len();
 			<span class="macro">log::info!</span>(target: TARGET, <span class="string">&quot;{} public proposals will be migrated.&quot;</span>, props_count,);
-			<span class="macro">ensure!</span>(props_count &lt;= T::MaxProposals::get() <span class="kw">as </span>usize, <span class="string">&quot;too many proposals&quot;</span>);
+			<span class="macro">ensure!</span>(props_count &lt;= T::MaxProposals::get() <span class="kw">as </span>usize, Error::&lt;T&gt;::TooMany);
 
 			<span class="kw">let </span>referenda_count = v0::ReferendumInfoOf::&lt;T&gt;::iter().count();
 			<span class="macro">log::info!</span>(target: TARGET, <span class="string">&quot;{} referenda will be migrated.&quot;</span>, referenda_count);
@@ -369,15 +369,15 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-			<span class="macro">assert_eq!</span>(StorageVersion::get::&lt;Pallet&lt;T&gt;&gt;(), <span class="number">1</span>, <span class="string">&quot;must upgrade&quot;</span>);
+		</span><span class="kw">fn </span>post_upgrade(state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_runtime::TryRuntimeError&gt; {
+			<span class="macro">ensure!</span>(StorageVersion::get::&lt;Pallet&lt;T&gt;&gt;() == <span class="number">1</span>, <span class="string">&quot;must upgrade&quot;</span>);
 
 			<span class="kw">let </span>(old_props_count, old_ref_count): (u32, u32) =
 				Decode::decode(<span class="kw-2">&amp;mut &amp;</span>state[..]).expect(<span class="string">&quot;pre_upgrade provides a valid state; qed&quot;</span>);
 			<span class="kw">let </span>new_props_count = <span class="kw">crate</span>::PublicProps::&lt;T&gt;::get().len() <span class="kw">as </span>u32;
-			<span class="macro">assert_eq!</span>(new_props_count, old_props_count, <span class="string">&quot;must migrate all public proposals&quot;</span>);
+			<span class="macro">ensure!</span>(new_props_count == old_props_count, <span class="string">&quot;must migrate all public proposals&quot;</span>);
 			<span class="kw">let </span>new_ref_count = <span class="kw">crate</span>::ReferendumInfoOf::&lt;T&gt;::iter().count() <span class="kw">as </span>u32;
-			<span class="macro">assert_eq!</span>(new_ref_count, old_ref_count, <span class="string">&quot;must migrate all referenda&quot;</span>);
+			<span class="macro">ensure!</span>(new_ref_count == old_ref_count, <span class="string">&quot;must migrate all referenda&quot;</span>);
 
 			<span class="macro">log::info!</span>(
 				target: TARGET,

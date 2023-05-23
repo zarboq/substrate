@@ -186,6 +186,7 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -207,6 +208,7 @@
 
 </span><span class="kw">use </span>impl_trait_for_tuples::impl_for_tuples;
 <span class="kw">use </span>sp_arithmetic::traits::AtLeast32BitUnsigned;
+<span class="kw">use </span>sp_runtime::TryRuntimeError;
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// Which state tests to execute.
@@ -317,7 +319,7 @@
 /// This hook should not alter any storage.
 </span><span class="kw">pub trait </span>TryState&lt;BlockNumber&gt; {
 	<span class="doccomment">/// Execute the state checks.
-	</span><span class="kw">fn </span>try_state(<span class="kw">_</span>: BlockNumber, <span class="kw">_</span>: Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
+	</span><span class="kw">fn </span>try_state(<span class="kw">_</span>: BlockNumber, <span class="kw">_</span>: Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt;;
 }
 
 <span class="attr">#[cfg_attr(all(not(feature = <span class="string">&quot;tuples-96&quot;</span>), not(feature = <span class="string">&quot;tuples-128&quot;</span>)), impl_for_tuples(<span class="number">64</span>))]
@@ -327,7 +329,7 @@
 	<span class="kw">for </span>Tuple
 {
 	<span class="macro">for_tuples!</span>( <span class="kw">where </span>#( Tuple: <span class="kw">crate</span>::traits::PalletInfoAccess )* );
-	<span class="kw">fn </span>try_state(n: BlockNumber, targets: Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	<span class="kw">fn </span>try_state(n: BlockNumber, targets: Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">match </span>targets {
 			Select::None =&gt; <span class="prelude-val">Ok</span>(()),
 			Select::All =&gt; {
@@ -336,7 +338,7 @@
 				result
 			},
 			Select::RoundRobin(len) =&gt; {
-				<span class="kw">let </span>functions: <span class="kw-2">&amp;</span>[<span class="kw">fn</span>(BlockNumber, Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;] =
+				<span class="kw">let </span>functions: <span class="kw-2">&amp;</span>[<span class="kw">fn</span>(BlockNumber, Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt;] =
 					<span class="kw-2">&amp;</span>[<span class="macro">for_tuples!</span>(#( Tuple::try_state ),<span class="kw-2">*</span>)];
 				<span class="kw">let </span>skip = n.clone() % (functions.len() <span class="kw">as </span>u32).into();
 				<span class="kw">let </span>skip: u32 =
@@ -351,7 +353,7 @@
 			Select::Only(<span class="kw-2">ref </span>pallet_names) =&gt; {
 				<span class="kw">let </span>try_state_fns: <span class="kw-2">&amp;</span>[(
 					<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-					<span class="kw">fn</span>(BlockNumber, Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
+					<span class="kw">fn</span>(BlockNumber, Select) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt;,
 				)] = <span class="kw-2">&amp;</span>[<span class="macro">for_tuples!</span>(
 					#( (&lt;Tuple <span class="kw">as </span><span class="kw">crate</span>::traits::PalletInfoAccess&gt;::name(), Tuple::try_state) ),*
 				)];

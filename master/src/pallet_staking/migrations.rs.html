@@ -498,6 +498,15 @@
 <a href="#498" id="498">498</a>
 <a href="#499" id="499">499</a>
 <a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -522,6 +531,11 @@
 	dispatch::GetStorageVersion, pallet_prelude::ValueQuery, storage_alias,
 	traits::OnRuntimeUpgrade,
 };
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+</span><span class="kw">use </span>frame_support::ensure;
+<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 <span class="doccomment">/// Used for release versioning upto v12.
 ///
@@ -558,7 +572,7 @@
 	<span class="kw">pub struct </span>MigrateToV13&lt;T&gt;(sp_std::marker::PhantomData&lt;T&gt;);
 	<span class="kw">impl</span>&lt;T: Config&gt; OnRuntimeUpgrade <span class="kw">for </span>MigrateToV13&lt;T&gt; {
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="macro">frame_support::ensure!</span>(
 				StorageVersion::&lt;T&gt;::get() == ObsoleteReleases::V12_0_0,
 				<span class="string">&quot;Required v12 before upgrading to v13&quot;
@@ -584,7 +598,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="macro">frame_support::ensure!</span>(
 				Pallet::&lt;T&gt;::on_chain_storage_version() == <span class="number">13</span>,
 				<span class="string">&quot;v13 not applied&quot;
@@ -614,7 +628,7 @@
 	</span><span class="kw">pub struct </span>MigrateToV12&lt;T&gt;(sp_std::marker::PhantomData&lt;T&gt;);
 	<span class="kw">impl</span>&lt;T: Config&gt; OnRuntimeUpgrade <span class="kw">for </span>MigrateToV12&lt;T&gt; {
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="macro">frame_support::ensure!</span>(
 				StorageVersion::&lt;T&gt;::get() == ObsoleteReleases::V11_0_0,
 				<span class="string">&quot;Expected v11 before upgrading to v12&quot;
@@ -646,7 +660,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="macro">frame_support::ensure!</span>(
 				StorageVersion::&lt;T&gt;::get() == ObsoleteReleases::V12_0_0,
 				<span class="string">&quot;v12 not applied&quot;
@@ -670,7 +684,7 @@
 		<span class="kw">for </span>MigrateToV11&lt;T, P, N&gt;
 	{
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="macro">frame_support::ensure!</span>(
 				StorageVersion::&lt;T&gt;::get() == ObsoleteReleases::V10_0_0,
 				<span class="string">&quot;must upgrade linearly&quot;
@@ -717,7 +731,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(_state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="macro">frame_support::ensure!</span>(
 				StorageVersion::&lt;T&gt;::get() == ObsoleteReleases::V11_0_0,
 				<span class="string">&quot;wrong version after the upgrade&quot;
@@ -832,7 +846,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="macro">frame_support::ensure!</span>(
 				StorageVersion::&lt;T&gt;::get() == ObsoleteReleases::V8_0_0,
 				<span class="string">&quot;must upgrade linearly&quot;
@@ -843,17 +857,21 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(prev_count: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(prev_count: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="kw">let </span>prev_count: u32 = Decode::decode(<span class="kw-2">&amp;mut </span>prev_count.as_slice()).expect(
 				<span class="string">&quot;the state parameter should be something that was generated by pre_upgrade&quot;</span>,
 			);
 			<span class="kw">let </span>post_count = T::VoterList::count();
 			<span class="kw">let </span>validators = Validators::&lt;T&gt;::count();
-			<span class="macro">assert!</span>(post_count == prev_count + validators);
+			<span class="macro">ensure!</span>(
+				post_count == prev_count + validators,
+				<span class="string">&quot;`VoterList` count after the migration must equal to the sum of \
+				previous count and the current number of validators&quot;
+			</span>);
 
 			<span class="macro">frame_support::ensure!</span>(
 				StorageVersion::&lt;T&gt;::get() == ObsoleteReleases::V9_0_0,
-				<span class="string">&quot;must upgrade &quot;
+				<span class="string">&quot;must upgrade&quot;
 			</span>);
 			<span class="prelude-val">Ok</span>(())
 		}

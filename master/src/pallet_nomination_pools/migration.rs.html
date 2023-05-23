@@ -706,6 +706,21 @@
 <a href="#706" id="706">706</a>
 <a href="#707" id="707">707</a>
 <a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -727,6 +742,9 @@
 <span class="kw">use </span><span class="kw">crate</span>::log;
 <span class="kw">use </span>frame_support::traits::OnRuntimeUpgrade;
 <span class="kw">use </span>sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
+</span><span class="kw">use </span>sp_runtime::TryRuntimeError;
 
 <span class="kw">pub mod </span>v1 {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -808,9 +826,12 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="comment">// new version must be set.
-			</span><span class="macro">assert_eq!</span>(Pallet::&lt;T&gt;::on_chain_storage_version(), <span class="number">1</span>);
+			</span><span class="macro">ensure!</span>(
+				Pallet::&lt;T&gt;::on_chain_storage_version() == <span class="number">1</span>,
+				<span class="string">&quot;The onchain version must be updated after the migration.&quot;
+			</span>);
 			Pallet::&lt;T&gt;::try_state(frame_system::Pallet::&lt;T&gt;::block_number())<span class="question-mark">?</span>;
 			<span class="prelude-val">Ok</span>(())
 		}
@@ -1060,38 +1081,47 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="comment">// all reward accounts must have more than ED.
-			</span>RewardPools::&lt;T&gt;::iter().for_each(|(id, <span class="kw">_</span>)| {
-				<span class="macro">assert!</span>(
+			</span>RewardPools::&lt;T&gt;::iter().try_for_each(|(id, <span class="kw">_</span>)| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+				<span class="macro">ensure!</span>(
 					T::Currency::free_balance(<span class="kw-2">&amp;</span>Pallet::&lt;T&gt;::create_reward_account(id)) &gt;=
-						T::Currency::minimum_balance()
-				)
-			});
+						T::Currency::minimum_balance(),
+					<span class="string">&quot;Reward accounts must have greater balance than ED.&quot;
+				</span>);
+				<span class="prelude-val">Ok</span>(())
+			})<span class="question-mark">?</span>;
 
 			<span class="prelude-val">Ok</span>(Vec::new())
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="comment">// new version must be set.
-			</span><span class="macro">assert_eq!</span>(Pallet::&lt;T&gt;::on_chain_storage_version(), <span class="number">2</span>);
+			</span><span class="macro">ensure!</span>(
+				Pallet::&lt;T&gt;::on_chain_storage_version() == <span class="number">2</span>,
+				<span class="string">&quot;The onchain version must be updated after the migration.&quot;
+			</span>);
 
 			<span class="comment">// no reward or bonded pool has been skipped.
-			</span><span class="macro">assert_eq!</span>(RewardPools::&lt;T&gt;::iter().count() <span class="kw">as </span>u32, RewardPools::&lt;T&gt;::count());
-			<span class="macro">assert_eq!</span>(BondedPools::&lt;T&gt;::iter().count() <span class="kw">as </span>u32, BondedPools::&lt;T&gt;::count());
+			</span><span class="macro">ensure!</span>(
+				RewardPools::&lt;T&gt;::iter().count() <span class="kw">as </span>u32 == RewardPools::&lt;T&gt;::count(),
+				<span class="string">&quot;The count of reward pools must remain the same after the migration.&quot;
+			</span>);
+			<span class="macro">ensure!</span>(
+				BondedPools::&lt;T&gt;::iter().count() <span class="kw">as </span>u32 == BondedPools::&lt;T&gt;::count(),
+				<span class="string">&quot;The count of reward pools must remain the same after the migration.&quot;
+			</span>);
 
 			<span class="comment">// all reward pools must have exactly ED in them. This means no reward can be claimed,
 			// and that setting reward counters all over the board to zero will work henceforth.
-			</span>RewardPools::&lt;T&gt;::iter().for_each(|(id, <span class="kw">_</span>)| {
-				<span class="macro">assert_eq!</span>(
-					RewardPool::&lt;T&gt;::current_balance(id),
-					Zero::zero(),
-					<span class="string">&quot;reward pool({}) balance is {:?}&quot;</span>,
-					id,
-					RewardPool::&lt;T&gt;::current_balance(id)
+			</span>RewardPools::&lt;T&gt;::iter().try_for_each(|(id, <span class="kw">_</span>)| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+				<span class="macro">ensure!</span>(
+					RewardPool::&lt;T&gt;::current_balance(id) == Zero::zero(),
+					<span class="string">&quot;Reward pool balance must be zero.&quot;</span>,
 				);
-			});
+				<span class="prelude-val">Ok</span>(())
+			})<span class="question-mark">?</span>;
 
 			<span class="macro">log!</span>(info, <span class="string">&quot;post upgrade hook for MigrateToV2 executed.&quot;</span>);
 			<span class="prelude-val">Ok</span>(())
@@ -1143,7 +1173,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="macro">ensure!</span>(
 				Pallet::&lt;T&gt;::current_storage_version() &gt; Pallet::&lt;T&gt;::on_chain_storage_version(),
 				<span class="string">&quot;the on_chain version is equal or more than the current one&quot;
@@ -1152,7 +1182,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="macro">ensure!</span>(
 				Metadata::&lt;T&gt;::iter_keys().all(|id| BondedPools::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>id)),
 				<span class="string">&quot;not all of the stale metadata has been removed&quot;
@@ -1243,7 +1273,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="macro">ensure!</span>(
 				Pallet::&lt;T&gt;::current_storage_version() &gt; Pallet::&lt;T&gt;::on_chain_storage_version(),
 				<span class="string">&quot;the on_chain version is equal or more than the current one&quot;
@@ -1252,7 +1282,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="comment">// ensure all BondedPools items now contain an `inner.commission: Commission` field.
 			</span><span class="macro">ensure!</span>(
 				BondedPools::&lt;T&gt;::iter().all(|(<span class="kw">_</span>, inner)| inner.commission.current.is_none() &amp;&amp;
@@ -1328,7 +1358,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
 			<span class="macro">ensure!</span>(
 				Pallet::&lt;T&gt;::current_storage_version() &gt; Pallet::&lt;T&gt;::on_chain_storage_version(),
 				<span class="string">&quot;the on_chain version is equal or more than the current one&quot;
@@ -1362,7 +1392,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>post_upgrade(data: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		</span><span class="kw">fn </span>post_upgrade(data: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="kw">let </span>old_rpool_values: u64 = Decode::decode(<span class="kw-2">&amp;mut &amp;</span>data[..]).unwrap();
 			<span class="kw">let </span>rpool_keys = RewardPools::&lt;T&gt;::iter_keys().count() <span class="kw">as </span>u64;
 			<span class="kw">let </span>rpool_values = RewardPools::&lt;T&gt;::iter_values().count() <span class="kw">as </span>u64;
