@@ -906,6 +906,7 @@
 <a href="#906" id="906">906</a>
 <a href="#907" id="907">907</a>
 <a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -1754,17 +1755,18 @@
 
 	<span class="kw">type </span>MaxLocks = T::MaxLocks;
 
-	<span class="comment">// Set a lock on the balance of `who`.
-	// Is a no-op if lock amount is zero or `reasons` `is_none()`.
+	<span class="comment">// Set or alter a lock on the balance of `who`.
 	</span><span class="kw">fn </span>set_lock(
 		id: LockIdentifier,
 		who: <span class="kw-2">&amp;</span>T::AccountId,
 		amount: T::Balance,
 		reasons: WithdrawReasons,
 	) {
-		<span class="kw">if </span>amount.is_zero() || reasons.is_empty() {
+		<span class="kw">if </span>reasons.is_empty() || amount.is_zero() {
+			<span class="self">Self</span>::remove_lock(id, who);
 			<span class="kw">return
 		</span>}
+
 		<span class="kw">let </span><span class="kw-2">mut </span>new_lock = <span class="prelude-val">Some</span>(BalanceLock { id, amount, reasons: reasons.into() });
 		<span class="kw">let </span><span class="kw-2">mut </span>locks = <span class="self">Self</span>::locks(who)
 			.into_iter()
