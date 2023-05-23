@@ -276,6 +276,9 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -332,7 +335,7 @@
 </span><span class="attr">#[derive(Debug, Clone, Copy, ValueEnum)]
 #[value(rename_all = <span class="string">&quot;kebab-case&quot;</span>)]
 </span><span class="kw">pub enum </span>WasmExecutionMethod {
-	<span class="doccomment">/// Uses an interpreter.
+	<span class="doccomment">/// Uses an interpreter which now is deprecated.
 	</span><span class="attr">#[clap(name = <span class="string">&quot;interpreted-i-know-what-i-do&quot;</span>)]
 	</span>Interpreted,
 	<span class="doccomment">/// Uses a compiled runtime.
@@ -354,21 +357,24 @@
 	execution_method: WasmExecutionMethod,
 	instantiation_strategy: WasmtimeInstantiationStrategy,
 ) -&gt; sc_service::config::WasmExecutionMethod {
-	<span class="kw">match </span>execution_method {
-		WasmExecutionMethod::Interpreted =&gt; sc_service::config::WasmExecutionMethod::Interpreted,
-		WasmExecutionMethod::Compiled =&gt; sc_service::config::WasmExecutionMethod::Compiled {
-			instantiation_strategy: <span class="kw">match </span>instantiation_strategy {
-				WasmtimeInstantiationStrategy::PoolingCopyOnWrite =&gt;
-					sc_service::config::WasmtimeInstantiationStrategy::PoolingCopyOnWrite,
-				WasmtimeInstantiationStrategy::RecreateInstanceCopyOnWrite =&gt;
-					sc_service::config::WasmtimeInstantiationStrategy::RecreateInstanceCopyOnWrite,
-				WasmtimeInstantiationStrategy::Pooling =&gt;
-					sc_service::config::WasmtimeInstantiationStrategy::Pooling,
-				WasmtimeInstantiationStrategy::RecreateInstance =&gt;
-					sc_service::config::WasmtimeInstantiationStrategy::RecreateInstance,
-				WasmtimeInstantiationStrategy::LegacyInstanceReuse =&gt;
-					sc_service::config::WasmtimeInstantiationStrategy::LegacyInstanceReuse,
-			},
+	<span class="kw">if let </span>WasmExecutionMethod::Interpreted = execution_method {
+		<span class="macro">log::warn!</span>(
+			<span class="string">&quot;`interpreted-i-know-what-i-do` is deprecated and will be removed in the future. Defaults to `compiled` execution mode.&quot;
+		</span>);
+	}
+
+	sc_service::config::WasmExecutionMethod::Compiled {
+		instantiation_strategy: <span class="kw">match </span>instantiation_strategy {
+			WasmtimeInstantiationStrategy::PoolingCopyOnWrite =&gt;
+				sc_service::config::WasmtimeInstantiationStrategy::PoolingCopyOnWrite,
+			WasmtimeInstantiationStrategy::RecreateInstanceCopyOnWrite =&gt;
+				sc_service::config::WasmtimeInstantiationStrategy::RecreateInstanceCopyOnWrite,
+			WasmtimeInstantiationStrategy::Pooling =&gt;
+				sc_service::config::WasmtimeInstantiationStrategy::Pooling,
+			WasmtimeInstantiationStrategy::RecreateInstance =&gt;
+				sc_service::config::WasmtimeInstantiationStrategy::RecreateInstance,
+			WasmtimeInstantiationStrategy::LegacyInstanceReuse =&gt;
+				sc_service::config::WasmtimeInstantiationStrategy::LegacyInstanceReuse,
 		},
 	}
 }

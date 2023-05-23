@@ -556,21 +556,6 @@
 <a href="#556" id="556">556</a>
 <a href="#557" id="557">557</a>
 <a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
-<a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
-<a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a>
-<a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -616,8 +601,6 @@
 <span class="doccomment">/// Specification of different methods of executing the runtime Wasm code.
 </span><span class="attr">#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 </span><span class="kw">pub enum </span>WasmExecutionMethod {
-	<span class="doccomment">/// Uses the Wasmi interpreter.
-	</span>Interpreted,
 	<span class="doccomment">/// Uses the Wasmtime compiled runtime.
 	</span>Compiled {
 		<span class="doccomment">/// The instantiation strategy to use.
@@ -626,8 +609,10 @@
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>WasmExecutionMethod {
-	<span class="kw">fn </span>default() -&gt; WasmExecutionMethod {
-		WasmExecutionMethod::Interpreted
+	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+		<span class="self">Self</span>::Compiled {
+			instantiation_strategy: sc_executor_wasmtime::InstantiationStrategy::PoolingCopyOnWrite,
+		}
 	}
 }
 
@@ -872,21 +857,6 @@
 	</span>H: HostFunctions,
 {
 	<span class="kw">match </span>wasm_method {
-		WasmExecutionMethod::Interpreted =&gt; {
-			<span class="comment">// Wasmi doesn&#39;t have any need in a cache directory.
-			//
-			// We drop the cache_path here to silence warnings that cache_path is not used if
-			// compiling without the `wasmtime` flag.
-			</span><span class="kw">let _ </span>= cache_path;
-
-			sc_executor_wasmi::create_runtime(
-				blob,
-				heap_alloc_strategy,
-				H::host_functions(),
-				allow_missing_func_imports,
-			)
-			.map(|runtime| -&gt; Box&lt;<span class="kw">dyn </span>WasmModule&gt; { Box::new(runtime) })
-		},
 		WasmExecutionMethod::Compiled { instantiation_strategy } =&gt;
 			sc_executor_wasmtime::create_runtime::&lt;H&gt;(
 				blob,
