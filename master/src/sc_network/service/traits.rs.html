@@ -600,38 +600,6 @@
 <a href="#600" id="600">600</a>
 <a href="#601" id="601">601</a>
 <a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
-<a href="#604" id="604">604</a>
-<a href="#605" id="605">605</a>
-<a href="#606" id="606">606</a>
-<a href="#607" id="607">607</a>
-<a href="#608" id="608">608</a>
-<a href="#609" id="609">609</a>
-<a href="#610" id="610">610</a>
-<a href="#611" id="611">611</a>
-<a href="#612" id="612">612</a>
-<a href="#613" id="613">613</a>
-<a href="#614" id="614">614</a>
-<a href="#615" id="615">615</a>
-<a href="#616" id="616">616</a>
-<a href="#617" id="617">617</a>
-<a href="#618" id="618">618</a>
-<a href="#619" id="619">619</a>
-<a href="#620" id="620">620</a>
-<a href="#621" id="621">621</a>
-<a href="#622" id="622">622</a>
-<a href="#623" id="623">623</a>
-<a href="#624" id="624">624</a>
-<a href="#625" id="625">625</a>
-<a href="#626" id="626">626</a>
-<a href="#627" id="627">627</a>
-<a href="#628" id="628">628</a>
-<a href="#629" id="629">629</a>
-<a href="#630" id="630">630</a>
-<a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 //
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -790,10 +758,6 @@
 	<span class="doccomment">/// Disconnect from a node as soon as possible.
 	///
 	/// This triggers the same effects as if the connection had closed itself spontaneously.
-	///
-	/// See also [`NetworkPeers::remove_from_peers_set`], which has the same effect but also
-	/// prevents the local node from re-establishing an outgoing substream to this peer until it
-	/// is added again.
 	</span><span class="kw">fn </span>disconnect_peer(<span class="kw-2">&amp;</span><span class="self">self</span>, who: PeerId, protocol: ProtocolName);
 
 	<span class="doccomment">/// Connect to unreserved peers and allow unreserved peers to connect for syncing purposes.
@@ -850,26 +814,6 @@
 	<span class="doccomment">/// Remove peers from a peer set.
 	</span><span class="kw">fn </span>remove_peers_from_reserved_set(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, peers: Vec&lt;PeerId&gt;);
 
-	<span class="doccomment">/// Add a peer to a set of peers.
-	///
-	/// If the set has slots available, it will try to open a substream with this peer.
-	///
-	/// Each `Multiaddr` must end with a `/p2p/` component containing the `PeerId`. It can also
-	/// consist of only `/p2p/&lt;peerid&gt;`.
-	///
-	/// Returns an `Err` if one of the given addresses is invalid or contains an
-	/// invalid peer ID (which includes the local peer ID).
-	</span><span class="kw">fn </span>add_to_peers_set(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		protocol: ProtocolName,
-		peers: HashSet&lt;Multiaddr&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt;;
-
-	<span class="doccomment">/// Remove peers from a peer set.
-	///
-	/// If we currently have an open substream with this peer, it will soon be closed.
-	</span><span class="kw">fn </span>remove_from_peers_set(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, peers: Vec&lt;PeerId&gt;);
-
 	<span class="doccomment">/// Returns the number of peers in the sync peer set we&#39;re connected to.
 	</span><span class="kw">fn </span>sync_num_connected(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
 }
@@ -893,7 +837,11 @@
 	}
 
 	<span class="kw">fn </span>report_peer(<span class="kw-2">&amp;</span><span class="self">self</span>, who: PeerId, cost_benefit: ReputationChange) {
-		T::report_peer(<span class="self">self</span>, who, cost_benefit)
+		<span class="comment">// TODO: when we get rid of `Peerset`, we&#39;ll likely need to add some kind of async
+		// interface to `PeerStore`, otherwise we&#39;ll have trouble calling functions accepting
+		// `&amp;mut self` via `Arc`.
+		// See https://github.com/paritytech/substrate/issues/14170.
+		</span>T::report_peer(<span class="self">self</span>, who, cost_benefit)
 	}
 
 	<span class="kw">fn </span>disconnect_peer(<span class="kw-2">&amp;</span><span class="self">self</span>, who: PeerId, protocol: ProtocolName) {
@@ -934,18 +882,6 @@
 
 	<span class="kw">fn </span>remove_peers_from_reserved_set(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, peers: Vec&lt;PeerId&gt;) {
 		T::remove_peers_from_reserved_set(<span class="self">self</span>, protocol, peers)
-	}
-
-	<span class="kw">fn </span>add_to_peers_set(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		protocol: ProtocolName,
-		peers: HashSet&lt;Multiaddr&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-		T::add_to_peers_set(<span class="self">self</span>, protocol, peers)
-	}
-
-	<span class="kw">fn </span>remove_from_peers_set(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, peers: Vec&lt;PeerId&gt;) {
-		T::remove_from_peers_set(<span class="self">self</span>, protocol, peers)
 	}
 
 	<span class="kw">fn </span>sync_num_connected(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {

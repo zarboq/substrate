@@ -4492,6 +4492,76 @@
 <a href="#4492" id="4492">4492</a>
 <a href="#4493" id="4493">4493</a>
 <a href="#4494" id="4494">4494</a>
+<a href="#4495" id="4495">4495</a>
+<a href="#4496" id="4496">4496</a>
+<a href="#4497" id="4497">4497</a>
+<a href="#4498" id="4498">4498</a>
+<a href="#4499" id="4499">4499</a>
+<a href="#4500" id="4500">4500</a>
+<a href="#4501" id="4501">4501</a>
+<a href="#4502" id="4502">4502</a>
+<a href="#4503" id="4503">4503</a>
+<a href="#4504" id="4504">4504</a>
+<a href="#4505" id="4505">4505</a>
+<a href="#4506" id="4506">4506</a>
+<a href="#4507" id="4507">4507</a>
+<a href="#4508" id="4508">4508</a>
+<a href="#4509" id="4509">4509</a>
+<a href="#4510" id="4510">4510</a>
+<a href="#4511" id="4511">4511</a>
+<a href="#4512" id="4512">4512</a>
+<a href="#4513" id="4513">4513</a>
+<a href="#4514" id="4514">4514</a>
+<a href="#4515" id="4515">4515</a>
+<a href="#4516" id="4516">4516</a>
+<a href="#4517" id="4517">4517</a>
+<a href="#4518" id="4518">4518</a>
+<a href="#4519" id="4519">4519</a>
+<a href="#4520" id="4520">4520</a>
+<a href="#4521" id="4521">4521</a>
+<a href="#4522" id="4522">4522</a>
+<a href="#4523" id="4523">4523</a>
+<a href="#4524" id="4524">4524</a>
+<a href="#4525" id="4525">4525</a>
+<a href="#4526" id="4526">4526</a>
+<a href="#4527" id="4527">4527</a>
+<a href="#4528" id="4528">4528</a>
+<a href="#4529" id="4529">4529</a>
+<a href="#4530" id="4530">4530</a>
+<a href="#4531" id="4531">4531</a>
+<a href="#4532" id="4532">4532</a>
+<a href="#4533" id="4533">4533</a>
+<a href="#4534" id="4534">4534</a>
+<a href="#4535" id="4535">4535</a>
+<a href="#4536" id="4536">4536</a>
+<a href="#4537" id="4537">4537</a>
+<a href="#4538" id="4538">4538</a>
+<a href="#4539" id="4539">4539</a>
+<a href="#4540" id="4540">4540</a>
+<a href="#4541" id="4541">4541</a>
+<a href="#4542" id="4542">4542</a>
+<a href="#4543" id="4543">4543</a>
+<a href="#4544" id="4544">4544</a>
+<a href="#4545" id="4545">4545</a>
+<a href="#4546" id="4546">4546</a>
+<a href="#4547" id="4547">4547</a>
+<a href="#4548" id="4548">4548</a>
+<a href="#4549" id="4549">4549</a>
+<a href="#4550" id="4550">4550</a>
+<a href="#4551" id="4551">4551</a>
+<a href="#4552" id="4552">4552</a>
+<a href="#4553" id="4553">4553</a>
+<a href="#4554" id="4554">4554</a>
+<a href="#4555" id="4555">4555</a>
+<a href="#4556" id="4556">4556</a>
+<a href="#4557" id="4557">4557</a>
+<a href="#4558" id="4558">4558</a>
+<a href="#4559" id="4559">4559</a>
+<a href="#4560" id="4560">4560</a>
+<a href="#4561" id="4561">4561</a>
+<a href="#4562" id="4562">4562</a>
+<a href="#4563" id="4563">4563</a>
+<a href="#4564" id="4564">4564</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -4519,7 +4589,7 @@
 
 <span class="kw">use </span>bytes::BytesMut;
 <span class="kw">use </span>fnv::FnvHashMap;
-<span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>futures::{channel::oneshot, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>libp2p::{
 	core::{ConnectedPoint, Endpoint, Multiaddr},
 	swarm::{
@@ -4529,7 +4599,7 @@
 	},
 	PeerId,
 };
-<span class="kw">use </span>log::{error, trace, warn};
+<span class="kw">use </span>log::{debug, error, info, trace, warn};
 <span class="kw">use </span>parking_lot::RwLock;
 <span class="kw">use </span>rand::distributions::{Distribution <span class="kw">as _</span>, Uniform};
 <span class="kw">use </span>sc_peerset::DropReason;
@@ -4724,6 +4794,9 @@
 	</span>Incoming {
 		<span class="doccomment">/// If `Some`, any dial attempts to this peer are delayed until the given `Instant`.
 		</span>backoff_until: <span class="prelude-ty">Option</span>&lt;Instant&gt;,
+
+		<span class="doccomment">/// Incoming index tracking this connection.
+		</span>incoming_index: sc_peerset::IncomingIndex,
 
 		<span class="doccomment">/// List of connections with this peer, and their state.
 		</span>connections: SmallVec&lt;[(ConnectionId, ConnectionState); <span class="kw">crate</span>::MAX_CONNECTIONS_PER_PEER]&gt;,
@@ -4987,7 +5060,7 @@
 
 			<span class="comment">// Incoming =&gt; Disabled.
 			// Ongoing opening requests from the remote are rejected.
-			</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
+			</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until, .. } =&gt; {
 				<span class="kw">let </span>inc = <span class="kw">if let </span><span class="prelude-val">Some</span>(inc) = <span class="self">self
 					</span>.incoming
 					.iter_mut()
@@ -5030,8 +5103,12 @@
 	}
 
 	<span class="doccomment">/// Returns the list of reserved peers.
-	</span><span class="kw">pub fn </span>reserved_peers(<span class="kw-2">&amp;</span><span class="self">self</span>, set_id: sc_peerset::SetId) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>PeerId&gt; {
-		<span class="self">self</span>.peerset.reserved_peers(set_id)
+	</span><span class="kw">pub fn </span>reserved_peers(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		set_id: sc_peerset::SetId,
+		pending_response: oneshot::Sender&lt;Vec&lt;PeerId&gt;&gt;,
+	) {
+		<span class="self">self</span>.peerset.reserved_peers(set_id, pending_response);
 	}
 
 	<span class="doccomment">/// Returns the state of the peerset manager, for debugging purposes.
@@ -5180,65 +5257,34 @@
 					};
 				}
 			},
-
-			<span class="comment">// Incoming =&gt; Enabled
-			</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, .. } =&gt; {
-				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM =&gt; Connect({}, {:?}): Enabling connections.&quot;</span>,
-					occ_entry.key().<span class="number">0</span>, set_id);
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(inc) = <span class="self">self
-					</span>.incoming
-					.iter_mut()
-					.find(|i| i.peer_id == occ_entry.key().<span class="number">0 </span>&amp;&amp; i.set_id == set_id &amp;&amp; i.alive)
-				{
-					inc.alive = <span class="bool-val">false</span>;
-				} <span class="kw">else </span>{
-					<span class="macro">error!</span>(
-						target: <span class="string">&quot;sub-libp2p&quot;</span>,
-						<span class="string">&quot;State mismatch in libp2p: no entry in incoming for incoming peer&quot;</span>,
-					)
-				}
-
-				<span class="macro">debug_assert!</span>(connections
-					.iter()
-					.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote)));
-				<span class="kw">for </span>(connec_id, connec_state) <span class="kw">in </span>connections
-					.iter_mut()
-					.filter(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote))
-				{
-					<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;Handler({:?}, {:?}) &lt;= Open({:?})&quot;</span>,
-						occ_entry.key(), <span class="kw-2">*</span>connec_id, set_id);
-					<span class="self">self</span>.events.push_back(ToSwarm::NotifyHandler {
-						peer_id: occ_entry.key().<span class="number">0</span>,
-						handler: NotifyHandler::One(<span class="kw-2">*</span>connec_id),
-						event: NotifsHandlerIn::Open { protocol_index: set_id.into() },
-					});
-					<span class="kw-2">*</span>connec_state = ConnectionState::Opening;
-				}
-
-				<span class="kw-2">*</span>occ_entry.into_mut() = PeerState::Enabled { connections };
+			<span class="comment">// Incoming =&gt; Incoming
+			</span>st @ PeerState::Incoming { .. } =&gt; {
+				<span class="macro">debug!</span>(
+					target: <span class="string">&quot;sub-libp2p&quot;</span>,
+					<span class="string">&quot;PSM =&gt; Connect({}, {:?}): Ignoring obsolete connect, we are awaiting accept/reject.&quot;</span>,
+					occ_entry.key().<span class="number">0</span>, set_id
+				);
+				<span class="kw-2">*</span>occ_entry.into_mut() = st;
 			},
 
 			<span class="comment">// Other states are kept as-is.
 			</span>st @ PeerState::Enabled { .. } =&gt; {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+				<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;PSM =&gt; Connect({}, {:?}): Already connected.&quot;</span>,
 					occ_entry.key().<span class="number">0</span>, set_id);
 				<span class="kw-2">*</span>occ_entry.into_mut() = st;
-				<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
 			},
 			st @ PeerState::DisabledPendingEnable { .. } =&gt; {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+				<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;PSM =&gt; Connect({}, {:?}): Already pending enabling.&quot;</span>,
 					occ_entry.key().<span class="number">0</span>, set_id);
 				<span class="kw-2">*</span>occ_entry.into_mut() = st;
-				<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
 			},
 			st @ PeerState::Requested { .. } | st @ PeerState::PendingRequest { .. } =&gt; {
-				<span class="macro">warn!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
+				<span class="macro">debug!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>,
 					<span class="string">&quot;PSM =&gt; Connect({}, {:?}): Duplicate request.&quot;</span>,
 					occ_entry.key().<span class="number">0</span>, set_id);
 				<span class="kw-2">*</span>occ_entry.into_mut() = st;
-				<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
 			},
 
 			PeerState::Poisoned =&gt; {
@@ -5341,10 +5387,12 @@
 
 			<span class="comment">// Invalid state transitions.
 			</span>st @ PeerState::Incoming { .. } =&gt; {
-				<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM =&gt; Drop({}, {:?}): Not enabled (Incoming).&quot;</span>,
-					entry.key().<span class="number">0</span>, set_id);
+				<span class="macro">info!</span>(
+					target: <span class="string">&quot;sub-libp2p&quot;</span>,
+					<span class="string">&quot;PSM =&gt; Drop({}, {:?}): Ignoring obsolete disconnect, we are awaiting accept/reject.&quot;</span>,
+					entry.key().<span class="number">0</span>, set_id,
+				);
 				<span class="kw-2">*</span>entry.into_mut() = st;
-				<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
 			},
 			PeerState::Poisoned =&gt; {
 				<span class="macro">error!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;State of {:?} is poisoned&quot;</span>, entry.key());
@@ -5389,7 +5437,24 @@
 
 		<span class="kw">match </span>mem::replace(state, PeerState::Poisoned) {
 			<span class="comment">// Incoming =&gt; Enabled
-			</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, .. } =&gt; {
+			</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, incoming_index, .. } =&gt; {
+				<span class="kw">if </span>index &lt; incoming_index {
+					<span class="macro">warn!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;PSM =&gt; Accept({:?}, {}, {:?}): Ignoring obsolete incoming index, we are already awaiting {:?}.&quot;</span>,
+						index, incoming.peer_id, incoming.set_id, incoming_index
+					);
+					<span class="kw">return
+				</span>} <span class="kw">else if </span>index &gt; incoming_index {
+					<span class="macro">error!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;PSM =&gt; Accept({:?}, {}, {:?}): Ignoring incoming index from the future, we are awaiting {:?}.&quot;</span>,
+						index, incoming.peer_id, incoming.set_id, incoming_index
+					);
+					<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+					<span class="kw">return
+				</span>}
+
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM =&gt; Accept({:?}, {}, {:?}): Enabling connections.&quot;</span>,
 					index, incoming.peer_id, incoming.set_id);
 
@@ -5449,7 +5514,24 @@
 
 		<span class="kw">match </span>mem::replace(state, PeerState::Poisoned) {
 			<span class="comment">// Incoming =&gt; Disabled
-			</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
+			</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until, incoming_index } =&gt; {
+				<span class="kw">if </span>index &lt; incoming_index {
+					<span class="macro">warn!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;PSM =&gt; Reject({:?}, {}, {:?}): Ignoring obsolete incoming index, we are already awaiting {:?}.&quot;</span>,
+						index, incoming.peer_id, incoming.set_id, incoming_index
+					);
+					<span class="kw">return
+				</span>} <span class="kw">else if </span>index &gt; incoming_index {
+					<span class="macro">error!</span>(
+						target: <span class="string">&quot;sub-libp2p&quot;</span>,
+						<span class="string">&quot;PSM =&gt; Reject({:?}, {}, {:?}): Ignoring incoming index from the future, we are awaiting {:?}.&quot;</span>,
+						index, incoming.peer_id, incoming.set_id, incoming_index
+					);
+					<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
+					<span class="kw">return
+				</span>}
+
 				<span class="macro">trace!</span>(target: <span class="string">&quot;sub-libp2p&quot;</span>, <span class="string">&quot;PSM =&gt; Reject({:?}, {}, {:?}): Rejecting connections.&quot;</span>,
 					index, incoming.peer_id, incoming.set_id);
 
@@ -5689,7 +5771,7 @@
 						},
 
 						<span class="comment">// Incoming =&gt; Incoming | Disabled | Backoff | Ø
-						</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
+						</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until, incoming_index } =&gt; {
 							<span class="macro">trace!</span>(
 								target: <span class="string">&quot;sub-libp2p&quot;</span>,
 								<span class="string">&quot;Libp2p =&gt; Disconnected({}, {:?}, {:?}): OpenDesiredByRemote.&quot;</span>,
@@ -5763,8 +5845,11 @@
 								</span><span class="kw-2">*</span>entry.get_mut() =
 									PeerState::Disabled { connections, backoff_until };
 							} <span class="kw">else </span>{
-								<span class="kw-2">*</span>entry.get_mut() =
-									PeerState::Incoming { connections, backoff_until };
+								<span class="kw-2">*</span>entry.get_mut() = PeerState::Incoming {
+									connections,
+									backoff_until,
+									incoming_index,
+								};
 							}
 						},
 
@@ -5983,7 +6068,7 @@
 
 				<span class="kw">match </span>mem::replace(entry.get_mut(), PeerState::Poisoned) {
 					<span class="comment">// Incoming =&gt; Incoming
-					</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until } =&gt; {
+					</span>PeerState::Incoming { <span class="kw-2">mut </span>connections, backoff_until, incoming_index } =&gt; {
 						<span class="macro">debug_assert!</span>(connections
 							.iter()
 							.any(|(<span class="kw">_</span>, s)| <span class="macro">matches!</span>(s, ConnectionState::OpenDesiredByRemote)));
@@ -6011,7 +6096,8 @@
 							<span class="macro">debug_assert!</span>(<span class="bool-val">false</span>);
 						}
 
-						<span class="kw-2">*</span>entry.into_mut() = PeerState::Incoming { connections, backoff_until };
+						<span class="kw-2">*</span>entry.into_mut() =
+							PeerState::Incoming { connections, backoff_until, incoming_index };
 					},
 
 					PeerState::Enabled { <span class="kw-2">mut </span>connections } =&gt; {
@@ -6076,8 +6162,11 @@
 									incoming_id,
 								});
 
-								<span class="kw-2">*</span>entry.into_mut() =
-									PeerState::Incoming { connections, backoff_until };
+								<span class="kw-2">*</span>entry.into_mut() = PeerState::Incoming {
+									connections,
+									backoff_until,
+									incoming_index: incoming_id,
+								};
 							} <span class="kw">else </span>{
 								<span class="comment">// Connections in `OpeningThenClosing` and `Closing` state can be
 								// in a Closed phase, and as such can emit `OpenDesiredByRemote`
@@ -6581,6 +6670,7 @@
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span><span class="kw">crate</span>::protocol::notifications::handler::tests::<span class="kw-2">*</span>;
 	<span class="kw">use </span>libp2p::swarm::AddressRecord;
+	<span class="kw">use </span>sc_peerset::IncomingIndex;
 	<span class="kw">use </span>std::{collections::HashSet, iter};
 
 	<span class="kw">impl </span>PartialEq <span class="kw">for </span>ConnectionState {
@@ -6773,7 +6863,7 @@
 			NotifsHandlerOut::OpenDesiredByRemote { protocol_index: <span class="number">0 </span>},
 		);
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { <span class="kw-2">ref </span>connections, backoff_until: <span class="prelude-val">None </span>}) =
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { <span class="kw-2">ref </span>connections, backoff_until: <span class="prelude-val">None</span>, .. }) =
 			notif.peers.get(<span class="kw-2">&amp;</span>(peer, <span class="number">0</span>.into()))
 		{
 			<span class="macro">assert_eq!</span>(connections.len(), <span class="number">1</span>);
@@ -6918,8 +7008,10 @@
 			NotifsHandlerOut::OpenDesiredByRemote { protocol_index: <span class="number">0 </span>},
 		);
 
-		<span class="comment">// attempt to connect to the peer and verify that the peer state is `Enabled`
-		</span>notif.peerset_report_connect(peer, set_id);
+		<span class="comment">// attempt to connect to the peer and verify that the peer state is `Enabled`;
+		// we rely on implementation detail that incoming indices are counted from 0
+		// to not mock the `Peerset`
+		</span>notif.peerset_report_accept(IncomingIndex(<span class="number">0</span>));
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Enabled { .. })));
 	}
 
@@ -6996,7 +7088,9 @@
 			conn,
 			NotifsHandlerOut::OpenDesiredByRemote { protocol_index: <span class="number">0 </span>},
 		);
-		notif.peerset_report_connect(peer, set_id);
+		<span class="comment">// we rely on the implementation detail that incoming indices are counted from 0
+		// to not mock the `Peerset`
+		</span>notif.peerset_report_accept(IncomingIndex(<span class="number">0</span>));
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Enabled { .. })));
 
 		<span class="comment">// disconnect peer and verify that the state is `Disabled`
@@ -7353,7 +7447,9 @@
 		);
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { .. })));
 
-		notif.peerset_report_connect(peer, set_id);
+		<span class="comment">// We rely on the implementation detail that incoming indices are counted
+		// from 0 to not mock the `Peerset`.
+		</span>notif.peerset_report_accept(sc_peerset::IncomingIndex(<span class="number">0</span>));
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Enabled { .. })));
 
 		<span class="comment">// open new substream
@@ -7442,7 +7538,6 @@
 
 		<span class="comment">// check peer information
 		</span><span class="macro">assert_eq!</span>(notif.open_peers().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(), <span class="macro">vec!</span>[<span class="kw-2">&amp;</span>peer],);
-		<span class="macro">assert_eq!</span>(notif.reserved_peers(set_id).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(), Vec::&lt;<span class="kw-2">&amp;</span>PeerId&gt;::new(),);
 		<span class="macro">assert_eq!</span>(notif.num_discovered_peers(), <span class="number">0usize</span>);
 
 		<span class="comment">// close the other connection and verify that notification replacement event is emitted
@@ -8197,7 +8292,9 @@
 		);
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { .. })));
 
-		notif.peerset_report_connect(peer, set_id);
+		<span class="comment">// we rely on the implementation detail that incoming indices are counted from 0
+		// to not mock the `Peerset`
+		</span>notif.peerset_report_accept(IncomingIndex(<span class="number">0</span>));
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Enabled { .. })));
 
 		<span class="kw">let </span>event = conn_yielder.open_substream(peer, <span class="number">0</span>, connected, <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]);
@@ -8328,7 +8425,6 @@
 	}
 
 	<span class="attr">#[test]
-	#[should_panic]
 	#[cfg(debug_assertions)]
 	</span><span class="kw">fn </span>peerset_report_connect_with_disabled_pending_enable_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
@@ -8366,11 +8462,15 @@
 			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::DisabledPendingEnable { .. })
 		));
 
-		notif.peerset_report_connect(peer, set_id);
+		<span class="comment">// duplicate &quot;connect&quot; must not change the state
+		</span>notif.peerset_report_connect(peer, set_id);
+		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(
+			notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)),
+			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::DisabledPendingEnable { .. })
+		));
 	}
 
 	<span class="attr">#[test]
-	#[should_panic]
 	#[cfg(debug_assertions)]
 	</span><span class="kw">fn </span>peerset_report_connect_with_requested_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
@@ -8381,11 +8481,12 @@
 		</span>notif.peerset_report_connect(peer, set_id);
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Requested)));
 
-		notif.peerset_report_connect(peer, set_id);
+		<span class="comment">// Duplicate &quot;connect&quot; must not change the state.
+		</span>notif.peerset_report_connect(peer, set_id);
+		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Requested)));
 	}
 
 	<span class="attr">#[test]
-	#[should_panic]
 	#[cfg(debug_assertions)]
 	</span><span class="kw">fn </span>peerset_report_connect_with_pending_requested() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
@@ -8434,11 +8535,50 @@
 			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::PendingRequest { .. })
 		));
 
-		notif.peerset_report_connect(peer, set_id);
+		<span class="comment">// duplicate &quot;connect&quot; must not change the state
+		</span>notif.peerset_report_connect(peer, set_id);
+		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(
+			notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)),
+			<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::PendingRequest { .. })
+		));
 	}
 
 	<span class="attr">#[test]
-	#[should_panic]
+	#[cfg(debug_assertions)]
+	</span><span class="kw">fn </span>peerset_report_connect_with_incoming_peer() {
+		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
+		<span class="kw">let </span>peer = PeerId::random();
+		<span class="kw">let </span>set_id = sc_peerset::SetId::from(<span class="number">0</span>);
+		<span class="kw">let </span>conn = ConnectionId::new_unchecked(<span class="number">0</span>);
+		<span class="kw">let </span>connected = ConnectedPoint::Listener {
+			local_addr: Multiaddr::empty(),
+			send_back_addr: Multiaddr::empty(),
+		};
+
+		notif.on_swarm_event(FromSwarm::ConnectionEstablished(
+			libp2p::swarm::behaviour::ConnectionEstablished {
+				peer_id: peer,
+				connection_id: conn,
+				endpoint: <span class="kw-2">&amp;</span>connected,
+				failed_addresses: <span class="kw-2">&amp;</span>[],
+				other_established: <span class="number">0usize</span>,
+			},
+		));
+		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Disabled { .. })));
+
+		<span class="comment">// remote opens a substream, verify that peer state is updated to `Incoming`
+		</span>notif.on_connection_handler_event(
+			peer,
+			conn,
+			NotifsHandlerOut::OpenDesiredByRemote { protocol_index: <span class="number">0 </span>},
+		);
+		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { .. })));
+
+		notif.peerset_report_connect(peer, set_id);
+		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { .. })));
+	}
+
+	<span class="attr">#[test]
 	#[cfg(debug_assertions)]
 	</span><span class="kw">fn </span>peerset_report_disconnect_with_incoming_peer() {
 		<span class="kw">let </span>(<span class="kw-2">mut </span>notif, _peerset) = development_notifs();
@@ -8467,10 +8607,10 @@
 			conn,
 			NotifsHandlerOut::OpenDesiredByRemote { protocol_index: <span class="number">0 </span>},
 		);
-
 		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { .. })));
 
 		notif.peerset_report_disconnect(peer, set_id);
+		<span class="macro">assert!</span>(<span class="macro">std::matches!</span>(notif.peers.get(<span class="kw-2">&amp;</span>(peer, set_id)), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>PeerState::Incoming { .. })));
 	}
 
 	<span class="attr">#[test]

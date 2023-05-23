@@ -1761,56 +1761,6 @@
 <a href="#1761" id="1761">1761</a>
 <a href="#1762" id="1762">1762</a>
 <a href="#1763" id="1763">1763</a>
-<a href="#1764" id="1764">1764</a>
-<a href="#1765" id="1765">1765</a>
-<a href="#1766" id="1766">1766</a>
-<a href="#1767" id="1767">1767</a>
-<a href="#1768" id="1768">1768</a>
-<a href="#1769" id="1769">1769</a>
-<a href="#1770" id="1770">1770</a>
-<a href="#1771" id="1771">1771</a>
-<a href="#1772" id="1772">1772</a>
-<a href="#1773" id="1773">1773</a>
-<a href="#1774" id="1774">1774</a>
-<a href="#1775" id="1775">1775</a>
-<a href="#1776" id="1776">1776</a>
-<a href="#1777" id="1777">1777</a>
-<a href="#1778" id="1778">1778</a>
-<a href="#1779" id="1779">1779</a>
-<a href="#1780" id="1780">1780</a>
-<a href="#1781" id="1781">1781</a>
-<a href="#1782" id="1782">1782</a>
-<a href="#1783" id="1783">1783</a>
-<a href="#1784" id="1784">1784</a>
-<a href="#1785" id="1785">1785</a>
-<a href="#1786" id="1786">1786</a>
-<a href="#1787" id="1787">1787</a>
-<a href="#1788" id="1788">1788</a>
-<a href="#1789" id="1789">1789</a>
-<a href="#1790" id="1790">1790</a>
-<a href="#1791" id="1791">1791</a>
-<a href="#1792" id="1792">1792</a>
-<a href="#1793" id="1793">1793</a>
-<a href="#1794" id="1794">1794</a>
-<a href="#1795" id="1795">1795</a>
-<a href="#1796" id="1796">1796</a>
-<a href="#1797" id="1797">1797</a>
-<a href="#1798" id="1798">1798</a>
-<a href="#1799" id="1799">1799</a>
-<a href="#1800" id="1800">1800</a>
-<a href="#1801" id="1801">1801</a>
-<a href="#1802" id="1802">1802</a>
-<a href="#1803" id="1803">1803</a>
-<a href="#1804" id="1804">1804</a>
-<a href="#1805" id="1805">1805</a>
-<a href="#1806" id="1806">1806</a>
-<a href="#1807" id="1807">1807</a>
-<a href="#1808" id="1808">1808</a>
-<a href="#1809" id="1809">1809</a>
-<a href="#1810" id="1810">1810</a>
-<a href="#1811" id="1811">1811</a>
-<a href="#1812" id="1812">1812</a>
-<a href="#1813" id="1813">1813</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2433,8 +2383,11 @@
 	}
 
 	<span class="doccomment">/// Returns the list of reserved peers.
-	</span><span class="kw">pub fn </span>reserved_peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>PeerId&gt; {
-		<span class="self">self</span>.network_service.behaviour().user_protocol().reserved_peers()
+	</span><span class="kw">fn </span>reserved_peers(<span class="kw-2">&amp;</span><span class="self">self</span>, pending_response: oneshot::Sender&lt;Vec&lt;PeerId&gt;&gt;) {
+		<span class="self">self</span>.network_service
+			.behaviour()
+			.user_protocol()
+			.reserved_peers(pending_response);
 	}
 }
 
@@ -2695,40 +2648,6 @@
 		}
 	}
 
-	<span class="kw">fn </span>add_to_peers_set(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		protocol: ProtocolName,
-		peers: HashSet&lt;Multiaddr&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-		<span class="kw">let </span>peers = <span class="self">self</span>.split_multiaddr_and_peer_id(peers)<span class="question-mark">?</span>;
-
-		<span class="kw">for </span>(peer_id, addr) <span class="kw">in </span>peers.into_iter() {
-			<span class="comment">// Make sure the local peer ID is never added to the PSM.
-			</span><span class="kw">if </span>peer_id == <span class="self">self</span>.local_peer_id {
-				<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Local peer ID cannot be added as a reserved peer.&quot;</span>.to_string())
-			}
-
-			<span class="kw">if </span>!addr.is_empty() {
-				<span class="kw">let _ </span>= <span class="self">self
-					</span>.to_worker
-					.unbounded_send(ServiceToWorkerMsg::AddKnownAddress(peer_id, addr));
-			}
-			<span class="kw">let _ </span>= <span class="self">self
-				</span>.to_worker
-				.unbounded_send(ServiceToWorkerMsg::AddToPeersSet(protocol.clone(), peer_id));
-		}
-
-		<span class="prelude-val">Ok</span>(())
-	}
-
-	<span class="kw">fn </span>remove_from_peers_set(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, peers: Vec&lt;PeerId&gt;) {
-		<span class="kw">for </span>peer_id <span class="kw">in </span>peers.into_iter() {
-			<span class="kw">let _ </span>= <span class="self">self
-				</span>.to_worker
-				.unbounded_send(ServiceToWorkerMsg::RemoveFromPeersSet(protocol.clone(), peer_id));
-		}
-	}
-
 	<span class="kw">fn </span>sync_num_connected(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
 		<span class="self">self</span>.num_connected.load(Ordering::Relaxed)
 	}
@@ -2941,8 +2860,6 @@
 	SetPeersetReserved(ProtocolName, HashSet&lt;PeerId&gt;),
 	AddSetReserved(ProtocolName, PeerId),
 	RemoveSetReserved(ProtocolName, PeerId),
-	AddToPeersSet(ProtocolName, PeerId),
-	RemoveFromPeersSet(ProtocolName, PeerId),
 	EventStream(out_events::Sender),
 	Request {
 		target: PeerId,
@@ -3119,16 +3036,6 @@
 				.remove_set_reserved_peer(protocol, peer_id),
 			ServiceToWorkerMsg::AddKnownAddress(peer_id, addr) =&gt;
 				<span class="self">self</span>.network_service.behaviour_mut().add_known_address(peer_id, addr),
-			ServiceToWorkerMsg::AddToPeersSet(protocol, peer_id) =&gt; <span class="self">self
-				</span>.network_service
-				.behaviour_mut()
-				.user_protocol_mut()
-				.add_to_peers_set(protocol, peer_id),
-			ServiceToWorkerMsg::RemoveFromPeersSet(protocol, peer_id) =&gt; <span class="self">self
-				</span>.network_service
-				.behaviour_mut()
-				.user_protocol_mut()
-				.remove_from_peers_set(protocol, peer_id),
 			ServiceToWorkerMsg::EventStream(sender) =&gt; <span class="self">self</span>.event_streams.push(sender),
 			ServiceToWorkerMsg::Request {
 				target,
@@ -3162,8 +3069,7 @@
 				.user_protocol_mut()
 				.set_notification_handshake(protocol, handshake),
 			ServiceToWorkerMsg::ReservedPeers { pending_response } =&gt; {
-				<span class="kw">let _ </span>=
-					pending_response.send(<span class="self">self</span>.reserved_peers().map(ToOwned::to_owned).collect());
+				<span class="self">self</span>.reserved_peers(pending_response);
 			},
 		}
 	}
@@ -3267,16 +3173,10 @@
 						.behaviour_mut()
 						.add_self_reported_address_to_dht(<span class="kw-2">&amp;</span>peer_id, <span class="kw-2">&amp;</span>protocols, addr);
 				}
-				<span class="self">self</span>.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.add_default_set_discovered_nodes(iter::once(peer_id));
+				<span class="self">self</span>.network_service.behaviour_mut().user_protocol_mut().add_known_peer(peer_id);
 			},
 			SwarmEvent::Behaviour(BehaviourOut::Discovered(peer_id)) =&gt; {
-				<span class="self">self</span>.network_service
-					.behaviour_mut()
-					.user_protocol_mut()
-					.add_default_set_discovered_nodes(iter::once(peer_id));
+				<span class="self">self</span>.network_service.behaviour_mut().user_protocol_mut().add_known_peer(peer_id);
 			},
 			SwarmEvent::Behaviour(BehaviourOut::RandomKademliaStarted) =&gt; {
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {

@@ -644,32 +644,6 @@
 <a href="#644" id="644">644</a>
 <a href="#645" id="645">645</a>
 <a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
-<a href="#650" id="650">650</a>
-<a href="#651" id="651">651</a>
-<a href="#652" id="652">652</a>
-<a href="#653" id="653">653</a>
-<a href="#654" id="654">654</a>
-<a href="#655" id="655">655</a>
-<a href="#656" id="656">656</a>
-<a href="#657" id="657">657</a>
-<a href="#658" id="658">658</a>
-<a href="#659" id="659">659</a>
-<a href="#660" id="660">660</a>
-<a href="#661" id="661">661</a>
-<a href="#662" id="662">662</a>
-<a href="#663" id="663">663</a>
-<a href="#664" id="664">664</a>
-<a href="#665" id="665">665</a>
-<a href="#666" id="666">666</a>
-<a href="#667" id="667">667</a>
-<a href="#668" id="668">668</a>
-<a href="#669" id="669">669</a>
-<a href="#670" id="670">670</a>
-<a href="#671" id="671">671</a>
-<a href="#672" id="672">672</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -929,8 +903,8 @@
 	}
 
 	<span class="doccomment">/// Returns the list of reserved peers.
-	</span><span class="kw">pub fn </span>reserved_peers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>PeerId&gt; {
-		<span class="self">self</span>.behaviour.reserved_peers(HARDCODED_PEERSETS_SYNC)
+	</span><span class="kw">pub fn </span>reserved_peers(<span class="kw-2">&amp;</span><span class="self">self</span>, pending_response: oneshot::Sender&lt;Vec&lt;PeerId&gt;&gt;) {
+		<span class="self">self</span>.behaviour.reserved_peers(HARDCODED_PEERSETS_SYNC, pending_response);
 	}
 
 	<span class="doccomment">/// Adds a `PeerId` to the list of reserved peers for syncing purposes.
@@ -982,39 +956,13 @@
 		}
 	}
 
-	<span class="doccomment">/// Notify the protocol that we have learned about the existence of nodes on the default set.
+	<span class="doccomment">/// Notify the protocol that we have learned about the existence of some peer.
 	///
-	/// Can be called multiple times with the same `PeerId`s.
-	</span><span class="kw">pub fn </span>add_default_set_discovered_nodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer_ids: <span class="kw">impl </span>Iterator&lt;Item = PeerId&gt;) {
-		<span class="kw">for </span>peer_id <span class="kw">in </span>peer_ids {
-			<span class="self">self</span>.peerset_handle.add_to_peers_set(HARDCODED_PEERSETS_SYNC, peer_id);
-		}
-	}
-
-	<span class="doccomment">/// Add a peer to a peers set.
-	</span><span class="kw">pub fn </span>add_to_peers_set(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, peer: PeerId) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(index) = <span class="self">self</span>.notification_protocols.iter().position(|p| <span class="kw-2">*</span>p == protocol) {
-			<span class="self">self</span>.peerset_handle.add_to_peers_set(sc_peerset::SetId::from(index), peer);
-		} <span class="kw">else </span>{
-			<span class="macro">error!</span>(
-				target: <span class="string">&quot;sub-libp2p&quot;</span>,
-				<span class="string">&quot;add_to_peers_set with unknown protocol: {}&quot;</span>,
-				protocol
-			);
-		}
-	}
-
-	<span class="doccomment">/// Remove a peer from a peers set.
-	</span><span class="kw">pub fn </span>remove_from_peers_set(<span class="kw-2">&amp;</span><span class="self">self</span>, protocol: ProtocolName, peer: PeerId) {
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(index) = <span class="self">self</span>.notification_protocols.iter().position(|p| <span class="kw-2">*</span>p == protocol) {
-			<span class="self">self</span>.peerset_handle.remove_from_peers_set(sc_peerset::SetId::from(index), peer);
-		} <span class="kw">else </span>{
-			<span class="macro">error!</span>(
-				target: <span class="string">&quot;sub-libp2p&quot;</span>,
-				<span class="string">&quot;remove_from_peers_set with unknown protocol: {}&quot;</span>,
-				protocol
-			);
-		}
+	/// Can be called multiple times with the same `PeerId`.
+	</span><span class="kw">pub fn </span>add_known_peer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, peer_id: PeerId) {
+		<span class="comment">// TODO: get rid of this function and call `Peerset`/`PeerStore` directly
+		// from `NetworkWorker`.
+		</span><span class="self">self</span>.peerset_handle.add_known_peer(peer_id);
 	}
 }
 
