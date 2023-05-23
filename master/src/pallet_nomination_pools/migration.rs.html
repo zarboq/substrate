@@ -721,6 +721,10 @@
 <a href="#721" id="721">721</a>
 <a href="#722" id="722">722</a>
 <a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1139,14 +1143,14 @@
 			<span class="kw">let </span>current = Pallet::&lt;T&gt;::current_storage_version();
 			<span class="kw">let </span>onchain = Pallet::&lt;T&gt;::on_chain_storage_version();
 
-			<span class="macro">log!</span>(
-				info,
-				<span class="string">&quot;Running migration with current storage version {:?} / onchain {:?}&quot;</span>,
-				current,
-				onchain
-			);
+			<span class="kw">if </span>onchain == <span class="number">2 </span>{
+				<span class="macro">log!</span>(
+					info,
+					<span class="string">&quot;Running migration with current storage version {:?} / onchain {:?}&quot;</span>,
+					current,
+					onchain
+				);
 
-			<span class="kw">if </span>current &gt; onchain {
 				<span class="kw">let </span><span class="kw-2">mut </span>metadata_iterated = <span class="number">0u64</span>;
 				<span class="kw">let </span><span class="kw-2">mut </span>metadata_removed = <span class="number">0u64</span>;
 				Metadata::&lt;T&gt;::iter_keys()
@@ -1160,7 +1164,7 @@
 						metadata_removed += <span class="number">1</span>;
 						Metadata::&lt;T&gt;::remove(<span class="kw-2">&amp;</span>id);
 					});
-				current.put::&lt;Pallet&lt;T&gt;&gt;();
+				StorageVersion::new(<span class="number">3</span>).put::&lt;Pallet&lt;T&gt;&gt;();
 				<span class="comment">// metadata iterated + bonded pools read + a storage version read
 				</span><span class="kw">let </span>total_reads = metadata_iterated * <span class="number">2 </span>+ <span class="number">1</span>;
 				<span class="comment">// metadata removed + a storage version write
@@ -1174,10 +1178,6 @@
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
 		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
-			<span class="macro">ensure!</span>(
-				Pallet::&lt;T&gt;::current_storage_version() &gt; Pallet::&lt;T&gt;::on_chain_storage_version(),
-				<span class="string">&quot;the on_chain version is equal or more than the current one&quot;
-			</span>);
 			<span class="prelude-val">Ok</span>(Vec::new())
 		}
 
@@ -1187,7 +1187,10 @@
 				Metadata::&lt;T&gt;::iter_keys().all(|id| BondedPools::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>id)),
 				<span class="string">&quot;not all of the stale metadata has been removed&quot;
 			</span>);
-			<span class="macro">ensure!</span>(Pallet::&lt;T&gt;::on_chain_storage_version() == <span class="number">3</span>, <span class="string">&quot;wrong storage version&quot;</span>);
+			<span class="macro">ensure!</span>(
+				Pallet::&lt;T&gt;::on_chain_storage_version() &gt;= <span class="number">3</span>,
+				<span class="string">&quot;nomination-pools::migration::v3: wrong storage version&quot;
+			</span>);
 			<span class="prelude-val">Ok</span>(())
 		}
 	}
@@ -1274,10 +1277,6 @@
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
 		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
-			<span class="macro">ensure!</span>(
-				Pallet::&lt;T&gt;::current_storage_version() &gt; Pallet::&lt;T&gt;::on_chain_storage_version(),
-				<span class="string">&quot;the on_chain version is equal or more than the current one&quot;
-			</span>);
 			<span class="prelude-val">Ok</span>(Vec::new())
 		}
 
@@ -1285,17 +1284,28 @@
 		</span><span class="kw">fn </span>post_upgrade(<span class="kw">_</span>: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="comment">// ensure all BondedPools items now contain an `inner.commission: Commission` field.
 			</span><span class="macro">ensure!</span>(
-				BondedPools::&lt;T&gt;::iter().all(|(<span class="kw">_</span>, inner)| inner.commission.current.is_none() &amp;&amp;
-					inner.commission.max.is_none() &amp;&amp;
-					inner.commission.change_rate.is_none() &amp;&amp;
-					inner.commission.throttle_from.is_none()),
-				<span class="string">&quot;a commission value has been incorrectly set&quot;
+				BondedPools::&lt;T&gt;::iter().all(|(<span class="kw">_</span>, inner)|
+					<span class="comment">// Check current
+					</span>(inner.commission.current.is_none() ||
+					inner.commission.current.is_some()) &amp;&amp;
+					<span class="comment">// Check max
+					</span>(inner.commission.max.is_none() || inner.commission.max.is_some()) &amp;&amp;
+					<span class="comment">// Check change_rate
+					</span>(inner.commission.change_rate.is_none() ||
+					inner.commission.change_rate.is_some()) &amp;&amp;
+					<span class="comment">// Check throttle_from
+					</span>(inner.commission.throttle_from.is_none() ||
+					inner.commission.throttle_from.is_some())),
+				<span class="string">&quot;a commission value has not been set correctly&quot;
 			</span>);
 			<span class="macro">ensure!</span>(
 				GlobalMaxCommission::&lt;T&gt;::get() == <span class="prelude-val">Some</span>(U::get()),
 				<span class="string">&quot;global maximum commission error&quot;
 			</span>);
-			<span class="macro">ensure!</span>(Pallet::&lt;T&gt;::on_chain_storage_version() == <span class="number">4</span>, <span class="string">&quot;wrong storage version&quot;</span>);
+			<span class="macro">ensure!</span>(
+				Pallet::&lt;T&gt;::on_chain_storage_version() &gt;= <span class="number">4</span>,
+				<span class="string">&quot;nomination-pools::migration::v4: wrong storage version&quot;
+			</span>);
 			<span class="prelude-val">Ok</span>(())
 		}
 	}
@@ -1359,11 +1369,6 @@
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
 		</span><span class="kw">fn </span>pre_upgrade() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, TryRuntimeError&gt; {
-			<span class="macro">ensure!</span>(
-				Pallet::&lt;T&gt;::current_storage_version() &gt; Pallet::&lt;T&gt;::on_chain_storage_version(),
-				<span class="string">&quot;the on_chain version is equal or more than the current one&quot;
-			</span>);
-
 			<span class="kw">let </span>rpool_keys = RewardPools::&lt;T&gt;::iter_keys().count();
 			<span class="kw">let </span>rpool_values = RewardPools::&lt;T&gt;::iter_values().count();
 			<span class="kw">if </span>rpool_keys != rpool_values {
@@ -1413,13 +1418,16 @@
 			// `total_commission_claimed` field.
 			</span><span class="macro">ensure!</span>(
 				RewardPools::&lt;T&gt;::iter().all(|(<span class="kw">_</span>, reward_pool)| reward_pool
-					.total_commission_pending
-					.is_zero() &amp;&amp; reward_pool
-					.total_commission_claimed
-					.is_zero()),
+					.total_commission_pending &gt;=
+					Zero::zero() &amp;&amp; reward_pool
+					.total_commission_claimed &gt;=
+					Zero::zero()),
 				<span class="string">&quot;a commission value has been incorrectly set&quot;
 			</span>);
-			<span class="macro">ensure!</span>(Pallet::&lt;T&gt;::on_chain_storage_version() == <span class="number">5</span>, <span class="string">&quot;wrong storage version&quot;</span>);
+			<span class="macro">ensure!</span>(
+				Pallet::&lt;T&gt;::on_chain_storage_version() &gt;= <span class="number">5</span>,
+				<span class="string">&quot;nomination-pools::migration::v5: wrong storage version&quot;
+			</span>);
 
 			<span class="comment">// These should not have been touched - just in case.
 			</span><span class="macro">ensure!</span>(
