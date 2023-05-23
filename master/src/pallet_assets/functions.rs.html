@@ -998,6 +998,11 @@
 <a href="#998" id="998">998</a>
 <a href="#999" id="999">999</a>
 <a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1962,9 +1967,7 @@
 			<span class="macro">ensure!</span>(metadata.as_ref().map_or(<span class="bool-val">true</span>, |m| !m.is_frozen), Error::&lt;T, I&gt;::NoPermission);
 
 			<span class="kw">let </span>old_deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
-			<span class="kw">let </span>new_deposit = T::MetadataDepositPerByte::get()
-				.saturating_mul(((name.len() + symbol.len()) <span class="kw">as </span>u32).into())
-				.saturating_add(T::MetadataDepositBase::get());
+			<span class="kw">let </span>new_deposit = <span class="self">Self</span>::calc_metadata_deposit(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>symbol);
 
 			<span class="kw">if </span>new_deposit &gt; old_deposit {
 				T::Currency::reserve(from, new_deposit - old_deposit)<span class="question-mark">?</span>;
@@ -1989,6 +1992,13 @@
 			});
 			<span class="prelude-val">Ok</span>(())
 		})
+	}
+
+	<span class="doccomment">/// Calculate the metadata deposit for the provided data.
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>calc_metadata_deposit(name: <span class="kw-2">&amp;</span>[u8], symbol: <span class="kw-2">&amp;</span>[u8]) -&gt; DepositBalanceOf&lt;T, I&gt; {
+		T::MetadataDepositPerByte::get()
+			.saturating_mul(((name.len() + symbol.len()) <span class="kw">as </span>u32).into())
+			.saturating_add(T::MetadataDepositBase::get())
 	}
 
 	<span class="doccomment">/// Returns all the non-zero balances for all assets of the given `account`.

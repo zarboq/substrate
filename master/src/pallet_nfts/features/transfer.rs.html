@@ -154,6 +154,11 @@
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -186,7 +191,12 @@
 	) -&gt; DispatchResult {
 		<span class="kw">let </span>collection_details =
 			Collection::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>collection).ok_or(Error::&lt;T, I&gt;::UnknownCollection)<span class="question-mark">?</span>;
+
 		<span class="macro">ensure!</span>(!T::Locker::is_locked(collection, item), Error::&lt;T, I&gt;::ItemLocked);
+		<span class="macro">ensure!</span>(
+			!<span class="self">Self</span>::has_system_attribute(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item, PalletAttributes::TransferDisabled)<span class="question-mark">?</span>,
+			Error::&lt;T, I&gt;::ItemLocked
+		);
 
 		<span class="kw">let </span>collection_config = <span class="self">Self</span>::get_collection_config(<span class="kw-2">&amp;</span>collection)<span class="question-mark">?</span>;
 		<span class="macro">ensure!</span>(
