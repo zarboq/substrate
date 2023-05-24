@@ -215,7 +215,7 @@
 		Hasher, Node, NodeOf,
 	},
 	primitives::{<span class="self">self</span>, Error, NodeIndex},
-	Config, HashingOf,
+	Config, HashOf, HashingOf,
 };
 <span class="kw">use </span>sp_mmr_primitives::{mmr_lib, utils::NodesUtils};
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
@@ -289,7 +289,7 @@
 	</span><span class="kw">pub fn </span>verify_leaves_proof(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		leaves: Vec&lt;L&gt;,
-		proof: primitives::Proof&lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash&gt;,
+		proof: primitives::Proof&lt;HashOf&lt;T, I&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;bool, Error&gt; {
 		<span class="kw">let </span>p = mmr_lib::MerkleProof::&lt;NodeOf&lt;T, I, L&gt;, Hasher&lt;HashingOf&lt;T, I&gt;, L&gt;&gt;::new(
 			<span class="self">self</span>.mmr.mmr_size(),
@@ -339,7 +339,7 @@
 
 	<span class="doccomment">/// Commit the changes to underlying storage, return current number of leaves and
 	/// calculate the new MMR&#39;s root hash.
-	</span><span class="kw">pub fn </span>finalize(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(NodeIndex, &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash), Error&gt; {
+	</span><span class="kw">pub fn </span>finalize(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(NodeIndex, HashOf&lt;T, I&gt;), Error&gt; {
 		<span class="kw">let </span>root = <span class="self">self</span>.mmr.get_root().map_err(|e| Error::GetRoot.log_error(e))<span class="question-mark">?</span>;
 		<span class="self">self</span>.mmr.commit().map_err(|e| Error::Commit.log_error(e))<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>((<span class="self">self</span>.leaves, root.hash()))
@@ -360,7 +360,7 @@
 	</span><span class="kw">pub fn </span>generate_proof(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		leaf_indices: Vec&lt;NodeIndex&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;L&gt;, primitives::Proof&lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash&gt;), Error&gt; {
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;L&gt;, primitives::Proof&lt;HashOf&lt;T, I&gt;&gt;), Error&gt; {
 		<span class="kw">let </span>positions = leaf_indices
 			.iter()
 			.map(|index| mmr_lib::leaf_index_to_pos(<span class="kw-2">*</span>index))

@@ -374,22 +374,6 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -505,6 +489,8 @@
 
 <span class="doccomment">/// Hashing used for the pallet.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>HashingOf&lt;T, I&gt; = &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hashing;
+<span class="doccomment">/// Hash type used for the pallet.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>HashOf&lt;T, I&gt; = &lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hashing <span class="kw">as </span>traits::Hash&gt;::Output;
 
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
@@ -538,24 +524,7 @@
 		///
 		/// Then we create a tuple of these two hashes, SCALE-encode it (concatenate) and
 		/// hash, to obtain a new MMR inner node - the new peak.
-		</span><span class="kw">type </span>Hashing: traits::Hash&lt;Output = &lt;<span class="self">Self </span><span class="kw">as </span>Config&lt;I&gt;&gt;::Hash&gt;;
-
-		<span class="doccomment">/// The hashing output type.
-		///
-		/// This type is actually going to be stored in the MMR.
-		/// Required to be provided again, to satisfy trait bounds for storage items.
-		</span><span class="kw">type </span>Hash: traits::Member
-			+ traits::MaybeSerializeDeserialize
-			+ sp_std::fmt::Debug
-			+ sp_std::hash::Hash
-			+ AsRef&lt;[u8]&gt;
-			+ AsMut&lt;[u8]&gt;
-			+ Copy
-			+ Default
-			+ codec::Codec
-			+ codec::EncodeLike
-			+ scale_info::TypeInfo
-			+ MaxEncodedLen;
+		</span><span class="kw">type </span>Hashing: traits::Hash;
 
 		<span class="doccomment">/// Data stored in the leaf nodes.
 		///
@@ -581,7 +550,7 @@
 		/// apart from having it in the storage. For instance you might output it in the header
 		/// digest (see [`frame_system::Pallet::deposit_log`]) to make it available for Light
 		/// Clients. Hook complexity should be `O(1)`.
-		</span><span class="kw">type </span>OnNewRoot: primitives::OnNewRoot&lt;&lt;<span class="self">Self </span><span class="kw">as </span>Config&lt;I&gt;&gt;::Hash&gt;;
+		</span><span class="kw">type </span>OnNewRoot: primitives::OnNewRoot&lt;HashOf&lt;<span class="self">Self</span>, I&gt;&gt;;
 
 		<span class="doccomment">/// Weights for this pallet.
 		</span><span class="kw">type </span>WeightInfo: WeightInfo;
@@ -590,8 +559,7 @@
 	<span class="doccomment">/// Latest MMR Root hash.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>mmr_root_hash)]
-	</span><span class="kw">pub type </span>RootHash&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; =
-		StorageValue&lt;<span class="kw">_</span>, &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash, ValueQuery&gt;;
+	</span><span class="kw">pub type </span>RootHash&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; = StorageValue&lt;<span class="kw">_</span>, HashOf&lt;T, I&gt;, ValueQuery&gt;;
 
 	<span class="doccomment">/// Current size of the MMR (number of leaves).
 	</span><span class="attr">#[pallet::storage]
@@ -605,7 +573,7 @@
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>mmr_peak)]
 	</span><span class="kw">pub type </span>Nodes&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; =
-		StorageMap&lt;<span class="kw">_</span>, Identity, NodeIndex, &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash, OptionQuery&gt;;
+		StorageMap&lt;<span class="kw">_</span>, Identity, NodeIndex, HashOf&lt;T, I&gt;, OptionQuery&gt;;
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
@@ -730,7 +698,7 @@
 	</span><span class="kw">pub fn </span>generate_proof(
 		block_numbers: Vec&lt;T::BlockNumber&gt;,
 		best_known_block_number: <span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;LeafOf&lt;T, I&gt;&gt;, primitives::Proof&lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash&gt;), primitives::Error&gt; {
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;LeafOf&lt;T, I&gt;&gt;, primitives::Proof&lt;HashOf&lt;T, I&gt;&gt;), primitives::Error&gt; {
 		<span class="comment">// check whether best_known_block_number provided, else use current best block
 		</span><span class="kw">let </span>best_known_block_number =
 			best_known_block_number.unwrap_or_else(|| &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number());
@@ -751,7 +719,7 @@
 	}
 
 	<span class="doccomment">/// Return the on-chain MMR root hash.
-	</span><span class="kw">pub fn </span>mmr_root() -&gt; &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash {
+	</span><span class="kw">pub fn </span>mmr_root() -&gt; HashOf&lt;T, I&gt; {
 		<span class="self">Self</span>::mmr_root_hash()
 	}
 
@@ -763,7 +731,7 @@
 	/// or the proof is invalid.
 	</span><span class="kw">pub fn </span>verify_leaves(
 		leaves: Vec&lt;LeafOf&lt;T, I&gt;&gt;,
-		proof: primitives::Proof&lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Hash&gt;,
+		proof: primitives::Proof&lt;HashOf&lt;T, I&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), primitives::Error&gt; {
 		<span class="kw">if </span>proof.leaf_count &gt; <span class="self">Self</span>::mmr_leaves() ||
 			proof.leaf_count == <span class="number">0 </span>||
