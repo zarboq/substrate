@@ -171,10 +171,7 @@
 </span><span class="doccomment">//! Helper for handling (i.e. answering) grandpa warp sync requests from a remote peer.
 
 </span><span class="kw">use </span>codec::Decode;
-<span class="kw">use </span>futures::{
-	channel::{mpsc, oneshot},
-	stream::StreamExt,
-};
+<span class="kw">use </span>futures::{channel::oneshot, stream::StreamExt};
 <span class="kw">use </span>log::debug;
 
 <span class="kw">use </span>sc_network::{
@@ -189,6 +186,9 @@
 <span class="kw">use </span>std::{sync::Arc, time::Duration};
 
 <span class="kw">const </span>MAX_RESPONSE_SIZE: u64 = <span class="number">16 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
+
+<span class="doccomment">/// Incoming warp requests bounded queue size.
+</span><span class="kw">const </span>MAX_WARP_REQUEST_QUEUE: usize = <span class="number">20</span>;
 
 <span class="doccomment">/// Generates a [`RequestResponseConfig`] for the grandpa warp sync request protocol, refusing
 /// incoming requests.
@@ -226,7 +226,7 @@
 <span class="doccomment">/// Handler for incoming grandpa warp sync requests from a remote peer.
 </span><span class="kw">pub struct </span>RequestHandler&lt;TBlock: BlockT&gt; {
 	backend: Arc&lt;<span class="kw">dyn </span>WarpSyncProvider&lt;TBlock&gt;&gt;,
-	request_receiver: mpsc::Receiver&lt;IncomingRequest&gt;,
+	request_receiver: async_channel::Receiver&lt;IncomingRequest&gt;,
 }
 
 <span class="kw">impl</span>&lt;TBlock: BlockT&gt; RequestHandler&lt;TBlock&gt; {
@@ -237,7 +237,7 @@
 		fork_id: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 		backend: Arc&lt;<span class="kw">dyn </span>WarpSyncProvider&lt;TBlock&gt;&gt;,
 	) -&gt; (<span class="self">Self</span>, RequestResponseConfig) {
-		<span class="kw">let </span>(tx, request_receiver) = mpsc::channel(<span class="number">20</span>);
+		<span class="kw">let </span>(tx, request_receiver) = async_channel::bounded(MAX_WARP_REQUEST_QUEUE);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>request_response_config =
 			generate_request_response_config(protocol_id, genesis_hash, fork_id);

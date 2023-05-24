@@ -309,6 +309,8 @@
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -335,7 +337,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::schema;
 <span class="kw">use </span>codec::{<span class="self">self</span>, Decode, Encode};
-<span class="kw">use </span>futures::{channel::mpsc, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>futures::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>libp2p_identity::PeerId;
 <span class="kw">use </span>log::{debug, trace};
 <span class="kw">use </span>prost::Message;
@@ -354,9 +356,13 @@
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;light-client-request-handler&quot;</span>;
 
+<span class="doccomment">/// Incoming requests bounded queue size. For now due to lack of data on light client request
+/// handling in production systems, this value is chosen to match the block request limit.
+</span><span class="kw">const </span>MAX_LIGHT_REQUEST_QUEUE: usize = <span class="number">20</span>;
+
 <span class="doccomment">/// Handler for incoming light client requests from a remote peer.
 </span><span class="kw">pub struct </span>LightClientRequestHandler&lt;B, Client&gt; {
-	request_receiver: mpsc::Receiver&lt;IncomingRequest&gt;,
+	request_receiver: async_channel::Receiver&lt;IncomingRequest&gt;,
 	<span class="doccomment">/// Blockchain client.
 	</span>client: Arc&lt;Client&gt;,
 	_block: PhantomData&lt;B&gt;,
@@ -373,9 +379,7 @@
 		fork_id: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
 		client: Arc&lt;Client&gt;,
 	) -&gt; (<span class="self">Self</span>, ProtocolConfig) {
-		<span class="comment">// For now due to lack of data on light client request handling in production systems, this
-		// value is chosen to match the block request limit.
-		</span><span class="kw">let </span>(tx, request_receiver) = mpsc::channel(<span class="number">20</span>);
+		<span class="kw">let </span>(tx, request_receiver) = async_channel::bounded(MAX_LIGHT_REQUEST_QUEUE);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>protocol_config = <span class="kw">super</span>::generate_protocol_config(
 			protocol_id,

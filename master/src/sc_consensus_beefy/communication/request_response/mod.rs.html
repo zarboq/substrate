@@ -103,7 +103,6 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -129,7 +128,6 @@
 
 <span class="kw">pub use </span>incoming_requests_handler::BeefyJustifsRequestHandler;
 
-<span class="kw">use </span>futures::channel::mpsc;
 <span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span>codec::{Decode, Encode, Error <span class="kw">as </span>CodecError};
@@ -160,7 +158,7 @@
 ) -&gt; (IncomingRequestReceiver, RequestResponseConfig) {
 	<span class="kw">let </span>name = justifications_protocol_name(genesis_hash, fork_id);
 	<span class="kw">let </span>fallback_names = <span class="macro">vec!</span>[];
-	<span class="kw">let </span>(tx, rx) = mpsc::channel(JUSTIF_CHANNEL_SIZE);
+	<span class="kw">let </span>(tx, rx) = async_channel::bounded(JUSTIF_CHANNEL_SIZE);
 	<span class="kw">let </span>rx = IncomingRequestReceiver::new(rx);
 	<span class="kw">let </span>cfg = RequestResponseConfig {
 		name,

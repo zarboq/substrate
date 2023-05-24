@@ -548,7 +548,7 @@
 //! CID is expected to reference 256-bit Blake2b transaction hash.
 
 </span><span class="kw">use </span>cid::{<span class="self">self</span>, Version};
-<span class="kw">use </span>futures::{channel::mpsc, StreamExt};
+<span class="kw">use </span>futures::StreamExt;
 <span class="kw">use </span>libp2p_identity::PeerId;
 <span class="kw">use </span>log::{debug, error, trace};
 <span class="kw">use </span>prost::Message;
@@ -620,13 +620,13 @@
 <span class="doccomment">/// Bitswap request handler
 </span><span class="kw">pub struct </span>BitswapRequestHandler&lt;B&gt; {
 	client: Arc&lt;<span class="kw">dyn </span>BlockBackend&lt;B&gt; + Send + Sync&gt;,
-	request_receiver: mpsc::Receiver&lt;IncomingRequest&gt;,
+	request_receiver: async_channel::Receiver&lt;IncomingRequest&gt;,
 }
 
 <span class="kw">impl</span>&lt;B: BlockT&gt; BitswapRequestHandler&lt;B&gt; {
 	<span class="doccomment">/// Create a new [`BitswapRequestHandler`].
 	</span><span class="kw">pub fn </span>new(client: Arc&lt;<span class="kw">dyn </span>BlockBackend&lt;B&gt; + Send + Sync&gt;) -&gt; (<span class="self">Self</span>, ProtocolConfig) {
-		<span class="kw">let </span>(tx, request_receiver) = mpsc::channel(MAX_REQUEST_QUEUE);
+		<span class="kw">let </span>(tx, request_receiver) = async_channel::bounded(MAX_REQUEST_QUEUE);
 
 		<span class="kw">let </span>config = ProtocolConfig {
 			name: ProtocolName::from(PROTOCOL_NAME),
@@ -816,7 +816,7 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>futures::{channel::oneshot, SinkExt};
+	<span class="kw">use </span>futures::channel::oneshot;
 	<span class="kw">use </span>sc_block_builder::BlockBuilderProvider;
 	<span class="kw">use </span>schema::bitswap::{
 		message::{wantlist::Entry, Wantlist},

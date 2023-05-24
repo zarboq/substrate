@@ -1519,10 +1519,7 @@
 
 </span><span class="kw">use crate</span>::{types::ProtocolName, ReputationChange};
 
-<span class="kw">use </span>futures::{
-	channel::{mpsc, oneshot},
-	prelude::<span class="kw-2">*</span>,
-};
+<span class="kw">use </span>futures::{channel::oneshot, prelude::<span class="kw-2">*</span>};
 <span class="kw">use </span>libp2p::{
 	core::{Endpoint, Multiaddr},
 	request_response::{<span class="self">self</span>, Behaviour, Codec, Message, ProtocolSupport, ResponseChannel},
@@ -1609,7 +1606,7 @@
 	/// other peers. If this is `Some` but the channel is closed, then the local node will
 	/// advertise support for this protocol, but any incoming request will lead to an error being
 	/// sent back.
-	</span><span class="kw">pub </span>inbound_queue: <span class="prelude-ty">Option</span>&lt;mpsc::Sender&lt;IncomingRequest&gt;&gt;,
+	</span><span class="kw">pub </span>inbound_queue: <span class="prelude-ty">Option</span>&lt;async_channel::Sender&lt;IncomingRequest&gt;&gt;,
 }
 
 <span class="doccomment">/// A single request received by a peer on a request-response protocol.
@@ -1742,8 +1739,10 @@
 	///
 	/// Contains the underlying libp2p request-response [`Behaviour`], plus an optional
 	/// &quot;response builder&quot; used to build responses for incoming requests.
-	</span>protocols:
-		HashMap&lt;ProtocolName, (Behaviour&lt;GenericCodec&gt;, <span class="prelude-ty">Option</span>&lt;mpsc::Sender&lt;IncomingRequest&gt;&gt;)&gt;,
+	</span>protocols: HashMap&lt;
+		ProtocolName,
+		(Behaviour&lt;GenericCodec&gt;, <span class="prelude-ty">Option</span>&lt;async_channel::Sender&lt;IncomingRequest&gt;&gt;),
+	&gt;,
 
 	<span class="doccomment">/// Pending requests, passed down to a request-response [`Behaviour`], awaiting a reply.
 	</span>pending_requests:
@@ -1778,7 +1777,10 @@
 	request: Vec&lt;u8&gt;,
 	channel: ResponseChannel&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, ()&gt;&gt;,
 	protocol: ProtocolName,
-	resp_builder: <span class="prelude-ty">Option</span>&lt;futures::channel::mpsc::Sender&lt;IncomingRequest&gt;&gt;,
+	<span class="comment">// A builder used for building responses for incoming requests. Note that we use
+	// `async_channel` and not `mpsc` on purpose, because `mpsc::channel` allocates an extra
+	// message slot for every cloned `Sender` and this breaks a back-pressure mechanism.
+	</span>resp_builder: <span class="prelude-ty">Option</span>&lt;async_channel::Sender&lt;IncomingRequest&gt;&gt;,
 	<span class="comment">// Once we get incoming request we save all params, create an async call to Peerset
 	// to get the reputation of the peer.
 	</span>get_peer_reputation: Pin&lt;Box&lt;<span class="kw">dyn </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;i32, ()&gt;&gt; + Send&gt;&gt;,
@@ -2101,10 +2103,12 @@
 
 						<span class="comment">// Submit the request to the &quot;response builder&quot; passed by the user at
 						// initialization.
-						</span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>resp_builder) = resp_builder {
+						</span><span class="kw">if let </span><span class="prelude-val">Some</span>(resp_builder) = resp_builder {
 							<span class="comment">// If the response builder is too busy, silently drop `tx`. This
 							// will be reported by the corresponding request-response [`Behaviour`]
 							// through an `InboundFailure::Omission` event.
+							// Note that we use `async_channel::bounded` and not `mpsc::channel`
+							// because the latter allocates an extra slot for every cloned sender.
 							</span><span class="kw">let _ </span>= resp_builder.try_send(IncomingRequest {
 								peer,
 								payload: request,
@@ -2519,11 +2523,7 @@
 </span><span class="kw">mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-	<span class="kw">use </span>futures::{
-		channel::{mpsc, oneshot},
-		executor::LocalPool,
-		task::Spawn,
-	};
+	<span class="kw">use </span>futures::{channel::oneshot, executor::LocalPool, task::Spawn};
 	<span class="kw">use </span>libp2p::{
 		core::{
 			transport::{MemoryTransport, Transport},
@@ -2595,7 +2595,7 @@
 		<span class="comment">// Build swarms whose behaviour is [`RequestResponsesBehaviour`].
 		</span><span class="kw">let </span><span class="kw-2">mut </span>swarms = (<span class="number">0</span>..<span class="number">2</span>)
 			.map(|<span class="kw">_</span>| {
-				<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = mpsc::channel::&lt;IncomingRequest&gt;(<span class="number">64</span>);
+				<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = async_channel::bounded::&lt;IncomingRequest&gt;(<span class="number">64</span>);
 
 				pool.spawner()
 					.spawn_obj(
@@ -2698,7 +2698,7 @@
 		<span class="comment">// Build swarms whose behaviour is [`RequestResponsesBehaviour`].
 		</span><span class="kw">let </span><span class="kw-2">mut </span>swarms = (<span class="number">0</span>..<span class="number">2</span>)
 			.map(|<span class="kw">_</span>| {
-				<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = mpsc::channel::&lt;IncomingRequest&gt;(<span class="number">64</span>);
+				<span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = async_channel::bounded::&lt;IncomingRequest&gt;(<span class="number">64</span>);
 
 				pool.spawner()
 					.spawn_obj(
@@ -2836,8 +2836,8 @@
 		</span>};
 
 		<span class="kw">let </span>(<span class="kw-2">mut </span>swarm_2, <span class="kw-2">mut </span>swarm_2_handler_1, <span class="kw-2">mut </span>swarm_2_handler_2, listen_add_2, peerset) = {
-			<span class="kw">let </span>(tx_1, rx_1) = mpsc::channel(<span class="number">64</span>);
-			<span class="kw">let </span>(tx_2, rx_2) = mpsc::channel(<span class="number">64</span>);
+			<span class="kw">let </span>(tx_1, rx_1) = async_channel::bounded(<span class="number">64</span>);
+			<span class="kw">let </span>(tx_2, rx_2) = async_channel::bounded(<span class="number">64</span>);
 
 			<span class="kw">let </span>protocol_configs = <span class="macro">vec!</span>[
 				ProtocolConfig {
