@@ -1148,13 +1148,6 @@
 <a href="#1148" id="1148">1148</a>
 <a href="#1149" id="1149">1149</a>
 <a href="#1150" id="1150">1150</a>
-<a href="#1151" id="1151">1151</a>
-<a href="#1152" id="1152">1152</a>
-<a href="#1153" id="1153">1153</a>
-<a href="#1154" id="1154">1154</a>
-<a href="#1155" id="1155">1155</a>
-<a href="#1156" id="1156">1156</a>
-<a href="#1157" id="1157">1157</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1319,11 +1312,7 @@
 	<span class="kw">use </span>frame_support::{
 		pallet_prelude::<span class="kw-2">*</span>,
 		traits::{
-			fungible::{
-				<span class="self">self</span>,
-				hold::{Inspect <span class="kw">as </span>FunHoldInspect, Mutate <span class="kw">as </span>FunHoldMutate},
-				Balanced <span class="kw">as </span>FunBalanced,
-			},
+			fungible::{<span class="self">self</span>, hold::Mutate <span class="kw">as </span>FunHoldMutate, Balanced <span class="kw">as </span>FunBalanced},
 			nonfungible::{Inspect <span class="kw">as </span>NftInspect, Transfer <span class="kw">as </span>NftTransfer},
 			tokens::{
 				Fortitude::Polite,
@@ -1373,13 +1362,10 @@
 		</span><span class="kw">type </span>Currency: FunInspect&lt;<span class="self">Self</span>::AccountId, Balance = <span class="self">Self</span>::CurrencyBalance&gt;
 			+ FunMutate&lt;<span class="self">Self</span>::AccountId&gt;
 			+ FunBalanced&lt;<span class="self">Self</span>::AccountId&gt;
-			+ FunHoldInspect&lt;<span class="self">Self</span>::AccountId&gt;
-			+ FunHoldMutate&lt;<span class="self">Self</span>::AccountId&gt;;
+			+ FunHoldMutate&lt;<span class="self">Self</span>::AccountId, Reason = <span class="self">Self</span>::RuntimeHoldReason&gt;;
 
-		<span class="doccomment">/// The identifier of the hold reason.
-
-		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>HoldReason: Get&lt;&lt;<span class="self">Self</span>::Currency <span class="kw">as </span>FunHoldInspect&lt;<span class="self">Self</span>::AccountId&gt;&gt;::Reason&gt;;
+		<span class="doccomment">/// Overarching hold reason.
+		</span><span class="kw">type </span>RuntimeHoldReason: From&lt;HoldReason&gt;;
 
 		<span class="doccomment">/// Just the `Currency::Balance` type; we have this item to allow us to constrain it to
 		/// `From&lt;u64&gt;`.
@@ -1726,14 +1712,14 @@
 				|q| -&gt; <span class="prelude-ty">Result</span>&lt;(u32, BalanceOf&lt;T&gt;), DispatchError&gt; {
 					<span class="kw">let </span>queue_full = q.len() == T::MaxQueueLen::get() <span class="kw">as </span>usize;
 					<span class="macro">ensure!</span>(!queue_full || q[<span class="number">0</span>].amount &lt; amount, Error::&lt;T&gt;::BidTooLow);
-					T::Currency::hold(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>who, amount)<span class="question-mark">?</span>;
+					T::Currency::hold(<span class="kw-2">&amp;</span>HoldReason::NftReceipt.into(), <span class="kw-2">&amp;</span>who, amount)<span class="question-mark">?</span>;
 
 					<span class="comment">// queue is &lt;Ordered: Lowest ... Highest&gt;&lt;Fifo: Last ... First&gt;
 					</span><span class="kw">let </span><span class="kw-2">mut </span>bid = Bid { amount, who: who.clone() };
 					<span class="kw">let </span>net = <span class="kw">if </span>queue_full {
 						sp_std::mem::swap(<span class="kw-2">&amp;mut </span>q[<span class="number">0</span>], <span class="kw-2">&amp;mut </span>bid);
 						<span class="kw">let _ </span>= T::Currency::release(
-							<span class="kw-2">&amp;</span>T::HoldReason::get(),
+							<span class="kw-2">&amp;</span>HoldReason::NftReceipt.into(),
 							<span class="kw-2">&amp;</span>bid.who,
 							bid.amount,
 							BestEffort,
@@ -1794,7 +1780,7 @@
 			queue.remove(pos);
 			<span class="kw">let </span>new_len = queue.len() <span class="kw">as </span>u32;
 
-			T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>bid.who, bid.amount, BestEffort)<span class="question-mark">?</span>;
+			T::Currency::release(<span class="kw-2">&amp;</span>HoldReason::NftReceipt.into(), <span class="kw-2">&amp;</span>bid.who, bid.amount, BestEffort)<span class="question-mark">?</span>;
 
 			Queues::&lt;T&gt;::insert(duration, queue);
 			QueueTotals::&lt;T&gt;::mutate(|qs| {
@@ -1886,7 +1872,7 @@
 			<span class="kw">let </span>dropped = receipt.proportion.is_zero();
 
 			<span class="kw">if </span>amount &gt; on_hold {
-				T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>who, on_hold, Exact)<span class="question-mark">?</span>;
+				T::Currency::release(<span class="kw-2">&amp;</span>HoldReason::NftReceipt.into(), <span class="kw-2">&amp;</span>who, on_hold, Exact)<span class="question-mark">?</span>;
 				<span class="kw">let </span>deficit = amount - on_hold;
 				<span class="comment">// Try to transfer deficit from pot to receipt owner.
 				</span>summary.receipts_on_hold.saturating_reduce(on_hold);
@@ -1901,7 +1887,7 @@
 					// Transfer excess of `on_hold` to the pot if we have now fully compensated for
 					// the receipt.
 					</span>T::Currency::transfer_on_hold(
-						<span class="kw-2">&amp;</span>T::HoldReason::get(),
+						<span class="kw-2">&amp;</span>HoldReason::NftReceipt.into(),
 						<span class="kw-2">&amp;</span>who,
 						<span class="kw-2">&amp;</span>our_account,
 						on_hold,
@@ -1917,7 +1903,7 @@
 					)<span class="question-mark">?</span>;
 					summary.receipts_on_hold.saturating_reduce(on_hold);
 				}
-				T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>who, amount, Exact)<span class="question-mark">?</span>;
+				T::Currency::release(<span class="kw-2">&amp;</span>HoldReason::NftReceipt.into(), <span class="kw-2">&amp;</span>who, amount, Exact)<span class="question-mark">?</span>;
 			}
 
 			<span class="kw">if </span>dropped {
@@ -2009,7 +1995,7 @@
 			</span><span class="macro">ensure!</span>(owner == who, Error::&lt;T&gt;::NotOwner);
 
 			<span class="comment">// Unreserve and transfer the funds to the pot.
-			</span><span class="kw">let </span>reason = T::HoldReason::get();
+			</span><span class="kw">let </span>reason = HoldReason::NftReceipt.into();
 			<span class="kw">let </span>us = <span class="self">Self</span>::account_id();
 			T::Currency::transfer_on_hold(<span class="kw-2">&amp;</span>reason, <span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;</span>us, on_hold, Exact, Free, Polite)
 				.map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::Unfunded)<span class="question-mark">?</span>;
@@ -2060,7 +2046,7 @@
 			)<span class="question-mark">?</span>;
 
 			<span class="comment">// Transfer the funds from the pot to the owner and reserve
-			</span><span class="kw">let </span>reason = T::HoldReason::get();
+			</span><span class="kw">let </span>reason = HoldReason::NftReceipt.into();
 			<span class="kw">let </span>us = <span class="self">Self</span>::account_id();
 			T::Currency::transfer_and_hold(<span class="kw-2">&amp;</span>reason, <span class="kw-2">&amp;</span>us, <span class="kw-2">&amp;</span>who, amount, Exact, Expendable, Polite)<span class="question-mark">?</span>;
 
@@ -2116,7 +2102,7 @@
 			<span class="kw">let </span><span class="kw-2">mut </span>item = Receipts::&lt;T&gt;::get(index).ok_or(TokenError::UnknownAsset)<span class="question-mark">?</span>;
 			<span class="kw">let </span>(owner, on_hold) = item.owner.take().ok_or(Error::&lt;T&gt;::AlreadyCommunal)<span class="question-mark">?</span>;
 
-			<span class="kw">let </span>reason = T::HoldReason::get();
+			<span class="kw">let </span>reason = HoldReason::NftReceipt.into();
 			T::Currency::transfer_on_hold(<span class="kw-2">&amp;</span>reason, <span class="kw-2">&amp;</span>owner, dest, on_hold, Exact, OnHold, Polite)<span class="question-mark">?</span>;
 
 			item.owner = <span class="prelude-val">Some</span>((dest.clone(), on_hold));

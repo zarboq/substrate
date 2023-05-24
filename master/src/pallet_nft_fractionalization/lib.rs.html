@@ -393,6 +393,18 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -458,8 +470,8 @@
 		sp_runtime::traits::{AccountIdConversion, StaticLookup},
 		traits::{
 			fungible::{
-				hold::{Inspect <span class="kw">as </span>HoldInspectFungible, Mutate <span class="kw">as </span>HoldMutateFungible},
-				Inspect <span class="kw">as </span>InspectFungible, Mutate <span class="kw">as </span>MutateFungible,
+				hold::Mutate <span class="kw">as </span>HoldMutateFungible, Inspect <span class="kw">as </span>InspectFungible,
+				Mutate <span class="kw">as </span>MutateFungible,
 			},
 			fungibles::{
 				metadata::{MetadataDeposit, Mutate <span class="kw">as </span>MutateMetadata},
@@ -491,11 +503,10 @@
 		<span class="doccomment">/// The currency mechanism, used for paying for deposits.
 		</span><span class="kw">type </span>Currency: InspectFungible&lt;<span class="self">Self</span>::AccountId&gt;
 			+ MutateFungible&lt;<span class="self">Self</span>::AccountId&gt;
-			+ HoldInspectFungible&lt;<span class="self">Self</span>::AccountId&gt;
-			+ HoldMutateFungible&lt;<span class="self">Self</span>::AccountId&gt;;
+			+ HoldMutateFungible&lt;<span class="self">Self</span>::AccountId, Reason = <span class="self">Self</span>::RuntimeHoldReason&gt;;
 
-		<span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>HoldReason: Get&lt;&lt;<span class="self">Self</span>::Currency <span class="kw">as </span>HoldInspectFungible&lt;<span class="self">Self</span>::AccountId&gt;&gt;::Reason&gt;;
+		<span class="doccomment">/// Overarching hold reason.
+		</span><span class="kw">type </span>RuntimeHoldReason: From&lt;HoldReason&gt;;
 
 		<span class="doccomment">/// The deposit paid by the user locking an NFT. The deposit is returned to the original NFT
 		/// owner when the asset is unified and the NFT is unlocked.
@@ -596,6 +607,14 @@
 		</span>NftNotFractionalized,
 	}
 
+	<span class="doccomment">/// A reason for the pallet placing a hold on funds.
+	</span><span class="attr">#[pallet::composite_enum]
+	</span><span class="kw">pub enum </span>HoldReason {
+		<span class="doccomment">/// Reserved for a fractionalized NFT.
+		</span><span class="attr">#[codec(index = <span class="number">0</span>)]
+		</span>Fractionalized,
+	}
+
 	<span class="attr">#[pallet::call]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
 		<span class="doccomment">/// Lock the NFT and mint a new fungible asset.
@@ -634,7 +653,7 @@
 
 			<span class="kw">let </span>pallet_account = <span class="self">Self</span>::get_pallet_account();
 			<span class="kw">let </span>deposit = T::Deposit::get();
-			T::Currency::hold(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>nft_owner, deposit)<span class="question-mark">?</span>;
+			T::Currency::hold(<span class="kw-2">&amp;</span>HoldReason::Fractionalized.into(), <span class="kw-2">&amp;</span>nft_owner, deposit)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_lock_nft(nft_collection_id, nft_id)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_create_asset(asset_id.clone(), pallet_account.clone())<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_mint_asset(asset_id.clone(), <span class="kw-2">&amp;</span>beneficiary, fractions)<span class="question-mark">?</span>;
@@ -698,7 +717,12 @@
 				<span class="kw">let </span>asset_creator = details.asset_creator;
 				<span class="self">Self</span>::do_burn_asset(asset_id.clone(), <span class="kw-2">&amp;</span>who, details.fractions)<span class="question-mark">?</span>;
 				<span class="self">Self</span>::do_unlock_nft(nft_collection_id, nft_id, <span class="kw-2">&amp;</span>beneficiary)<span class="question-mark">?</span>;
-				T::Currency::release(<span class="kw-2">&amp;</span>T::HoldReason::get(), <span class="kw-2">&amp;</span>asset_creator, deposit, BestEffort)<span class="question-mark">?</span>;
+				T::Currency::release(
+					<span class="kw-2">&amp;</span>HoldReason::Fractionalized.into(),
+					<span class="kw-2">&amp;</span>asset_creator,
+					deposit,
+					BestEffort,
+				)<span class="question-mark">?</span>;
 
 				<span class="self">Self</span>::deposit_event(Event::NftUnified {
 					nft_collection: nft_collection_id,
