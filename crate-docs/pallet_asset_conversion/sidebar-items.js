@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NativeOrAssetId"],"mod":["pallet","weights"],"struct":["NativeOrAssetIdConverter","PoolInfo"],"trait":["AssetConversionApi","BenchmarkHelper","MultiAssetIdConverter"]};

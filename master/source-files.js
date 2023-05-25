@@ -43,6 +43,7 @@ var sourcesIndex = JSON.parse('{\
 "node_testing":["",[],["bench.rs","client.rs","genesis.rs","keyring.rs","lib.rs"]],\
 "normalize":["",[],["normalize.rs"]],\
 "pallet_alliance":["",[],["benchmarking.rs","lib.rs","migration.rs","types.rs","weights.rs"]],\
+"pallet_asset_conversion":["",[],["benchmarking.rs","lib.rs","types.rs","weights.rs"]],\
 "pallet_asset_rate":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_asset_tx_payment":["",[],["lib.rs","payment.rs"]],\
 "pallet_assets":["",[],["benchmarking.rs","extra_mutator.rs","functions.rs","impl_fungibles.rs","impl_stored_map.rs","lib.rs","migration.rs","types.rs","weights.rs"]],\
