@@ -1621,6 +1621,43 @@
 <a href="#1621" id="1621">1621</a>
 <a href="#1622" id="1622">1622</a>
 <a href="#1623" id="1623">1623</a>
+<a href="#1624" id="1624">1624</a>
+<a href="#1625" id="1625">1625</a>
+<a href="#1626" id="1626">1626</a>
+<a href="#1627" id="1627">1627</a>
+<a href="#1628" id="1628">1628</a>
+<a href="#1629" id="1629">1629</a>
+<a href="#1630" id="1630">1630</a>
+<a href="#1631" id="1631">1631</a>
+<a href="#1632" id="1632">1632</a>
+<a href="#1633" id="1633">1633</a>
+<a href="#1634" id="1634">1634</a>
+<a href="#1635" id="1635">1635</a>
+<a href="#1636" id="1636">1636</a>
+<a href="#1637" id="1637">1637</a>
+<a href="#1638" id="1638">1638</a>
+<a href="#1639" id="1639">1639</a>
+<a href="#1640" id="1640">1640</a>
+<a href="#1641" id="1641">1641</a>
+<a href="#1642" id="1642">1642</a>
+<a href="#1643" id="1643">1643</a>
+<a href="#1644" id="1644">1644</a>
+<a href="#1645" id="1645">1645</a>
+<a href="#1646" id="1646">1646</a>
+<a href="#1647" id="1647">1647</a>
+<a href="#1648" id="1648">1648</a>
+<a href="#1649" id="1649">1649</a>
+<a href="#1650" id="1650">1650</a>
+<a href="#1651" id="1651">1651</a>
+<a href="#1652" id="1652">1652</a>
+<a href="#1653" id="1653">1653</a>
+<a href="#1654" id="1654">1654</a>
+<a href="#1655" id="1655">1655</a>
+<a href="#1656" id="1656">1656</a>
+<a href="#1657" id="1657">1657</a>
+<a href="#1658" id="1658">1658</a>
+<a href="#1659" id="1659">1659</a>
+<a href="#1660" id="1660">1660</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1692,6 +1729,9 @@
 <span class="doccomment">/// Responsible for the voting strategy.
 /// It chooses which incoming votes to accept and which votes to generate.
 /// Keeps track of voting seen for current and future rounds.
+///
+/// Note: this is part of `PersistedState` so any changes here should also bump
+/// aux-db schema version.
 </span><span class="attr">#[derive(Debug, Decode, Encode, PartialEq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>VoterOracle&lt;B: Block&gt; {
 	<span class="doccomment">/// Queue of known sessions. Keeps track of voting rounds (block numbers) within each session.
@@ -1879,13 +1919,18 @@
 	}
 }
 
-<span class="attr">#[derive(Debug, Decode, Encode, PartialEq)]
+<span class="doccomment">/// BEEFY voter state persisted in aux DB.
+///
+/// Note: Any changes here should also bump aux-db schema version.
+</span><span class="attr">#[derive(Debug, Decode, Encode, PartialEq)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PersistedState&lt;B: Block&gt; {
 	<span class="doccomment">/// Best block we voted on.
 	</span>best_voted: NumberFor&lt;B&gt;,
 	<span class="doccomment">/// Chooses which incoming votes to accept and which votes to generate.
 	/// Keeps track of voting seen for current and future rounds.
 	</span>voting_oracle: VoterOracle&lt;B&gt;,
+	<span class="doccomment">/// Pallet-beefy genesis block - block number when BEEFY consensus started for this chain.
+	</span>pallet_genesis: NumberFor&lt;B&gt;,
 }
 
 <span class="kw">impl</span>&lt;B: Block&gt; PersistedState&lt;B&gt; {
@@ -1894,9 +1939,19 @@
 		best_beefy: NumberFor&lt;B&gt;,
 		sessions: VecDeque&lt;Rounds&lt;B&gt;&gt;,
 		min_block_delta: u32,
+		pallet_genesis: NumberFor&lt;B&gt;,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
-		VoterOracle::checked_new(sessions, min_block_delta, grandpa_header, best_beefy)
-			.map(|voting_oracle| PersistedState { best_voted: Zero::zero(), voting_oracle })
+		VoterOracle::checked_new(sessions, min_block_delta, grandpa_header, best_beefy).map(
+			|voting_oracle| PersistedState {
+				best_voted: Zero::zero(),
+				voting_oracle,
+				pallet_genesis,
+			},
+		)
+	}
+
+	<span class="kw">pub fn </span>pallet_genesis(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NumberFor&lt;B&gt; {
+		<span class="self">self</span>.pallet_genesis
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_min_block_delta(<span class="kw-2">&amp;mut </span><span class="self">self</span>, min_block_delta: u32) {
@@ -2034,7 +2089,10 @@
 		);
 	}
 
-	<span class="kw">fn </span>handle_finality_notification(<span class="kw-2">&amp;mut </span><span class="self">self</span>, notification: <span class="kw-2">&amp;</span>FinalityNotification&lt;B&gt;) {
+	<span class="kw">fn </span>handle_finality_notification(
+		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+		notification: <span class="kw-2">&amp;</span>FinalityNotification&lt;B&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 		<span class="macro">debug!</span>(
 			target: LOG_TARGET,
 			<span class="string">&quot;🥩 Finality notification: header {:?} tree_route {:?}&quot;</span>,
@@ -2042,6 +2100,18 @@
 			notification.tree_route,
 		);
 		<span class="kw">let </span>header = <span class="kw-2">&amp;</span>notification.header;
+
+		<span class="self">self</span>.runtime
+			.runtime_api()
+			.beefy_genesis(header.hash())
+			.ok()
+			.flatten()
+			.filter(|genesis| <span class="kw-2">*</span>genesis == <span class="self">self</span>.persisted_state.pallet_genesis)
+			.ok_or_else(|| {
+				<span class="kw">let </span>err = Error::ConsensusReset;
+				<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Error: {}&quot;</span>, err);
+				err
+			})<span class="question-mark">?</span>;
 
 		<span class="kw">if </span><span class="kw-2">*</span>header.number() &gt; <span class="self">self</span>.best_grandpa_block() {
 			<span class="comment">// update best GRANDPA finalized block we have seen
@@ -2074,6 +2144,8 @@
 				<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Voter error: {:?}&quot;</span>, e);
 			}
 		}
+
+		<span class="prelude-val">Ok</span>(())
 	}
 
 	<span class="doccomment">/// Based on [VoterOracle] this vote is either processed here or discarded.
@@ -2436,9 +2508,9 @@
 				<span class="comment">// Use `select_biased!` to prioritize order below.
 				// Process finality notifications first since these drive the voter.
 				</span>notification = finality_notifications.next() =&gt; {
-					<span class="kw">if let </span><span class="prelude-val">Some</span>(notification) = notification {
-						<span class="self">self</span>.handle_finality_notification(<span class="kw-2">&amp;</span>notification);
-					} <span class="kw">else </span>{
+					<span class="kw">if </span>notification.and_then(|notif| {
+						<span class="self">self</span>.handle_finality_notification(<span class="kw-2">&amp;</span>notif).ok()
+					}).is_none() {
 						<span class="macro">error!</span>(target: LOG_TARGET, <span class="string">&quot;🥩 Finality stream terminated, closing worker.&quot;</span>);
 						<span class="kw">return</span>;
 					}
@@ -2709,6 +2781,7 @@
 		};
 
 		<span class="kw">let </span>backend = peer.client().as_backend();
+		<span class="kw">let </span>beefy_genesis = <span class="number">1</span>;
 		<span class="kw">let </span>api = Arc::new(TestApi::with_validator_set(<span class="kw-2">&amp;</span>genesis_validator_set));
 		<span class="kw">let </span>network = peer.network_service().clone();
 		<span class="kw">let </span>sync = peer.sync_service().clone();
@@ -2741,6 +2814,7 @@
 			Zero::zero(),
 			<span class="macro">vec!</span>[Rounds::new(One::one(), genesis_validator_set)].into(),
 			min_block_delta,
+			beefy_genesis,
 		)
 		.unwrap();
 		<span class="kw">let </span>payload_provider = MmrRootProvider::new(api.clone());
