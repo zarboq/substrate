@@ -439,6 +439,31 @@
 <a href="#439" id="439">439</a>
 <a href="#440" id="440">440</a>
 <a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -537,6 +562,7 @@
 		method.sig.ident,
 	);
 	<span class="kw">let </span>return_value = <span class="kw-2">&amp;</span>method.sig.output;
+	<span class="kw">let </span>cfg_attrs = method.attrs.iter().filter(|a| a.path().is_ident(<span class="string">&quot;cfg&quot;</span>));
 
 	<span class="kw">let </span>ffi_return_value = <span class="kw">match </span>method.sig.output {
 		ReturnType::Default =&gt; <span class="macro">quote!</span>(),
@@ -553,6 +579,7 @@
 	};
 
 	<span class="prelude-val">Ok</span>(<span class="macro">quote! </span>{
+		#(#cfg_attrs)*
 		<span class="attr">#[doc = #doc_string]
 		</span><span class="kw">pub fn </span>#function ( #( #args ),* ) #return_value {
 			<span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
@@ -584,8 +611,10 @@
 	<span class="kw">let </span>exchangeable_function = create_exchangeable_host_function_ident(<span class="kw-2">&amp;</span>method.sig.ident);
 	<span class="kw">let </span>doc_string = <span class="macro">format!</span>(<span class="string">&quot; Exchangeable host function used by [`{}`].&quot;</span>, method.sig.ident);
 	<span class="kw">let </span>output = <span class="kw-2">&amp;</span>method.sig.output;
+	<span class="kw">let </span>cfg_attrs = method.attrs.iter().filter(|a| a.path().is_ident(<span class="string">&quot;cfg&quot;</span>));
 
 	<span class="prelude-val">Ok</span>(<span class="macro">quote! </span>{
+		#(#cfg_attrs)*
 		<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
 		#[allow(non_upper_case_globals)]
 		#[doc = #doc_string]
@@ -604,14 +633,15 @@
 	<span class="kw">let </span>crate_ = generate_crate_access();
 
 	<span class="kw">let </span><span class="kw-2">mut </span>host_function_impls = Vec::new();
-	<span class="kw">let </span><span class="kw-2">mut </span>host_function_names = Vec::new();
 	<span class="kw">let </span><span class="kw-2">mut </span>register_bodies = Vec::new();
+	<span class="kw">let </span><span class="kw-2">mut </span>append_hf_bodies = Vec::new();
+
 	<span class="kw">for </span>(version, method) <span class="kw">in </span>get_runtime_interface(trait_def)<span class="question-mark">?</span>.all_versions() {
-		<span class="kw">let </span>(implementation, name, register_body) =
+		<span class="kw">let </span>(implementation, register_body, append_hf_body) =
 			generate_host_function_implementation(<span class="kw-2">&amp;</span>trait_def.ident, method, version, is_wasm_only)<span class="question-mark">?</span>;
 		host_function_impls.push(implementation);
-		host_function_names.push(name);
 		register_bodies.push(register_body);
+		append_hf_bodies.push(append_hf_body);
 	}
 
 	<span class="prelude-val">Ok</span>(<span class="macro">quote! </span>{
@@ -624,7 +654,9 @@
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span><span class="kw">impl </span>#crate_::sp_wasm_interface::HostFunctions <span class="kw">for </span>HostFunctions {
 			<span class="kw">fn </span>host_functions() -&gt; Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw">dyn </span>#crate_::sp_wasm_interface::Function&gt; {
-				<span class="macro">vec!</span>[ #( <span class="kw-2">&amp;</span>#host_function_names <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>#crate_::sp_wasm_interface::Function ),* ]
+				<span class="kw">let </span><span class="kw-2">mut </span>host_functions_list = Vec::new();
+				#(#append_hf_bodies)*
+				host_functions_list
 			}
 
 			#<span class="macro">crate_::sp_wasm_interface::if_wasmtime_is_enabled! </span>{
@@ -649,7 +681,7 @@
 	method: <span class="kw-2">&amp;</span>RuntimeInterfaceFunction,
 	version: u32,
 	is_wasm_only: bool,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(TokenStream, Ident, TokenStream)&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(TokenStream, TokenStream, TokenStream)&gt; {
 	<span class="kw">let </span>name = create_host_function_ident(<span class="kw-2">&amp;</span>method.sig.ident, version, trait_name).to_string();
 	<span class="kw">let </span>struct_name = Ident::new(<span class="kw-2">&amp;</span>name.to_pascal_case(), Span::call_site());
 	<span class="kw">let </span>crate_ = generate_crate_access();
@@ -764,10 +796,21 @@
 		});
 	}
 
+	<span class="kw">let </span>cfg_attrs: Vec&lt;<span class="kw">_</span>&gt; =
+		method.attrs.iter().filter(|a| a.path().is_ident(<span class="string">&quot;cfg&quot;</span>)).cloned().collect();
+	<span class="kw">if </span>version &gt; <span class="number">1 </span>&amp;&amp; !cfg_attrs.is_empty() {
+		<span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(
+			method.span(),
+			<span class="string">&quot;Conditional compilation is not supported for versioned functions&quot;</span>,
+		))
+	}
+
 	<span class="kw">let </span>implementation = <span class="macro">quote! </span>{
+		#(#cfg_attrs)*
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span><span class="kw">struct </span>#struct_name;
 
+		#(#cfg_attrs)*
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span><span class="kw">impl </span>#struct_name {
 			<span class="kw">fn </span>call(
@@ -782,6 +825,7 @@
 			}
 		}
 
+		#(#cfg_attrs)*
 		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 		</span><span class="kw">impl </span>#crate_::sp_wasm_interface::Function <span class="kw">for </span>#struct_name {
 			<span class="kw">fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
@@ -809,6 +853,7 @@
 	};
 
 	<span class="kw">let </span>register_body = <span class="macro">quote! </span>{
+		#(#cfg_attrs)*
 		registry.register_static(
 			#crate_::sp_wasm_interface::Function::name(<span class="kw-2">&amp;</span>#struct_name),
 			|<span class="kw-2">mut </span>caller: #crate_::sp_wasm_interface::wasmtime::Caller&lt;T::State&gt;, #(#ffi_args_prototype),<span class="kw-2">*</span>|
@@ -840,7 +885,12 @@
 		)<span class="question-mark">?</span>;
 	};
 
-	<span class="prelude-val">Ok</span>((implementation, struct_name, register_body))
+	<span class="kw">let </span>append_hf_body = <span class="macro">quote! </span>{
+		#(#cfg_attrs)*
+		host_functions_list.push(<span class="kw-2">&amp;</span>#struct_name <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>#crate_::sp_wasm_interface::Function);
+	};
+
+	<span class="prelude-val">Ok</span>((implementation, register_body, append_hf_body))
 }
 
 <span class="doccomment">/// Generate the `wasm_interface::Signature` for the given host function `sig`.

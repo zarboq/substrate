@@ -363,6 +363,52 @@
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -545,9 +591,18 @@
 ///             None =&gt; self.clear_storage(&amp;[1, 2, 3, 4]),
 ///         }
 ///     }
+///
+///     /// A function can be gated behind a configuration (`cfg`) attribute.
+///     /// To prevent ambiguity and confusion about what will be the final exposed host
+///     /// functions list, conditionally compiled functions can&#39;t be versioned.
+///     /// That is, conditionally compiled functions with `version`s greater than 1
+///     /// are not allowed.
+///     #[cfg(feature = &quot;experimental-function&quot;)]
+///     fn gated_call(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
+///         [42].to_vec()
+///     }
 /// }
 /// ```
-///
 ///
 /// The given example will generate roughly the following code for native:
 ///
@@ -562,6 +617,8 @@
 ///         fn call_version_2(data: &amp;[u8]) -&gt; Vec&lt;u8&gt;;
 ///         fn call_version_3(data: &amp;[u8]) -&gt; Vec&lt;u8&gt;;
 ///         fn set_or_clear_version_1(&amp;mut self, optional: Option&lt;Vec&lt;u8&gt;&gt;);
+///         #[cfg(feature = &quot;experimental-function&quot;)]
+///         fn gated_call_version_1(data: &amp;[u8]) -&gt; Vec&lt;u8&gt;;
 ///     }
 ///
 ///     impl Interface for &amp;mut dyn sp_externalities::Externalities {
@@ -574,6 +631,8 @@
 ///                 None =&gt; self.clear_storage(&amp;[1, 2, 3, 4]),
 ///             }
 ///         }
+///         #[cfg(feature = &quot;experimental-function&quot;)]
+///         fn gated_call_version_1(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; { [42].to_vec() }
 ///     }
 ///
 ///     pub fn call(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
@@ -602,6 +661,16 @@
 ///             .expect(&quot;`set_or_clear` called outside of an Externalities-provided environment.&quot;)
 ///     }
 ///
+///     #[cfg(feature = &quot;experimental-function&quot;)]
+///     pub fn gated_call(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
+///         gated_call_version_1(data)
+///     }
+///
+///     #[cfg(feature = &quot;experimental-function&quot;)]
+///     fn gated_call_version_1(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
+///         &lt;&amp;mut dyn sp_externalities::Externalities as Interface&gt;::gated_call_version_1(data)
+///     }
+///
 ///     /// This type implements the `HostFunctions` trait (from `sp-wasm-interface`) and
 ///     /// provides the host implementation for the wasm side. The host implementation converts the
 ///     /// arguments from wasm to native and calls the corresponding native function.
@@ -612,28 +681,43 @@
 /// }
 /// ```
 ///
-///
 /// The given example will generate roughly the following code for wasm:
 ///
 /// ```
 /// mod interface {
 ///     mod extern_host_functions_impls {
-///         extern &quot;C&quot; {
-///             /// Every function is exported as `ext_TRAIT_NAME_FUNCTION_NAME_version_VERSION`.
-///             ///
-///             /// `TRAIT_NAME` is converted into snake case.
-///             ///
-///             /// The type for each argument of the exported function depends on
-///             /// `&lt;ARGUMENT_TYPE as RIType&gt;::FFIType`.
-///             ///
-///             /// `data` holds the pointer and the length to the `[u8]` slice.
-///             pub fn ext_Interface_call_version_1(data: u64) -&gt; u64;
-///             /// `optional` holds the pointer and the length of the encoded value.
-///             pub fn ext_Interface_set_or_clear_version_1(optional: u64);
+///         /// Every function is exported by the native code as `ext_FUNCTION_NAME_version_VERSION`.
+///         ///
+///         /// The type for each argument of the exported function depends on
+///         /// `&lt;ARGUMENT_TYPE as RIType&gt;::FFIType`.
+///         ///
+///         /// `key` holds the pointer and the length to the `data` slice.
+///         pub fn call(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
+///             extern &quot;C&quot; { pub fn ext_call_version_2(key: u64); }
+///             // Should call into extenal `ext_call_version_2(&lt;[u8] as IntoFFIValue&gt;::into_ffi_value(key))`
+///             // But this is too much to replicate in a doc test so here we just return a dummy vector.
+///             // Note that we jump into the latest version not marked as `register_only` (i.e. version 2).
+///             Vec::new()
+///         }
+///
+///         /// `key` holds the pointer and the length of the `option` value.
+///         pub fn set_or_clear(option: Option&lt;Vec&lt;u8&gt;&gt;) {
+///             extern &quot;C&quot; { pub fn ext_set_or_clear_version_1(key: u64); }
+///             // Same as above
+///         }
+///
+///         /// `key` holds the pointer and the length to the `data` slice.
+///         #[cfg(feature = &quot;experimental-function&quot;)]
+///         pub fn gated_call(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
+///             extern &quot;C&quot; { pub fn ext_gated_call_version_1(key: u64); }
+///             /// Same as above
+///             Vec::new()
 ///         }
 ///     }
 ///
-///     /// The type is actually `ExchangeableFunction` (from `sp-runtime-interface`).
+///     /// The type is actually `ExchangeableFunction` (from `sp-runtime-interface`) and
+///     /// by default this is initialized to jump into the corresponding function in
+///     /// `extern_host_functions_impls`.
 ///     ///
 ///     /// This can be used to replace the implementation of the `call` function.
 ///     /// Instead of calling into the host, the callee will automatically call the other
@@ -644,6 +728,8 @@
 ///     /// `host_call.replace_implementation(some_other_impl)`
 ///     pub static host_call: () = ();
 ///     pub static host_set_or_clear: () = ();
+///     #[cfg(feature = &quot;experimental-feature&quot;)]
+///     pub static gated_call: () = ();
 ///
 ///     pub fn call(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
 ///         // This is the actual call: `host_call.get()(data)`
@@ -655,6 +741,12 @@
 ///
 ///     pub fn set_or_clear(optional: Option&lt;Vec&lt;u8&gt;&gt;) {
 ///         // Same as above
+///     }
+///
+///     #[cfg(feature = &quot;experimental-feature&quot;)]
+///     pub fn gated_call(data: &amp;[u8]) -&gt; Vec&lt;u8&gt; {
+///         // Same as above
+///         Vec::new()
 ///     }
 /// }
 /// ```
