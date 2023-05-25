@@ -59,17 +59,6 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -91,7 +80,6 @@
 
 <span class="doccomment">///
 /// * implement the trait `sp_runtime::BuildModuleGenesisStorage`
-/// * add #[cfg(feature = &quot;std&quot;)] to GenesisBuild implementation.
 </span><span class="kw">pub fn </span>expand_genesis_build(def: <span class="kw-2">&amp;mut </span>Def) -&gt; proc_macro2::TokenStream {
 	<span class="kw">let </span>genesis_config = <span class="kw">if let </span><span class="prelude-val">Some</span>(genesis_config) = <span class="kw-2">&amp;</span>def.genesis_config {
 		genesis_config
@@ -113,16 +101,6 @@
 
 	<span class="kw">let </span>gen_cfg_use_gen = genesis_config.gen_kind.type_use_gen(genesis_build.attr_span);
 
-	<span class="kw">let </span>genesis_build_item =
-		<span class="kw-2">&amp;mut </span>def.item.content.as_mut().expect(<span class="string">&quot;Checked by def parser&quot;</span>).<span class="number">1</span>[genesis_build.index];
-
-	<span class="kw">let </span>genesis_build_item_impl = <span class="kw">if let </span>syn::Item::Impl(impl_) = genesis_build_item {
-		impl_
-	} <span class="kw">else </span>{
-		<span class="macro">unreachable!</span>(<span class="string">&quot;Checked by genesis_build parser&quot;</span>)
-	};
-
-	genesis_build_item_impl.attrs.push(<span class="macro">syn::parse_quote!</span>( <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)] </span>));
 	<span class="kw">let </span>where_clause = <span class="kw-2">&amp;</span>genesis_build.where_clause;
 
 	<span class="macro">quote::quote_spanned!</span>(genesis_build.attr_span =&gt;

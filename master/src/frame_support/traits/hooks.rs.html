@@ -528,6 +528,7 @@
 <a href="#528" id="528">528</a>
 <a href="#529" id="529">529</a>
 <a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -891,13 +892,13 @@
 
 <span class="doccomment">/// A trait to define the build function of a genesis config, T and I are placeholder for pallet
 /// trait and pallet instance.
-</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">pub trait </span>GenesisBuild&lt;T, I = ()&gt;: Default + sp_runtime::traits::MaybeSerializeDeserialize {
 	<span class="doccomment">/// The build function is called within an externalities allowing storage APIs.
 	/// Thus one can write to storage using regular pallet storages.
 	</span><span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>);
 
 	<span class="doccomment">/// Build the storage using `build` inside default storage.
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 	</span><span class="kw">fn </span>build_storage(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;sp_runtime::Storage, String&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>storage = Default::default();
 		<span class="self">self</span>.assimilate_storage(<span class="kw-2">&amp;mut </span>storage)<span class="question-mark">?</span>;
@@ -905,6 +906,7 @@
 	}
 
 	<span class="doccomment">/// Assimilate the storage for this module into pre-existing overlays.
+	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 	</span><span class="kw">fn </span>assimilate_storage(<span class="kw-2">&amp;</span><span class="self">self</span>, storage: <span class="kw-2">&amp;mut </span>sp_runtime::Storage) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
 		sp_state_machine::BasicExternalities::execute_with_storage(storage, || {
 			<span class="self">self</span>.build();
