@@ -930,6 +930,44 @@
 <a href="#930" id="930">930</a>
 <a href="#931" id="931">931</a>
 <a href="#932" id="932">932</a>
+<a href="#933" id="933">933</a>
+<a href="#934" id="934">934</a>
+<a href="#935" id="935">935</a>
+<a href="#936" id="936">936</a>
+<a href="#937" id="937">937</a>
+<a href="#938" id="938">938</a>
+<a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
+<a href="#941" id="941">941</a>
+<a href="#942" id="942">942</a>
+<a href="#943" id="943">943</a>
+<a href="#944" id="944">944</a>
+<a href="#945" id="945">945</a>
+<a href="#946" id="946">946</a>
+<a href="#947" id="947">947</a>
+<a href="#948" id="948">948</a>
+<a href="#949" id="949">949</a>
+<a href="#950" id="950">950</a>
+<a href="#951" id="951">951</a>
+<a href="#952" id="952">952</a>
+<a href="#953" id="953">953</a>
+<a href="#954" id="954">954</a>
+<a href="#955" id="955">955</a>
+<a href="#956" id="956">956</a>
+<a href="#957" id="957">957</a>
+<a href="#958" id="958">958</a>
+<a href="#959" id="959">959</a>
+<a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
+<a href="#965" id="965">965</a>
+<a href="#966" id="966">966</a>
+<a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2023 Parity Technologies (UK) Ltd.
@@ -1008,10 +1046,22 @@
 <span class="doccomment">/// Maximum number of known block hashes to keep for a peer.
 </span><span class="kw">const </span>MAX_KNOWN_BLOCKS: usize = <span class="number">1024</span>; <span class="comment">// ~32kb per peer + LruHashSet overhead
 
-</span><span class="doccomment">/// If the block announces stream to peer has been inactive for two minutes meaning local node
+</span><span class="doccomment">/// If the block announces stream to peer has been inactive for 30 seconds meaning local node
 /// has not sent or received block announcements to/from the peer, report the node for inactivity,
 /// disconnect it and attempt to establish connection to some other peer.
 </span><span class="kw">const </span>INACTIVITY_EVICT_THRESHOLD: Duration = Duration::from_secs(<span class="number">30</span>);
+
+<span class="doccomment">/// When `SyncingEngine` is started, wait two minutes before actually staring to count peers as
+/// evicted.
+///
+/// Parachain collator may incorrectly get evicted because it&#39;s waiting to receive a number of
+/// relaychain blocks before it can start creating parachain blocks. During this wait,
+/// `SyncingEngine` still counts it as active and as the peer is not sending blocks, it may get
+/// evicted if a block is not received within the first 30 secons since the peer connected.
+///
+/// To prevent this from happening, define a threshold for how long `SyncingEngine` should wait
+/// before it starts evicting peers.
+</span><span class="kw">const </span>INITIAL_EVICTION_WAIT_PERIOD: Duration = Duration::from_secs(<span class="number">2 </span>* <span class="number">60</span>);
 
 <span class="kw">mod </span>rep {
 	<span class="kw">use </span>sc_peerset::ReputationChange <span class="kw">as </span>Rep;
@@ -1175,6 +1225,12 @@
 
 	<span class="doccomment">/// Prometheus metrics.
 	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
+
+	<span class="doccomment">/// When the syncing was started.
+	///
+	/// Stored as an `Option&lt;Instant&gt;` so once the initial wait has passed, `SyncingEngine`
+	/// can reset the peer timers and continue with the normal eviction process.
+	</span>syncing_started: <span class="prelude-ty">Option</span>&lt;Instant&gt;,
 }
 
 <span class="kw">impl</span>&lt;B: BlockT, Client&gt; SyncingEngine&lt;B, Client&gt;
@@ -1321,6 +1377,7 @@
 				default_peers_set_num_light,
 				event_streams: Vec::new(),
 				tick_timeout: Delay::new(TICK_TIMEOUT),
+				syncing_started: <span class="prelude-val">None</span>,
 				metrics: <span class="kw">if let </span><span class="prelude-val">Some</span>(r) = metrics_registry {
 					<span class="kw">match </span>Metrics::register(r, is_major_syncing.clone()) {
 						<span class="prelude-val">Ok</span>(metrics) =&gt; <span class="prelude-val">Some</span>(metrics),
@@ -1539,6 +1596,8 @@
 	}
 
 	<span class="kw">pub async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>) {
+		<span class="self">self</span>.syncing_started = <span class="prelude-val">Some</span>(Instant::now());
+
 		<span class="kw">loop </span>{
 			futures::future::poll_fn(|cx| <span class="self">self</span>.poll(cx)).<span class="kw">await</span>;
 		}
@@ -1551,6 +1610,25 @@
 
 		<span class="kw">while let </span>Poll::Ready(()) = <span class="self">self</span>.tick_timeout.poll_unpin(cx) {
 			<span class="self">self</span>.report_metrics();
+			<span class="self">self</span>.tick_timeout.reset(TICK_TIMEOUT);
+
+			<span class="comment">// if `SyncingEngine` has just started, don&#39;t evict seemingly inactive peers right away
+			// as they may not have produced blocks not because they&#39;ve disconnected but because
+			// they&#39;re still waiting to receive enough relaychain blocks to start producing blocks.
+			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(started) = <span class="self">self</span>.syncing_started {
+				<span class="kw">if </span>started.elapsed() &lt; INITIAL_EVICTION_WAIT_PERIOD {
+					<span class="kw">continue
+				</span>}
+
+				<span class="comment">// reset the peer activity timers so they don&#39;t expire right away after
+				// the initial wait is done.
+				</span><span class="kw">for </span>info <span class="kw">in </span><span class="self">self</span>.peers.values_mut() {
+					info.last_notification_received = Instant::now();
+					info.last_notification_sent = Instant::now();
+				}
+
+				<span class="self">self</span>.syncing_started = <span class="prelude-val">None</span>;
+			}
 
 			<span class="comment">// go over all connected peers and check if any of them have been idle for a while. Idle
 			// in this case means that we haven&#39;t sent or received block announcements to/from this
@@ -1579,8 +1657,6 @@
 					<span class="self">self</span>.evicted.insert(<span class="kw-2">*</span>id);
 				}
 			}
-
-			<span class="self">self</span>.tick_timeout.reset(TICK_TIMEOUT);
 		}
 
 		<span class="kw">while let </span>Poll::Ready(<span class="prelude-val">Some</span>(event)) = <span class="self">self</span>.service_rx.poll_next_unpin(cx) {
