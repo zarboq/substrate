@@ -800,6 +800,12 @@
 <a href="#800" id="800">800</a>
 <a href="#801" id="801">801</a>
 <a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -842,7 +848,8 @@
 	traits::{Currency, Get, InstanceFilter, IsSubType, IsType, OriginTrait, ReservableCurrency},
 	RuntimeDebug,
 };
-<span class="kw">use </span>frame_system::{<span class="self">self </span><span class="kw">as </span>system};
+<span class="kw">use </span>frame_system::{<span class="self">self </span><span class="kw">as </span>system, ensure_signed};
+<span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_io::hashing::blake2_256;
 <span class="kw">use </span>sp_runtime::{
@@ -851,8 +858,6 @@
 };
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>weights::WeightInfo;
-
-<span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
 
 <span class="kw">type </span>CallHashOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>Config&gt;::CallHasher <span class="kw">as </span>Hash&gt;::Output;
 
@@ -1067,9 +1072,7 @@
 		#[pallet::weight(T::WeightInfo::remove_proxies(T::MaxProxies::get()))]
 		</span><span class="kw">pub fn </span>remove_proxies(origin: OriginFor&lt;T&gt;) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
-			<span class="kw">let </span>(<span class="kw">_</span>, old_deposit) = Proxies::&lt;T&gt;::take(<span class="kw-2">&amp;</span>who);
-			T::Currency::unreserve(<span class="kw-2">&amp;</span>who, old_deposit);
-
+			<span class="self">Self</span>::remove_all_proxy_delegates(<span class="kw-2">&amp;</span>who);
 			<span class="prelude-val">Ok</span>(())
 		}
 
@@ -1600,6 +1603,15 @@
 		});
 		<span class="kw">let </span>e = call.dispatch(origin);
 		<span class="self">Self</span>::deposit_event(Event::ProxyExecuted { result: e.map(|<span class="kw">_</span>| ()).map_err(|e| e.error) });
+	}
+
+	<span class="doccomment">/// Removes all proxy delegates for a given delegator.
+	///
+	/// Parameters:
+	/// - `delegator`: The delegator account.
+	</span><span class="kw">pub fn </span>remove_all_proxy_delegates(delegator: <span class="kw-2">&amp;</span>T::AccountId) {
+		<span class="kw">let </span>(<span class="kw">_</span>, old_deposit) = Proxies::&lt;T&gt;::take(<span class="kw-2">&amp;</span>delegator);
+		T::Currency::unreserve(<span class="kw-2">&amp;</span>delegator, old_deposit);
 	}
 }
 </code></pre></div>
