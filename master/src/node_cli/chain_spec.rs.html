@@ -553,7 +553,7 @@
 	Perbill,
 };
 
-<span class="kw">pub use </span>kitchensink_runtime::GenesisConfig;
+<span class="kw">pub use </span>kitchensink_runtime::RuntimeGenesisConfig;
 <span class="kw">pub use </span>node_primitives::{AccountId, Balance, Signature};
 
 <span class="kw">type </span>AccountPublic = &lt;Signature <span class="kw">as </span>Verify&gt;::Signer;
@@ -576,7 +576,7 @@
 }
 
 <span class="doccomment">/// Specialized `ChainSpec`.
-</span><span class="kw">pub type </span>ChainSpec = sc_service::GenericChainSpec&lt;GenesisConfig, Extensions&gt;;
+</span><span class="kw">pub type </span>ChainSpec = sc_service::GenericChainSpec&lt;RuntimeGenesisConfig, Extensions&gt;;
 <span class="doccomment">/// Flaming Fir testnet generator
 </span><span class="kw">pub fn </span>flaming_fir_config() -&gt; <span class="prelude-ty">Result</span>&lt;ChainSpec, String&gt; {
 	ChainSpec::from_json_bytes(<span class="kw-2">&amp;</span><span class="macro">include_bytes!</span>(<span class="string">&quot;../res/flaming-fir.json&quot;</span>)[..])
@@ -591,7 +591,7 @@
 	SessionKeys { grandpa, babe, im_online, authority_discovery }
 }
 
-<span class="kw">fn </span>staging_testnet_config_genesis() -&gt; GenesisConfig {
+<span class="kw">fn </span>staging_testnet_config_genesis() -&gt; RuntimeGenesisConfig {
 	<span class="attr">#[rustfmt::skip]
 	</span><span class="comment">// stash, controller, session-key
 	// generated with secret:
@@ -743,7 +743,7 @@
 	)
 }
 
-<span class="doccomment">/// Helper function to create GenesisConfig for testing
+<span class="doccomment">/// Helper function to create RuntimeGenesisConfig for testing
 </span><span class="kw">pub fn </span>testnet_genesis(
 	initial_authorities: Vec&lt;(
 		AccountId,
@@ -756,7 +756,7 @@
 	initial_nominators: Vec&lt;AccountId&gt;,
 	root_key: AccountId,
 	endowed_accounts: <span class="prelude-ty">Option</span>&lt;Vec&lt;AccountId&gt;&gt;,
-) -&gt; GenesisConfig {
+) -&gt; RuntimeGenesisConfig {
 	<span class="kw">let </span><span class="kw-2">mut </span>endowed_accounts: Vec&lt;AccountId&gt; = endowed_accounts.unwrap_or_else(|| {
 		<span class="macro">vec!</span>[
 			get_account_id_from_seed::&lt;sr25519::Public&gt;(<span class="string">&quot;Alice&quot;</span>),
@@ -808,7 +808,7 @@
 	<span class="kw">const </span>ENDOWMENT: Balance = <span class="number">10_000_000 </span>* DOLLARS;
 	<span class="kw">const </span>STASH: Balance = ENDOWMENT / <span class="number">1000</span>;
 
-	GenesisConfig {
+	RuntimeGenesisConfig {
 		system: SystemConfig { code: wasm_binary_unwrap().to_vec() },
 		balances: BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect(),
@@ -895,7 +895,7 @@
 	}
 }
 
-<span class="kw">fn </span>development_config_genesis() -&gt; GenesisConfig {
+<span class="kw">fn </span>development_config_genesis() -&gt; RuntimeGenesisConfig {
 	testnet_genesis(
 		<span class="macro">vec!</span>[authority_keys_from_seed(<span class="string">&quot;Alice&quot;</span>)],
 		<span class="macro">vec!</span>[],
@@ -920,7 +920,7 @@
 	)
 }
 
-<span class="kw">fn </span>local_testnet_genesis() -&gt; GenesisConfig {
+<span class="kw">fn </span>local_testnet_genesis() -&gt; RuntimeGenesisConfig {
 	testnet_genesis(
 		<span class="macro">vec!</span>[authority_keys_from_seed(<span class="string">&quot;Alice&quot;</span>), authority_keys_from_seed(<span class="string">&quot;Bob&quot;</span>)],
 		<span class="macro">vec!</span>[],
@@ -952,7 +952,7 @@
 	<span class="kw">use </span>sc_service_test;
 	<span class="kw">use </span>sp_runtime::BuildStorage;
 
-	<span class="kw">fn </span>local_testnet_genesis_instant_single() -&gt; GenesisConfig {
+	<span class="kw">fn </span>local_testnet_genesis_instant_single() -&gt; RuntimeGenesisConfig {
 		testnet_genesis(
 			<span class="macro">vec!</span>[authority_keys_from_seed(<span class="string">&quot;Alice&quot;</span>)],
 			<span class="macro">vec!</span>[],
