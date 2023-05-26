@@ -474,6 +474,10 @@
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -518,7 +522,11 @@
 <span class="kw">use </span>sc_service::client::{ClientConfig, LocalCallExecutor};
 <span class="kw">use </span>serde::Deserialize;
 <span class="kw">use </span>sp_core::{storage::ChildInfo, testing::TaskExecutor};
-<span class="kw">use </span>sp_runtime::{codec::Encode, traits::Block <span class="kw">as </span>BlockT, OpaqueExtrinsic};
+<span class="kw">use </span>sp_runtime::{
+	codec::Encode,
+	traits::{Block <span class="kw">as </span>BlockT, Header},
+	OpaqueExtrinsic,
+};
 <span class="kw">use </span>std::{
 	collections::{HashMap, HashSet},
 	pin::Pin,
@@ -886,7 +894,7 @@
 		Box::pin(<span class="kw">async move </span>{
 			<span class="kw">while let </span><span class="prelude-val">Some</span>(notification) = import_notification_stream.next().<span class="kw">await </span>{
 				<span class="kw">if </span>notification.is_new_best {
-					blocks.insert(notification.hash);
+					blocks.insert(<span class="kw-2">*</span>notification.header.number());
 					<span class="kw">if </span>blocks.len() == count {
 						<span class="kw">break
 					</span>}
