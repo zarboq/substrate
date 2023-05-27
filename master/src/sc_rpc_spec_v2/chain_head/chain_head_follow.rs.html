@@ -664,7 +664,7 @@
 	<span class="doccomment">/// Subscriptions handle.
 	</span>sub_handle: Arc&lt;SubscriptionManagement&lt;Block, BE&gt;&gt;,
 	<span class="doccomment">/// Subscription was started with the runtime updates flag.
-	</span>runtime_updates: bool,
+	</span>with_runtime: bool,
 	<span class="doccomment">/// Subscription ID.
 	</span>sub_id: String,
 	<span class="doccomment">/// The best reported block by this subscription.
@@ -677,10 +677,10 @@
 		client: Arc&lt;Client&gt;,
 		backend: Arc&lt;BE&gt;,
 		sub_handle: Arc&lt;SubscriptionManagement&lt;Block, BE&gt;&gt;,
-		runtime_updates: bool,
+		with_runtime: bool,
 		sub_id: String,
 	) -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{ client, backend, sub_handle, runtime_updates, sub_id, best_block_cache: <span class="prelude-val">None </span>}
+		<span class="self">Self </span>{ client, backend, sub_handle, with_runtime, sub_id, best_block_cache: <span class="prelude-val">None </span>}
 	}
 }
 
@@ -756,7 +756,7 @@
 		parent: <span class="prelude-ty">Option</span>&lt;Block::Hash&gt;,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;RuntimeEvent&gt; {
 		<span class="comment">// No runtime versions should be reported.
-		</span><span class="kw">if </span>!<span class="self">self</span>.runtime_updates {
+		</span><span class="kw">if </span>!<span class="self">self</span>.with_runtime {
 			<span class="kw">return </span><span class="prelude-val">None
 		</span>}
 
@@ -840,7 +840,7 @@
 		<span class="kw">let </span>initialized_event = FollowEvent::Initialized(Initialized {
 			finalized_block_hash,
 			finalized_block_runtime,
-			runtime_updates: <span class="self">self</span>.runtime_updates,
+			with_runtime: <span class="self">self</span>.with_runtime,
 		});
 
 		<span class="kw">let </span><span class="kw-2">mut </span>finalized_block_descendants = Vec::with_capacity(initial_blocks.len() + <span class="number">1</span>);
@@ -855,7 +855,7 @@
 				block_hash: child,
 				parent_block_hash: parent,
 				new_runtime,
-				runtime_updates: <span class="self">self</span>.runtime_updates,
+				with_runtime: <span class="self">self</span>.with_runtime,
 			});
 
 			finalized_block_descendants.push(event);
@@ -886,7 +886,7 @@
 			block_hash,
 			parent_block_hash,
 			new_runtime,
-			runtime_updates: <span class="self">self</span>.runtime_updates,
+			with_runtime: <span class="self">self</span>.with_runtime,
 		});
 
 		<span class="kw">if </span>!is_best_block {

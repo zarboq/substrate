@@ -1052,8 +1052,8 @@
 
 <span class="doccomment">/// The state of a single subscription ID.
 </span><span class="kw">struct </span>SubscriptionState&lt;Block: BlockT&gt; {
-	<span class="doccomment">/// The `runtime_updates` parameter flag of the subscription.
-	</span>runtime_updates: bool,
+	<span class="doccomment">/// The `with_runtime` parameter flag of the subscription.
+	</span>with_runtime: bool,
 	<span class="doccomment">/// Signals the &quot;Stop&quot; event.
 	</span>tx_stop: <span class="prelude-ty">Option</span>&lt;oneshot::Sender&lt;()&gt;&gt;,
 	<span class="doccomment">/// Track the block hashes available for this subscription.
@@ -1174,7 +1174,7 @@
 /// executing an RPC method call.
 </span><span class="kw">pub struct </span>BlockGuard&lt;Block: BlockT, BE: Backend&lt;Block&gt;&gt; {
 	hash: Block::Hash,
-	runtime_updates: bool,
+	with_runtime: bool,
 	backend: Arc&lt;BE&gt;,
 }
 
@@ -1182,7 +1182,7 @@
 // testing.
 </span><span class="kw">impl</span>&lt;Block: BlockT, BE: Backend&lt;Block&gt;&gt; std::fmt::Debug <span class="kw">for </span>BlockGuard&lt;Block, BE&gt; {
 	<span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-		<span class="macro">write!</span>(f, <span class="string">&quot;BlockGuard hash {:?} runtime_updates {:?}&quot;</span>, <span class="self">self</span>.hash, <span class="self">self</span>.runtime_updates)
+		<span class="macro">write!</span>(f, <span class="string">&quot;BlockGuard hash {:?} with_runtime {:?}&quot;</span>, <span class="self">self</span>.hash, <span class="self">self</span>.with_runtime)
 	}
 }
 
@@ -1190,19 +1190,19 @@
 	<span class="doccomment">/// Construct a new [`BlockGuard`] .
 	</span><span class="kw">fn </span>new(
 		hash: Block::Hash,
-		runtime_updates: bool,
+		with_runtime: bool,
 		backend: Arc&lt;BE&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, SubscriptionManagementError&gt; {
 		backend
 			.pin_block(hash)
 			.map_err(|err| SubscriptionManagementError::Custom(err.to_string()))<span class="question-mark">?</span>;
 
-		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ hash, runtime_updates, backend })
+		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ hash, with_runtime, backend })
 	}
 
-	<span class="doccomment">/// The `runtime_updates` flag of the subscription.
-	</span><span class="kw">pub fn </span>has_runtime_updates(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-		<span class="self">self</span>.runtime_updates
+	<span class="doccomment">/// The `with_runtime` flag of the subscription.
+	</span><span class="kw">pub fn </span>has_runtime(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="self">self</span>.with_runtime
 	}
 }
 
@@ -1250,12 +1250,12 @@
 	</span><span class="kw">pub fn </span>insert_subscription(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		sub_id: String,
-		runtime_updates: bool,
+		with_runtime: bool,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;oneshot::Receiver&lt;()&gt;&gt; {
 		<span class="kw">if let </span>Entry::Vacant(entry) = <span class="self">self</span>.subs.entry(sub_id) {
 			<span class="kw">let </span>(tx_stop, rx_stop) = oneshot::channel();
 			<span class="kw">let </span>state = SubscriptionState::&lt;Block&gt; {
-				runtime_updates,
+				with_runtime,
 				tx_stop: <span class="prelude-val">Some</span>(tx_stop),
 				blocks: Default::default(),
 			};
@@ -1441,7 +1441,7 @@
 			<span class="kw">return </span><span class="prelude-val">Err</span>(SubscriptionManagementError::BlockHashAbsent)
 		}
 
-		BlockGuard::new(hash, sub.runtime_updates, <span class="self">self</span>.backend.clone())
+		BlockGuard::new(hash, sub.with_runtime, <span class="self">self</span>.backend.clone())
 	}
 }
 
@@ -1548,7 +1548,7 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>sub_state_register_twice() {
 		<span class="kw">let </span><span class="kw-2">mut </span>sub_state = SubscriptionState::&lt;Block&gt; {
-			runtime_updates: <span class="bool-val">false</span>,
+			with_runtime: <span class="bool-val">false</span>,
 			tx_stop: <span class="prelude-val">None</span>,
 			blocks: Default::default(),
 		};
@@ -1573,7 +1573,7 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>sub_state_register_unregister() {
 		<span class="kw">let </span><span class="kw-2">mut </span>sub_state = SubscriptionState::&lt;Block&gt; {
-			runtime_updates: <span class="bool-val">false</span>,
+			with_runtime: <span class="bool-val">false</span>,
 			tx_stop: <span class="prelude-val">None</span>,
 			blocks: Default::default(),
 		};
@@ -1649,7 +1649,7 @@
 
 		<span class="kw">let </span>block = subs.lock_block(<span class="kw-2">&amp;</span>id, hash).unwrap();
 		<span class="comment">// Subscription started with runtime updates
-		</span><span class="macro">assert_eq!</span>(block.has_runtime_updates(), <span class="bool-val">true</span>);
+		</span><span class="macro">assert_eq!</span>(block.has_runtime(), <span class="bool-val">true</span>);
 
 		<span class="kw">let </span>invalid_id = <span class="string">&quot;abc-invalid&quot;</span>.to_string();
 		<span class="kw">let </span>err = subs.unpin_block(<span class="kw-2">&amp;</span>invalid_id, hash).unwrap_err();

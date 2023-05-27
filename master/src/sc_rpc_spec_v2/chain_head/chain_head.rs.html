@@ -615,7 +615,7 @@
 	<span class="kw">fn </span>chain_head_unstable_follow(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		<span class="kw-2">mut </span>sink: SubscriptionSink,
-		runtime_updates: bool,
+		with_runtime: bool,
 	) -&gt; SubscriptionResult {
 		<span class="kw">let </span>sub_id = <span class="kw">match </span><span class="self">self</span>.accept_subscription(<span class="kw-2">&amp;mut </span>sink) {
 			<span class="prelude-val">Ok</span>(sub_id) =&gt; sub_id,
@@ -625,7 +625,7 @@
 			},
 		};
 		<span class="comment">// Keep track of the subscription.
-		</span><span class="kw">let </span><span class="prelude-val">Some</span>(rx_stop) = <span class="self">self</span>.subscriptions.insert_subscription(sub_id.clone(), runtime_updates) <span class="kw">else </span>{
+		</span><span class="kw">let </span><span class="prelude-val">Some</span>(rx_stop) = <span class="self">self</span>.subscriptions.insert_subscription(sub_id.clone(), with_runtime) <span class="kw">else </span>{
 			<span class="comment">// Inserting the subscription can only fail if the JsonRPSee
 			// generated a duplicate subscription ID.
 			</span><span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[follow][id={:?}] Subscription already accepted&quot;</span>, sub_id);
@@ -642,7 +642,7 @@
 				client,
 				backend,
 				subscriptions.clone(),
-				runtime_updates,
+				with_runtime,
 				sub_id.clone(),
 			);
 
@@ -873,8 +873,8 @@
 		};
 
 		<span class="kw">let </span>fut = <span class="kw">async move </span>{
-			<span class="comment">// Reject subscription if runtime_updates is false.
-			</span><span class="kw">if </span>!block_guard.has_runtime_updates() {
+			<span class="comment">// Reject subscription if with_runtime is false.
+			</span><span class="kw">if </span>!block_guard.has_runtime() {
 				<span class="kw">let _ </span>= sink.reject(ChainHeadRpcError::InvalidParam(
 					<span class="string">&quot;The runtime updates flag must be set&quot;</span>.into(),
 				));
