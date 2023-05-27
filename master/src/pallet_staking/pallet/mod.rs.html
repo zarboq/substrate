@@ -1759,6 +1759,25 @@
 <a href="#1759" id="1759">1759</a>
 <a href="#1760" id="1760">1760</a>
 <a href="#1761" id="1761">1761</a>
+<a href="#1762" id="1762">1762</a>
+<a href="#1763" id="1763">1763</a>
+<a href="#1764" id="1764">1764</a>
+<a href="#1765" id="1765">1765</a>
+<a href="#1766" id="1766">1766</a>
+<a href="#1767" id="1767">1767</a>
+<a href="#1768" id="1768">1768</a>
+<a href="#1769" id="1769">1769</a>
+<a href="#1770" id="1770">1770</a>
+<a href="#1771" id="1771">1771</a>
+<a href="#1772" id="1772">1772</a>
+<a href="#1773" id="1773">1773</a>
+<a href="#1774" id="1774">1774</a>
+<a href="#1775" id="1775">1775</a>
+<a href="#1776" id="1776">1776</a>
+<a href="#1777" id="1777">1777</a>
+<a href="#1778" id="1778">1778</a>
+<a href="#1779" id="1779">1779</a>
+<a href="#1780" id="1780">1780</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2801,14 +2820,23 @@
 
 		<span class="doccomment">/// Remove any unlocked chunks from the `unlocking` queue from our management.
 		///
-		/// This essentially frees up that balance to be used by the stash account to do
-		/// whatever it wants.
+		/// This essentially frees up that balance to be used by the stash account to do whatever
+		/// it wants.
 		///
 		/// The dispatch origin for this call must be _Signed_ by the controller.
 		///
 		/// Emits `Withdrawn`.
 		///
 		/// See also [`Call::unbond`].
+		///
+		/// ## Parameters
+		///
+		/// - `num_slashing_spans` indicates the number of metadata slashing spans to clear when
+		/// this call results in a complete removal of all the data related to the stash account.
+		/// In this case, the `num_slashing_spans` must be larger or equal to the number of
+		/// slashing spans associated with the stash account in the [`SlashingSpans`] storage type,
+		/// otherwise the call will fail. The call weight is directly propotional to
+		/// `num_slashing_spans`.
 		///
 		/// ## Complexity
 		/// O(S) where S is the number of slashing spans to remove
@@ -3138,6 +3166,11 @@
 		<span class="doccomment">/// Force a current staker to become completely unstaked, immediately.
 		///
 		/// The dispatch origin must be Root.
+		///
+		/// ## Parameters
+		///
+		/// - `num_slashing_spans`: Refer to comments on [`Call::withdraw_unbonded`] for more
+		/// details.
 		</span><span class="attr">#[pallet::call_index(<span class="number">15</span>)]
 		#[pallet::weight(T::WeightInfo::force_unstake(<span class="kw-2">*</span>num_slashing_spans))]
 		</span><span class="kw">pub fn </span>force_unstake(
@@ -3278,6 +3311,11 @@
 		/// It can be called by anyone, as long as `stash` meets the above requirements.
 		///
 		/// Refunds the transaction fees upon successful execution.
+		///
+		/// ## Parameters
+		///
+		/// - `num_slashing_spans`: Refer to comments on [`Call::withdraw_unbonded`] for more
+		/// details.
 		</span><span class="attr">#[pallet::call_index(<span class="number">20</span>)]
 		#[pallet::weight(T::WeightInfo::reap_stash(<span class="kw-2">*</span>num_slashing_spans))]
 		</span><span class="kw">pub fn </span>reap_stash(
