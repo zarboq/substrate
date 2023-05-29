@@ -269,6 +269,9 @@
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
 <a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -433,15 +436,18 @@
 		ty.default = <span class="prelude-val">None</span>;
 	}
 
-	<span class="kw">let </span>where_clause = where_clause
-		.iter()
-		.map(|ty| <span class="macro">quote!</span>(#ty: #crate_::scale_info::TypeInfo + <span class="lifetime">&#39;static</span>));
+	where_clause
+		.into_iter()
+		.map(|ty| <span class="macro">parse_quote!</span>(#ty: #crate_::scale_info::TypeInfo + <span class="lifetime">&#39;static</span>))
+		.for_each(|w| generics.make_where_clause().predicates.push(w));
+
+	<span class="kw">let </span>(impl_generics, <span class="kw">_</span>, where_clause) = generics.split_for_impl();
 
 	<span class="macro">quote!</span>(
 		#( #attrs )*
 		<span class="attr">#[inline(always)]
-		</span><span class="kw">pub fn </span>runtime_metadata #generics () -&gt; #crate_::metadata_ir::RuntimeApiMetadataIR
-		<span class="kw">where </span>#( #where_clause, )*
+		</span><span class="kw">pub fn </span>runtime_metadata #impl_generics () -&gt; #crate_::metadata_ir::RuntimeApiMetadataIR
+		#where_clause
 		{
 			#crate_::metadata_ir::RuntimeApiMetadataIR {
 				name: #trait_name,

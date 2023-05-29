@@ -244,7 +244,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_trie":["",[["cache",[],["mod.rs","shared_cache.rs"]]],["error.rs","lib.rs","node_codec.rs","node_header.rs","recorder.rs","storage_proof.rs","trie_codec.rs","trie_stream.rs"]],\
 "sp_version":["",[],["embed.rs","lib.rs"]],\
 "sp_version_proc_macro":["",[],["decl_runtime_version.rs","lib.rs"]],\
-"sp_wasm_interface":["",[],["lib.rs","wasmi_impl.rs"]],\
+"sp_wasm_interface":["",[],["lib.rs"]],\
 "sp_weights":["",[],["lib.rs","weight_meter.rs","weight_v2.rs"]],\
 "subkey":["",[],["lib.rs"]],\
 "substrate":["",[],["main.rs"]],\
