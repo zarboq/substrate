@@ -1873,6 +1873,13 @@
 <a href="#1873" id="1873">1873</a>
 <a href="#1874" id="1874">1874</a>
 <a href="#1875" id="1875">1875</a>
+<a href="#1876" id="1876">1876</a>
+<a href="#1877" id="1877">1877</a>
+<a href="#1878" id="1878">1878</a>
+<a href="#1879" id="1879">1879</a>
+<a href="#1880" id="1880">1880</a>
+<a href="#1881" id="1881">1881</a>
+<a href="#1882" id="1882">1882</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2511,6 +2518,8 @@
 		</span>WrongNamespace,
 		<span class="doccomment">/// Can&#39;t delete non-empty collections.
 		</span>CollectionNotEmpty,
+		<span class="doccomment">/// The witness data should be provided.
+		</span>WitnessRequired,
 	}
 
 	<span class="attr">#[pallet::call]
@@ -2646,7 +2655,8 @@
 		/// - `item`: An identifier of the new item.
 		/// - `mint_to`: Account into which the item will be minted.
 		/// - `witness_data`: When the mint type is `HolderOf(collection_id)`, then the owned
-		///   item_id from that collection needs to be provided within the witness data object.
+		///   item_id from that collection needs to be provided within the witness data object. If
+		///   the mint price is set, then it should be additionally confirmed in the `witness_data`.
 		///
 		/// Note: the deposit will be taken from the `origin` and not the `owner` of the `item`.
 		///
@@ -2660,7 +2670,7 @@
 			collection: T::CollectionId,
 			item: T::ItemId,
 			mint_to: AccountIdLookupOf&lt;T&gt;,
-			witness_data: <span class="prelude-ty">Option</span>&lt;MintWitness&lt;T::ItemId&gt;&gt;,
+			witness_data: <span class="prelude-ty">Option</span>&lt;MintWitness&lt;T::ItemId, DepositBalanceOf&lt;T, I&gt;&gt;&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>caller = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>mint_to = T::Lookup::lookup(mint_to)<span class="question-mark">?</span>;
@@ -2692,8 +2702,8 @@
 							);
 						},
 						MintType::HolderOf(collection_id) =&gt; {
-							<span class="kw">let </span>MintWitness { owned_item } =
-								witness_data.ok_or(Error::&lt;T, I&gt;::BadWitness)<span class="question-mark">?</span>;
+							<span class="kw">let </span>MintWitness { owned_item, .. } =
+								witness_data.clone().ok_or(Error::&lt;T, I&gt;::WitnessRequired)<span class="question-mark">?</span>;
 
 							<span class="kw">let </span>owns_item = Account::&lt;T, I&gt;::contains_key((
 								<span class="kw-2">&amp;</span>caller,
@@ -2733,6 +2743,10 @@
 					}
 
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(price) = mint_settings.price {
+						<span class="kw">let </span>MintWitness { mint_price, .. } =
+							witness_data.clone().ok_or(Error::&lt;T, I&gt;::WitnessRequired)<span class="question-mark">?</span>;
+						<span class="kw">let </span>mint_price = mint_price.ok_or(Error::&lt;T, I&gt;::BadWitness)<span class="question-mark">?</span>;
+						<span class="macro">ensure!</span>(mint_price &gt;= price, Error::&lt;T, I&gt;::BadWitness);
 						T::Currency::transfer(
 							<span class="kw-2">&amp;</span>caller,
 							<span class="kw-2">&amp;</span>collection_details.owner,
