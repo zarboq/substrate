@@ -412,6 +412,11 @@
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
 <a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -527,7 +532,13 @@
 	}
 	<span class="macro">debug_assert_eq!</span>(fn_weight.len(), methods.len());
 
-	<span class="kw">let </span>fn_doc = methods.iter().map(|method| <span class="kw-2">&amp;</span>method.docs).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+	<span class="kw">let </span>fn_doc = methods
+		.iter()
+		.map(|method| {
+			<span class="kw">let </span>reference = <span class="macro">format!</span>(<span class="string">&quot;See [`Pallet::{}`].&quot;</span>, method.name);
+			<span class="macro">quote!</span>(#reference)
+		})
+		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
 	<span class="kw">let </span>args_name = methods
 		.iter()
@@ -589,9 +600,8 @@
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 	});
 
-	<span class="kw">let </span>default_docs = [<span class="macro">syn::parse_quote!</span>(
-		<span class="string">r&quot;Contains one variant per dispatchable that can be called by an extrinsic.&quot;
-	</span>)];
+	<span class="kw">let </span>default_docs =
+		[<span class="macro">syn::parse_quote!</span>(<span class="string">r&quot;Contains a variant per dispatchable extrinsic that this pallet has.&quot;</span>)];
 	<span class="kw">let </span>docs = <span class="kw">if </span>docs.is_empty() { <span class="kw-2">&amp;</span>default_docs[..] } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>docs[..] };
 
 	<span class="kw">let </span>maybe_compile_error = <span class="kw">if </span>def.call.is_none() {
@@ -688,8 +698,8 @@
 				#frame_support::Never,
 			),
 			#(
-				#( <span class="attr">#[doc = #fn_doc] </span>)*
-				<span class="attr">#[codec(index = #call_index)]
+				<span class="attr">#[doc = #fn_doc]
+				#[codec(index = #call_index)]
 				</span>#fn_name {
 					#(
 						<span class="attr">#[allow(missing_docs)]

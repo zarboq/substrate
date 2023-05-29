@@ -117,6 +117,13 @@
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -155,7 +162,6 @@
 <span class="kw">mod </span>validate_unsigned;
 
 <span class="kw">use </span><span class="kw">crate</span>::pallet::Def;
-<span class="kw">use </span>frame_support_procedural_tools::get_doc_literals;
 <span class="kw">use </span>quote::ToTokens;
 
 <span class="doccomment">/// Merge where clause together, `where` token span is taken from the first not none one.
@@ -194,16 +200,24 @@
 	<span class="kw">let </span>tt_default_parts = tt_default_parts::expand_tt_default_parts(<span class="kw-2">&amp;mut </span>def);
 	<span class="kw">let </span>doc_only = doc_only::expand_doc_only(<span class="kw-2">&amp;mut </span>def);
 
-	<span class="kw">if </span>get_doc_literals(<span class="kw-2">&amp;</span>def.item.attrs).is_empty() {
-		def.item.attrs.push(<span class="macro">syn::parse_quote!</span>(
-			<span class="attr">#[doc = <span class="string">r&quot;
-			The module that hosts all the
-			[FRAME](https://docs.substrate.io/main-docs/build/events-errors/)
-			types needed to add this pallet to a
-			runtime.
-			&quot;</span>]
-		</span>));
-	}
+	def.item.attrs.insert(
+		<span class="number">0</span>,
+		<span class="macro">syn::parse_quote!</span>(
+			<span class="attr">#[doc = <span class="string">r&quot;The `pallet` module in each FRAME pallet hosts the most important items needed
+to construct this pallet.
+
+The main components of this pallet are:
+- [`Pallet`], which implements all of the dispatchable extrinsics of the pallet, among
+other public functions.
+	- The subset of the functions that are dispatchable can be identified either in the
+	[`dispatchables`] module or in the [`Call`] enum.
+- [`storage_types`], which contains the list of all types that are representing a
+storage item. Otherwise, all storage items are listed among [*Type Definitions*](#types).
+- [`Config`], which contains the configuration trait of this pallet.
+- [`Event`] and [`Error`], which are listed among the [*Enums*](#enums).
+		&quot;</span>]
+		</span>),
+	);
 
 	<span class="kw">let </span>new_items = <span class="macro">quote::quote!</span>(
 		#metadata_docs

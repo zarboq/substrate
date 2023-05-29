@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Call","Error","Event"],"mod":["dispatchables","storage_types"],"struct":["MaxChecking","Pallet"],"trait":["Config"],"type":["ErasToCheckPerBlock","Head","Module","Queue"]};
+window.SIDEBAR_ITEMS = {"enum":["Call","Error","Event"],"mod":["dispatchables","storage_types"],"struct":["Pallet"],"trait":["Config"],"type":["ErasToCheckPerBlock","Head","Module","Queue"]};

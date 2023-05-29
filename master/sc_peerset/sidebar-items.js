@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["BANNED_THRESHOLD","LOG_TARGET"],"enum":["DropReason","Message"],"struct":["IncomingIndex","PeerId","Peerset","PeersetConfig","PeersetHandle","ReputationChange","SetConfig","SetId"]};

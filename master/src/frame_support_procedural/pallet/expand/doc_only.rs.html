@@ -77,6 +77,30 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2023 Parity Technologies (UK) Ltd.
@@ -99,8 +123,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::pallet::Def;
 
 <span class="kw">pub fn </span>expand_doc_only(def: <span class="kw-2">&amp;mut </span>Def) -&gt; proc_macro2::TokenStream {
-	<span class="kw">let </span>storage_names = def.storages.iter().map(|storage| <span class="kw-2">&amp;</span>storage.ident);
-	<span class="kw">let </span>storage_docs = def.storages.iter().map(|storage| <span class="kw-2">&amp;</span>storage.docs);
 	<span class="kw">let </span>dispatchables = <span class="kw">if let </span><span class="prelude-val">Some</span>(call_def) = <span class="kw-2">&amp;</span>def.call {
 		<span class="kw">let </span>type_impl_generics = def.type_impl_generics(Span::call_site());
 		call_def
@@ -114,17 +136,16 @@
 					.map(|(<span class="kw">_</span>, arg_name, arg_type)| <span class="macro">quote::quote!</span>( #arg_name: #arg_type, ))
 					.collect::&lt;proc_macro2::TokenStream&gt;();
 				<span class="kw">let </span>docs = <span class="kw-2">&amp;</span>method.docs;
-				<span class="kw">let </span>line_2 =
-					<span class="macro">format!</span>(<span class="string">&quot; designed to document the [`{}`][`Call::{}`] variant of&quot;</span>, name, name);
+
+				<span class="kw">let </span>real = <span class="macro">format!</span>(<span class="string">&quot; [`Pallet::{}`].&quot;</span>, name);
 				<span class="macro">quote::quote!</span>(
 					#( <span class="attr">#[doc = #docs] </span>)*
 					<span class="doccomment">///
-					/// ---
+					/// # Warning: Doc-Only
 					///
-					/// NOTE: This function is an automatically generated, doc only, uncallable stub.
-					</span><span class="attr">#[ doc = #line_2 ]
-					</span><span class="doccomment">/// the pallet [`Call`] enum. You should not attempt to call this function
-					/// directly.
+					/// This function is an automatically generated, and is doc-only, uncallable
+					/// stub. See the real version in
+					</span><span class="attr">#[ doc = #real ]
 					</span><span class="kw">pub fn </span>#name&lt;#type_impl_generics&gt;(#args) { <span class="macro">unreachable!</span>(); }
 				)
 			})
@@ -133,22 +154,49 @@
 		<span class="macro">quote::quote!</span>()
 	};
 
+	<span class="kw">let </span>storage_types = def
+		.storages
+		.iter()
+		.map(|storage| {
+			<span class="kw">let </span>storage_name = <span class="kw-2">&amp;</span>storage.ident;
+			<span class="kw">let </span>storage_type_docs = <span class="kw-2">&amp;</span>storage.docs;
+			<span class="kw">let </span>real = <span class="macro">format!</span>(<span class="string">&quot;[`pallet::{}`].&quot;</span>, storage_name);
+			<span class="macro">quote::quote!</span>(
+				#( <span class="attr">#[doc = #storage_type_docs] </span>)*
+				<span class="doccomment">///
+				/// # Warning: Doc-Only
+				///
+				/// This type is automatically generated, and is doc-only. See the real version in
+				</span><span class="attr">#[ doc = #real ]
+				</span><span class="kw">pub struct </span>#storage_name();
+			)
+		})
+		.collect::&lt;proc_macro2::TokenStream&gt;();
+
 	<span class="macro">quote::quote!</span>(
-		<span class="doccomment">/// Auto-generated docs-only module listing all defined storage types for this pallet.
-		/// Note that members of this module cannot be used directly and are only provided for
-		/// documentation purposes.
+		<span class="doccomment">/// Auto-generated docs-only module listing all (public and private) defined storage types
+		/// for this pallet.
+		///
+		/// # Warning: Doc-Only
+		///
+		/// Members of this module cannot be used directly and are only provided for documentation
+		/// purposes.
+		///
+		/// To see the actual storage type, find a struct with the same name at the root of the
+		/// pallet, in the list of [*Type Definitions*](../index.html#types).
 		</span><span class="attr">#[cfg(doc)]
 		</span><span class="kw">pub mod </span>storage_types {
 			<span class="kw">use super</span>::<span class="kw-2">*</span>;
-			#(
-				#( <span class="attr">#[doc = #storage_docs] </span>)*
-				<span class="kw">pub struct </span>#storage_names();
-			)*
+			#storage_types
 		}
 
 		<span class="doccomment">/// Auto-generated docs-only module listing all defined dispatchables for this pallet.
-		/// Note that members of this module cannot be used directly and are only provided for
-		/// documentation purposes.
+		///
+		/// # Warning: Doc-Only
+		///
+		/// Members of this module cannot be used directly and are only provided for documentation
+		/// purposes. To see the real version of each dispatchable, look for them in [`Pallet`] or
+		/// [`Call`].
 		</span><span class="attr">#[cfg(doc)]
 		</span><span class="kw">pub mod </span>dispatchables {
 			<span class="kw">use super</span>::<span class="kw-2">*</span>;
