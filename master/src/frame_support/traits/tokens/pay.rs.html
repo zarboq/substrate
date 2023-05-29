@@ -99,6 +99,10 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -121,6 +125,7 @@
 </span><span class="kw">use </span>codec::{Decode, Encode, FullCodec, MaxEncodedLen};
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_core::{RuntimeDebug, TypedGet};
+<span class="kw">use </span>sp_runtime::DispatchError;
 <span class="kw">use </span>sp_std::fmt::Debug;
 
 <span class="kw">use super</span>::{fungible, Balance, Preservation::Expendable};
@@ -139,13 +144,15 @@
 	</span><span class="kw">type </span>AssetKind;
 	<span class="doccomment">/// An identifier given to an individual payment.
 	</span><span class="kw">type </span>Id: FullCodec + MaxEncodedLen + TypeInfo + Clone + Eq + PartialEq + Debug + Copy;
+	<span class="doccomment">/// An error which could be returned by the Pay type
+	</span><span class="kw">type </span>Error: Debug;
 	<span class="doccomment">/// Make a payment and return an identifier for later evaluation of success in some off-chain
 	/// mechanism (likely an event, but possibly not on this chain).
 	</span><span class="kw">fn </span>pay(
 		who: <span class="kw-2">&amp;</span><span class="self">Self</span>::Beneficiary,
 		asset_kind: <span class="self">Self</span>::AssetKind,
 		amount: <span class="self">Self</span>::Balance,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Id, ()&gt;;
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Id, <span class="self">Self</span>::Error&gt;;
 	<span class="doccomment">/// Check how a payment has proceeded. `id` must have been previously returned by `pay` for
 	/// the result of this call to be meaningful. Once this returns anything other than
 	/// `InProgress` for some `id` it must return `Unknown` rather than the actual result
@@ -182,12 +189,13 @@
 	<span class="kw">type </span>Beneficiary = A::Type;
 	<span class="kw">type </span>AssetKind = ();
 	<span class="kw">type </span>Id = ();
+	<span class="kw">type </span>Error = DispatchError;
 	<span class="kw">fn </span>pay(
 		who: <span class="kw-2">&amp;</span><span class="self">Self</span>::Beneficiary,
 		<span class="kw">_</span>: <span class="self">Self</span>::AssetKind,
 		amount: <span class="self">Self</span>::Balance,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Id, ()&gt; {
-		&lt;F <span class="kw">as </span>fungible::Mutate&lt;<span class="kw">_</span>&gt;&gt;::transfer(<span class="kw-2">&amp;</span>A::get(), who, amount, Expendable).map_err(|<span class="kw">_</span>| ())<span class="question-mark">?</span>;
+	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Id, <span class="self">Self</span>::Error&gt; {
+		&lt;F <span class="kw">as </span>fungible::Mutate&lt;<span class="kw">_</span>&gt;&gt;::transfer(<span class="kw-2">&amp;</span>A::get(), who, amount, Expendable)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 	<span class="kw">fn </span>check_payment(<span class="kw">_</span>: ()) -&gt; PaymentStatus {
