@@ -893,6 +893,7 @@
 <a href="#893" id="893">893</a>
 <a href="#894" id="894">894</a>
 <a href="#895" id="895">895</a>
+<a href="#896" id="896">896</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1723,6 +1724,7 @@
 			metadata: metadata.clone(),
 			only_account: <span class="prelude-val">None</span>,
 			deadline: One::one(),
+			mint_price: <span class="prelude-val">Some</span>(DepositBalanceOf::&lt;T, I&gt;::min_value()),
 		};
 		<span class="kw">let </span>message = Encode::encode(<span class="kw-2">&amp;</span>mint_data);
 		<span class="kw">let </span>signature = MultiSignature::Sr25519(sr25519_sign(<span class="number">0</span>.into(), <span class="kw-2">&amp;</span>caller_public, <span class="kw-2">&amp;</span>message).unwrap());
@@ -1730,7 +1732,7 @@
 		<span class="kw">let </span>target: T::AccountId = account(<span class="string">&quot;target&quot;</span>, <span class="number">0</span>, SEED);
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>target, DepositBalanceOf::&lt;T, I&gt;::max_value());
 		frame_system::Pallet::&lt;T&gt;::set_block_number(One::one());
-	}: <span class="kw">_</span>(SystemOrigin::Signed(target.clone()), mint_data, signature.into(), caller)
+	}: <span class="kw">_</span>(SystemOrigin::Signed(target.clone()), Box::new(mint_data), signature.into(), caller)
 	verify {
 		<span class="kw">let </span>metadata: BoundedVec&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = metadata.try_into().unwrap();
 		assert_last_event::&lt;T, I&gt;(Event::ItemMetadataSet { collection, item, data: metadata }.into());
