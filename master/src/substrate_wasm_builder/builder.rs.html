@@ -267,6 +267,26 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -317,6 +337,7 @@
 			file_name: <span class="prelude-val">None</span>,
 			project_cargo_toml: get_manifest_dir().join(<span class="string">&quot;Cargo.toml&quot;</span>),
 			features_to_enable: Vec::new(),
+			disable_runtime_version_section_check: <span class="bool-val">false</span>,
 		}
 	}
 
@@ -332,6 +353,7 @@
 				file_name: <span class="prelude-val">None</span>,
 				project_cargo_toml: path,
 				features_to_enable: Vec::new(),
+				disable_runtime_version_section_check: <span class="bool-val">false</span>,
 			})
 		} <span class="kw">else </span>{
 			<span class="prelude-val">Err</span>(<span class="string">&quot;Project path must point to the `Cargo.toml` of the project&quot;</span>)
@@ -362,6 +384,8 @@
 	</span>project_cargo_toml: PathBuf,
 	<span class="doccomment">/// Features that should be enabled when building the wasm binary.
 	</span>features_to_enable: Vec&lt;String&gt;,
+	<span class="doccomment">/// Should the builder not check that the `runtime_version` section exists in the wasm binary?
+	</span>disable_runtime_version_section_check: bool,
 }
 
 <span class="kw">impl </span>WasmBuilder {
@@ -412,6 +436,17 @@
 		<span class="self">self
 	</span>}
 
+	<span class="doccomment">/// Disable the check for the `runtime_version` wasm section.
+	///
+	/// By default the `wasm-builder` will ensure that the `runtime_version` section will
+	/// exists in the build wasm binary. This `runtime_version` section is used to get the
+	/// `RuntimeVersion` without needing to call into the wasm binary. However, for some
+	/// use cases (like tests) you may want to disable this check.
+	</span><span class="kw">pub fn </span>disable_runtime_version_section_check(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+		<span class="self">self</span>.disable_runtime_version_section_check = <span class="bool-val">true</span>;
+		<span class="self">self
+	</span>}
+
 	<span class="doccomment">/// Build the WASM binary.
 	</span><span class="kw">pub fn </span>build(<span class="self">self</span>) {
 		<span class="kw">let </span>out_dir = PathBuf::from(env::var(<span class="string">&quot;OUT_DIR&quot;</span>).expect(<span class="string">&quot;`OUT_DIR` is set by cargo!&quot;</span>));
@@ -434,6 +469,7 @@
 			<span class="self">self</span>.rust_flags.into_iter().map(|f| <span class="macro">format!</span>(<span class="string">&quot;{} &quot;</span>, f)).collect(),
 			<span class="self">self</span>.features_to_enable,
 			<span class="self">self</span>.file_name,
+			!<span class="self">self</span>.disable_runtime_version_section_check,
 		);
 
 		<span class="comment">// As last step we need to generate our `rerun-if-changed` stuff. If a build fails, we don&#39;t
@@ -484,7 +520,7 @@
 /// The current project is determined by using the `CARGO_MANIFEST_DIR` environment variable.
 ///
 /// `file_name` - The name + path of the file being generated. The file contains the
-/// constant `WASM_BINARY`, which contains the built WASM binary.
+/// constant `WASM_BINARY`, which contains the built wasm binary.
 ///
 /// `project_cargo_toml` - The path to the `Cargo.toml` of the project that should be built.
 ///
@@ -493,14 +529,17 @@
 /// `features_to_enable` - Features that should be enabled for the project.
 ///
 /// `wasm_binary_name` - The optional wasm binary name that is extended with
-///
 /// `.compact.compressed.wasm`. If `None`, the project name will be used.
+///
+/// `check_for_runtime_version_section` - Should the wasm binary be checked for the
+/// `runtime_version` section?
 </span><span class="kw">fn </span>build_project(
 	file_name: PathBuf,
 	project_cargo_toml: PathBuf,
 	default_rustflags: String,
 	features_to_enable: Vec&lt;String&gt;,
 	wasm_binary_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+	check_for_runtime_version_section: bool,
 ) {
 	<span class="kw">let </span>cargo_cmd = <span class="kw">match </span><span class="kw">crate</span>::prerequisites::check() {
 		<span class="prelude-val">Ok</span>(cmd) =&gt; cmd,
@@ -516,6 +555,7 @@
 		cargo_cmd,
 		features_to_enable,
 		wasm_binary_name,
+		check_for_runtime_version_section,
 	);
 
 	<span class="kw">let </span>(wasm_binary, wasm_binary_bloaty) = <span class="kw">if let </span><span class="prelude-val">Some</span>(wasm_binary) = wasm_binary {
