@@ -1758,6 +1758,46 @@
 <a href="#1758" id="1758">1758</a>
 <a href="#1759" id="1759">1759</a>
 <a href="#1760" id="1760">1760</a>
+<a href="#1761" id="1761">1761</a>
+<a href="#1762" id="1762">1762</a>
+<a href="#1763" id="1763">1763</a>
+<a href="#1764" id="1764">1764</a>
+<a href="#1765" id="1765">1765</a>
+<a href="#1766" id="1766">1766</a>
+<a href="#1767" id="1767">1767</a>
+<a href="#1768" id="1768">1768</a>
+<a href="#1769" id="1769">1769</a>
+<a href="#1770" id="1770">1770</a>
+<a href="#1771" id="1771">1771</a>
+<a href="#1772" id="1772">1772</a>
+<a href="#1773" id="1773">1773</a>
+<a href="#1774" id="1774">1774</a>
+<a href="#1775" id="1775">1775</a>
+<a href="#1776" id="1776">1776</a>
+<a href="#1777" id="1777">1777</a>
+<a href="#1778" id="1778">1778</a>
+<a href="#1779" id="1779">1779</a>
+<a href="#1780" id="1780">1780</a>
+<a href="#1781" id="1781">1781</a>
+<a href="#1782" id="1782">1782</a>
+<a href="#1783" id="1783">1783</a>
+<a href="#1784" id="1784">1784</a>
+<a href="#1785" id="1785">1785</a>
+<a href="#1786" id="1786">1786</a>
+<a href="#1787" id="1787">1787</a>
+<a href="#1788" id="1788">1788</a>
+<a href="#1789" id="1789">1789</a>
+<a href="#1790" id="1790">1790</a>
+<a href="#1791" id="1791">1791</a>
+<a href="#1792" id="1792">1792</a>
+<a href="#1793" id="1793">1793</a>
+<a href="#1794" id="1794">1794</a>
+<a href="#1795" id="1795">1795</a>
+<a href="#1796" id="1796">1796</a>
+<a href="#1797" id="1797">1797</a>
+<a href="#1798" id="1798">1798</a>
+<a href="#1799" id="1799">1799</a>
+<a href="#1800" id="1800">1800</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1961,12 +2001,55 @@
 	<span class="kw">use crate</span>::{<span class="self">self </span><span class="kw">as </span>frame_system, pallet_prelude::<span class="kw-2">*</span>, <span class="kw-2">*</span>};
 	<span class="kw">use </span>frame_support::pallet_prelude::<span class="kw-2">*</span>;
 
+	<span class="doccomment">/// Contains default types suitable for various environments
+	</span><span class="kw">pub mod </span>config_preludes {
+		<span class="kw">use </span><span class="kw">super</span>::DefaultConfig;
+
+		<span class="doccomment">/// Provides a viable default config that can be used with
+		/// [`derive_impl`](`frame_support::derive_impl`) to derive a testing pallet config
+		/// based on this one.
+		///
+		/// See `Test` in the `default-config` example pallet&#39;s `test.rs` for an example of
+		/// a downstream user of this particular `TestDefaultConfig`
+		</span><span class="kw">pub struct </span>TestDefaultConfig;
+
+		<span class="attr">#[frame_support::register_default_impl(TestDefaultConfig)]
+		</span><span class="kw">impl </span>DefaultConfig <span class="kw">for </span>TestDefaultConfig {
+			<span class="kw">type </span>Index = u32;
+			<span class="kw">type </span>BlockNumber = u32;
+			<span class="kw">type </span>Header = sp_runtime::generic::Header&lt;<span class="self">Self</span>::BlockNumber, <span class="self">Self</span>::Hashing&gt;;
+			<span class="kw">type </span>Hash = sp_core::hash::H256;
+			<span class="kw">type </span>Hashing = sp_runtime::traits::BlakeTwo256;
+			<span class="kw">type </span>AccountId = u64;
+			<span class="kw">type </span>Lookup = sp_runtime::traits::IdentityLookup&lt;u64&gt;;
+			<span class="kw">type </span>BlockHashCount = frame_support::traits::ConstU32&lt;<span class="number">10</span>&gt;;
+			<span class="kw">type </span>MaxConsumers = frame_support::traits::ConstU32&lt;<span class="number">16</span>&gt;;
+			<span class="kw">type </span>AccountData = ();
+			<span class="kw">type </span>OnNewAccount = ();
+			<span class="kw">type </span>OnKilledAccount = ();
+			<span class="kw">type </span>SystemWeightInfo = ();
+			<span class="kw">type </span>SS58Prefix = ();
+			<span class="kw">type </span>Version = ();
+			<span class="kw">type </span>BlockWeights = ();
+			<span class="kw">type </span>BlockLength = ();
+			<span class="kw">type </span>DbWeight = ();
+		}
+	}
+
 	<span class="doccomment">/// System configuration trait. Implemented by runtime.
-	</span><span class="attr">#[pallet::config]
+	</span><span class="attr">#[pallet::config(with_default)]
 	#[pallet::disable_frame_system_supertrait_check]
 	</span><span class="kw">pub trait </span>Config: <span class="lifetime">&#39;static </span>+ Eq + Clone {
+		<span class="doccomment">/// The aggregated event type of the runtime.
+		</span><span class="kw">type </span>RuntimeEvent: Parameter
+			+ Member
+			+ From&lt;Event&lt;<span class="self">Self</span>&gt;&gt;
+			+ Debug
+			+ IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
+
 		<span class="doccomment">/// The basic call filter to use in Origin. All origins are built with this filter as base,
 		/// except Root.
+		</span><span class="attr">#[pallet::no_default]
 		</span><span class="kw">type </span>BaseCallFilter: Contains&lt;<span class="self">Self</span>::RuntimeCall&gt;;
 
 		<span class="doccomment">/// Block &amp; extrinsics weights: base values and limits.
@@ -1978,12 +2061,14 @@
 		</span><span class="kw">type </span>BlockLength: Get&lt;limits::BlockLength&gt;;
 
 		<span class="doccomment">/// The `RuntimeOrigin` type used by dispatchable calls.
+		</span><span class="attr">#[pallet::no_default]
 		</span><span class="kw">type </span>RuntimeOrigin: Into&lt;<span class="prelude-ty">Result</span>&lt;RawOrigin&lt;<span class="self">Self</span>::AccountId&gt;, <span class="self">Self</span>::RuntimeOrigin&gt;&gt;
 			+ From&lt;RawOrigin&lt;<span class="self">Self</span>::AccountId&gt;&gt;
 			+ Clone
 			+ OriginTrait&lt;Call = <span class="self">Self</span>::RuntimeCall&gt;;
 
 		<span class="doccomment">/// The aggregated `RuntimeCall` type.
+		</span><span class="attr">#[pallet::no_default]
 		</span><span class="kw">type </span>RuntimeCall: Parameter
 			+ Dispatchable&lt;RuntimeOrigin = <span class="self">Self</span>::RuntimeOrigin&gt;
 			+ Debug
@@ -2055,13 +2140,6 @@
 		<span class="doccomment">/// The block header.
 		</span><span class="kw">type </span>Header: Parameter + traits::Header&lt;Number = <span class="self">Self</span>::BlockNumber, Hash = <span class="self">Self</span>::Hash&gt;;
 
-		<span class="doccomment">/// The aggregated event type of the runtime.
-		</span><span class="kw">type </span>RuntimeEvent: Parameter
-			+ Member
-			+ From&lt;Event&lt;<span class="self">Self</span>&gt;&gt;
-			+ Debug
-			+ IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
-
 		<span class="doccomment">/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>BlockHashCount: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
@@ -2080,6 +2158,7 @@
 		/// runtime.
 		///
 		/// For tests it is okay to use `()` as type, however it will provide &quot;useless&quot; data.
+		</span><span class="attr">#[pallet::no_default]
 		</span><span class="kw">type </span>PalletInfo: PalletInfo;
 
 		<span class="doccomment">/// Data to be associated with an account (other than nonce/transaction counter, which this
@@ -2111,6 +2190,7 @@
 		/// [`Pallet::update_code_in_storage`]).
 		/// It&#39;s unlikely that this needs to be customized, unless you are writing a parachain using
 		/// `Cumulus`, where the actual code change is deferred.
+		</span><span class="attr">#[pallet::no_default]
 		</span><span class="kw">type </span>OnSetCode: SetCode&lt;<span class="self">Self</span>&gt;;
 
 		<span class="doccomment">/// The maximum number of consumers allowed on a single account.

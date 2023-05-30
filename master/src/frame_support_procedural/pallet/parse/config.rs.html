@@ -410,6 +410,32 @@
 <a href="#410" id="410">410</a>
 <a href="#411" id="411">411</a>
 <a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -430,7 +456,7 @@
 </span><span class="kw">use </span><span class="kw">super</span>::helper;
 <span class="kw">use </span>frame_support_procedural_tools::get_doc_literals;
 <span class="kw">use </span>quote::ToTokens;
-<span class="kw">use </span>syn::spanned::Spanned;
+<span class="kw">use </span>syn::{spanned::Spanned, token, Token};
 
 <span class="doccomment">/// List of additional token to be used for parsing.
 </span><span class="kw">mod </span>keyword {
@@ -439,12 +465,14 @@
 	<span class="macro">syn::custom_keyword!</span>(T);
 	<span class="macro">syn::custom_keyword!</span>(I);
 	<span class="macro">syn::custom_keyword!</span>(config);
+	<span class="macro">syn::custom_keyword!</span>(pallet);
 	<span class="macro">syn::custom_keyword!</span>(IsType);
 	<span class="macro">syn::custom_keyword!</span>(RuntimeEvent);
 	<span class="macro">syn::custom_keyword!</span>(Event);
-	<span class="macro">syn::custom_keyword!</span>(constant);
 	<span class="macro">syn::custom_keyword!</span>(frame_system);
 	<span class="macro">syn::custom_keyword!</span>(disable_frame_system_supertrait_check);
+	<span class="macro">syn::custom_keyword!</span>(no_default);
+	<span class="macro">syn::custom_keyword!</span>(constant);
 }
 
 <span class="doccomment">/// Input definition for the pallet config.
@@ -464,6 +492,12 @@
 	</span><span class="kw">pub </span>where_clause: <span class="prelude-ty">Option</span>&lt;syn::WhereClause&gt;,
 	<span class="doccomment">/// The span of the pallet::config attribute.
 	</span><span class="kw">pub </span>attr_span: proc_macro2::Span,
+	<span class="doccomment">/// Whether a default sub-trait should be generated.
+	///
+	/// Contains default sub-trait items (instantiated by `#[pallet::config(with_default)]`).
+	/// Vec will be empty if `#[pallet::config(with_default)]` is not specified or if there are
+	/// no trait items
+	</span><span class="kw">pub </span>default_sub_trait: Vec&lt;syn::TraitItem&gt;,
 }
 
 <span class="doccomment">/// Input definition for a constant in pallet config.
@@ -535,41 +569,29 @@
 	}
 }
 
-<span class="doccomment">/// Parse for `#[pallet::constant]`
-</span><span class="kw">pub struct </span>TypeAttrConst {
-	pound_token: <span class="macro">syn::Token!</span>[#],
-	bracket_token: syn::token::Bracket,
-	pallet_ident: syn::Ident,
-	path_sep_token: syn::token::PathSep,
-	constant_keyword: keyword::constant,
+<span class="doccomment">/// Parsing for the `typ` portion of `PalletAttr`
+</span><span class="attr">#[derive(derive_syn_parse::Parse, PartialEq, Eq)]
+</span><span class="kw">pub enum </span>PalletAttrType {
+	<span class="attr">#[peek(keyword::no_default, name = <span class="string">&quot;no_default&quot;</span>)]
+	</span>NoDefault(keyword::no_default),
+	<span class="attr">#[peek(keyword::constant, name = <span class="string">&quot;constant&quot;</span>)]
+	</span>Constant(keyword::constant),
 }
 
-<span class="kw">impl </span>syn::parse::Parse <span class="kw">for </span>TypeAttrConst {
-	<span class="kw">fn </span>parse(input: syn::parse::ParseStream) -&gt; syn::Result&lt;<span class="self">Self</span>&gt; {
-		<span class="kw">let </span>pound_token = input.parse::&lt;<span class="macro">syn::Token!</span>[#]&gt;()<span class="question-mark">?</span>;
-		<span class="kw">let </span>content;
-		<span class="kw">let </span>bracket_token = <span class="macro">syn::bracketed!</span>(content <span class="kw">in </span>input);
-		<span class="kw">let </span>pallet_ident = content.parse::&lt;syn::Ident&gt;()<span class="question-mark">?</span>;
-		<span class="kw">let </span>path_sep_token = content.parse::&lt;<span class="macro">syn::Token!</span>[::]&gt;()<span class="question-mark">?</span>;
-		<span class="kw">let </span>constant_keyword = content.parse::&lt;keyword::constant&gt;()<span class="question-mark">?</span>;
-
-		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ pound_token, bracket_token, pallet_ident, path_sep_token, constant_keyword })
-	}
+<span class="doccomment">/// Parsing for `#[pallet::X]`
+</span><span class="attr">#[derive(derive_syn_parse::Parse)]
+</span><span class="kw">pub struct </span>PalletAttr {
+	_pound: <span class="macro">Token!</span>[#],
+	<span class="attr">#[bracket]
+	</span>_bracket: token::Bracket,
+	<span class="attr">#[inside(_bracket)]
+	</span>_pallet: keyword::pallet,
+	<span class="attr">#[prefix(<span class="macro">Token!</span>[::] </span><span class="kw">in </span>_bracket)]
+	<span class="attr">#[inside(_bracket)]
+	</span>typ: PalletAttrType,
 }
 
-<span class="kw">impl </span>ToTokens <span class="kw">for </span>TypeAttrConst {
-	<span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>proc_macro2::TokenStream) {
-		<span class="self">self</span>.pound_token.to_tokens(tokens);
-		<span class="self">self</span>.bracket_token.surround(tokens, |tokens| {
-			<span class="self">self</span>.pallet_ident.to_tokens(tokens);
-			<span class="self">self</span>.path_sep_token.to_tokens(tokens);
-			<span class="self">self</span>.constant_keyword.to_tokens(tokens);
-		})
-	}
-}
-
-<span class="doccomment">/// Parse for `$ident::Config`
-</span><span class="kw">pub struct </span>ConfigBoundParse(syn::Ident);
+<span class="kw">pub struct </span>ConfigBoundParse(syn::Ident);
 
 <span class="kw">impl </span>syn::parse::Parse <span class="kw">for </span>ConfigBoundParse {
 	<span class="kw">fn </span>parse(input: syn::parse::ParseStream) -&gt; syn::Result&lt;<span class="self">Self</span>&gt; {
@@ -719,6 +741,7 @@
 		attr_span: proc_macro2::Span,
 		index: usize,
 		item: <span class="kw-2">&amp;mut </span>syn::Item,
+		enable_default: bool,
 	) -&gt; syn::Result&lt;<span class="self">Self</span>&gt; {
 		<span class="kw">let </span>item = <span class="kw">if let </span>syn::Item::Trait(item) = item {
 			item
@@ -756,38 +779,59 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>has_event_type = <span class="bool-val">false</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>consts_metadata = <span class="macro">vec!</span>[];
+		<span class="kw">let </span><span class="kw-2">mut </span>default_sub_trait = <span class="macro">vec!</span>[];
 		<span class="kw">for </span>trait_item <span class="kw">in </span><span class="kw-2">&amp;mut </span>item.items {
-			<span class="comment">// Parse for event
-			</span>has_event_type =
-				has_event_type || check_event_type(frame_system, trait_item, has_instance)<span class="question-mark">?</span>;
+			<span class="kw">let </span>is_event = check_event_type(frame_system, trait_item, has_instance)<span class="question-mark">?</span>;
+			has_event_type = has_event_type || is_event;
 
-			<span class="comment">// Parse for constant
-			</span><span class="kw">let </span>type_attrs_const: Vec&lt;TypeAttrConst&gt; = helper::take_item_pallet_attrs(trait_item)<span class="question-mark">?</span>;
+			<span class="kw">let </span><span class="kw-2">mut </span>already_no_default = <span class="bool-val">false</span>;
+			<span class="kw">let </span><span class="kw-2">mut </span>already_constant = <span class="bool-val">false</span>;
 
-			<span class="kw">if </span>type_attrs_const.len() &gt; <span class="number">1 </span>{
-				<span class="kw">let </span>msg = <span class="string">&quot;Invalid attribute in pallet::config, only one attribute is expected&quot;</span>;
-				<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(type_attrs_const[<span class="number">1</span>].span(), msg))
-			}
-
-			<span class="kw">if </span>type_attrs_const.len() == <span class="number">1 </span>{
-				<span class="kw">match </span>trait_item {
-					syn::TraitItem::Type(<span class="kw-2">ref </span>type_) =&gt; {
-						<span class="kw">let </span>constant = ConstMetadataDef::try_from(type_)<span class="question-mark">?</span>;
-						consts_metadata.push(constant);
+			<span class="kw">while let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(pallet_attr)) =
+				helper::take_first_item_pallet_attr::&lt;PalletAttr&gt;(trait_item)
+			{
+				<span class="kw">match </span>(pallet_attr.typ, <span class="kw-2">&amp;</span>trait_item) {
+					(PalletAttrType::Constant(<span class="kw">_</span>), syn::TraitItem::Type(<span class="kw-2">ref </span>typ)) =&gt; {
+						<span class="kw">if </span>already_constant {
+							<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
+								pallet_attr._bracket.span.join(),
+								<span class="string">&quot;Duplicate #[pallet::constant] attribute not allowed.&quot;</span>,
+							))
+						}
+						already_constant = <span class="bool-val">true</span>;
+						consts_metadata.push(ConstMetadataDef::try_from(typ)<span class="question-mark">?</span>);
 					},
-					<span class="kw">_ </span>=&gt; {
-						<span class="kw">let </span>msg =
-							<span class="string">&quot;Invalid pallet::constant in pallet::config, expected type trait \
-							item&quot;</span>;
-						<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(trait_item.span(), msg))
+					(PalletAttrType::Constant(<span class="kw">_</span>), <span class="kw">_</span>) =&gt;
+						<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
+							trait_item.span(),
+							<span class="string">&quot;Invalid #[pallet::constant] in #[pallet::config], expected type item&quot;</span>,
+						)),
+					(PalletAttrType::NoDefault(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; {
+						<span class="kw">if </span>!enable_default {
+							<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
+								pallet_attr._bracket.span.join(),
+								<span class="string">&quot;`#[pallet:no_default]` can only be used if `#[pallet::config(with_default)]` \
+								has been specified&quot;
+							</span>))
+						}
+						<span class="kw">if </span>already_no_default {
+							<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
+								pallet_attr._bracket.span.join(),
+								<span class="string">&quot;Duplicate #[pallet::no_default] attribute not allowed.&quot;</span>,
+							))
+						}
+						already_no_default = <span class="bool-val">true</span>;
 					},
 				}
+			}
+
+			<span class="kw">if </span>!already_no_default &amp;&amp; !is_event &amp;&amp; enable_default {
+				default_sub_trait.push(trait_item.clone());
 			}
 		}
 
 		<span class="kw">let </span>attr: <span class="prelude-ty">Option</span>&lt;DisableFrameSystemSupertraitCheck&gt; =
 			helper::take_first_item_pallet_attr(<span class="kw-2">&amp;mut </span>item.attrs)<span class="question-mark">?</span>;
-
 		<span class="kw">let </span>disable_system_supertrait_check = attr.is_some();
 
 		<span class="kw">let </span>has_frame_system_supertrait = item.supertraits.iter().any(|s| {
@@ -819,7 +863,15 @@
 			<span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(item.span(), msg))
 		}
 
-		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ index, has_instance, consts_metadata, has_event_type, where_clause, attr_span })
+		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+			index,
+			has_instance,
+			consts_metadata,
+			has_event_type,
+			where_clause,
+			attr_span,
+			default_sub_trait,
+		})
 	}
 }
 </code></pre></div>
