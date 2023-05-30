@@ -570,6 +570,9 @@
 <a href="#570" id="570">570</a>
 <a href="#571" id="571">571</a>
 <a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -604,9 +607,6 @@
 	crypto::{ByteArray, CryptoType, Derive, IsWrappedBy, Public, UncheckedFrom, Wraps},
 	RuntimeDebug,
 };
-<span class="attr">#[doc(hidden)]
-#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
-</span><span class="kw">pub use </span>sp_std::alloc::{format, string::String};
 
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub use </span>codec;
@@ -900,6 +900,14 @@
 	};
 }
 
+<span class="attr">#[doc(hidden)]
+</span><span class="kw">pub mod </span>module_format_string_prelude {
+	<span class="attr">#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
+	</span><span class="kw">pub use </span>sp_std::alloc::{format, string::String};
+	<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+	</span><span class="kw">pub use </span>std::{format, string::String};
+}
+
 <span class="doccomment">/// Implements traits for the public key type if `feature = &quot;serde&quot;` is enabled.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 #[doc(hidden)]
@@ -937,9 +945,7 @@
 			<span class="kw">where
 				</span>D: <span class="macro-nonterminal">$crate::serde::Deserializer</span>&lt;<span class="lifetime">&#39;de</span>&gt;,
 			{
-				<span class="kw">use </span><span class="macro-nonterminal">$crate::Ss58Codec</span>;
-				<span class="attr">#[cfg(all(not(feature = <span class="string">&quot;std&quot;</span>), feature = <span class="string">&quot;serde&quot;</span>))]
-				</span><span class="kw">use </span><span class="macro-nonterminal">$</span><span class="kw">crate</span>::{<span class="macro-nonterminal">format</span>, String};
+				<span class="kw">use </span><span class="macro-nonterminal">$</span><span class="kw">crate</span>::{<span class="macro-nonterminal">module_format_string_prelude</span>::<span class="kw-2">*</span>, Ss58Codec};
 
 				Public::from_ss58check(<span class="kw-2">&amp;</span>String::deserialize(deserializer)<span class="question-mark">?</span>)
 					.map_err(|e| <span class="macro-nonterminal">$crate::serde::de::Error::custom</span>(<span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, e)))
