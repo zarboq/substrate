@@ -420,6 +420,60 @@
 <a href="#420" id="420">420</a>
 <a href="#421" id="421">421</a>
 <a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -446,11 +500,17 @@
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>futures::{Future, Stream};
 <span class="kw">use </span>serde::{de::DeserializeOwned, Deserialize, Serialize};
+<span class="kw">use </span>sp_core::offchain::TransactionPoolExt;
 <span class="kw">use </span>sp_runtime::{
 	generic::BlockId,
 	traits::{Block <span class="kw">as </span>BlockT, Member, NumberFor},
 };
-<span class="kw">use </span>std::{collections::HashMap, hash::Hash, pin::Pin, sync::Arc};
+<span class="kw">use </span>std::{
+	collections::HashMap,
+	hash::Hash,
+	pin::Pin,
+	sync::{Arc, Weak},
+};
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;txpool::api&quot;</span>;
 
@@ -751,29 +811,27 @@
 	/// `TransactionSource::Local`.
 	</span><span class="kw">fn </span>submit_local(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		at: <span class="kw-2">&amp;</span>BlockId&lt;<span class="self">Self</span>::Block&gt;,
+		at: &lt;<span class="self">Self</span>::Block <span class="kw">as </span>BlockT&gt;::Hash,
 		xt: LocalTransactionFor&lt;<span class="self">Self</span>&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Hash, <span class="self">Self</span>::Error&gt;;
 }
 
-<span class="doccomment">/// An abstraction for transaction pool.
+<span class="doccomment">/// An abstraction for [`LocalTransactionPool`]
 ///
-/// This trait is used by offchain calls to be able to submit transactions.
-/// The main use case is for offchain workers, to feed back the results of computations,
-/// but since the transaction pool access is a separate `ExternalitiesExtension` it can
-/// be also used in context of other offchain calls. For one may generate and submit
-/// a transaction for some misbehavior reports (say equivocation).
-</span><span class="kw">pub trait </span>OffchainSubmitTransaction&lt;Block: BlockT&gt;: Send + Sync {
+/// We want to use a transaction pool in [`OffchainTransactionPoolFactory`] in a `Arc` without
+/// bleeding the associated types besides the `Block`. Thus, this abstraction here exists to achieve
+/// the wrapping in a `Arc`.
+</span><span class="kw">trait </span>OffchainSubmitTransaction&lt;Block: BlockT&gt;: Send + Sync {
 	<span class="doccomment">/// Submit transaction.
 	///
 	/// The transaction will end up in the pool and be propagated to others.
-	</span><span class="kw">fn </span>submit_at(<span class="kw-2">&amp;</span><span class="self">self</span>, at: <span class="kw-2">&amp;</span>BlockId&lt;Block&gt;, extrinsic: Block::Extrinsic) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt;;
+	</span><span class="kw">fn </span>submit_at(<span class="kw-2">&amp;</span><span class="self">self</span>, at: Block::Hash, extrinsic: Block::Extrinsic) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt;;
 }
 
 <span class="kw">impl</span>&lt;TPool: LocalTransactionPool&gt; OffchainSubmitTransaction&lt;TPool::Block&gt; <span class="kw">for </span>TPool {
 	<span class="kw">fn </span>submit_at(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		at: <span class="kw-2">&amp;</span>BlockId&lt;TPool::Block&gt;,
+		at: &lt;TPool::Block <span class="kw">as </span>BlockT&gt;::Hash,
 		extrinsic: &lt;TPool::Block <span class="kw">as </span>BlockT&gt;::Extrinsic,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
 		<span class="macro">log::debug!</span>(
@@ -791,6 +849,56 @@
 				e
 			)
 		})
+	}
+}
+
+<span class="doccomment">/// Factory for creating [`TransactionPoolExt`]s.
+///
+/// This provides an easy way for creating [`TransactionPoolExt`] extensions for registering them in
+/// the wasm execution environment to send transactions from an offchain call to the  runtime.
+</span><span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>OffchainTransactionPoolFactory&lt;Block: BlockT&gt; {
+	<span class="comment">// To break retain cycle between `Client` and `TransactionPool` we require this
+	// extension to be a `Weak` reference.
+	</span>pool: Weak&lt;<span class="kw">dyn </span>OffchainSubmitTransaction&lt;Block&gt;&gt;,
+}
+
+<span class="kw">impl</span>&lt;Block: BlockT&gt; OffchainTransactionPoolFactory&lt;Block&gt; {
+	<span class="doccomment">/// Creates a new instance using the given `tx_pool`.
+	</span><span class="kw">pub fn </span>new&lt;T: LocalTransactionPool&lt;Block = Block&gt; + <span class="lifetime">&#39;static</span>&gt;(tx_pool: <span class="kw-2">&amp;</span>Arc&lt;T&gt;) -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{ pool: Arc::downgrade(tx_pool) <span class="kw">as </span>Weak&lt;<span class="kw">_</span>&gt; }
+	}
+
+	<span class="doccomment">/// Returns an instance of [`TransactionPoolExt`] bound to the given `block_hash`.
+	///
+	/// Transactions that are being submitted by this instance will be submitted with `block_hash`
+	/// as context for validation.
+	</span><span class="kw">pub fn </span>offchain_transaction_pool(<span class="kw-2">&amp;</span><span class="self">self</span>, block_hash: Block::Hash) -&gt; TransactionPoolExt {
+		TransactionPoolExt::new(OffchainTransactionPool { pool: <span class="self">self</span>.pool.clone(), block_hash })
+	}
+}
+
+<span class="doccomment">/// Wraps a `pool` and `block_hash` to implement [`sp_core::offchain::TransactionPool`].
+</span><span class="kw">struct </span>OffchainTransactionPool&lt;Block: BlockT&gt; {
+	block_hash: Block::Hash,
+	pool: Weak&lt;<span class="kw">dyn </span>OffchainSubmitTransaction&lt;Block&gt;&gt;,
+}
+
+<span class="kw">impl</span>&lt;Block: BlockT&gt; sp_core::offchain::TransactionPool <span class="kw">for </span>OffchainTransactionPool&lt;Block&gt; {
+	<span class="kw">fn </span>submit_transaction(<span class="kw-2">&amp;mut </span><span class="self">self</span>, extrinsic: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+		<span class="kw">let </span>extrinsic = <span class="kw">match </span>codec::Decode::decode(<span class="kw-2">&amp;mut &amp;</span>extrinsic[..]) {
+			<span class="prelude-val">Ok</span>(t) =&gt; t,
+			<span class="prelude-val">Err</span>(e) =&gt; {
+				<span class="macro">log::error!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Failed to decode extrinsic in `OffchainTransactionPool::submit_transaction`: {e:?}&quot;
+				</span>);
+
+				<span class="kw">return </span><span class="prelude-val">Err</span>(())
+			},
+		};
+
+		<span class="self">self</span>.pool.upgrade().ok_or(())<span class="question-mark">?</span>.submit_at(<span class="self">self</span>.block_hash, extrinsic)
 	}
 }
 
