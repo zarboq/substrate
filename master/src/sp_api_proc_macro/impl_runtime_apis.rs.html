@@ -947,11 +947,12 @@
 			});
 
 	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>(
-		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-		</span><span class="kw">pub fn </span>dispatch(method: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>#data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-			<span class="kw">match </span>method {
-				#( #impl_calls )*
-				<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+		#<span class="macro">c::std_enabled! </span>{
+			<span class="kw">pub fn </span>dispatch(method: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>#data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+				<span class="kw">match </span>method {
+					#( #impl_calls )*
+					<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+				}
 			}
 		}
 	))
@@ -970,22 +971,23 @@
 					Ident::new(<span class="kw-2">&amp;</span>prefix_function_with_trait(<span class="kw-2">&amp;</span>trait_, <span class="kw-2">&amp;</span>fn_name), Span::call_site());
 
 				<span class="macro">quote!</span>(
-					#( #attrs )*
-					<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
-					#[no_mangle]
-					</span><span class="kw">pub unsafe fn </span>#fn_name(input_data: <span class="kw-2">*mut </span>u8, input_len: usize) -&gt; u64 {
-						<span class="kw">let </span><span class="kw-2">mut </span>#input = <span class="kw">if </span>input_len == <span class="number">0 </span>{
-							<span class="kw-2">&amp;</span>[<span class="number">0u8</span>; <span class="number">0</span>]
-						} <span class="kw">else </span>{
-							<span class="kw">unsafe </span>{
-								#c::slice::from_raw_parts(input_data, input_len)
-							}
-						};
+					#<span class="macro">c::std_disabled! </span>{
+						#( #attrs )*
+						<span class="attr">#[no_mangle]
+						</span><span class="kw">pub unsafe fn </span>#fn_name(input_data: <span class="kw-2">*mut </span>u8, input_len: usize) -&gt; u64 {
+							<span class="kw">let </span><span class="kw-2">mut </span>#input = <span class="kw">if </span>input_len == <span class="number">0 </span>{
+								<span class="kw-2">&amp;</span>[<span class="number">0u8</span>; <span class="number">0</span>]
+							} <span class="kw">else </span>{
+								<span class="kw">unsafe </span>{
+									#c::slice::from_raw_parts(input_data, input_len)
+								}
+							};
 
-						#c::init_runtime_logger();
+							#c::init_runtime_logger();
 
-						<span class="kw">let </span>output = (<span class="kw">move </span>|| { #impl_ })();
-						#c::to_substrate_wasm_fn_return_value(<span class="kw-2">&amp;</span>output)
+							<span class="kw">let </span>output = (<span class="kw">move </span>|| { #impl_ })();
+							#c::to_substrate_wasm_fn_return_value(<span class="kw-2">&amp;</span>output)
+						}
 					}
 				)
 			});
@@ -999,175 +1001,173 @@
 	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>(
 		<span class="kw">pub struct </span>RuntimeApi {}
 		<span class="doccomment">/// Implements all runtime apis for the client side.
-		</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-		</span><span class="kw">pub struct </span>RuntimeApiImpl&lt;Block: #crate_::BlockT, C: #crate_::CallApiAt&lt;Block&gt; + <span class="lifetime">&#39;static</span>&gt; {
-			call: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>C,
-			commit_on_success: std::cell::RefCell&lt;bool&gt;,
-			changes: std::cell::RefCell&lt;#crate_::OverlayedChanges&gt;,
-			storage_transaction_cache: std::cell::RefCell&lt;
-				#crate_::StorageTransactionCache&lt;Block, C::StateBackend&gt;
-			&gt;,
-			recorder: std::option::Option&lt;#crate_::ProofRecorder&lt;Block&gt;&gt;,
-		}
-
-		<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-		</span><span class="kw">impl</span>&lt;Block: #crate_::BlockT, C: #crate_::CallApiAt&lt;Block&gt;&gt; #crate_::ApiExt&lt;Block&gt; <span class="kw">for
-			</span>RuntimeApiImpl&lt;Block, C&gt;
-		{
-			<span class="kw">type </span>StateBackend = C::StateBackend;
-
-			<span class="kw">fn </span>execute_in_transaction&lt;F: FnOnce(<span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; #crate_::TransactionOutcome&lt;R&gt;, R&gt;(
-				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				call: F,
-			) -&gt; R <span class="kw">where </span><span class="self">Self</span>: Sized {
-				<span class="self">self</span>.start_transaction();
-
-				<span class="kw-2">*</span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) = <span class="bool-val">false</span>;
-				<span class="kw">let </span>res = call(<span class="self">self</span>);
-				<span class="kw-2">*</span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) = <span class="bool-val">true</span>;
-
-				<span class="self">self</span>.commit_or_rollback(<span class="macro">std::matches!</span>(res, #crate_::TransactionOutcome::Commit(<span class="kw">_</span>)));
-
-				res.into_inner()
+		</span>#<span class="macro">crate_::std_enabled! </span>{
+			<span class="kw">pub struct </span>RuntimeApiImpl&lt;Block: #crate_::BlockT, C: #crate_::CallApiAt&lt;Block&gt; + <span class="lifetime">&#39;static</span>&gt; {
+				call: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>C,
+				commit_on_success: std::cell::RefCell&lt;bool&gt;,
+				changes: std::cell::RefCell&lt;#crate_::OverlayedChanges&gt;,
+				storage_transaction_cache: std::cell::RefCell&lt;
+					#crate_::StorageTransactionCache&lt;Block, C::StateBackend&gt;
+				&gt;,
+				recorder: std::option::Option&lt;#crate_::ProofRecorder&lt;Block&gt;&gt;,
 			}
 
-			<span class="kw">fn </span>has_api&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized&gt;(
-				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
-			) -&gt; std::result::Result&lt;bool, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
-				#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
+			<span class="kw">impl</span>&lt;Block: #crate_::BlockT, C: #crate_::CallApiAt&lt;Block&gt;&gt; #crate_::ApiExt&lt;Block&gt; <span class="kw">for
+				</span>RuntimeApiImpl&lt;Block, C&gt;
+			{
+				<span class="kw">type </span>StateBackend = C::StateBackend;
+
+				<span class="kw">fn </span>execute_in_transaction&lt;F: FnOnce(<span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; #crate_::TransactionOutcome&lt;R&gt;, R&gt;(
+					<span class="kw-2">&amp;</span><span class="self">self</span>,
+					call: F,
+				) -&gt; R <span class="kw">where </span><span class="self">Self</span>: Sized {
+					<span class="self">self</span>.start_transaction();
+
+					<span class="kw-2">*</span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) = <span class="bool-val">false</span>;
+					<span class="kw">let </span>res = call(<span class="self">self</span>);
+					<span class="kw-2">*</span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) = <span class="bool-val">true</span>;
+
+					<span class="self">self</span>.commit_or_rollback(<span class="macro">std::matches!</span>(res, #crate_::TransactionOutcome::Commit(<span class="kw">_</span>)));
+
+					res.into_inner()
+				}
+
+				<span class="kw">fn </span>has_api&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized&gt;(
+					<span class="kw-2">&amp;</span><span class="self">self</span>,
+					at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
+				) -&gt; std::result::Result&lt;bool, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
+					#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
 					.map(|v| #crate_::RuntimeVersion::has_api_with(<span class="kw-2">&amp;</span>v, <span class="kw-2">&amp;</span>A::ID, |v| v == A::VERSION))
-			}
+				}
 
-			<span class="kw">fn </span>has_api_with&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized, P: Fn(u32) -&gt; bool&gt;(
-				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
-				pred: P,
-			) -&gt; std::result::Result&lt;bool, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
-				#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
+				<span class="kw">fn </span>has_api_with&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized, P: Fn(u32) -&gt; bool&gt;(
+					<span class="kw-2">&amp;</span><span class="self">self</span>,
+					at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
+					pred: P,
+				) -&gt; std::result::Result&lt;bool, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
+					#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
 					.map(|v| #crate_::RuntimeVersion::has_api_with(<span class="kw-2">&amp;</span>v, <span class="kw-2">&amp;</span>A::ID, pred))
-			}
+				}
 
-			<span class="kw">fn </span>api_version&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized&gt;(
-				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
-			) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;u32&gt;, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
-				#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
+				<span class="kw">fn </span>api_version&lt;A: #crate_::RuntimeApiInfo + <span class="question-mark">?</span>Sized&gt;(
+					<span class="kw-2">&amp;</span><span class="self">self</span>,
+					at: &lt;Block <span class="kw">as </span>#crate_::BlockT&gt;::Hash,
+				) -&gt; std::result::Result&lt;<span class="prelude-ty">Option</span>&lt;u32&gt;, #crate_::ApiError&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
+					#crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, at)
 					.map(|v| #crate_::RuntimeVersion::api_version(<span class="kw-2">&amp;</span>v, <span class="kw-2">&amp;</span>A::ID))
-			}
+				}
 
-			<span class="kw">fn </span>record_proof(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-				<span class="self">self</span>.recorder = std::option::Option::Some(std::default::Default::default());
-			}
+				<span class="kw">fn </span>record_proof(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+					<span class="self">self</span>.recorder = std::option::Option::Some(std::default::Default::default());
+				}
 
-			<span class="kw">fn </span>proof_recorder(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::option::Option&lt;#crate_::ProofRecorder&lt;Block&gt;&gt; {
-				std::clone::Clone::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.recorder)
-			}
+				<span class="kw">fn </span>proof_recorder(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::option::Option&lt;#crate_::ProofRecorder&lt;Block&gt;&gt; {
+					std::clone::Clone::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.recorder)
+				}
 
-			<span class="kw">fn </span>extract_proof(
-				<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-			) -&gt; std::option::Option&lt;#crate_::StorageProof&gt; {
-				<span class="kw">let </span>recorder = std::option::Option::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.recorder);
-				std::option::Option::map(recorder, |recorder| {
-					#crate_::ProofRecorder::&lt;Block&gt;::drain_storage_proof(recorder)
-				})
-			}
+				<span class="kw">fn </span>extract_proof(
+					<span class="kw-2">&amp;mut </span><span class="self">self</span>,
+				) -&gt; std::option::Option&lt;#crate_::StorageProof&gt; {
+					<span class="kw">let </span>recorder = std::option::Option::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.recorder);
+					std::option::Option::map(recorder, |recorder| {
+						#crate_::ProofRecorder::&lt;Block&gt;::drain_storage_proof(recorder)
+					})
+				}
 
-			<span class="kw">fn </span>into_storage_changes(
-				<span class="kw-2">&amp;</span><span class="self">self</span>,
-				backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::StateBackend,
-				parent_hash: Block::Hash,
-			) -&gt; core::result::Result&lt;
-				#crate_::StorageChanges&lt;C::StateBackend, Block&gt;,
+				<span class="kw">fn </span>into_storage_changes(
+					<span class="kw-2">&amp;</span><span class="self">self</span>,
+					backend: <span class="kw-2">&amp;</span><span class="self">Self</span>::StateBackend,
+					parent_hash: Block::Hash,
+				) -&gt; core::result::Result&lt;
+					#crate_::StorageChanges&lt;C::StateBackend, Block&gt;,
 				String
-			&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
-				<span class="kw">let </span>state_version = #crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, std::clone::Clone::clone(<span class="kw-2">&amp;</span>parent_hash))
-					.map(|v| #crate_::RuntimeVersion::state_version(<span class="kw-2">&amp;</span>v))
-					.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to get state version: {}&quot;</span>, e))<span class="question-mark">?</span>;
+					&gt; <span class="kw">where </span><span class="self">Self</span>: Sized {
+						<span class="kw">let </span>state_version = #crate_::CallApiAt::&lt;Block&gt;::runtime_version_at(<span class="self">self</span>.call, std::clone::Clone::clone(<span class="kw-2">&amp;</span>parent_hash))
+							.map(|v| #crate_::RuntimeVersion::state_version(<span class="kw-2">&amp;</span>v))
+							.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to get state version: {}&quot;</span>, e))<span class="question-mark">?</span>;
 
-				#crate_::OverlayedChanges::into_storage_changes(
-					std::cell::RefCell::take(<span class="kw-2">&amp;</span><span class="self">self</span>.changes),
-					backend,
-					core::cell::RefCell::take(<span class="kw-2">&amp;</span><span class="self">self</span>.storage_transaction_cache),
-					state_version,
-				)
+						#crate_::OverlayedChanges::into_storage_changes(
+							std::cell::RefCell::take(<span class="kw-2">&amp;</span><span class="self">self</span>.changes),
+							backend,
+							core::cell::RefCell::take(<span class="kw-2">&amp;</span><span class="self">self</span>.storage_transaction_cache),
+							state_version,
+						)
+					}
 			}
-		}
 
-		<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-		</span><span class="kw">impl</span>&lt;Block: #crate_::BlockT, C&gt; #crate_::ConstructRuntimeApi&lt;Block, C&gt;
-			<span class="kw">for </span>RuntimeApi
-				<span class="kw">where
-					</span>C: #crate_::CallApiAt&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
-		{
-			<span class="kw">type </span>RuntimeApi = RuntimeApiImpl&lt;Block, C&gt;;
+			<span class="kw">impl</span>&lt;Block: #crate_::BlockT, C&gt; #crate_::ConstructRuntimeApi&lt;Block, C&gt;
+				<span class="kw">for </span>RuntimeApi
+			<span class="kw">where
+				</span>C: #crate_::CallApiAt&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
+			{
+				<span class="kw">type </span>RuntimeApi = RuntimeApiImpl&lt;Block, C&gt;;
 
-			<span class="kw">fn </span>construct_runtime_api&lt;<span class="lifetime">&#39;a</span>&gt;(
-				call: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>C,
-			) -&gt; #crate_::ApiRef&lt;<span class="lifetime">&#39;a</span>, <span class="self">Self</span>::RuntimeApi&gt; {
-				RuntimeApiImpl {
-					call: <span class="kw">unsafe </span>{ std::mem::transmute(call) },
-					commit_on_success: <span class="bool-val">true</span>.into(),
-					changes: std::default::Default::default(),
-					recorder: std::default::Default::default(),
-					storage_transaction_cache: std::default::Default::default(),
-				}.into()
+				<span class="kw">fn </span>construct_runtime_api&lt;<span class="lifetime">&#39;a</span>&gt;(
+					call: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>C,
+				) -&gt; #crate_::ApiRef&lt;<span class="lifetime">&#39;a</span>, <span class="self">Self</span>::RuntimeApi&gt; {
+					RuntimeApiImpl {
+						call: <span class="kw">unsafe </span>{ std::mem::transmute(call) },
+						commit_on_success: <span class="bool-val">true</span>.into(),
+						changes: std::default::Default::default(),
+						recorder: std::default::Default::default(),
+						storage_transaction_cache: std::default::Default::default(),
+					}.into()
+				}
 			}
-		}
 
-		<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-		</span><span class="kw">impl</span>&lt;Block: #crate_::BlockT, C: #crate_::CallApiAt&lt;Block&gt;&gt; RuntimeApiImpl&lt;Block, C&gt; {
-			<span class="kw">fn </span>commit_or_rollback(<span class="kw-2">&amp;</span><span class="self">self</span>, commit: bool) {
-				<span class="kw">let </span>proof = <span class="string">&quot;\
+			<span class="kw">impl</span>&lt;Block: #crate_::BlockT, C: #crate_::CallApiAt&lt;Block&gt;&gt; RuntimeApiImpl&lt;Block, C&gt; {
+				<span class="kw">fn </span>commit_or_rollback(<span class="kw-2">&amp;</span><span class="self">self</span>, commit: bool) {
+					<span class="kw">let </span>proof = <span class="string">&quot;\
 					We only close a transaction when we opened one ourself.
 					Other parts of the runtime that make use of transactions (state-machine)
 					also balance their transactions. The runtime cannot close client initiated
 					transactions; qed&quot;</span>;
-				<span class="kw">if </span><span class="kw-2">*</span>std::cell::RefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) {
-					<span class="kw">let </span>res = <span class="kw">if </span>commit {
-						<span class="kw">let </span>res = <span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
-							#crate_::ProofRecorder::&lt;Block&gt;::commit_transaction(<span class="kw-2">&amp;</span>recorder)
+					<span class="kw">if </span><span class="kw-2">*</span>std::cell::RefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) {
+						<span class="kw">let </span>res = <span class="kw">if </span>commit {
+							<span class="kw">let </span>res = <span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
+								#crate_::ProofRecorder::&lt;Block&gt;::commit_transaction(<span class="kw-2">&amp;</span>recorder)
+							} <span class="kw">else </span>{
+								<span class="prelude-val">Ok</span>(())
+							};
+
+							<span class="kw">let </span>res2 = #crate_::OverlayedChanges::commit_transaction(
+								<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
+							);
+
+							<span class="comment">// Will panic on an `Err` below, however we should call commit
+							// on the recorder and the changes together.
+							</span>std::result::Result::and(res, std::result::Result::map_err(res2, drop))
 						} <span class="kw">else </span>{
-							<span class="prelude-val">Ok</span>(())
+							<span class="kw">let </span>res = <span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
+								#crate_::ProofRecorder::&lt;Block&gt;::rollback_transaction(<span class="kw-2">&amp;</span>recorder)
+							} <span class="kw">else </span>{
+								<span class="prelude-val">Ok</span>(())
+							};
+
+							<span class="kw">let </span>res2 = #crate_::OverlayedChanges::rollback_transaction(
+								<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
+							);
+
+							<span class="comment">// Will panic on an `Err` below, however we should call commit
+							// on the recorder and the changes together.
+							</span>std::result::Result::and(res, std::result::Result::map_err(res2, drop))
 						};
 
-						<span class="kw">let </span>res2 = #crate_::OverlayedChanges::commit_transaction(
-							<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
-						);
-
-						<span class="comment">// Will panic on an `Err` below, however we should call commit
-						// on the recorder and the changes together.
-						</span>std::result::Result::and(res, std::result::Result::map_err(res2, drop))
-					} <span class="kw">else </span>{
-						<span class="kw">let </span>res = <span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
-							#crate_::ProofRecorder::&lt;Block&gt;::rollback_transaction(<span class="kw-2">&amp;</span>recorder)
-						} <span class="kw">else </span>{
-							<span class="prelude-val">Ok</span>(())
-						};
-
-						<span class="kw">let </span>res2 = #crate_::OverlayedChanges::rollback_transaction(
-							<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
-						);
-
-						<span class="comment">// Will panic on an `Err` below, however we should call commit
-						// on the recorder and the changes together.
-						</span>std::result::Result::and(res, std::result::Result::map_err(res2, drop))
-					};
-
-					std::result::Result::expect(res, proof);
+						std::result::Result::expect(res, proof);
+					}
 				}
-			}
 
-			<span class="kw">fn </span>start_transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-				<span class="kw">if </span>!<span class="kw-2">*</span>std::cell::RefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) {
-					<span class="kw">return
-				</span>}
+				<span class="kw">fn </span>start_transaction(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+					<span class="kw">if </span>!<span class="kw-2">*</span>std::cell::RefCell::borrow(<span class="kw-2">&amp;</span><span class="self">self</span>.commit_on_success) {
+						<span class="kw">return
+					</span>}
 
-				#crate_::OverlayedChanges::start_transaction(
-					<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
-				);
-				<span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
-					#crate_::ProofRecorder::&lt;Block&gt;::start_transaction(<span class="kw-2">&amp;</span>recorder);
+					#crate_::OverlayedChanges::start_transaction(
+						<span class="kw-2">&amp;mut </span>std::cell::RefCell::borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>.changes)
+					);
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(recorder) = <span class="kw-2">&amp;</span><span class="self">self</span>.recorder {
+						#crate_::ProofRecorder::&lt;Block&gt;::start_transaction(<span class="kw-2">&amp;</span>recorder);
+					}
 				}
 			}
 		}
@@ -1346,10 +1346,6 @@
 
 		input.attrs = filter_cfg_attrs(<span class="kw-2">&amp;</span>input.attrs);
 
-		<span class="comment">// The implementation for the `RuntimeApiImpl` is only required when compiling with
-		// the feature `std` or `test`.
-		</span>input.attrs.push(<span class="macro">parse_quote!</span>( <span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))] </span>));
-
 		fold::fold_item_impl(<span class="self">self</span>, input)
 	}
 }
@@ -1370,7 +1366,10 @@
 
 		result.push(processed_impl);
 	}
-	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>( #( #result )* ))
+
+	<span class="kw">let </span>crate_ = generate_crate_access();
+
+	<span class="prelude-val">Ok</span>(<span class="macro">quote!</span>( #<span class="macro">crate_::std_enabled! </span>{ #( #result )* } ))
 }
 
 <span class="kw">fn </span>populate_runtime_api_versions(
@@ -1387,13 +1386,14 @@
 	));
 
 	sections.push(<span class="macro">quote!</span>(
-		#( #attrs )*
-		<span class="kw">const _</span>: () = {
-			<span class="comment">// All sections with the same name are going to be merged by concatenation.
-			</span><span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
-			#[link_section = <span class="string">&quot;runtime_apis&quot;</span>]
-			</span><span class="kw">static </span>SECTION_CONTENTS: [u8; <span class="number">12</span>] = #crate_access::serialize_runtime_api_info(#id, #version);
-		};
+		#<span class="macro">crate_access::std_disabled! </span>{
+			#( #attrs )*
+			<span class="kw">const _</span>: () = {
+				<span class="comment">// All sections with the same name are going to be merged by concatenation.
+				</span><span class="attr">#[link_section = <span class="string">&quot;runtime_apis&quot;</span>]
+				</span><span class="kw">static </span>SECTION_CONTENTS: [u8; <span class="number">12</span>] = #crate_access::serialize_runtime_api_info(#id, #version);
+			};
+		}
 	));
 }
 
