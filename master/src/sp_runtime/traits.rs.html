@@ -2089,6 +2089,18 @@
 <a href="#2089" id="2089">2089</a>
 <a href="#2090" id="2090">2090</a>
 <a href="#2091" id="2091">2091</a>
+<a href="#2092" id="2092">2092</a>
+<a href="#2093" id="2093">2093</a>
+<a href="#2094" id="2094">2094</a>
+<a href="#2095" id="2095">2095</a>
+<a href="#2096" id="2096">2096</a>
+<a href="#2097" id="2097">2097</a>
+<a href="#2098" id="2098">2098</a>
+<a href="#2099" id="2099">2099</a>
+<a href="#2100" id="2100">2100</a>
+<a href="#2101" id="2101">2101</a>
+<a href="#2102" id="2102">2102</a>
+<a href="#2103" id="2103">2103</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2603,10 +2615,22 @@
 <span class="macro">morph_types! </span>{
 	<span class="doccomment">/// Morpher to disregard the source value and replace with another.
 	</span><span class="kw">pub type </span>Replace&lt;V: TypedGet&gt; = |<span class="kw">_</span>| -&gt; V::Type { V::get() };
+
 	<span class="doccomment">/// Mutator which reduces a scalar by a particular amount.
 	</span><span class="kw">pub type </span>ReduceBy&lt;N: TypedGet&gt; = |r: N::Type| -&gt; N::Type {
 		r.checked_sub(<span class="kw-2">&amp;</span>N::get()).unwrap_or(Zero::zero())
 	} <span class="kw">where </span>N::Type: CheckedSub | Zero;
+
+	<span class="doccomment">/// A `TryMorph` implementation to reduce a scalar by a particular amount, checking for
+	/// underflow.
+	</span><span class="kw">pub type </span>CheckedReduceBy&lt;N: TypedGet&gt;: TryMorph = |r: N::Type| -&gt; <span class="prelude-ty">Result</span>&lt;N::Type, ()&gt; {
+		r.checked_sub(<span class="kw-2">&amp;</span>N::get()).ok_or(())
+	} <span class="kw">where </span>N::Type: CheckedSub;
+
+	<span class="doccomment">/// A `TryMorph` implementation to enforce an upper limit for a result of the outer morphed type.
+	</span><span class="kw">pub type </span>MorphWithUpperLimit&lt;L: TypedGet, M&gt;: TryMorph = |r: L::Type| -&gt; <span class="prelude-ty">Result</span>&lt;L::Type, ()&gt; {
+		M::try_morph(r).map(|m| m.min(L::get()))
+	} <span class="kw">where </span>L::Type: Ord, M: TryMorph&lt;L::Type, Outcome = L::Type&gt;;
 }
 
 <span class="doccomment">/// Extensible conversion trait. Generic over both source and destination types.

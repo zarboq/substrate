@@ -417,6 +417,18 @@
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -435,7 +447,10 @@
 // limitations under the License.
 
 </span><span class="kw">use crate</span>::{
-	pallet::{parse::call::CallWeightDef, Def},
+	pallet::{
+		parse::call::{CallVariantDef, CallWeightDef},
+		Def,
+	},
 	COUNTER,
 };
 <span class="kw">use </span>proc_macro2::TokenStream <span class="kw">as </span>TokenStream2;
@@ -532,13 +547,22 @@
 	}
 	<span class="macro">debug_assert_eq!</span>(fn_weight.len(), methods.len());
 
-	<span class="kw">let </span>fn_doc = methods
-		.iter()
-		.map(|method| {
+	<span class="kw">let </span>map_fn_docs = <span class="kw">if </span>!def.dev_mode {
+		<span class="comment">// Emit the [`Pallet::method`] documentation only for non-dev modes.
+		</span>|method: <span class="kw-2">&amp;</span>CallVariantDef| {
 			<span class="kw">let </span>reference = <span class="macro">format!</span>(<span class="string">&quot;See [`Pallet::{}`].&quot;</span>, method.name);
 			<span class="macro">quote!</span>(#reference)
-		})
-		.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+		}
+	} <span class="kw">else </span>{
+		<span class="comment">// For the dev-mode do not provide a documenation link as it will break the
+		// `cargo doc` if the pallet is private inside a test.
+		</span>|method: <span class="kw-2">&amp;</span>CallVariantDef| {
+			<span class="kw">let </span>reference = <span class="macro">format!</span>(<span class="string">&quot;See `Pallet::{}`.&quot;</span>, method.name);
+			<span class="macro">quote!</span>(#reference)
+		}
+	};
+
+	<span class="kw">let </span>fn_doc = methods.iter().map(map_fn_docs).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
 	<span class="kw">let </span>args_name = methods
 		.iter()
