@@ -1394,7 +1394,7 @@
 		</span><span class="kw">type </span>WeightInfo: WeightInfo;
 
 		<span class="doccomment">/// The benchmarks need a way to create asset ids from u32s.
-		</span><span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
+		</span><span class="attr">#[cfg(any(test, feature = <span class="string">&quot;runtime-benchmarks&quot;</span>))]
 		</span><span class="kw">type </span>BenchmarkHelper: BenchmarkHelper&lt;<span class="self">Self</span>::AssetId&gt;;
 	}
 
@@ -1545,24 +1545,24 @@
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 		<span class="kw">fn </span>integrity_test() {
-			<span class="macro">sp_std::if_std! </span>{
-				sp_io::TestExternalities::new_empty().execute_with(|| {
-					<span class="comment">// ensure that the `AccountId` is set properly and doesn&#39;t generate the same
-					// pool account for different pool ids.
-					</span><span class="kw">let </span>native = T::MultiAssetIdConverter::get_native();
-					<span class="comment">// Decode the asset ids from bytes.
-					</span><span class="kw">let </span>asset_1 = T::MultiAssetIdConverter::into_multiasset_id(<span class="kw-2">&amp;</span>T::AssetId::decode(<span class="kw-2">&amp;mut </span><span class="macro">vec!</span>[<span class="number">0u8</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>].as_slice()).unwrap());
-					<span class="kw">let </span>asset_2 = T::MultiAssetIdConverter::into_multiasset_id(<span class="kw-2">&amp;</span>T::AssetId::decode(<span class="kw-2">&amp;mut </span><span class="macro">vec!</span>[<span class="number">255u8</span>, <span class="number">255</span>, <span class="number">255</span>, <span class="number">255</span>].as_slice()).unwrap());
-					<span class="macro">assert!</span>(asset_1 != asset_2, <span class="string">&quot;unfortunatly decoded to be the same asset.&quot;</span>);
-					<span class="kw">let </span>pool_account_1 = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>(native.clone(), asset_1));
-					<span class="kw">let </span>pool_account_2 = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>(native, asset_2));
-					<span class="macro">assert!</span>(sp_std::mem::size_of::&lt;T::AccountId&gt;() &gt;= sp_std::mem::size_of::&lt;u128&gt;());
-					<span class="macro">assert!</span>(
-						pool_account_1 != pool_account_2,
-						<span class="string">&quot;AccountId should be set at least to u128&quot;
-					</span>);
-				});
-			}
+			<span class="attr">#[cfg(test)]
+			</span>sp_io::TestExternalities::new_empty().execute_with(|| {
+				<span class="comment">// ensure that the `AccountId` is set properly and doesn&#39;t generate the same
+				// pool account for different pool ids.
+				</span><span class="kw">let </span>native = T::MultiAssetIdConverter::get_native();
+				<span class="kw">let </span>asset_1 =
+					T::MultiAssetIdConverter::into_multiasset_id(<span class="kw-2">&amp;</span>T::BenchmarkHelper::asset_id(<span class="number">1</span>));
+				<span class="kw">let </span>asset_2 =
+					T::MultiAssetIdConverter::into_multiasset_id(<span class="kw-2">&amp;</span>T::BenchmarkHelper::asset_id(<span class="number">2</span>));
+				<span class="macro">assert!</span>(asset_1 != asset_2, <span class="string">&quot;must return different assets for different ids.&quot;</span>);
+				<span class="kw">let </span>pool_account_1 = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>(native.clone(), asset_1));
+				<span class="kw">let </span>pool_account_2 = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>(native, asset_2));
+				<span class="macro">assert!</span>(sp_std::mem::size_of::&lt;T::AccountId&gt;() &gt;= sp_std::mem::size_of::&lt;u128&gt;());
+				<span class="macro">assert!</span>(
+					pool_account_1 != pool_account_2,
+					<span class="string">&quot;AccountId should be set at least to u128&quot;
+				</span>);
+			});
 		}
 	}
 
