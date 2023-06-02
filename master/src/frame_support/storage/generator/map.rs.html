@@ -429,6 +429,20 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -609,34 +623,48 @@
 	}
 
 	<span class="kw">fn </span>translate&lt;O: Decode, F: FnMut(K, O) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt;&gt;(<span class="kw-2">mut </span>f: F) {
-		<span class="kw">let </span>prefix = G::prefix_hash();
-		<span class="kw">let </span><span class="kw-2">mut </span>previous_key = prefix.clone();
-		<span class="kw">while let </span><span class="prelude-val">Some</span>(next) =
-			sp_io::storage::next_key(<span class="kw-2">&amp;</span>previous_key).filter(|n| n.starts_with(<span class="kw-2">&amp;</span>prefix))
-		{
-			previous_key = next;
-			<span class="kw">let </span>value = <span class="kw">match </span>unhashed::get::&lt;O&gt;(<span class="kw-2">&amp;</span>previous_key) {
-				<span class="prelude-val">Some</span>(value) =&gt; value,
-				<span class="prelude-val">None </span>=&gt; {
-					<span class="macro">log::error!</span>(<span class="string">&quot;Invalid translate: fail to decode old value&quot;</span>);
-					<span class="kw">continue
-				</span>},
-			};
-
-			<span class="kw">let </span><span class="kw-2">mut </span>key_material = G::Hasher::reverse(<span class="kw-2">&amp;</span>previous_key[prefix.len()..]);
-			<span class="kw">let </span>key = <span class="kw">match </span>K::decode(<span class="kw-2">&amp;mut </span>key_material) {
-				<span class="prelude-val">Ok</span>(key) =&gt; key,
-				<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-					<span class="macro">log::error!</span>(<span class="string">&quot;Invalid translate: fail to decode key&quot;</span>);
-					<span class="kw">continue
-				</span>},
-			};
-
-			<span class="kw">match </span>f(key, value) {
-				<span class="prelude-val">Some</span>(new) =&gt; unhashed::put::&lt;V&gt;(<span class="kw-2">&amp;</span>previous_key, <span class="kw-2">&amp;</span>new),
-				<span class="prelude-val">None </span>=&gt; unhashed::kill(<span class="kw-2">&amp;</span>previous_key),
-			}
+		<span class="kw">let </span><span class="kw-2">mut </span>previous_key = <span class="prelude-val">None</span>;
+		<span class="kw">loop </span>{
+			previous_key = <span class="self">Self</span>::translate_next(previous_key, <span class="kw-2">&amp;mut </span>f);
+			<span class="kw">if </span>previous_key.is_none() {
+				<span class="kw">break
+			</span>}
 		}
+	}
+
+	<span class="kw">fn </span>translate_next&lt;O: Decode, F: FnMut(K, O) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt;&gt;(
+		previous_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+		<span class="kw-2">mut </span>f: F,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		<span class="kw">let </span>prefix = G::prefix_hash();
+		<span class="kw">let </span>previous_key = previous_key.unwrap_or_else(|| prefix.clone());
+
+		<span class="kw">let </span>current_key =
+			sp_io::storage::next_key(<span class="kw-2">&amp;</span>previous_key).filter(|n| n.starts_with(<span class="kw-2">&amp;</span>prefix))<span class="question-mark">?</span>;
+
+		<span class="kw">let </span>value = <span class="kw">match </span>unhashed::get::&lt;O&gt;(<span class="kw-2">&amp;</span>current_key) {
+			<span class="prelude-val">Some</span>(value) =&gt; value,
+			<span class="prelude-val">None </span>=&gt; {
+				<span class="macro">log::error!</span>(<span class="string">&quot;Invalid translate: fail to decode old value&quot;</span>);
+				<span class="kw">return </span><span class="prelude-val">Some</span>(current_key)
+			},
+		};
+
+		<span class="kw">let </span><span class="kw-2">mut </span>key_material = G::Hasher::reverse(<span class="kw-2">&amp;</span>current_key[prefix.len()..]);
+		<span class="kw">let </span>key = <span class="kw">match </span>K::decode(<span class="kw-2">&amp;mut </span>key_material) {
+			<span class="prelude-val">Ok</span>(key) =&gt; key,
+			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
+				<span class="macro">log::error!</span>(<span class="string">&quot;Invalid translate: fail to decode key&quot;</span>);
+				<span class="kw">return </span><span class="prelude-val">Some</span>(current_key)
+			},
+		};
+
+		<span class="kw">match </span>f(key, value) {
+			<span class="prelude-val">Some</span>(new) =&gt; unhashed::put::&lt;V&gt;(<span class="kw-2">&amp;</span>current_key, <span class="kw-2">&amp;</span>new),
+			<span class="prelude-val">None </span>=&gt; unhashed::kill(<span class="kw-2">&amp;</span>current_key),
+		}
+
+		<span class="prelude-val">Some</span>(current_key)
 	}
 }
 

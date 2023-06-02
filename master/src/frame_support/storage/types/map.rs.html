@@ -738,6 +738,15 @@
 <a href="#738" id="738">738</a>
 <a href="#739" id="739">739</a>
 <a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1224,7 +1233,7 @@
 	<span class="kw">use crate</span>::{
 		hash::<span class="kw-2">*</span>,
 		metadata_ir::{StorageEntryModifierIR, StorageEntryTypeIR, StorageHasherIR},
-		storage::types::ValueQuery,
+		storage::{types::ValueQuery, IterableStorageMap},
 	};
 	<span class="kw">use </span>sp_io::{hashing::twox_128, TestExternalities};
 
@@ -1439,6 +1448,15 @@
 			C::insert(<span class="number">4</span>, <span class="number">10</span>);
 			A::translate::&lt;u8, <span class="kw">_</span>&gt;(|k, v| <span class="prelude-val">Some</span>((k * v <span class="kw">as </span>u16).into()));
 			<span class="macro">assert_eq!</span>(A::iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(), <span class="macro">vec!</span>[(<span class="number">4</span>, <span class="number">40</span>), (<span class="number">3</span>, <span class="number">30</span>)]);
+
+			<span class="kw">let </span>translate_next = |k: u16, v: u8| <span class="prelude-val">Some</span>((v <span class="kw">as </span>u16 / k).into());
+			<span class="kw">let </span>k = A::translate_next::&lt;u8, <span class="kw">_</span>&gt;(<span class="prelude-val">None</span>, translate_next);
+			<span class="kw">let </span>k = A::translate_next::&lt;u8, <span class="kw">_</span>&gt;(k, translate_next);
+			<span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, A::translate_next::&lt;u8, <span class="kw">_</span>&gt;(k, translate_next));
+			<span class="macro">assert_eq!</span>(A::iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(), <span class="macro">vec!</span>[(<span class="number">4</span>, <span class="number">10</span>), (<span class="number">3</span>, <span class="number">10</span>)]);
+
+			<span class="kw">let _ </span>= A::translate_next::&lt;u8, <span class="kw">_</span>&gt;(<span class="prelude-val">None</span>, |<span class="kw">_</span>, <span class="kw">_</span>| <span class="prelude-val">None</span>);
+			<span class="macro">assert_eq!</span>(A::iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(), <span class="macro">vec!</span>[(<span class="number">3</span>, <span class="number">10</span>)]);
 
 			<span class="kw">let </span><span class="kw-2">mut </span>entries = <span class="macro">vec!</span>[];
 			A::build_metadata(<span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>entries);
