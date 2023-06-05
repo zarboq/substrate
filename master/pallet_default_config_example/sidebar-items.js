@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["__export_tokens_tt_parachain_default_config","__export_tokens_tt_test_default_config"],"mod":["pallet","tests"]};
+window.SIDEBAR_ITEMS = {"mod":["pallet","tests"]};
