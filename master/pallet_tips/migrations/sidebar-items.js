@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["v4"]};
+window.SIDEBAR_ITEMS = {"mod":["unreserve_deposits","v4"]};

@@ -121,7 +121,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_sudo":["",[],["benchmarking.rs","extension.rs","lib.rs","weights.rs"]],\
 "pallet_template":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_timestamp":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
-"pallet_tips":["",[["migrations",[],["mod.rs","v4.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
+"pallet_tips":["",[["migrations",[],["mod.rs","unreserve_deposits.rs","v4.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_transaction_payment":["",[],["lib.rs","payment.rs","types.rs"]],\
 "pallet_transaction_payment_rpc":["",[],["lib.rs"]],\
 "pallet_transaction_payment_rpc_runtime_api":["",[],["lib.rs"]],\
