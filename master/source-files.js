@@ -73,7 +73,9 @@ var sourcesIndex = JSON.parse('{\
 "pallet_election_provider_support_benchmarking":["",[],["lib.rs"]],\
 "pallet_elections_phragmen":["",[["migrations",[],["mod.rs","v3.rs","v4.rs","v5.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_basic":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
+"pallet_example_kitchensink":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_offchain_worker":["",[],["lib.rs"]],\
+"pallet_examples":["",[],["lib.rs"]],\
 "pallet_fast_unstake":["",[],["benchmarking.rs","lib.rs","migrations.rs","types.rs","weights.rs"]],\
 "pallet_glutton":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_grandpa":["",[["migrations",[],["v4.rs"]]],["benchmarking.rs","default_weights.rs","equivocation.rs","lib.rs","migrations.rs"]],\
