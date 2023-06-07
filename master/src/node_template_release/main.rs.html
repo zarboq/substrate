@@ -420,6 +420,8 @@
 <a href="#420" id="420">420</a>
 <a href="#421" id="421">421</a>
 <a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
 	collections::HashMap,
 	fs::{<span class="self">self</span>, File, OpenOptions},
@@ -430,7 +432,6 @@
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>flate2::{write::GzEncoder, Compression};
 <span class="kw">use </span>fs_extra::dir::{<span class="self">self</span>, CopyOptions};
-<span class="kw">use </span>git2;
 <span class="kw">use </span>glob;
 <span class="kw">use </span>itertools::Itertools;
 <span class="kw">use </span>tar;
@@ -501,17 +502,20 @@
 
 <span class="doccomment">/// Gets the latest commit id of the repository given by `path`.
 </span><span class="kw">fn </span>get_git_commit_id(path: <span class="kw-2">&amp;</span>Path) -&gt; String {
-	<span class="kw">let </span>repo = git2::Repository::discover(path)
-		.expect(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Node template ({}) should be in a git repository.&quot;</span>, path.display()));
+	<span class="kw">let </span><span class="kw-2">mut </span>dir = path;
+	<span class="kw">while </span>!dir.join(<span class="string">&quot;.git&quot;</span>).exists() {
+		dir = dir
+			.parent()
+			.expect(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;Node template ({}) should be in a git repository.&quot;</span>, path.display()));
+	}
 
-	<span class="kw">let </span>commit_id = repo
-		.head()
-		.expect(<span class="string">&quot;Repository should have a head&quot;</span>)
-		.peel_to_commit()
-		.expect(<span class="string">&quot;Head references a commit&quot;</span>)
-		.id();
-
-	<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, commit_id)
+	<span class="kw">let </span>git = dir.join(<span class="string">&quot;.git&quot;</span>);
+	<span class="kw">let </span>head = git.join(<span class="string">&quot;HEAD&quot;</span>);
+	<span class="kw">let </span>head_contents = fs::read_to_string(head).expect(<span class="string">&quot;Repository should have a HEAD&quot;</span>);
+	<span class="kw">let </span>branch = head_contents.strip_prefix(<span class="string">&quot;ref: &quot;</span>).expect(<span class="string">&quot;.git/HEAD to start &#39;ref: &#39;&quot;</span>).trim();
+	<span class="kw">let </span><span class="kw-2">mut </span>commit = fs::read_to_string(git.join(branch)).expect(<span class="string">&quot;Head references a commit&quot;</span>);
+	commit.truncate(commit.trim_end().len());
+	commit
 }
 
 <span class="doccomment">/// Rewrites git dependencies:
