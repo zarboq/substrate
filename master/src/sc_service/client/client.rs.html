@@ -2144,6 +2144,10 @@
 <a href="#2144" id="2144">2144</a>
 <a href="#2145" id="2145">2145</a>
 <a href="#2146" id="2146">2146</a>
+<a href="#2147" id="2147">2147</a>
+<a href="#2148" id="2148">2148</a>
+<a href="#2149" id="2149">2149</a>
+<a href="#2150" id="2150">2150</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2198,7 +2202,7 @@
 };
 <span class="kw">use </span>sp_blockchain::{
 	<span class="self">self </span><span class="kw">as </span>blockchain, Backend <span class="kw">as </span>ChainBackend, CachedHeaderMetadata, Error,
-	HeaderBackend <span class="kw">as </span>ChainHeaderBackend, HeaderMetadata,
+	HeaderBackend <span class="kw">as </span>ChainHeaderBackend, HeaderMetadata, Info <span class="kw">as </span>BlockchainInfo,
 };
 <span class="kw">use </span>sp_consensus::{BlockOrigin, BlockStatus, Error <span class="kw">as </span>ConsensusError};
 
@@ -2863,7 +2867,7 @@
 				operation,
 				parent_hash,
 				<span class="prelude-val">None</span>,
-				info.best_hash,
+				<span class="kw-2">&amp;</span>info,
 				make_notifications,
 			)<span class="question-mark">?</span>;
 		}
@@ -3053,52 +3057,56 @@
 	<span class="kw">fn </span>apply_finality_with_block_hash(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		operation: <span class="kw-2">&amp;mut </span>ClientImportOperation&lt;Block, B&gt;,
-		block: Block::Hash,
+		hash: Block::Hash,
 		justification: <span class="prelude-ty">Option</span>&lt;Justification&gt;,
-		best_block: Block::Hash,
+		info: <span class="kw-2">&amp;</span>BlockchainInfo&lt;Block&gt;,
 		notify: bool,
 	) -&gt; sp_blockchain::Result&lt;()&gt; {
-		<span class="comment">// find tree route from last finalized to given block.
-		</span><span class="kw">let </span>last_finalized = <span class="self">self</span>.backend.blockchain().last_finalized()<span class="question-mark">?</span>;
-
-		<span class="kw">if </span>block == last_finalized {
+		<span class="kw">if </span>hash == info.finalized_hash {
 			<span class="macro">warn!</span>(
 				<span class="string">&quot;Possible safety violation: attempted to re-finalize last finalized block {:?} &quot;</span>,
-				last_finalized
+				hash,
 			);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
 		}
 
-		<span class="kw">let </span>route_from_finalized =
-			sp_blockchain::tree_route(<span class="self">self</span>.backend.blockchain(), last_finalized, block)<span class="question-mark">?</span>;
+		<span class="comment">// Find tree route from last finalized to given block.
+		</span><span class="kw">let </span>route_from_finalized =
+			sp_blockchain::tree_route(<span class="self">self</span>.backend.blockchain(), info.finalized_hash, hash)<span class="question-mark">?</span>;
 
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(retracted) = route_from_finalized.retracted().get(<span class="number">0</span>) {
 			<span class="macro">warn!</span>(
 				<span class="string">&quot;Safety violation: attempted to revert finalized block {:?} which is not in the \
 				same chain as last finalized {:?}&quot;</span>,
-				retracted, last_finalized
+				retracted, info.finalized_hash
 			);
 
 			<span class="kw">return </span><span class="prelude-val">Err</span>(sp_blockchain::Error::NotInFinalizedChain)
 		}
 
-		<span class="comment">// If there is only one leaf, best block is guaranteed to be
-		// a descendant of the new finalized block. If not,
-		// we need to check.
-		</span><span class="kw">if </span><span class="self">self</span>.backend.blockchain().leaves()<span class="question-mark">?</span>.len() &gt; <span class="number">1 </span>{
+		<span class="comment">// We may need to coercively update the best block if there is more than one
+		// leaf or if the finalized block number is greater than last best number recorded
+		// by the backend. This last condition may apply in case of consensus implementations
+		// not always checking this condition.
+		</span><span class="kw">let </span>block_number = <span class="self">self
+			</span>.backend
+			.blockchain()
+			.number(hash)<span class="question-mark">?
+			</span>.ok_or(Error::MissingHeader(<span class="macro">format!</span>(<span class="string">&quot;{hash:?}&quot;</span>)))<span class="question-mark">?</span>;
+		<span class="kw">if </span><span class="self">self</span>.backend.blockchain().leaves()<span class="question-mark">?</span>.len() &gt; <span class="number">1 </span>|| info.best_number &lt; block_number {
 			<span class="kw">let </span>route_from_best =
-				sp_blockchain::tree_route(<span class="self">self</span>.backend.blockchain(), best_block, block)<span class="question-mark">?</span>;
+				sp_blockchain::tree_route(<span class="self">self</span>.backend.blockchain(), info.best_hash, hash)<span class="question-mark">?</span>;
 
-			<span class="comment">// if the block is not a direct ancestor of the current best chain,
+			<span class="comment">// If the block is not a direct ancestor of the current best chain,
 			// then some other block is the common ancestor.
-			</span><span class="kw">if </span>route_from_best.common_block().hash != block {
+			</span><span class="kw">if </span>route_from_best.common_block().hash != hash {
 				<span class="comment">// NOTE: we&#39;re setting the finalized block as best block, this might
 				// be slightly inaccurate since we might have a &quot;better&quot; block
 				// further along this chain, but since best chain selection logic is
 				// plugable we cannot make a better choice here. usages that need
 				// an accurate &quot;best&quot; block need to go through `SelectChain`
 				// instead.
-				</span>operation.op.mark_head(block)<span class="question-mark">?</span>;
+				</span>operation.op.mark_head(hash)<span class="question-mark">?</span>;
 			}
 		}
 
@@ -3108,8 +3116,8 @@
 			operation.op.mark_finalized(finalize_new.hash, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 		}
 
-		<span class="macro">assert_eq!</span>(enacted.last().map(|e| e.hash), <span class="prelude-val">Some</span>(block));
-		operation.op.mark_finalized(block, justification)<span class="question-mark">?</span>;
+		<span class="macro">assert_eq!</span>(enacted.last().map(|e| e.hash), <span class="prelude-val">Some</span>(hash));
+		operation.op.mark_finalized(hash, justification)<span class="question-mark">?</span>;
 
 		<span class="kw">if </span>notify {
 			<span class="kw">let </span>finalized =
@@ -3131,7 +3139,7 @@
 			<span class="kw">let </span>header = <span class="self">self
 				</span>.backend
 				.blockchain()
-				.header(block)<span class="question-mark">?
+				.header(hash)<span class="question-mark">?
 				</span>.expect(<span class="string">&quot;Block to finalize expected to be onchain; qed&quot;</span>);
 
 			operation.notify_finalized = <span class="prelude-val">Some</span>(FinalizeSummary { header, finalized, stale_heads });
@@ -3275,7 +3283,7 @@
 	}
 
 	<span class="doccomment">/// Get blockchain info.
-	</span><span class="kw">pub fn </span>chain_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; blockchain::Info&lt;Block&gt; {
+	</span><span class="kw">pub fn </span>chain_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BlockchainInfo&lt;Block&gt; {
 		<span class="self">self</span>.backend.blockchain().info()
 	}
 
@@ -4042,8 +4050,8 @@
 		justification: <span class="prelude-ty">Option</span>&lt;Justification&gt;,
 		notify: bool,
 	) -&gt; sp_blockchain::Result&lt;()&gt; {
-		<span class="kw">let </span>last_best = <span class="self">self</span>.backend.blockchain().info().best_hash;
-		<span class="self">self</span>.apply_finality_with_block_hash(operation, hash, justification, last_best, notify)
+		<span class="kw">let </span>info = <span class="self">self</span>.backend.blockchain().info();
+		<span class="self">self</span>.apply_finality_with_block_hash(operation, hash, justification, <span class="kw-2">&amp;</span>info, notify)
 	}
 
 	<span class="kw">fn </span>finalize_block(
