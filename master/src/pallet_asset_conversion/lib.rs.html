@@ -1410,13 +1410,13 @@
 			<span class="doccomment">/// The pool id of the pool that the liquidity was added to.
 			</span>pool_id: PoolIdOf&lt;T&gt;,
 			<span class="doccomment">/// The amount of the first asset that was added to the pool.
-			</span>amount1_provided: AssetBalanceOf&lt;T&gt;,
+			</span>amount1_provided: T::AssetBalance,
 			<span class="doccomment">/// The amount of the second asset that was added to the pool.
-			</span>amount2_provided: AssetBalanceOf&lt;T&gt;,
+			</span>amount2_provided: T::AssetBalance,
 			<span class="doccomment">/// The id of the lp token that was minted.
 			</span>lp_token: T::PoolAssetId,
 			<span class="doccomment">/// The amount of lp tokens that were minted of that id.
-			</span>lp_token_minted: AssetBalanceOf&lt;T&gt;,
+			</span>lp_token_minted: T::AssetBalance,
 		},
 
 		<span class="doccomment">/// A successful call of the `RemoveLiquidity` extrinsic will create this event.
@@ -1428,13 +1428,13 @@
 			<span class="doccomment">/// The pool id that the liquidity was removed from.
 			</span>pool_id: PoolIdOf&lt;T&gt;,
 			<span class="doccomment">/// The amount of the first asset that was removed from the pool.
-			</span>amount1: AssetBalanceOf&lt;T&gt;,
+			</span>amount1: T::AssetBalance,
 			<span class="doccomment">/// The amount of the second asset that was removed from the pool.
-			</span>amount2: AssetBalanceOf&lt;T&gt;,
+			</span>amount2: T::AssetBalance,
 			<span class="doccomment">/// The id of the lp token that was burned.
 			</span>lp_token: T::PoolAssetId,
 			<span class="doccomment">/// The amount of lp tokens that were burned of that id.
-			</span>lp_token_burned: AssetBalanceOf&lt;T&gt;,
+			</span>lp_token_burned: T::AssetBalance,
 			<span class="doccomment">/// Liquidity withdrawal fee (%).
 			</span>withdrawal_fee: Permill,
 		},
@@ -1449,9 +1449,9 @@
 			/// E.g. A -&gt; Dot -&gt; B
 			</span>path: BoundedVec&lt;T::MultiAssetId, T::MaxSwapPathLength&gt;,
 			<span class="doccomment">/// The amount of the first asset that was swapped.
-			</span>amount_in: AssetBalanceOf&lt;T&gt;,
+			</span>amount_in: T::AssetBalance,
 			<span class="doccomment">/// The amount of the second asset that was received.
-			</span>amount_out: AssetBalanceOf&lt;T&gt;,
+			</span>amount_out: T::AssetBalance,
 		},
 		<span class="doccomment">/// An amount has been transferred from one account to another.
 		</span>Transfer {
@@ -1462,7 +1462,7 @@
 			<span class="doccomment">/// The asset that was transferred.
 			</span>asset: T::MultiAssetId,
 			<span class="doccomment">/// The amount of the asset that was transferred.
-			</span>amount: AssetBalanceOf&lt;T&gt;,
+			</span>amount: T::AssetBalance,
 		},
 	}
 
@@ -1596,10 +1596,10 @@
 			origin: OriginFor&lt;T&gt;,
 			asset1: T::MultiAssetId,
 			asset2: T::MultiAssetId,
-			amount1_desired: AssetBalanceOf&lt;T&gt;,
-			amount2_desired: AssetBalanceOf&lt;T&gt;,
-			amount1_min: AssetBalanceOf&lt;T&gt;,
-			amount2_min: AssetBalanceOf&lt;T&gt;,
+			amount1_desired: T::AssetBalance,
+			amount2_desired: T::AssetBalance,
+			amount1_min: T::AssetBalance,
+			amount2_min: T::AssetBalance,
 			mint_to: T::AccountId,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>sender = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -1622,8 +1622,8 @@
 			<span class="kw">let </span>maybe_pool = Pools::&lt;T&gt;::get(pool_id.clone());
 			<span class="kw">let </span>pool = maybe_pool.as_ref().ok_or(Error::&lt;T&gt;::PoolNotFound)<span class="question-mark">?</span>;
 
-			<span class="kw">let </span>amount1: AssetBalanceOf&lt;T&gt;;
-			<span class="kw">let </span>amount2: AssetBalanceOf&lt;T&gt;;
+			<span class="kw">let </span>amount1: T::AssetBalance;
+			<span class="kw">let </span>amount2: T::AssetBalance;
 			<span class="kw">let </span>pool_account = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>pool_id);
 			<span class="kw">let </span>reserve1 = <span class="self">Self</span>::get_balance(<span class="kw-2">&amp;</span>pool_account, <span class="kw-2">&amp;</span>asset1)<span class="question-mark">?</span>;
 			<span class="kw">let </span>reserve2 = <span class="self">Self</span>::get_balance(<span class="kw-2">&amp;</span>pool_account, <span class="kw-2">&amp;</span>asset2)<span class="question-mark">?</span>;
@@ -1666,7 +1666,7 @@
 
 			<span class="kw">let </span>total_supply = T::PoolAssets::total_issuance(pool.lp_token.clone());
 
-			<span class="kw">let </span>lp_token_amount: AssetBalanceOf&lt;T&gt;;
+			<span class="kw">let </span>lp_token_amount: T::AssetBalance;
 			<span class="kw">if </span>total_supply.is_zero() {
 				lp_token_amount = <span class="self">Self</span>::calc_lp_amount_for_zero_supply(<span class="kw-2">&amp;</span>amount1, <span class="kw-2">&amp;</span>amount2)<span class="question-mark">?</span>;
 				T::PoolAssets::mint_into(
@@ -1709,9 +1709,9 @@
 			origin: OriginFor&lt;T&gt;,
 			asset1: T::MultiAssetId,
 			asset2: T::MultiAssetId,
-			lp_token_burn: AssetBalanceOf&lt;T&gt;,
-			amount1_min_receive: AssetBalanceOf&lt;T&gt;,
-			amount2_min_receive: AssetBalanceOf&lt;T&gt;,
+			lp_token_burn: T::AssetBalance,
+			amount1_min_receive: T::AssetBalance,
+			amount2_min_receive: T::AssetBalance,
 			withdraw_to: T::AccountId,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>sender = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -1787,8 +1787,8 @@
 		</span><span class="kw">pub fn </span>swap_exact_tokens_for_tokens(
 			origin: OriginFor&lt;T&gt;,
 			path: BoundedVec&lt;T::MultiAssetId, T::MaxSwapPathLength&gt;,
-			amount_in: AssetBalanceOf&lt;T&gt;,
-			amount_out_min: AssetBalanceOf&lt;T&gt;,
+			amount_in: T::AssetBalance,
+			amount_out_min: T::AssetBalance,
 			send_to: T::AccountId,
 			keep_alive: bool,
 		) -&gt; DispatchResult {
@@ -1828,8 +1828,8 @@
 		</span><span class="kw">pub fn </span>swap_tokens_for_exact_tokens(
 			origin: OriginFor&lt;T&gt;,
 			path: BoundedVec&lt;T::MultiAssetId, T::MaxSwapPathLength&gt;,
-			amount_out: AssetBalanceOf&lt;T&gt;,
-			amount_in_max: AssetBalanceOf&lt;T&gt;,
+			amount_out: T::AssetBalance,
+			amount_in_max: T::AssetBalance,
 			send_to: T::AccountId,
 			keep_alive: bool,
 		) -&gt; DispatchResult {
@@ -1864,7 +1864,7 @@
 			asset_id: <span class="kw-2">&amp;</span>T::MultiAssetId,
 			from: <span class="kw-2">&amp;</span>T::AccountId,
 			to: <span class="kw-2">&amp;</span>T::AccountId,
-			amount: AssetBalanceOf&lt;T&gt;,
+			amount: T::AssetBalance,
 			keep_alive: bool,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;T::AssetBalance, DispatchError&gt; {
 			<span class="self">Self</span>::deposit_event(Event::Transfer {
@@ -1906,7 +1906,7 @@
 
 		<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>do_swap(
 			sender: <span class="kw-2">&amp;</span>T::AccountId,
-			amounts: <span class="kw-2">&amp;</span>Vec&lt;AssetBalanceOf&lt;T&gt;&gt;,
+			amounts: <span class="kw-2">&amp;</span>Vec&lt;T::AssetBalance&gt;,
 			path: <span class="kw-2">&amp;</span>BoundedVec&lt;T::MultiAssetId, T::MaxSwapPathLength&gt;,
 			send_to: <span class="kw-2">&amp;</span>T::AccountId,
 			keep_alive: bool,
@@ -1996,7 +1996,7 @@
 		</span><span class="kw">pub fn </span>get_reserves(
 			asset1: <span class="kw-2">&amp;</span>T::MultiAssetId,
 			asset2: <span class="kw-2">&amp;</span>T::MultiAssetId,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;(AssetBalanceOf&lt;T&gt;, AssetBalanceOf&lt;T&gt;), Error&lt;T&gt;&gt; {
+		) -&gt; <span class="prelude-ty">Result</span>&lt;(T::AssetBalance, T::AssetBalance), Error&lt;T&gt;&gt; {
 			<span class="kw">let </span>pool_id = <span class="self">Self</span>::get_pool_id(asset1.clone(), asset2.clone());
 			<span class="kw">let </span>pool_account = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>pool_id);
 
@@ -2011,10 +2011,10 @@
 		}
 
 		<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_amounts_in(
-			amount_out: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
+			amount_out: <span class="kw-2">&amp;</span>T::AssetBalance,
 			path: <span class="kw-2">&amp;</span>BoundedVec&lt;T::MultiAssetId, T::MaxSwapPathLength&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;AssetBalanceOf&lt;T&gt;&gt;, DispatchError&gt; {
-			<span class="kw">let </span><span class="kw-2">mut </span>amounts: Vec&lt;AssetBalanceOf&lt;T&gt;&gt; = <span class="macro">vec!</span>[<span class="kw-2">*</span>amount_out];
+		) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;T::AssetBalance&gt;, DispatchError&gt; {
+			<span class="kw">let </span><span class="kw-2">mut </span>amounts: Vec&lt;T::AssetBalance&gt; = <span class="macro">vec!</span>[<span class="kw-2">*</span>amount_out];
 
 			<span class="kw">for </span>assets_pair <span class="kw">in </span>path.windows(<span class="number">2</span>).rev() {
 				<span class="kw">if let </span>[asset1, asset2] = assets_pair {
@@ -2030,10 +2030,10 @@
 		}
 
 		<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_amounts_out(
-			amount_in: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
+			amount_in: <span class="kw-2">&amp;</span>T::AssetBalance,
 			path: <span class="kw-2">&amp;</span>BoundedVec&lt;T::MultiAssetId, T::MaxSwapPathLength&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;AssetBalanceOf&lt;T&gt;&gt;, DispatchError&gt; {
-			<span class="kw">let </span><span class="kw-2">mut </span>amounts: Vec&lt;AssetBalanceOf&lt;T&gt;&gt; = <span class="macro">vec!</span>[<span class="kw-2">*</span>amount_in];
+		) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;T::AssetBalance&gt;, DispatchError&gt; {
+			<span class="kw">let </span><span class="kw-2">mut </span>amounts: Vec&lt;T::AssetBalance&gt; = <span class="macro">vec!</span>[<span class="kw-2">*</span>amount_in];
 
 			<span class="kw">for </span>assets_pair <span class="kw">in </span>path.windows(<span class="number">2</span>) {
 				<span class="kw">if let </span>[asset1, asset2] = assets_pair {
@@ -2051,9 +2051,9 @@
 		</span><span class="kw">pub fn </span>quote_price_exact_tokens_for_tokens(
 			asset1: T::MultiAssetId,
 			asset2: T::MultiAssetId,
-			amount: AssetBalanceOf&lt;T&gt;,
+			amount: T::AssetBalance,
 			include_fee: bool,
-		) -&gt; <span class="prelude-ty">Option</span>&lt;AssetBalanceOf&lt;T&gt;&gt; {
+		) -&gt; <span class="prelude-ty">Option</span>&lt;T::AssetBalance&gt; {
 			<span class="kw">let </span>pool_id = <span class="self">Self</span>::get_pool_id(asset1.clone(), asset2.clone());
 			<span class="kw">let </span>pool_account = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>pool_id);
 
@@ -2074,9 +2074,9 @@
 		</span><span class="kw">pub fn </span>quote_price_tokens_for_exact_tokens(
 			asset1: T::MultiAssetId,
 			asset2: T::MultiAssetId,
-			amount: AssetBalanceOf&lt;T&gt;,
+			amount: T::AssetBalance,
 			include_fee: bool,
-		) -&gt; <span class="prelude-ty">Option</span>&lt;AssetBalanceOf&lt;T&gt;&gt; {
+		) -&gt; <span class="prelude-ty">Option</span>&lt;T::AssetBalance&gt; {
 			<span class="kw">let </span>pool_id = <span class="self">Self</span>::get_pool_id(asset1.clone(), asset2.clone());
 			<span class="kw">let </span>pool_account = <span class="self">Self</span>::get_pool_account(<span class="kw-2">&amp;</span>pool_id);
 
@@ -2095,18 +2095,18 @@
 
 		<span class="doccomment">/// Calculates the optimal amount from the reserves.
 		</span><span class="kw">pub fn </span>quote(
-			amount: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			reserve1: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			reserve2: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;AssetBalanceOf&lt;T&gt;, Error&lt;T&gt;&gt; {
+			amount: <span class="kw-2">&amp;</span>T::AssetBalance,
+			reserve1: <span class="kw-2">&amp;</span>T::AssetBalance,
+			reserve2: <span class="kw-2">&amp;</span>T::AssetBalance,
+		) -&gt; <span class="prelude-ty">Result</span>&lt;T::AssetBalance, Error&lt;T&gt;&gt; {
 			<span class="comment">// amount * reserve2 / reserve1
 			</span><span class="self">Self</span>::mul_div(amount, reserve2, reserve1)
 		}
 
 		<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>calc_lp_amount_for_zero_supply(
-			amount1: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			amount2: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;AssetBalanceOf&lt;T&gt;, Error&lt;T&gt;&gt; {
+			amount1: <span class="kw-2">&amp;</span>T::AssetBalance,
+			amount2: <span class="kw-2">&amp;</span>T::AssetBalance,
+		) -&gt; <span class="prelude-ty">Result</span>&lt;T::AssetBalance, Error&lt;T&gt;&gt; {
 			<span class="kw">let </span>amount1 = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>amount1);
 			<span class="kw">let </span>amount2 = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>amount2);
 
@@ -2121,10 +2121,10 @@
 		}
 
 		<span class="kw">fn </span>mul_div(
-			a: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			b: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			c: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;AssetBalanceOf&lt;T&gt;, Error&lt;T&gt;&gt; {
+			a: <span class="kw-2">&amp;</span>T::AssetBalance,
+			b: <span class="kw-2">&amp;</span>T::AssetBalance,
+			c: <span class="kw-2">&amp;</span>T::AssetBalance,
+		) -&gt; <span class="prelude-ty">Result</span>&lt;T::AssetBalance, Error&lt;T&gt;&gt; {
 			<span class="kw">let </span>a = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>a);
 			<span class="kw">let </span>b = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>b);
 			<span class="kw">let </span>c = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>c);
@@ -2143,10 +2143,10 @@
 		/// Given an input amount of an asset and pair reserves, returns the maximum output amount
 		/// of the other asset
 		</span><span class="kw">pub fn </span>get_amount_out(
-			amount_in: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			reserve_in: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			reserve_out: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;AssetBalanceOf&lt;T&gt;, Error&lt;T&gt;&gt; {
+			amount_in: <span class="kw-2">&amp;</span>T::AssetBalance,
+			reserve_in: <span class="kw-2">&amp;</span>T::AssetBalance,
+			reserve_out: <span class="kw-2">&amp;</span>T::AssetBalance,
+		) -&gt; <span class="prelude-ty">Result</span>&lt;T::AssetBalance, Error&lt;T&gt;&gt; {
 			<span class="kw">let </span>amount_in = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>amount_in);
 			<span class="kw">let </span>reserve_in = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>reserve_in);
 			<span class="kw">let </span>reserve_out = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>reserve_out);
@@ -2178,10 +2178,10 @@
 		/// Given an output amount of an asset and pair reserves, returns a required input amount
 		/// of the other asset
 		</span><span class="kw">pub fn </span>get_amount_in(
-			amount_out: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			reserve_in: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-			reserve_out: <span class="kw-2">&amp;</span>AssetBalanceOf&lt;T&gt;,
-		) -&gt; <span class="prelude-ty">Result</span>&lt;AssetBalanceOf&lt;T&gt;, Error&lt;T&gt;&gt; {
+			amount_out: <span class="kw-2">&amp;</span>T::AssetBalance,
+			reserve_in: <span class="kw-2">&amp;</span>T::AssetBalance,
+			reserve_out: <span class="kw-2">&amp;</span>T::AssetBalance,
+		) -&gt; <span class="prelude-ty">Result</span>&lt;T::AssetBalance, Error&lt;T&gt;&gt; {
 			<span class="kw">let </span>amount_out = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>amount_out);
 			<span class="kw">let </span>reserve_in = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>reserve_in);
 			<span class="kw">let </span>reserve_out = T::HigherPrecisionBalance::from(<span class="kw-2">*</span>reserve_out);
