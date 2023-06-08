@@ -2328,6 +2328,11 @@
 <a href="#2328" id="2328">2328</a>
 <a href="#2329" id="2329">2329</a>
 <a href="#2330" id="2330">2330</a>
+<a href="#2331" id="2331">2331</a>
+<a href="#2332" id="2332">2332</a>
+<a href="#2333" id="2333">2333</a>
+<a href="#2334" id="2334">2334</a>
+<a href="#2335" id="2335">2335</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3262,19 +3267,7 @@
 	+ Hasher&lt;Out = &lt;<span class="self">Self </span><span class="kw">as </span>Hash&gt;::Output&gt;
 {
 	<span class="doccomment">/// The hash type produced.
-	</span><span class="kw">type </span>Output: Member
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ sp_std::hash::Hash
-		+ AsRef&lt;[u8]&gt;
-		+ AsMut&lt;[u8]&gt;
-		+ Copy
-		+ Default
-		+ Encode
-		+ Decode
-		+ EncodeLike
-		+ MaxEncodedLen
-		+ TypeInfo;
+	</span><span class="kw">type </span>Output: HashOutput;
 
 	<span class="doccomment">/// Produce the hash of some byte-slice.
 	</span><span class="kw">fn </span>hash(s: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self</span>::Output {
@@ -3291,6 +3284,47 @@
 
 	<span class="doccomment">/// The Patricia tree root of the given mapping.
 	</span><span class="kw">fn </span>trie_root(input: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;, state_version: StateVersion) -&gt; <span class="self">Self</span>::Output;
+}
+
+<span class="doccomment">/// Super trait with all the attributes for a hashing output.
+</span><span class="kw">pub trait </span>HashOutput:
+	Member
+	+ MaybeSerializeDeserialize
+	+ MaybeDisplay
+	+ MaybeFromStr
+	+ Debug
+	+ sp_std::hash::Hash
+	+ AsRef&lt;[u8]&gt;
+	+ AsMut&lt;[u8]&gt;
+	+ Copy
+	+ Ord
+	+ Default
+	+ Encode
+	+ Decode
+	+ EncodeLike
+	+ MaxEncodedLen
+	+ TypeInfo
+{
+}
+
+<span class="kw">impl</span>&lt;T&gt; HashOutput <span class="kw">for </span>T <span class="kw">where
+	</span>T: Member
+		+ MaybeSerializeDeserialize
+		+ MaybeDisplay
+		+ MaybeFromStr
+		+ Debug
+		+ sp_std::hash::Hash
+		+ AsRef&lt;[u8]&gt;
+		+ AsMut&lt;[u8]&gt;
+		+ Copy
+		+ Ord
+		+ Default
+		+ Encode
+		+ Decode
+		+ EncodeLike
+		+ MaxEncodedLen
+		+ TypeInfo
+{
 }
 
 <span class="doccomment">/// Blake2-256 Hash implementation.
@@ -3311,12 +3345,12 @@
 <span class="kw">impl </span>Hash <span class="kw">for </span>BlakeTwo256 {
 	<span class="kw">type </span>Output = sp_core::H256;
 
-	<span class="kw">fn </span>trie_root(input: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;, version: StateVersion) -&gt; <span class="self">Self</span>::Output {
-		sp_io::trie::blake2_256_root(input, version)
-	}
-
 	<span class="kw">fn </span>ordered_trie_root(input: Vec&lt;Vec&lt;u8&gt;&gt;, version: StateVersion) -&gt; <span class="self">Self</span>::Output {
 		sp_io::trie::blake2_256_ordered_root(input, version)
+	}
+
+	<span class="kw">fn </span>trie_root(input: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;, version: StateVersion) -&gt; <span class="self">Self</span>::Output {
+		sp_io::trie::blake2_256_root(input, version)
 	}
 }
 
@@ -3338,12 +3372,12 @@
 <span class="kw">impl </span>Hash <span class="kw">for </span>Keccak256 {
 	<span class="kw">type </span>Output = sp_core::H256;
 
-	<span class="kw">fn </span>trie_root(input: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;, version: StateVersion) -&gt; <span class="self">Self</span>::Output {
-		sp_io::trie::keccak_256_root(input, version)
-	}
-
 	<span class="kw">fn </span>ordered_trie_root(input: Vec&lt;Vec&lt;u8&gt;&gt;, version: StateVersion) -&gt; <span class="self">Self</span>::Output {
 		sp_io::trie::keccak_256_ordered_root(input, version)
+	}
+
+	<span class="kw">fn </span>trie_root(input: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;, version: StateVersion) -&gt; <span class="self">Self</span>::Output {
+		sp_io::trie::keccak_256_root(input, version)
 	}
 }
 
@@ -3432,27 +3466,15 @@
 	<span class="doccomment">/// Header number.
 	</span><span class="kw">type </span>Number: Member
 		+ MaybeSerializeDeserialize
+		+ MaybeFromStr
 		+ Debug
 		+ sp_std::hash::Hash
 		+ Copy
 		+ MaybeDisplay
 		+ AtLeast32BitUnsigned
-		+ Codec
-		+ sp_std::str::FromStr;
+		+ Codec;
 	<span class="doccomment">/// Header hash type
-	</span><span class="kw">type </span>Hash: Member
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ sp_std::hash::Hash
-		+ Ord
-		+ Copy
-		+ MaybeDisplay
-		+ Default
-		+ SimpleBitOps
-		+ Codec
-		+ AsRef&lt;[u8]&gt;
-		+ AsMut&lt;[u8]&gt;
-		+ TypeInfo;
+	</span><span class="kw">type </span>Hash: HashOutput;
 	<span class="doccomment">/// Hashing algorithm
 	</span><span class="kw">type </span>Hashing: Hash&lt;Output = <span class="self">Self</span>::Hash&gt;;
 
@@ -3506,19 +3528,7 @@
 	<span class="doccomment">/// Header type.
 	</span><span class="kw">type </span>Header: Header&lt;Hash = <span class="self">Self</span>::Hash&gt;;
 	<span class="doccomment">/// Block hash type.
-	</span><span class="kw">type </span>Hash: Member
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ sp_std::hash::Hash
-		+ Ord
-		+ Copy
-		+ MaybeDisplay
-		+ Default
-		+ SimpleBitOps
-		+ Codec
-		+ AsRef&lt;[u8]&gt;
-		+ AsMut&lt;[u8]&gt;
-		+ TypeInfo;
+	</span><span class="kw">type </span>Hash: HashOutput;
 
 	<span class="doccomment">/// Returns a reference to the header.
 	</span><span class="kw">fn </span>header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Header;
