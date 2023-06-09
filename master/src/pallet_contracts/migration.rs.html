@@ -589,18 +589,6 @@
 <a href="#589" id="589">589</a>
 <a href="#590" id="590">590</a>
 <a href="#591" id="591">591</a>
-<a href="#592" id="592">592</a>
-<a href="#593" id="593">593</a>
-<a href="#594" id="594">594</a>
-<a href="#595" id="595">595</a>
-<a href="#596" id="596">596</a>
-<a href="#597" id="597">597</a>
-<a href="#598" id="598">598</a>
-<a href="#599" id="599">599</a>
-<a href="#600" id="600">600</a>
-<a href="#601" id="601">601</a>
-<a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -620,21 +608,10 @@
 
 </span><span class="doccomment">//! Migration framework for pallets.
 
-/// Macro to include all migration modules.
-/// We only want to make these modules public when `runtime-benchmarks` is
-/// enabled, so we can access migration code in benchmarks.
-</span><span class="macro">macro_rules! </span>use_modules {
-    ($(<span class="macro-nonterminal">$module</span>:ident),<span class="kw-2">*</span>) =&gt; {
-        $(
-            <span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
-            </span><span class="kw">pub mod </span><span class="macro-nonterminal">$module</span>;
-            <span class="attr">#[cfg(not(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>))]
-            </span><span class="kw">mod </span><span class="macro-nonterminal">$module</span>;
-        )*
-    };
-}
+</span><span class="kw">pub mod </span>v10;
+<span class="kw">pub mod </span>v11;
+<span class="kw">pub mod </span>v9;
 
-<span class="macro">use_modules!</span>(v9, v10, v11);
 <span class="kw">use crate</span>::{weights::WeightInfo, Config, Error, MigrationInProgress, Pallet, Weight, LOG_TARGET};
 <span class="kw">use </span>codec::{Codec, Decode};
 <span class="kw">use </span>frame_support::{
@@ -660,10 +637,6 @@
 
 <span class="doccomment">/// The cursor used to store the state of the current migration step.
 </span><span class="kw">pub type </span>Cursor = BoundedVec&lt;u8, ConstU32&lt;<span class="number">1024</span>&gt;&gt;;
-
-<span class="comment">// In benchmark and tests we use noop migrations, to test and bench the migration framework itself.
-</span><span class="attr">#[cfg(not(any(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, test)))]
-</span><span class="kw">type </span>Migrations&lt;T&gt; = (v9::Migration&lt;T&gt;, v10::Migration&lt;T&gt;, v11::Migration&lt;T&gt;);
 
 <span class="doccomment">/// IsFinished describes whether a migration is finished or not.
 </span><span class="kw">pub enum </span>IsFinished {
@@ -809,23 +782,16 @@
 }
 
 <span class="doccomment">/// Performs all necessary migrations based on `StorageVersion`.
-</span><span class="attr">#[cfg(not(any(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, test)))]
-</span><span class="kw">pub struct </span>Migration&lt;T: Config, M: MigrateSequence = Migrations&lt;T&gt;&gt;(PhantomData&lt;(T, M)&gt;);
-
-<span class="doccomment">/// Custom migration for running runtime-benchmarks and tests.
-</span><span class="attr">#[cfg(any(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, test))]
-</span><span class="kw">pub struct </span>Migration&lt;T: Config, M: MigrateSequence = (NoopMigration&lt;<span class="number">1</span>&gt;, NoopMigration&lt;<span class="number">2</span>&gt;)&gt;(
-	PhantomData&lt;(T, M)&gt;,
-);
+</span><span class="kw">pub struct </span>Migration&lt;T: Config&gt;(PhantomData&lt;T&gt;);
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-</span><span class="kw">impl</span>&lt;T: Config, M: MigrateSequence&gt; Migration&lt;T, M&gt; {
+</span><span class="kw">impl</span>&lt;T: Config&gt; Migration&lt;T&gt; {
 	<span class="kw">fn </span>run_all_steps() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>weight = Weight::zero();
 		<span class="kw">let </span>name = &lt;Pallet&lt;T&gt;&gt;::name();
 		<span class="kw">loop </span>{
 			<span class="kw">let </span>in_progress_version = &lt;Pallet&lt;T&gt;&gt;::on_chain_storage_version() + <span class="number">1</span>;
-			<span class="kw">let </span>state = M::pre_upgrade_step(in_progress_version)<span class="question-mark">?</span>;
+			<span class="kw">let </span>state = T::Migrations::pre_upgrade_step(in_progress_version)<span class="question-mark">?</span>;
 			<span class="kw">let </span>(status, w) = <span class="self">Self</span>::migrate(Weight::MAX);
 			weight.saturating_accrue(w);
 			<span class="macro">log::info!</span>(
@@ -834,7 +800,7 @@
 				in_progress_version,
 				weight
 			);
-			M::post_upgrade_step(in_progress_version, state)<span class="question-mark">?</span>;
+			T::Migrations::post_upgrade_step(in_progress_version, state)<span class="question-mark">?</span>;
 			<span class="kw">if </span><span class="macro">matches!</span>(status, MigrateResult::Completed) {
 				<span class="kw">break
 			</span>}
@@ -846,7 +812,7 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config, M: MigrateSequence&gt; OnRuntimeUpgrade <span class="kw">for </span>Migration&lt;T, M&gt; {
+<span class="kw">impl</span>&lt;T: Config&gt; OnRuntimeUpgrade <span class="kw">for </span>Migration&lt;T&gt; {
 	<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight {
 		<span class="kw">let </span>name = &lt;Pallet&lt;T&gt;&gt;::name();
 		<span class="kw">let </span>latest_version = &lt;Pallet&lt;T&gt;&gt;::current_storage_version();
@@ -877,7 +843,7 @@
 			<span class="string">&quot;{name}: Upgrading storage from {storage_version:?} to {latest_version:?}.&quot;</span>,
 		);
 
-		<span class="kw">let </span>cursor = M::new(storage_version + <span class="number">1</span>);
+		<span class="kw">let </span>cursor = T::Migrations::new(storage_version + <span class="number">1</span>);
 		MigrationInProgress::&lt;T&gt;::set(<span class="prelude-val">Some</span>(cursor));
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
@@ -898,11 +864,14 @@
 			target: LOG_TARGET,
 			<span class="string">&quot;{}: Range supported {:?}, range requested {:?}&quot;</span>,
 			&lt;Pallet&lt;T&gt;&gt;::name(),
-			M::VERSION_RANGE,
+			T::Migrations::VERSION_RANGE,
 			(storage_version, target_version)
 		);
 
-		<span class="macro">ensure!</span>(M::is_upgrade_supported(storage_version, target_version), <span class="string">&quot;Unsupported upgrade&quot;</span>);
+		<span class="macro">ensure!</span>(
+			T::Migrations::is_upgrade_supported(storage_version, target_version),
+			<span class="string">&quot;Unsupported upgrade&quot;
+		</span>);
 		<span class="prelude-val">Ok</span>(Default::default())
 	}
 }
@@ -927,11 +896,11 @@
 	Completed { steps_done: u32 },
 }
 
-<span class="kw">impl</span>&lt;T: Config, M: MigrateSequence&gt; Migration&lt;T, M&gt; {
-	<span class="doccomment">/// Verify that each migration&#39;s step of the MigrateSequence fits into `Cursor`.
+<span class="kw">impl</span>&lt;T: Config&gt; Migration&lt;T&gt; {
+	<span class="doccomment">/// Verify that each migration&#39;s step of the [`T::Migrations`] sequence fits into `Cursor`.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>integrity_test() {
 		<span class="kw">let </span>max_weight = &lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get().max_block;
-		M::integrity_test(max_weight)
+		T::Migrations::integrity_test(max_weight)
 	}
 
 	<span class="doccomment">/// Migrate
@@ -960,33 +929,36 @@
 				in_progress_version,
 			);
 
-			<span class="kw">let </span>result =
-				<span class="kw">match </span>M::steps(in_progress_version, cursor_before.as_ref(), <span class="kw-2">&amp;mut </span>weight_left) {
-					StepResult::InProgress { cursor, steps_done } =&gt; {
-						<span class="kw-2">*</span>progress = <span class="prelude-val">Some</span>(cursor);
+			<span class="kw">let </span>result = <span class="kw">match </span>T::Migrations::steps(
+				in_progress_version,
+				cursor_before.as_ref(),
+				<span class="kw-2">&amp;mut </span>weight_left,
+			) {
+				StepResult::InProgress { cursor, steps_done } =&gt; {
+					<span class="kw-2">*</span>progress = <span class="prelude-val">Some</span>(cursor);
+					MigrateResult::InProgress { steps_done }
+				},
+				StepResult::Completed { steps_done } =&gt; {
+					in_progress_version.put::&lt;Pallet&lt;T&gt;&gt;();
+					<span class="kw">if </span>&lt;Pallet&lt;T&gt;&gt;::current_storage_version() != in_progress_version {
+						<span class="macro">log::info!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;{name}: Next migration is {:?},&quot;</span>,
+							in_progress_version + <span class="number">1
+						</span>);
+						<span class="kw-2">*</span>progress = <span class="prelude-val">Some</span>(T::Migrations::new(in_progress_version + <span class="number">1</span>));
 						MigrateResult::InProgress { steps_done }
-					},
-					StepResult::Completed { steps_done } =&gt; {
-						in_progress_version.put::&lt;Pallet&lt;T&gt;&gt;();
-						<span class="kw">if </span>&lt;Pallet&lt;T&gt;&gt;::current_storage_version() != in_progress_version {
-							<span class="macro">log::info!</span>(
-								target: LOG_TARGET,
-								<span class="string">&quot;{name}: Next migration is {:?},&quot;</span>,
-								in_progress_version + <span class="number">1
-							</span>);
-							<span class="kw-2">*</span>progress = <span class="prelude-val">Some</span>(M::new(in_progress_version + <span class="number">1</span>));
-							MigrateResult::InProgress { steps_done }
-						} <span class="kw">else </span>{
-							<span class="macro">log::info!</span>(
-								target: LOG_TARGET,
-								<span class="string">&quot;{name}: All migrations done. At version {:?},&quot;</span>,
-								in_progress_version
-							);
-							<span class="kw-2">*</span>progress = <span class="prelude-val">None</span>;
-							MigrateResult::Completed
-						}
-					},
-				};
+					} <span class="kw">else </span>{
+						<span class="macro">log::info!</span>(
+							target: LOG_TARGET,
+							<span class="string">&quot;{name}: All migrations done. At version {:?},&quot;</span>,
+							in_progress_version
+						);
+						<span class="kw-2">*</span>progress = <span class="prelude-val">None</span>;
+						MigrateResult::Completed
+					}
+				},
+			};
 
 			(result, weight_limit.saturating_sub(weight_left))
 		})
@@ -1130,11 +1102,14 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>is_upgrade_supported_works() {
-		<span class="kw">type </span>M = (MockMigration&lt;<span class="number">9</span>&gt;, MockMigration&lt;<span class="number">10</span>&gt;, MockMigration&lt;<span class="number">11</span>&gt;);
+		<span class="kw">type </span>Migrations = (MockMigration&lt;<span class="number">9</span>&gt;, MockMigration&lt;<span class="number">10</span>&gt;, MockMigration&lt;<span class="number">11</span>&gt;);
 
 		[(<span class="number">1</span>, <span class="number">1</span>), (<span class="number">8</span>, <span class="number">11</span>), (<span class="number">9</span>, <span class="number">11</span>)].into_iter().for_each(|(from, to)| {
 			<span class="macro">assert!</span>(
-				M::is_upgrade_supported(StorageVersion::new(from), StorageVersion::new(to)),
+				Migrations::is_upgrade_supported(
+					StorageVersion::new(from),
+					StorageVersion::new(to)
+				),
 				<span class="string">&quot;{} -&gt; {} is supported&quot;</span>,
 				from,
 				to
@@ -1143,7 +1118,10 @@
 
 		[(<span class="number">1</span>, <span class="number">0</span>), (<span class="number">0</span>, <span class="number">3</span>), (<span class="number">7</span>, <span class="number">11</span>), (<span class="number">8</span>, <span class="number">10</span>)].into_iter().for_each(|(from, to)| {
 			<span class="macro">assert!</span>(
-				!M::is_upgrade_supported(StorageVersion::new(from), StorageVersion::new(to)),
+				!Migrations::is_upgrade_supported(
+					StorageVersion::new(from),
+					StorageVersion::new(to)
+				),
 				<span class="string">&quot;{} -&gt; {} is not supported&quot;</span>,
 				from,
 				to
@@ -1153,27 +1131,26 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>steps_works() {
-		<span class="kw">type </span>M = (MockMigration&lt;<span class="number">2</span>&gt;, MockMigration&lt;<span class="number">3</span>&gt;);
+		<span class="kw">type </span>Migrations = (MockMigration&lt;<span class="number">2</span>&gt;, MockMigration&lt;<span class="number">3</span>&gt;);
 		<span class="kw">let </span>version = StorageVersion::new(<span class="number">2</span>);
-		<span class="kw">let </span><span class="kw-2">mut </span>cursor = M::new(version);
+		<span class="kw">let </span><span class="kw-2">mut </span>cursor = Migrations::new(version);
 
 		<span class="kw">let </span><span class="kw-2">mut </span>weight = Weight::from_all(<span class="number">2</span>);
-		<span class="kw">let </span>result = M::steps(version, <span class="kw-2">&amp;</span>cursor, <span class="kw-2">&amp;mut </span>weight);
+		<span class="kw">let </span>result = Migrations::steps(version, <span class="kw-2">&amp;</span>cursor, <span class="kw-2">&amp;mut </span>weight);
 		cursor = <span class="macro">vec!</span>[<span class="number">1u8</span>, <span class="number">0</span>].try_into().unwrap();
 		<span class="macro">assert_eq!</span>(result, StepResult::InProgress { cursor: cursor.clone(), steps_done: <span class="number">1 </span>});
 		<span class="macro">assert_eq!</span>(weight, Weight::from_all(<span class="number">1</span>));
 
 		<span class="kw">let </span><span class="kw-2">mut </span>weight = Weight::from_all(<span class="number">2</span>);
 		<span class="macro">assert_eq!</span>(
-			M::steps(version, <span class="kw-2">&amp;</span>cursor, <span class="kw-2">&amp;mut </span>weight),
+			Migrations::steps(version, <span class="kw-2">&amp;</span>cursor, <span class="kw-2">&amp;mut </span>weight),
 			StepResult::Completed { steps_done: <span class="number">1 </span>}
 		);
 	}
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>no_migration_in_progress_works() {
-		<span class="kw">type </span>M = (MockMigration&lt;<span class="number">1</span>&gt;, MockMigration&lt;<span class="number">2</span>&gt;);
-		<span class="kw">type </span>TestMigration = Migration&lt;Test, M&gt;;
+		<span class="kw">type </span>TestMigration = Migration&lt;Test&gt;;
 
 		ExtBuilder::default().build().execute_with(|| {
 			<span class="macro">assert_eq!</span>(StorageVersion::get::&lt;Pallet&lt;Test&gt;&gt;(), <span class="number">2</span>);
@@ -1183,8 +1160,7 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>migration_works() {
-		<span class="kw">type </span>M = (MockMigration&lt;<span class="number">1</span>&gt;, MockMigration&lt;<span class="number">2</span>&gt;);
-		<span class="kw">type </span>TestMigration = Migration&lt;Test, M&gt;;
+		<span class="kw">type </span>TestMigration = Migration&lt;Test&gt;;
 
 		ExtBuilder::default().set_storage_version(<span class="number">0</span>).build().execute_with(|| {
 			<span class="macro">assert_eq!</span>(StorageVersion::get::&lt;Pallet&lt;Test&gt;&gt;(), <span class="number">0</span>);
