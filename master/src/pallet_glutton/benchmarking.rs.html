@@ -96,6 +96,7 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -123,6 +124,7 @@
 <span class="kw">use </span>frame_benchmarking::benchmarks;
 <span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, weights::constants::<span class="kw-2">*</span>};
 <span class="kw">use </span>frame_system::RawOrigin <span class="kw">as </span>SystemOrigin;
+<span class="kw">use </span>sp_runtime::{traits::One, Perbill};
 
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>Glutton;
 <span class="kw">use </span>frame_system::Pallet <span class="kw">as </span>System;
@@ -165,8 +167,8 @@
 	<span class="comment">// For manual verification only.
 	</span>on_idle_high_proof_waste {
 		(<span class="number">0</span>..<span class="number">5000</span>).for_each(|i| TrashData::&lt;T&gt;::insert(i, [i <span class="kw">as </span>u8; <span class="number">1024</span>]));
-		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_compute(SystemOrigin::Root.into(), Perbill::from_percent(<span class="number">100</span>));
-		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_storage(SystemOrigin::Root.into(), Perbill::from_percent(<span class="number">100</span>));
+		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_compute(SystemOrigin::Root.into(), One::one());
+		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_storage(SystemOrigin::Root.into(), One::one());
 	}: {
 		<span class="kw">let </span>weight = Glutton::&lt;T&gt;::on_idle(System::&lt;T&gt;::block_number(), Weight::from_parts(WEIGHT_REF_TIME_PER_MILLIS * <span class="number">100</span>, WEIGHT_PROOF_SIZE_PER_MB * <span class="number">5</span>));
 	}
@@ -174,8 +176,8 @@
 	<span class="comment">// For manual verification only.
 	</span>on_idle_low_proof_waste {
 		(<span class="number">0</span>..<span class="number">5000</span>).for_each(|i| TrashData::&lt;T&gt;::insert(i, [i <span class="kw">as </span>u8; <span class="number">1024</span>]));
-		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_compute(SystemOrigin::Root.into(), Perbill::from_percent(<span class="number">100</span>));
-		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_storage(SystemOrigin::Root.into(), Perbill::from_percent(<span class="number">100</span>));
+		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_compute(SystemOrigin::Root.into(), One::one());
+		<span class="kw">let _ </span>= Glutton::&lt;T&gt;::set_storage(SystemOrigin::Root.into(), One::one());
 	}: {
 		<span class="kw">let </span>weight = Glutton::&lt;T&gt;::on_idle(System::&lt;T&gt;::block_number(), Weight::from_parts(WEIGHT_REF_TIME_PER_MILLIS * <span class="number">100</span>, WEIGHT_PROOF_SIZE_PER_KB * <span class="number">20</span>));
 	}
@@ -187,10 +189,10 @@
 	}
 
 	set_compute {
-	}: <span class="kw">_</span>(SystemOrigin::Root, Perbill::from_percent(<span class="number">50</span>))
+	}: <span class="kw">_</span>(SystemOrigin::Root, FixedU64::from_perbill(Perbill::from_percent(<span class="number">50</span>)))
 
 	set_storage {
-	}: <span class="kw">_</span>(SystemOrigin::Root, Perbill::from_percent(<span class="number">50</span>))
+	}: <span class="kw">_</span>(SystemOrigin::Root, FixedU64::from_perbill(Perbill::from_percent(<span class="number">50</span>)))
 
 	<span class="macro">impl_benchmark_test_suite!</span>(Glutton, <span class="kw">crate</span>::mock::new_test_ext(), <span class="kw">crate</span>::mock::Test);
 }

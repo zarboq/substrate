@@ -66,12 +66,12 @@ var sourcesIndex = JSON.parse('{\
 "pallet_conviction_voting":["",[],["benchmarking.rs","conviction.rs","lib.rs","types.rs","vote.rs","weights.rs"]],\
 "pallet_core_fellowship":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_default_config_example":["",[],["lib.rs"]],\
-"pallet_democracy":["",[],["benchmarking.rs","conviction.rs","lib.rs","migrations.rs","types.rs","vote.rs","vote_threshold.rs","weights.rs"]],\
+"pallet_democracy":["",[["migrations",[],["mod.rs","unlock_and_unreserve_all_funds.rs","v1.rs"]]],["benchmarking.rs","conviction.rs","lib.rs","types.rs","vote.rs","vote_threshold.rs","weights.rs"]],\
 "pallet_dev_mode":["",[],["lib.rs"]],\
 "pallet_election_provider_e2e_test":["",[],["lib.rs"]],\
 "pallet_election_provider_multi_phase":["",[],["benchmarking.rs","helpers.rs","lib.rs","migrations.rs","signed.rs","unsigned.rs","weights.rs"]],\
 "pallet_election_provider_support_benchmarking":["",[],["lib.rs"]],\
-"pallet_elections_phragmen":["",[["migrations",[],["mod.rs","v3.rs","v4.rs","v5.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
+"pallet_elections_phragmen":["",[["migrations",[],["mod.rs","unlock_and_unreserve_all_funds.rs","v3.rs","v4.rs","v5.rs"]]],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_basic":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_kitchensink":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_example_offchain_worker":["",[],["lib.rs"]],\

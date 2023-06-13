@@ -357,6 +357,13 @@
 <a href="#357" id="357">357</a>
 <a href="#358" id="358">358</a>
 <a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -374,7 +381,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="doccomment">//! # Glutton Pallet
+</span><span class="doccomment">//! # WARNING
+//!
+//! **DO NOT USE ON VALUE-BEARING CHAINS. THIS PALLET IS ONLY INTENDED FOR TESTING USAGE.**
+//!
+//! # Glutton Pallet
 //!
 //! Pallet that consumes `ref_time` and `proof_size` of a block. Based on the
 //! `Compute` and `Storage` parameters the pallet consumes the adequate amount
@@ -391,10 +402,10 @@
 <span class="kw">pub mod </span>weights;
 
 <span class="kw">use </span>blake2::{Blake2b512, Digest};
-<span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, weights::WeightMeter};
+<span class="kw">use </span>frame_support::{pallet_prelude::<span class="kw-2">*</span>, weights::WeightMeter, DefaultNoBound};
 <span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>sp_io::hashing::twox_256;
-<span class="kw">use </span>sp_runtime::{traits::Zero, Perbill};
+<span class="kw">use </span>sp_runtime::{traits::Zero, FixedPointNumber, FixedU64};
 <span class="kw">use </span>sp_std::{vec, vec::Vec};
 
 <span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
@@ -402,8 +413,10 @@
 
 <span class="doccomment">/// The size of each value in the `TrashData` storage in bytes.
 </span><span class="kw">pub const </span>VALUE_SIZE: usize = <span class="number">1024</span>;
-<span class="doccomment">/// Max number of entries for `TrashData` storage item
+<span class="doccomment">/// Max number of entries for the `TrashData` map.
 </span><span class="kw">pub const </span>MAX_TRASH_DATA_ENTRIES: u32 = <span class="number">65_000</span>;
+<span class="doccomment">/// Hard limit for any other resource limit (in units).
+</span><span class="kw">pub const </span>RESOURCE_HARD_LIMIT: FixedU64 = FixedU64::from_u32(<span class="number">10</span>);
 
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
@@ -411,7 +424,8 @@
 
 	<span class="attr">#[pallet::config]
 	</span><span class="kw">pub trait </span>Config: frame_system::Config {
-		<span class="kw">type </span>RuntimeEvent: From&lt;Event&gt; + IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
+		<span class="doccomment">/// The overarching event type.
+		</span><span class="kw">type </span>RuntimeEvent: From&lt;Event&gt; + IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
 
 		<span class="doccomment">/// The admin origin that can set computational limits and initialize the pallet.
 		</span><span class="kw">type </span>AdminOrigin: EnsureOrigin&lt;<span class="self">Self</span>::RuntimeOrigin&gt;;
@@ -429,9 +443,9 @@
 		<span class="doccomment">/// The pallet has been (re)initialized.
 		</span>PalletInitialized { reinit: bool },
 		<span class="doccomment">/// The computation limit has been updated.
-		</span>ComputationLimitSet { compute: Perbill },
+		</span>ComputationLimitSet { compute: FixedU64 },
 		<span class="doccomment">/// The storage limit has been updated.
-		</span>StorageLimitSet { storage: Perbill },
+		</span>StorageLimitSet { storage: FixedU64 },
 	}
 
 	<span class="attr">#[pallet::error]
@@ -440,17 +454,24 @@
 		///
 		/// Set `witness_count` to `Some` to bypass this error.
 		</span>AlreadyInitialized,
+
+		<span class="doccomment">/// The limit was over [`crate::RESOURCE_HARD_LIMIT`].
+		</span>InsaneLimit,
 	}
 
-	<span class="doccomment">/// Storage value used to specify what percentage of the left over `ref_time`
-	/// to consume during `on_idle`.
+	<span class="doccomment">/// The proportion of the remaining `ref_time` to consume during `on_idle`.
+	///
+	/// `1.0` is mapped to `100%`. Must be at most [`crate::RESOURCE_HARD_LIMIT`]. Setting this to
+	/// over `1.0` could stall the chain.
 	</span><span class="attr">#[pallet::storage]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Compute&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, Perbill, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Compute&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, FixedU64, ValueQuery&gt;;
 
-	<span class="doccomment">/// Storage value used the specify what percentage of left over `proof_size`
-	/// to consume during `on_idle`.
+	<span class="doccomment">/// The proportion of the remaining `proof_size` to consume during `on_idle`.
+	///
+	/// `1.0` is mapped to `100%`. Must be at most [`crate::RESOURCE_HARD_LIMIT`]. Setting this to
+	/// over `1.0` could stall the chain.
 	</span><span class="attr">#[pallet::storage]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Storage&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, Perbill, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Storage&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, FixedU64, ValueQuery&gt;;
 
 	<span class="doccomment">/// Storage map used for wasting proof size.
 	///
@@ -474,20 +495,11 @@
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>TrashDataCount&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, u32, ValueQuery&gt;;
 
 	<span class="attr">#[pallet::genesis_config]
+	#[derive(DefaultNoBound)]
 	</span><span class="kw">pub struct </span>GenesisConfig {
-		<span class="kw">pub </span>compute: Perbill,
-		<span class="kw">pub </span>storage: Perbill,
+		<span class="kw">pub </span>compute: FixedU64,
+		<span class="kw">pub </span>storage: FixedU64,
 		<span class="kw">pub </span>trash_data_count: u32,
-	}
-
-	<span class="kw">impl </span>Default <span class="kw">for </span>GenesisConfig {
-		<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-			<span class="self">Self </span>{
-				compute: Default::default(),
-				storage: Default::default(),
-				trash_data_count: Default::default(),
-			}
-		}
 	}
 
 	<span class="attr">#[pallet::genesis_build]
@@ -504,7 +516,10 @@
 
 			TrashDataCount::&lt;T&gt;::set(<span class="self">self</span>.trash_data_count);
 
+			<span class="macro">assert!</span>(<span class="self">self</span>.compute &lt;= RESOURCE_HARD_LIMIT, <span class="string">&quot;Compute limit is insane&quot;</span>);
 			&lt;Compute&lt;T&gt;&gt;::put(<span class="self">self</span>.compute);
+
+			<span class="macro">assert!</span>(<span class="self">self</span>.storage &lt;= RESOURCE_HARD_LIMIT, <span class="string">&quot;Storage limit is insane&quot;</span>);
 			&lt;Storage&lt;T&gt;&gt;::put(<span class="self">self</span>.storage);
 		}
 	}
@@ -528,9 +543,10 @@
 				<span class="kw">return </span>T::WeightInfo::empty_on_idle()
 			}
 
-			<span class="kw">let </span>proof_size_limit = Storage::&lt;T&gt;::get().mul_floor(meter.remaining().proof_size());
+			<span class="kw">let </span>proof_size_limit =
+				Storage::&lt;T&gt;::get().saturating_mul_int(meter.remaining().proof_size());
 			<span class="kw">let </span>computation_weight_limit =
-				Compute::&lt;T&gt;::get().mul_floor(meter.remaining().ref_time());
+				Compute::&lt;T&gt;::get().saturating_mul_int(meter.remaining().ref_time());
 			<span class="kw">let </span><span class="kw-2">mut </span>meter = WeightMeter::from_limit(Weight::from_parts(
 				computation_weight_limit,
 				proof_size_limit,
@@ -543,15 +559,14 @@
 		}
 	}
 
-	<span class="attr">#[pallet::call]
+	<span class="attr">#[pallet::call(weight = T::WeightInfo)]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
-		<span class="doccomment">/// Initializes the pallet by writing into `TrashData`.
+		<span class="doccomment">/// Initialize the pallet. Should be called once, if no genesis state was provided.
 		///
 		/// `current_count` is the current number of elements in `TrashData`. This can be set to
 		/// `None` when the pallet is first initialized.
 		///
-		/// Only callable by Root or `AdminOrigin`. A good default for `new_count` is
-		/// `5_000`.
+		/// Only callable by Root or `AdminOrigin`. A good default for `new_count` is `5_000`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
 		#[pallet::weight(
 			T::WeightInfo::initialize_pallet_grow(witness_count.unwrap_or_default())
@@ -586,10 +601,10 @@
 		///
 		/// Only callable by Root or `AdminOrigin`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">1</span>)]
-		#[pallet::weight(T::WeightInfo::set_compute())]
-		</span><span class="kw">pub fn </span>set_compute(origin: OriginFor&lt;T&gt;, compute: Perbill) -&gt; DispatchResult {
+		</span><span class="kw">pub fn </span>set_compute(origin: OriginFor&lt;T&gt;, compute: FixedU64) -&gt; DispatchResult {
 			T::AdminOrigin::try_origin(origin).map(|<span class="kw">_</span>| ()).or_else(|o| ensure_root(o))<span class="question-mark">?</span>;
 
+			<span class="macro">ensure!</span>(compute &lt;= RESOURCE_HARD_LIMIT, Error::&lt;T&gt;::InsaneLimit);
 			Compute::&lt;T&gt;::set(compute);
 
 			<span class="self">Self</span>::deposit_event(Event::ComputationLimitSet { compute });
@@ -598,17 +613,16 @@
 
 		<span class="doccomment">/// Set how much of the remaining `proof_size` weight should be consumed by `on_idle`.
 		</span><span class="comment">//
-		</span><span class="doccomment">/// 100% means that all remaining `proof_size` will be consumed. The PoV benchmarking
+		</span><span class="doccomment">/// `1.0` means that all remaining `proof_size` will be consumed. The PoV benchmarking
 		/// results that are used here are likely an over-estimation. 100% intended consumption will
-		/// therefore translate to less than 100% actual consumption. In the future, this could be
-		/// counter-acted by allowing the glutton to specify over-unity consumption ratios.
+		/// therefore translate to less than 100% actual consumption.
 		///
 		/// Only callable by Root or `AdminOrigin`.
 		</span><span class="attr">#[pallet::call_index(<span class="number">2</span>)]
-		#[pallet::weight(T::WeightInfo::set_storage())]
-		</span><span class="kw">pub fn </span>set_storage(origin: OriginFor&lt;T&gt;, storage: Perbill) -&gt; DispatchResult {
+		</span><span class="kw">pub fn </span>set_storage(origin: OriginFor&lt;T&gt;, storage: FixedU64) -&gt; DispatchResult {
 			T::AdminOrigin::try_origin(origin).map(|<span class="kw">_</span>| ()).or_else(|o| ensure_root(o))<span class="question-mark">?</span>;
 
+			<span class="macro">ensure!</span>(storage &lt;= RESOURCE_HARD_LIMIT, Error::&lt;T&gt;::InsaneLimit);
 			Storage::&lt;T&gt;::set(storage);
 
 			<span class="self">Self</span>::deposit_event(Event::StorageLimitSet { storage });

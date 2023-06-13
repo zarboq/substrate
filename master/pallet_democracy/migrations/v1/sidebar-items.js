@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Migration"]};
+window.SIDEBAR_ITEMS = {"mod":["v1"]};
