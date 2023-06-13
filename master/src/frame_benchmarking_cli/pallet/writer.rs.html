@@ -1344,6 +1344,17 @@
 <a href="#1344" id="1344">1344</a>
 <a href="#1345" id="1345">1345</a>
 <a href="#1346" id="1346">1346</a>
+<a href="#1347" id="1347">1347</a>
+<a href="#1348" id="1348">1348</a>
+<a href="#1349" id="1349">1349</a>
+<a href="#1350" id="1350">1350</a>
+<a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
+<a href="#1355" id="1355">1355</a>
+<a href="#1356" id="1356">1356</a>
+<a href="#1357" id="1357">1357</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1721,7 +1732,7 @@
 	}
 }
 
-<span class="comment">// Create weight file from benchmark data and Handlebars template.
+<span class="doccomment">/// Create weight file from benchmark data and Handlebars template.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>write_results(
 	batches: <span class="kw-2">&amp;</span>[BenchmarkBatchSplitResults],
 	storage_info: <span class="kw-2">&amp;</span>[StorageInfo],
@@ -1730,7 +1741,7 @@
 	default_pov_mode: PovEstimationMode,
 	path: <span class="kw-2">&amp;</span>PathBuf,
 	cmd: <span class="kw-2">&amp;</span>PalletCmd,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), std::io::Error&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), sc_cli::Error&gt; {
 	<span class="comment">// Use custom template if provided.
 	</span><span class="kw">let </span>template: String = <span class="kw">match </span><span class="kw-2">&amp;</span>cmd.template {
 		<span class="prelude-val">Some</span>(template_file) =&gt; fs::read_to_string(template_file)<span class="question-mark">?</span>,
@@ -1838,10 +1849,21 @@
 		created_files.push(file_path);
 	}
 
-	<span class="kw">for </span>file <span class="kw">in </span>created_files.iter().duplicates() {
-		<span class="comment">// This can happen when there are multiple instances of a pallet deployed
-		// and `--output` forces the output of all instances into the same file.
-		</span><span class="macro">println!</span>(<span class="string">&quot;Multiple benchmarks were written to the same file: {:?}.&quot;</span>, file);
+	<span class="kw">let </span>overwritten_files = created_files.iter().duplicates().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+	<span class="kw">if </span>!overwritten_files.is_empty() {
+		<span class="kw">let </span>msg = <span class="macro">format!</span>(
+			<span class="string">&quot;Multiple results were written to the same file. This can happen when \
+		there are multiple instances of a pallet deployed and `--output` forces the output of all \
+		instances into the same file. Use `--unsafe-overwrite-results` to ignore this error. The \
+		affected files are: {:?}&quot;</span>,
+			overwritten_files
+		);
+
+		<span class="kw">if </span>cmd.unsafe_overwrite_results {
+			<span class="macro">println!</span>(<span class="string">&quot;{msg}&quot;</span>);
+		} <span class="kw">else </span>{
+			<span class="kw">return </span><span class="prelude-val">Err</span>(msg.into())
+		}
 	}
 	<span class="prelude-val">Ok</span>(())
 }
