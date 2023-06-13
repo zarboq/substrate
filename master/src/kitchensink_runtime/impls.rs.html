@@ -449,6 +449,44 @@
 <a href="#449" id="449">449</a>
 <a href="#450" id="450">450</a>
 <a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -468,11 +506,7 @@
 
 </span><span class="doccomment">//! Some configurable implementations as associated type for the substrate runtime.
 
-</span><span class="kw">use crate</span>::{
-	AccountId, AllianceMotion, Assets, Authorship, Balances, Hash, NegativeImbalance, Runtime,
-	RuntimeCall,
-};
-<span class="kw">use </span>frame_support::{
+</span><span class="kw">use </span>frame_support::{
 	pallet_prelude::<span class="kw-2">*</span>,
 	traits::{
 		fungibles::{Balanced, Credit},
@@ -482,6 +516,11 @@
 <span class="kw">use </span>pallet_alliance::{IdentityVerifier, ProposalIndex, ProposalProvider};
 <span class="kw">use </span>pallet_asset_tx_payment::HandleCredit;
 <span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">use crate</span>::{
+	AccountId, AllianceMotion, Assets, Authorship, Balances, Hash, NegativeImbalance, Runtime,
+	RuntimeCall,
+};
 
 <span class="kw">pub struct </span>Author;
 <span class="kw">impl </span>OnUnbalanced&lt;NegativeImbalance&gt; <span class="kw">for </span>Author {
@@ -562,6 +601,10 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>multiplier_tests {
+	<span class="kw">use </span>frame_support::{
+		dispatch::DispatchClass,
+		weights::{Weight, WeightToFee},
+	};
 	<span class="kw">use </span>pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 	<span class="kw">use </span>sp_runtime::{
 		assert_eq_error_rate,
@@ -573,10 +616,6 @@
 		constants::{currency::<span class="kw-2">*</span>, time::<span class="kw-2">*</span>},
 		AdjustmentVariable, MaximumMultiplier, MinimumMultiplier, Runtime,
 		RuntimeBlockWeights <span class="kw">as </span>BlockWeights, System, TargetBlockFullness, TransactionPayment,
-	};
-	<span class="kw">use </span>frame_support::{
-		dispatch::DispatchClass,
-		weights::{Weight, WeightToFee},
 	};
 
 	<span class="kw">fn </span>max_normal() -&gt; Weight {
@@ -612,14 +651,28 @@
 		<span class="comment">// bump if it is zero.
 		</span><span class="kw">let </span>previous_float = previous_float.max(min_multiplier().into_inner() <span class="kw">as </span>f64 / accuracy);
 
+		<span class="kw">let </span>max_normal = max_normal();
+		<span class="kw">let </span>target_weight = target();
+		<span class="kw">let </span>normalized_weight_dimensions = (
+			block_weight.ref_time() <span class="kw">as </span>f64 / max_normal.ref_time() <span class="kw">as </span>f64,
+			block_weight.proof_size() <span class="kw">as </span>f64 / max_normal.proof_size() <span class="kw">as </span>f64,
+		);
+
+		<span class="kw">let </span>(normal, max, target) =
+			<span class="kw">if </span>normalized_weight_dimensions.<span class="number">0 </span>&lt; normalized_weight_dimensions.<span class="number">1 </span>{
+				(block_weight.proof_size(), max_normal.proof_size(), target_weight.proof_size())
+			} <span class="kw">else </span>{
+				(block_weight.ref_time(), max_normal.ref_time(), target_weight.ref_time())
+			};
+
 		<span class="comment">// maximum tx weight
-		</span><span class="kw">let </span>m = max_normal().ref_time() <span class="kw">as </span>f64;
+		</span><span class="kw">let </span>m = max <span class="kw">as </span>f64;
 		<span class="comment">// block weight always truncated to max weight
-		</span><span class="kw">let </span>block_weight = (block_weight.ref_time() <span class="kw">as </span>f64).min(m);
+		</span><span class="kw">let </span>block_weight = (normal <span class="kw">as </span>f64).min(m);
 		<span class="kw">let </span>v: f64 = AdjustmentVariable::get().to_float();
 
 		<span class="comment">// Ideal saturation in terms of weight
-		</span><span class="kw">let </span>ss = target().ref_time() <span class="kw">as </span>f64;
+		</span><span class="kw">let </span>ss = target <span class="kw">as </span>f64;
 		<span class="comment">// Current saturation in terms of weight
 		</span><span class="kw">let </span>s = block_weight;
 
@@ -669,10 +722,16 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>multiplier_can_grow_from_zero() {
 		<span class="comment">// if the min is too small, then this will not change, and we are doomed forever.
-		// the weight is 1/100th bigger than target.
+		// the block ref time is 1/100th bigger than target.
 		</span>run_with_system_weight(target().set_ref_time(target().ref_time() * <span class="number">101 </span>/ <span class="number">100</span>), || {
 			<span class="kw">let </span>next = runtime_multiplier_update(min_multiplier());
-			<span class="macro">assert!</span>(next &gt; min_multiplier(), <span class="string">&quot;{:?} !&gt;= {:?}&quot;</span>, next, min_multiplier());
+			<span class="macro">assert!</span>(next &gt; min_multiplier(), <span class="string">&quot;{:?} !&gt; {:?}&quot;</span>, next, min_multiplier());
+		});
+
+		<span class="comment">// the block proof size is 1/100th bigger than target.
+		</span>run_with_system_weight(target().set_proof_size((target().proof_size() / <span class="number">100</span>) * <span class="number">101</span>), || {
+			<span class="kw">let </span>next = runtime_multiplier_update(min_multiplier());
+			<span class="macro">assert!</span>(next &gt; min_multiplier(), <span class="string">&quot;{:?} !&gt; {:?}&quot;</span>, next, min_multiplier());
 		})
 	}
 
@@ -858,23 +917,33 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>weight_to_fee_should_not_overflow_on_large_weights() {
-		<span class="kw">let </span>kb = Weight::from_parts(<span class="number">1024</span>, <span class="number">0</span>);
-		<span class="kw">let </span>mb = <span class="number">1024u64 </span>* kb;
+		<span class="kw">let </span>kb_time = Weight::from_parts(<span class="number">1024</span>, <span class="number">0</span>);
+		<span class="kw">let </span>kb_size = Weight::from_parts(<span class="number">0</span>, <span class="number">1024</span>);
+		<span class="kw">let </span>mb_time = <span class="number">1024u64 </span>* kb_time;
 		<span class="kw">let </span>max_fm = Multiplier::saturating_from_integer(i128::MAX);
 
 		<span class="comment">// check that for all values it can compute, correctly.
 		</span><span class="macro">vec!</span>[
 			Weight::zero(),
-			Weight::from_parts(<span class="number">1</span>, <span class="number">0</span>),
+			<span class="comment">// testcases ignoring proof size part of the weight.
+			</span>Weight::from_parts(<span class="number">1</span>, <span class="number">0</span>),
 			Weight::from_parts(<span class="number">10</span>, <span class="number">0</span>),
 			Weight::from_parts(<span class="number">1000</span>, <span class="number">0</span>),
-			kb,
-			<span class="number">10u64 </span>* kb,
-			<span class="number">100u64 </span>* kb,
-			mb,
-			<span class="number">10u64 </span>* mb,
+			kb_time,
+			<span class="number">10u64 </span>* kb_time,
+			<span class="number">100u64 </span>* kb_time,
+			mb_time,
+			<span class="number">10u64 </span>* mb_time,
 			Weight::from_parts(<span class="number">2147483647</span>, <span class="number">0</span>),
 			Weight::from_parts(<span class="number">4294967295</span>, <span class="number">0</span>),
+			<span class="comment">// testcases ignoring ref time part of the weight.
+			</span>Weight::from_parts(<span class="number">0</span>, <span class="number">100000000000</span>),
+			<span class="number">1000000u64 </span>* kb_size,
+			<span class="number">1000000000u64 </span>* kb_size,
+			Weight::from_parts(<span class="number">0</span>, <span class="number">18014398509481983</span>),
+			Weight::from_parts(<span class="number">0</span>, <span class="number">9223372036854775807</span>),
+			<span class="comment">// test cases with both parts of the weight.
+			</span>BlockWeights::get().max_block / <span class="number">1024</span>,
 			BlockWeights::get().max_block / <span class="number">2</span>,
 			BlockWeights::get().max_block,
 			Weight::MAX / <span class="number">2</span>,
@@ -891,7 +960,14 @@
 
 		<span class="comment">// Some values that are all above the target and will cause an increase.
 		</span><span class="kw">let </span>t = target();
-		<span class="macro">vec!</span>[t + Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>), t * <span class="number">2</span>, t * <span class="number">4</span>].into_iter().for_each(|i| {
+		<span class="macro">vec!</span>[
+			t + Weight::from_parts(<span class="number">100</span>, <span class="number">0</span>),
+			t + Weight::from_parts(<span class="number">0</span>, t.proof_size() * <span class="number">2</span>),
+			t * <span class="number">2</span>,
+			t * <span class="number">4</span>,
+		]
+		.into_iter()
+		.for_each(|i| {
 			run_with_system_weight(i, || {
 				<span class="kw">let </span>fm = runtime_multiplier_update(max_fm);
 				<span class="comment">// won&#39;t grow. The convert saturates everything.
