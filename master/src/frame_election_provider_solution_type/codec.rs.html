@@ -293,14 +293,14 @@
 		<span class="macro">quote! </span>{
 			<span class="kw">let </span>#name =
 			&lt;
-				_feps::sp_std::prelude::Vec&lt;(_feps::codec::Compact&lt;#voter_type&gt;, _feps::codec::Compact&lt;#target_type&gt;)&gt;
+				_fepsp::sp_std::prelude::Vec&lt;(_fepsp::codec::Compact&lt;#voter_type&gt;, _fepsp::codec::Compact&lt;#target_type&gt;)&gt;
 				<span class="kw">as
-				</span>_feps::codec::Decode
+				</span>_fepsp::codec::Decode
 			&gt;::decode(value)<span class="question-mark">?</span>;
 			<span class="kw">let </span>#name = #name
 				.into_iter()
 				.map(|(v, t)| (v.<span class="number">0</span>, t.<span class="number">0</span>))
-				.collect::&lt;_feps::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
+				.collect::&lt;_fepsp::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		}
 	};
 
@@ -315,12 +315,12 @@
 			<span class="macro">quote! </span>{
 				<span class="kw">let </span>#name =
 				&lt;
-					_feps::sp_std::prelude::Vec&lt;(
-						_feps::codec::Compact&lt;#voter_type&gt;,
-						[(_feps::codec::Compact&lt;#target_type&gt;, _feps::codec::Compact&lt;#weight_type&gt;); #c-<span class="number">1</span>],
-						_feps::codec::Compact&lt;#target_type&gt;,
+					_fepsp::sp_std::prelude::Vec&lt;(
+						_fepsp::codec::Compact&lt;#voter_type&gt;,
+						[(_fepsp::codec::Compact&lt;#target_type&gt;, _fepsp::codec::Compact&lt;#weight_type&gt;); #c-<span class="number">1</span>],
+						_fepsp::codec::Compact&lt;#target_type&gt;,
 					)&gt;
-					<span class="kw">as </span>_feps::codec::Decode
+					<span class="kw">as </span>_fepsp::codec::Decode
 				&gt;::decode(value)<span class="question-mark">?</span>;
 				<span class="kw">let </span>#name = #name
 					.into_iter()
@@ -329,7 +329,7 @@
 						[ #inner_impl ],
 						t_last.<span class="number">0</span>,
 					))
-					.collect::&lt;_feps::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
+					.collect::&lt;_fepsp::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
 			}
 		})
 		.collect::&lt;TokenStream2&gt;();
@@ -342,8 +342,8 @@
 		.collect::&lt;TokenStream2&gt;();
 
 	<span class="macro">quote!</span>(
-		<span class="kw">impl </span>_feps::codec::Decode <span class="kw">for </span>#ident {
-			<span class="kw">fn </span>decode&lt;I: _feps::codec::Input&gt;(value: <span class="kw-2">&amp;mut </span>I) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, _feps::codec::Error&gt; {
+		<span class="kw">impl </span>_fepsp::codec::Decode <span class="kw">for </span>#ident {
+			<span class="kw">fn </span>decode&lt;I: _fepsp::codec::Input&gt;(value: <span class="kw-2">&amp;mut </span>I) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, _fepsp::codec::Error&gt; {
 				#decode_impl_single
 				#decode_impl_rest
 
@@ -365,10 +365,10 @@
 			<span class="kw">let </span>#name = <span class="self">self</span>.#name
 				.iter()
 				.map(|(v, t)| (
-					_feps::codec::Compact(v.clone()),
-					_feps::codec::Compact(t.clone()),
+					_fepsp::codec::Compact(v.clone()),
+					_fepsp::codec::Compact(t.clone()),
 				))
-				.collect::&lt;_feps::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
+				.collect::&lt;_fepsp::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
 			#name.encode_to(<span class="kw-2">&amp;mut </span>r);
 		}
 	};
@@ -381,8 +381,8 @@
 			</span><span class="kw">let </span>inners_solution_array = (<span class="number">0</span>..c - <span class="number">1</span>)
 				.map(|i| {
 					<span class="macro">quote! </span>{(
-						_feps::codec::Compact(inner[#i].<span class="number">0</span>.clone()),
-						_feps::codec::Compact(inner[#i].<span class="number">1</span>.clone()),
+						_fepsp::codec::Compact(inner[#i].<span class="number">0</span>.clone()),
+						_fepsp::codec::Compact(inner[#i].<span class="number">1</span>.clone()),
 					),}
 				})
 				.collect::&lt;TokenStream2&gt;();
@@ -391,19 +391,19 @@
 				<span class="kw">let </span>#name = <span class="self">self</span>.#name
 					.iter()
 					.map(|(v, inner, t_last)| (
-						_feps::codec::Compact(v.clone()),
+						_fepsp::codec::Compact(v.clone()),
 						[ #inners_solution_array ],
-						_feps::codec::Compact(t_last.clone()),
+						_fepsp::codec::Compact(t_last.clone()),
 					))
-					.collect::&lt;_feps::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
+					.collect::&lt;_fepsp::sp_std::prelude::Vec&lt;<span class="kw">_</span>&gt;&gt;();
 				#name.encode_to(<span class="kw-2">&amp;mut </span>r);
 			}
 		})
 		.collect::&lt;TokenStream2&gt;();
 
 	<span class="macro">quote!</span>(
-		<span class="kw">impl </span>_feps::codec::Encode <span class="kw">for </span>#ident {
-			<span class="kw">fn </span>encode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; _feps::sp_std::prelude::Vec&lt;u8&gt; {
+		<span class="kw">impl </span>_fepsp::codec::Encode <span class="kw">for </span>#ident {
+			<span class="kw">fn </span>encode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; _fepsp::sp_std::prelude::Vec&lt;u8&gt; {
 				<span class="kw">let </span><span class="kw-2">mut </span>r = <span class="macro">vec!</span>[];
 				#encode_impl_single
 				#encode_impl_rest
@@ -424,8 +424,8 @@
 		<span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, vote_field(<span class="number">1</span>));
 		<span class="macro">quote! </span>{
 			.field(|f|
-				f.ty::&lt;_feps::sp_std::prelude::Vec&lt;
-				   (_feps::codec::Compact&lt;#voter_type&gt;, _feps::codec::Compact&lt;#target_type&gt;)
+				f.ty::&lt;_fepsp::sp_std::prelude::Vec&lt;
+				   (_fepsp::codec::Compact&lt;#voter_type&gt;, _fepsp::codec::Compact&lt;#target_type&gt;)
 				&gt;&gt;()
 				.name(#name)
 			)
@@ -436,10 +436,10 @@
 		<span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, vote_field(<span class="number">2</span>));
 		<span class="macro">quote! </span>{
 			.field(|f|
-				f.ty::&lt;_feps::sp_std::prelude::Vec&lt;(
-					_feps::codec::Compact&lt;#voter_type&gt;,
-					(_feps::codec::Compact&lt;#target_type&gt;, _feps::codec::Compact&lt;#weight_type&gt;),
-					_feps::codec::Compact&lt;#target_type&gt;
+				f.ty::&lt;_fepsp::sp_std::prelude::Vec&lt;(
+					_fepsp::codec::Compact&lt;#voter_type&gt;,
+					(_fepsp::codec::Compact&lt;#target_type&gt;, _fepsp::codec::Compact&lt;#weight_type&gt;),
+					_fepsp::codec::Compact&lt;#target_type&gt;
 				)&gt;&gt;()
 				.name(#name)
 			)
@@ -451,13 +451,13 @@
 			<span class="kw">let </span>name = <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, vote_field(c));
 			<span class="macro">quote! </span>{
 				.field(|f|
-					f.ty::&lt;_feps::sp_std::prelude::Vec&lt;(
-						_feps::codec::Compact&lt;#voter_type&gt;,
+					f.ty::&lt;_fepsp::sp_std::prelude::Vec&lt;(
+						_fepsp::codec::Compact&lt;#voter_type&gt;,
 						[
-							(_feps::codec::Compact&lt;#target_type&gt;, _feps::codec::Compact&lt;#weight_type&gt;);
+							(_fepsp::codec::Compact&lt;#target_type&gt;, _fepsp::codec::Compact&lt;#weight_type&gt;);
 							#c - <span class="number">1
 						</span>],
-						_feps::codec::Compact&lt;#target_type&gt;
+						_fepsp::codec::Compact&lt;#target_type&gt;
 					)&gt;&gt;()
 					.name(#name)
 				)
@@ -466,14 +466,14 @@
 		.collect::&lt;TokenStream2&gt;();
 
 	<span class="macro">quote!</span>(
-		 <span class="kw">impl </span>_feps::scale_info::TypeInfo <span class="kw">for </span>#ident {
+		 <span class="kw">impl </span>_fepsp::scale_info::TypeInfo <span class="kw">for </span>#ident {
 			 <span class="kw">type </span>Identity = <span class="self">Self</span>;
 
-			 <span class="kw">fn </span>type_info() -&gt; _feps::scale_info::Type&lt;_feps::scale_info::form::MetaForm&gt; {
-				 _feps::scale_info::Type::builder()
-					 .path(_feps::scale_info::Path::new(<span class="macro">stringify!</span>(#ident), <span class="macro">module_path!</span>()))
+			 <span class="kw">fn </span>type_info() -&gt; _fepsp::scale_info::Type&lt;_fepsp::scale_info::form::MetaForm&gt; {
+				 _fepsp::scale_info::Type::builder()
+					 .path(_fepsp::scale_info::Path::new(<span class="macro">stringify!</span>(#ident), <span class="macro">module_path!</span>()))
 					 .composite(
-						 _feps::scale_info::build::Fields::named()
+						 _fepsp::scale_info::build::Fields::named()
 						 #scale_info_impl_single
 						 #scale_info_impl_double
 						 #scale_info_impl_rest

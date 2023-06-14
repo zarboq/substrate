@@ -431,7 +431,7 @@
 		<span class="kw">let </span>name = vote_field(<span class="number">1</span>);
 		<span class="comment">// NOTE: we use the visibility of the struct for the fields as well.. could be made better.
 		</span><span class="macro">quote!</span>(
-			#vis #name: _feps::sp_std::prelude::Vec&lt;(#voter_type, #target_type)&gt;,
+			#vis #name: _fepsp::sp_std::prelude::Vec&lt;(#voter_type, #target_type)&gt;,
 		)
 	};
 
@@ -440,7 +440,7 @@
 			<span class="kw">let </span>field_name = vote_field(c);
 			<span class="kw">let </span>array_len = c - <span class="number">1</span>;
 			<span class="macro">quote!</span>(
-				#vis #field_name: _feps::sp_std::prelude::Vec&lt;(
+				#vis #field_name: _fepsp::sp_std::prelude::Vec&lt;(
 					#voter_type,
 					[(#target_type, #weight_type); #array_len],
 					#target_type
@@ -475,9 +475,9 @@
 			Eq,
 			Clone,
 			Debug,
-			_feps::codec::Encode,
-			_feps::codec::Decode,
-			_feps::scale_info::TypeInfo,
+			_fepsp::codec::Encode,
+			_fepsp::codec::Decode,
+			_fepsp::scale_info::TypeInfo,
 		)]</span>)
 	};
 
@@ -493,7 +493,7 @@
 		</span>#derives_and_maybe_compact_encoding
 		#vis <span class="kw">struct </span>#ident { #single #rest }
 
-		<span class="kw">use </span>_feps::__OrInvalidIndex;
+		<span class="kw">use </span>_fepsp::__OrInvalidIndex;
 		<span class="kw">impl </span>_feps::NposSolution <span class="kw">for </span>#ident {
 			<span class="kw">const </span>LIMIT: usize = #count;
 			<span class="kw">type </span>VoterIndex = #voter_type;
@@ -538,8 +538,8 @@
 				<span class="self">self</span>,
 				voter_at: <span class="kw">impl </span>Fn(<span class="self">Self</span>::VoterIndex) -&gt; <span class="prelude-ty">Option</span>&lt;A&gt;,
 				target_at: <span class="kw">impl </span>Fn(<span class="self">Self</span>::TargetIndex) -&gt; <span class="prelude-ty">Option</span>&lt;A&gt;,
-			) -&gt; <span class="prelude-ty">Result</span>&lt;_feps::sp_std::prelude::Vec&lt;_feps::Assignment&lt;A, #weight_type&gt;&gt;, _feps::Error&gt; {
-				<span class="kw">let </span><span class="kw-2">mut </span>#assignment_name: _feps::sp_std::prelude::Vec&lt;_feps::Assignment&lt;A, #weight_type&gt;&gt; = Default::default();
+			) -&gt; <span class="prelude-ty">Result</span>&lt;_fepsp::sp_std::prelude::Vec&lt;_feps::Assignment&lt;A, #weight_type&gt;&gt;, _feps::Error&gt; {
+				<span class="kw">let </span><span class="kw-2">mut </span>#assignment_name: _fepsp::sp_std::prelude::Vec&lt;_feps::Assignment&lt;A, #weight_type&gt;&gt; = Default::default();
 				#into_impl
 				<span class="prelude-val">Ok</span>(#assignment_name)
 			}
@@ -556,10 +556,10 @@
 				all_edges
 			}
 
-			<span class="kw">fn </span>unique_targets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; _feps::sp_std::prelude::Vec&lt;<span class="self">Self</span>::TargetIndex&gt; {
+			<span class="kw">fn </span>unique_targets(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; _fepsp::sp_std::prelude::Vec&lt;<span class="self">Self</span>::TargetIndex&gt; {
 				<span class="comment">// NOTE: this implementation returns the targets sorted, but we don&#39;t use it yet per
 				// se, nor is the API enforcing it.
-				</span><span class="kw">use </span>_feps::sp_std::collections::btree_set::BTreeSet;
+				</span><span class="kw">use </span>_fepsp::sp_std::collections::btree_set::BTreeSet;
 				<span class="kw">let </span><span class="kw-2">mut </span>all_targets: BTreeSet&lt;<span class="self">Self</span>::TargetIndex&gt; = BTreeSet::new();
 				<span class="kw">let </span><span class="kw-2">mut </span>maybe_insert_target = |t: <span class="self">Self</span>::TargetIndex| {
 					all_targets.insert(t);
@@ -576,10 +576,10 @@
 			&lt;#ident <span class="kw">as </span>_feps::NposSolution&gt;::TargetIndex,
 			&lt;#ident <span class="kw">as </span>_feps::NposSolution&gt;::Accuracy,
 		&gt;;
-		<span class="kw">impl </span>_feps::codec::MaxEncodedLen <span class="kw">for </span>#ident {
+		<span class="kw">impl </span>_fepsp::codec::MaxEncodedLen <span class="kw">for </span>#ident {
 			<span class="kw">fn </span>max_encoded_len() -&gt; usize {
 				<span class="kw">use </span>frame_support::traits::Get;
-				<span class="kw">use </span>_feps::codec::Encode;
+				<span class="kw">use </span>_fepsp::codec::Encode;
 				<span class="kw">let </span>s: u32 = #max_voters::get();
 				<span class="kw">let </span>max_element_size =
 					<span class="comment">// the first voter..
@@ -593,11 +593,11 @@
 				<span class="comment">// The assumption is that it contains #count-1 empty elements
 				// and then last element with full size
 				</span>#count
-					.saturating_mul(_feps::codec::Compact(<span class="number">0u32</span>).encoded_size())
+					.saturating_mul(_fepsp::codec::Compact(<span class="number">0u32</span>).encoded_size())
 					.saturating_add((s <span class="kw">as </span>usize).saturating_mul(max_element_size))
 			}
 		}
-		<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; _feps::sp_std::convert::TryFrom&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[__IndexAssignment]&gt; <span class="kw">for </span>#ident {
+		<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; _fepsp::sp_std::convert::TryFrom&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[__IndexAssignment]&gt; <span class="kw">for </span>#ident {
 			<span class="kw">type </span>Error = _feps::Error;
 			<span class="kw">fn </span>try_from(index_assignments: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[__IndexAssignment]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
 				<span class="kw">let </span><span class="kw-2">mut </span>#struct_name =  #ident::default();
@@ -748,18 +748,18 @@
 					<span class="kw">let </span><span class="kw-2">mut </span>inners_parsed = inners
 						.iter()
 						.map(|(<span class="kw-2">ref </span>t_idx, p)| {
-							sum = _feps::sp_arithmetic::traits::Saturating::saturating_add(sum, <span class="kw-2">*</span>p);
+							sum = _fepsp::sp_arithmetic::traits::Saturating::saturating_add(sum, <span class="kw-2">*</span>p);
 							<span class="kw">let </span>target = target_at(<span class="kw-2">*</span>t_idx).or_invalid_index()<span class="question-mark">?</span>;
 							<span class="prelude-val">Ok</span>((target, <span class="kw-2">*</span>p))
 						})
-						.collect::&lt;<span class="prelude-ty">Result</span>&lt;_feps::sp_std::prelude::Vec&lt;(A, #per_thing)&gt;, _feps::Error&gt;&gt;()<span class="question-mark">?</span>;
+						.collect::&lt;<span class="prelude-ty">Result</span>&lt;_fepsp::sp_std::prelude::Vec&lt;(A, #per_thing)&gt;, _feps::Error&gt;&gt;()<span class="question-mark">?</span>;
 
 					<span class="kw">if </span>sum &gt;= #per_thing::one() {
 						<span class="kw">return </span><span class="prelude-val">Err</span>(_feps::Error::SolutionWeightOverflow);
 					}
 
 					<span class="comment">// defensive only. Since Percent doesn&#39;t have `Sub`.
-					</span><span class="kw">let </span>p_last = _feps::sp_arithmetic::traits::Saturating::saturating_sub(
+					</span><span class="kw">let </span>p_last = _fepsp::sp_arithmetic::traits::Saturating::saturating_sub(
 						#per_thing::one(),
 						sum,
 					);

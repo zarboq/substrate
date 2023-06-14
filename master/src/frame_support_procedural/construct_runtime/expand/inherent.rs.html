@@ -221,6 +221,7 @@
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -281,22 +282,22 @@
 
 		<span class="kw">trait </span>InherentDataExt {
 			<span class="kw">fn </span>create_extrinsics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt;
-				#scrate::inherent::Vec&lt;&lt;#block <span class="kw">as </span>#scrate::inherent::BlockT&gt;::Extrinsic&gt;;
+				#scrate::sp_std::vec::Vec&lt;&lt;#block <span class="kw">as </span>#scrate::sp_runtime::traits::Block&gt;::Extrinsic&gt;;
 			<span class="kw">fn </span>check_extrinsics(<span class="kw-2">&amp;</span><span class="self">self</span>, block: <span class="kw-2">&amp;</span>#block) -&gt; #scrate::inherent::CheckInherentsResult;
 		}
 
 		<span class="kw">impl </span>InherentDataExt <span class="kw">for </span>#scrate::inherent::InherentData {
 			<span class="kw">fn </span>create_extrinsics(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt;
-				#scrate::inherent::Vec&lt;&lt;#block <span class="kw">as </span>#scrate::inherent::BlockT&gt;::Extrinsic&gt;
+				#scrate::sp_std::vec::Vec&lt;&lt;#block <span class="kw">as </span>#scrate::sp_runtime::traits::Block&gt;::Extrinsic&gt;
 			{
 				<span class="kw">use </span>#scrate::inherent::ProvideInherent;
 
-				<span class="kw">let </span><span class="kw-2">mut </span>inherents = Vec::new();
+				<span class="kw">let </span><span class="kw-2">mut </span>inherents = #scrate::sp_std::vec::Vec::new();
 
 				#(
 					#pallet_attrs
 					<span class="kw">if let </span><span class="prelude-val">Some</span>(inherent) = #pallet_names::create_inherent(<span class="self">self</span>) {
-						<span class="kw">let </span>inherent = &lt;#unchecked_extrinsic <span class="kw">as </span>#scrate::inherent::Extrinsic&gt;::new(
+						<span class="kw">let </span>inherent = &lt;#unchecked_extrinsic <span class="kw">as </span>#scrate::sp_runtime::traits::Extrinsic&gt;::new(
 							inherent.into(),
 							<span class="prelude-val">None</span>,
 						).expect(<span class="string">&quot;Runtime UncheckedExtrinsic is not Opaque, so it has to return \
@@ -319,7 +320,7 @@
 				<span class="kw">for </span>xt <span class="kw">in </span>block.extrinsics() {
 					<span class="comment">// Inherents are before any other extrinsics.
 					// And signed extrinsics are not inherents.
-					</span><span class="kw">if </span>#scrate::inherent::Extrinsic::is_signed(xt).unwrap_or(<span class="bool-val">false</span>) {
+					</span><span class="kw">if </span>#scrate::sp_runtime::traits::Extrinsic::is_signed(xt).unwrap_or(<span class="bool-val">false</span>) {
 						<span class="kw">break
 					</span>}
 
@@ -357,7 +358,7 @@
 					<span class="kw">match </span>#pallet_names::is_inherent_required(<span class="self">self</span>) {
 						<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(e)) =&gt; {
 							<span class="kw">let </span>found = block.extrinsics().iter().any(|xt| {
-								<span class="kw">let </span>is_signed = #scrate::inherent::Extrinsic::is_signed(xt)
+								<span class="kw">let </span>is_signed = #scrate::sp_runtime::traits::Extrinsic::is_signed(xt)
 									.unwrap_or(<span class="bool-val">false</span>);
 
 								<span class="kw">if </span>!is_signed {
@@ -409,7 +410,8 @@
 				<span class="kw">let </span><span class="kw-2">mut </span>first_signed_observed = <span class="bool-val">false</span>;
 
 				<span class="kw">for </span>(i, xt) <span class="kw">in </span>block.extrinsics().iter().enumerate() {
-					<span class="kw">let </span>is_signed = #scrate::inherent::Extrinsic::is_signed(xt).unwrap_or(<span class="bool-val">false</span>);
+					<span class="kw">let </span>is_signed = #scrate::sp_runtime::traits::Extrinsic::is_signed(xt)
+						.unwrap_or(<span class="bool-val">false</span>);
 
 					<span class="kw">let </span>is_inherent = <span class="kw">if </span>is_signed {
 						<span class="comment">// Signed extrinsics are not inherents.
