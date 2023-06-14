@@ -696,10 +696,10 @@
 		<span class="kw">let </span>asset_id = default_asset_id::&lt;T, I&gt;();
 		<span class="kw">let </span>origin = T::CreateOrigin::try_successful_origin(<span class="kw-2">&amp;</span>asset_id.into())
 			.map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
-		<span class="kw">let </span>caller = T::CreateOrigin::ensure_origin(origin, <span class="kw-2">&amp;</span>asset_id.into()).unwrap();
+		<span class="kw">let </span>caller = T::CreateOrigin::ensure_origin(origin.clone(), <span class="kw-2">&amp;</span>asset_id.into()).unwrap();
 		<span class="kw">let </span>caller_lookup = T::Lookup::unlookup(caller.clone());
 		T::Currency::make_free_balance_be(<span class="kw-2">&amp;</span>caller, DepositBalanceOf::&lt;T, I&gt;::max_value());
-	}: <span class="kw">_</span>(SystemOrigin::Signed(caller.clone()), asset_id.clone(), caller_lookup, <span class="number">1u32</span>.into())
+	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(origin, asset_id.clone(), caller_lookup, <span class="number">1u32</span>.into())
 	verify {
 		assert_last_event::&lt;T, I&gt;(Event::Created { asset_id: asset_id.into(), creator: caller.clone(), owner: caller }.into());
 	}
