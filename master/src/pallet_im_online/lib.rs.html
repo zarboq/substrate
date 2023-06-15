@@ -867,99 +867,6 @@
 <a href="#867" id="867">867</a>
 <a href="#868" id="868">868</a>
 <a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
-<a href="#877" id="877">877</a>
-<a href="#878" id="878">878</a>
-<a href="#879" id="879">879</a>
-<a href="#880" id="880">880</a>
-<a href="#881" id="881">881</a>
-<a href="#882" id="882">882</a>
-<a href="#883" id="883">883</a>
-<a href="#884" id="884">884</a>
-<a href="#885" id="885">885</a>
-<a href="#886" id="886">886</a>
-<a href="#887" id="887">887</a>
-<a href="#888" id="888">888</a>
-<a href="#889" id="889">889</a>
-<a href="#890" id="890">890</a>
-<a href="#891" id="891">891</a>
-<a href="#892" id="892">892</a>
-<a href="#893" id="893">893</a>
-<a href="#894" id="894">894</a>
-<a href="#895" id="895">895</a>
-<a href="#896" id="896">896</a>
-<a href="#897" id="897">897</a>
-<a href="#898" id="898">898</a>
-<a href="#899" id="899">899</a>
-<a href="#900" id="900">900</a>
-<a href="#901" id="901">901</a>
-<a href="#902" id="902">902</a>
-<a href="#903" id="903">903</a>
-<a href="#904" id="904">904</a>
-<a href="#905" id="905">905</a>
-<a href="#906" id="906">906</a>
-<a href="#907" id="907">907</a>
-<a href="#908" id="908">908</a>
-<a href="#909" id="909">909</a>
-<a href="#910" id="910">910</a>
-<a href="#911" id="911">911</a>
-<a href="#912" id="912">912</a>
-<a href="#913" id="913">913</a>
-<a href="#914" id="914">914</a>
-<a href="#915" id="915">915</a>
-<a href="#916" id="916">916</a>
-<a href="#917" id="917">917</a>
-<a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
-<a href="#924" id="924">924</a>
-<a href="#925" id="925">925</a>
-<a href="#926" id="926">926</a>
-<a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
-<a href="#931" id="931">931</a>
-<a href="#932" id="932">932</a>
-<a href="#933" id="933">933</a>
-<a href="#934" id="934">934</a>
-<a href="#935" id="935">935</a>
-<a href="#936" id="936">936</a>
-<a href="#937" id="937">937</a>
-<a href="#938" id="938">938</a>
-<a href="#939" id="939">939</a>
-<a href="#940" id="940">940</a>
-<a href="#941" id="941">941</a>
-<a href="#942" id="942">942</a>
-<a href="#943" id="943">943</a>
-<a href="#944" id="944">944</a>
-<a href="#945" id="945">945</a>
-<a href="#946" id="946">946</a>
-<a href="#947" id="947">947</a>
-<a href="#948" id="948">948</a>
-<a href="#949" id="949">949</a>
-<a href="#950" id="950">950</a>
-<a href="#951" id="951">951</a>
-<a href="#952" id="952">952</a>
-<a href="#953" id="953">953</a>
-<a href="#954" id="954">954</a>
-<a href="#955" id="955">955</a>
-<a href="#956" id="956">956</a>
-<a href="#957" id="957">957</a>
-<a href="#958" id="958">958</a>
-<a href="#959" id="959">959</a>
-<a href="#960" id="960">960</a>
-<a href="#961" id="961">961</a>
-<a href="#962" id="962">962</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -988,8 +895,7 @@
 //! in the current era or session.
 //!
 //! The heartbeat is a signed transaction, which was signed using the session key
-//! and includes the recent best block number of the local validators chain as well
-//! as the [NetworkState](../../client/offchain/struct.NetworkState.html).
+//! and includes the recent best block number of the local validators chain.
 //! It is submitted as an Unsigned Transaction via off-chain workers.
 //!
 //! - [`Config`]
@@ -1040,23 +946,27 @@
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 
 </span><span class="kw">mod </span>benchmarking;
+<span class="kw">pub mod </span>migration;
 <span class="kw">mod </span>mock;
 <span class="kw">mod </span>tests;
 <span class="kw">pub mod </span>weights;
 
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
 <span class="kw">use </span>frame_support::{
+	pallet_prelude::<span class="kw-2">*</span>,
 	traits::{
 		EstimateNextSessionRotation, Get, OneSessionHandler, ValidatorSet,
-		ValidatorSetWithIdentification, WrapperOpaque,
+		ValidatorSetWithIdentification,
 	},
 	BoundedSlice, WeakBoundedVec,
 };
-<span class="kw">use </span>frame_system::offchain::{SendTransactionTypes, SubmitTransaction};
+<span class="kw">use </span>frame_system::{
+	offchain::{SendTransactionTypes, SubmitTransaction},
+	pallet_prelude::<span class="kw-2">*</span>,
+};
 <span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_application_crypto::RuntimeAppPublic;
-<span class="kw">use </span>sp_core::offchain::OpaqueNetworkState;
 <span class="kw">use </span>sp_runtime::{
 	offchain::storage::{MutateStorageError, StorageRetrievalError, StorageValueRef},
 	traits::{AtLeast32BitUnsigned, Convert, Saturating, TrailingZeroInput},
@@ -1152,7 +1062,6 @@
 	AlreadyOnline(u32),
 	FailedSigning,
 	FailedToAcquireLock,
-	NetworkState,
 	SubmitTransaction,
 }
 
@@ -1168,7 +1077,6 @@
 			},
 			OffchainErr::FailedSigning =&gt; <span class="macro">write!</span>(fmt, <span class="string">&quot;Failed to sign heartbeat&quot;</span>),
 			OffchainErr::FailedToAcquireLock =&gt; <span class="macro">write!</span>(fmt, <span class="string">&quot;Failed to acquire lock&quot;</span>),
-			OffchainErr::NetworkState =&gt; <span class="macro">write!</span>(fmt, <span class="string">&quot;Failed to fetch network state&quot;</span>),
 			OffchainErr::SubmitTransaction =&gt; <span class="macro">write!</span>(fmt, <span class="string">&quot;Failed to submit transaction&quot;</span>),
 		}
 	}
@@ -1184,72 +1092,12 @@
 {
 	<span class="doccomment">/// Block number at the time heartbeat is created..
 	</span><span class="kw">pub </span>block_number: BlockNumber,
-	<span class="doccomment">/// A state of local network (peer id and external addresses)
-	</span><span class="kw">pub </span>network_state: OpaqueNetworkState,
 	<span class="doccomment">/// Index of the current session.
 	</span><span class="kw">pub </span>session_index: SessionIndex,
 	<span class="doccomment">/// An index of the authority on the list of validators.
 	</span><span class="kw">pub </span>authority_index: AuthIndex,
 	<span class="doccomment">/// The length of session validator set
 	</span><span class="kw">pub </span>validators_len: u32,
-}
-
-<span class="doccomment">/// A type that is the same as [`OpaqueNetworkState`] but with [`Vec`] replaced with
-/// [`WeakBoundedVec&lt;Limit&gt;`] where Limit is the respective size limit
-/// `PeerIdEncodingLimit` represents the size limit of the encoding of `PeerId`
-/// `MultiAddrEncodingLimit` represents the size limit of the encoding of `MultiAddr`
-/// `AddressesLimit` represents the size limit of the vector of peers connected
-</span><span class="attr">#[derive(Clone, Eq, PartialEq, Encode, Decode, MaxEncodedLen, TypeInfo)]
-#[codec(mel_bound())]
-#[scale_info(skip_type_params(PeerIdEncodingLimit, MultiAddrEncodingLimit, AddressesLimit))]
-</span><span class="kw">pub struct </span>BoundedOpaqueNetworkState&lt;PeerIdEncodingLimit, MultiAddrEncodingLimit, AddressesLimit&gt;
-<span class="kw">where
-	</span>PeerIdEncodingLimit: Get&lt;u32&gt;,
-	MultiAddrEncodingLimit: Get&lt;u32&gt;,
-	AddressesLimit: Get&lt;u32&gt;,
-{
-	<span class="doccomment">/// PeerId of the local node in SCALE encoded.
-	</span><span class="kw">pub </span>peer_id: WeakBoundedVec&lt;u8, PeerIdEncodingLimit&gt;,
-	<span class="doccomment">/// List of addresses the node knows it can be reached as.
-	</span><span class="kw">pub </span>external_addresses:
-		WeakBoundedVec&lt;WeakBoundedVec&lt;u8, MultiAddrEncodingLimit&gt;, AddressesLimit&gt;,
-}
-
-<span class="kw">impl</span>&lt;PeerIdEncodingLimit: Get&lt;u32&gt;, MultiAddrEncodingLimit: Get&lt;u32&gt;, AddressesLimit: Get&lt;u32&gt;&gt;
-	BoundedOpaqueNetworkState&lt;PeerIdEncodingLimit, MultiAddrEncodingLimit, AddressesLimit&gt;
-{
-	<span class="kw">fn </span>force_from(ons: <span class="kw-2">&amp;</span>OpaqueNetworkState) -&gt; <span class="self">Self </span>{
-		<span class="kw">let </span>peer_id = WeakBoundedVec::&lt;<span class="kw">_</span>, PeerIdEncodingLimit&gt;::force_from(
-			ons.peer_id.<span class="number">0</span>.clone(),
-			<span class="prelude-val">Some</span>(
-				<span class="string">&quot;Warning: The size of the encoding of PeerId \
-  				is bigger than expected. A runtime configuration \
-  				adjustment may be needed.&quot;</span>,
-			),
-		);
-
-		<span class="kw">let </span>external_addresses = WeakBoundedVec::&lt;<span class="kw">_</span>, AddressesLimit&gt;::force_from(
-			ons.external_addresses
-				.iter()
-				.map(|x| {
-					WeakBoundedVec::&lt;<span class="kw">_</span>, MultiAddrEncodingLimit&gt;::force_from(
-						x.<span class="number">0</span>.clone(),
-						<span class="prelude-val">Some</span>(
-							<span class="string">&quot;Warning: The size of the encoding of MultiAddr \
-  							is bigger than expected. A runtime configuration \
-  							adjustment may be needed.&quot;</span>,
-						),
-					)
-				})
-				.collect(),
-			<span class="prelude-val">Some</span>(
-				<span class="string">&quot;Warning: The network has more peers than expected \
-  				A runtime configuration adjustment may be needed.&quot;</span>,
-			),
-		);
-
-		<span class="self">Self </span>{ peer_id, external_addresses }
-	}
 }
 
 <span class="doccomment">/// A type for representing the validator id in a session.
@@ -1271,10 +1119,12 @@
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
-	<span class="kw">use </span>frame_support::pallet_prelude::<span class="kw-2">*</span>;
-	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
+
+	<span class="doccomment">/// The current storage version.
+	</span><span class="kw">const </span>STORAGE_VERSION: StorageVersion = StorageVersion::new(<span class="number">1</span>);
 
 	<span class="attr">#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	</span><span class="kw">pub struct </span>Pallet&lt;T&gt;(<span class="kw">_</span>);
 
 	<span class="attr">#[pallet::config]
@@ -1292,10 +1142,6 @@
 
 		<span class="doccomment">/// The maximum number of peers to be stored in `ReceivedHeartbeats`
 		</span><span class="kw">type </span>MaxPeerInHeartbeats: Get&lt;u32&gt;;
-
-		<span class="doccomment">/// The maximum size of the encoding of `PeerId` and `MultiAddr` that are coming
-		/// from the hearbeat
-		</span><span class="kw">type </span>MaxPeerDataEncodingSize: Get&lt;u32&gt;;
 
 		<span class="doccomment">/// The overarching event type.
 		</span><span class="kw">type </span>RuntimeEvent: From&lt;Event&lt;<span class="self">Self</span>&gt;&gt; + IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
@@ -1362,38 +1208,25 @@
 	/// more accurate then the value we calculate for `HeartbeatAfter`.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>heartbeat_after)]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>HeartbeatAfter&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, T::BlockNumber, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>HeartbeatAfter&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, T::BlockNumber, ValueQuery&gt;;
 
 	<span class="doccomment">/// The current set of keys that may issue a heartbeat.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>keys)]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Keys&lt;T: Config&gt; =
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>Keys&lt;T: Config&gt; =
 		StorageValue&lt;<span class="kw">_</span>, WeakBoundedVec&lt;T::AuthorityId, T::MaxKeys&gt;, ValueQuery&gt;;
 
-	<span class="doccomment">/// For each session index, we keep a mapping of `SessionIndex` and `AuthIndex` to
-	/// `WrapperOpaque&lt;BoundedOpaqueNetworkState&gt;`.
+	<span class="doccomment">/// For each session index, we keep a mapping of `SessionIndex` and `AuthIndex`.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>received_heartbeats)]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>ReceivedHeartbeats&lt;T: Config&gt; = StorageDoubleMap&lt;
-		<span class="kw">_</span>,
-		Twox64Concat,
-		SessionIndex,
-		Twox64Concat,
-		AuthIndex,
-		WrapperOpaque&lt;
-			BoundedOpaqueNetworkState&lt;
-				T::MaxPeerDataEncodingSize,
-				T::MaxPeerDataEncodingSize,
-				T::MaxPeerInHeartbeats,
-			&gt;,
-		&gt;,
-	&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>ReceivedHeartbeats&lt;T: Config&gt; =
+		StorageDoubleMap&lt;<span class="kw">_</span>, Twox64Concat, SessionIndex, Twox64Concat, AuthIndex, bool&gt;;
 
 	<span class="doccomment">/// For each session index, we keep a mapping of `ValidatorId&lt;T&gt;` to the
 	/// number of blocks authored by the given authority.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>authored_blocks)]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>AuthoredBlocks&lt;T: Config&gt; = StorageDoubleMap&lt;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>AuthoredBlocks&lt;T: Config&gt; = StorageDoubleMap&lt;
 		<span class="kw">_</span>,
 		Twox64Concat,
 		SessionIndex,
@@ -1419,16 +1252,13 @@
 	<span class="attr">#[pallet::call]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
 		<span class="doccomment">/// ## Complexity:
-		/// - `O(K + E)` where K is length of `Keys` (heartbeat.validators_len) and E is length of
-		///   `heartbeat.network_state.external_address`
+		/// - `O(K)` where K is length of `Keys` (heartbeat.validators_len)
 		///   - `O(K)`: decoding of length `K`
-		///   - `O(E)`: decoding/encoding of length `E`
 		</span><span class="comment">// NOTE: the weight includes the cost of validate_unsigned as it is part of the cost to
 		// import block with such an extrinsic.
 		</span><span class="attr">#[pallet::call_index(<span class="number">0</span>)]
 		#[pallet::weight(&lt;T <span class="kw">as </span>Config&gt;::WeightInfo::validate_unsigned_and_then_heartbeat(
-			heartbeat.validators_len <span class="kw">as </span>u32,
-			heartbeat.network_state.external_addresses.len() <span class="kw">as </span>u32,
+			heartbeat.validators_len,
 		))]
 		</span><span class="kw">pub fn </span>heartbeat(
 			origin: OriginFor&lt;T&gt;,
@@ -1441,22 +1271,13 @@
 
 			<span class="kw">let </span>current_session = T::ValidatorSet::session_index();
 			<span class="kw">let </span>exists =
-				ReceivedHeartbeats::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>current_session, <span class="kw-2">&amp;</span>heartbeat.authority_index);
+				ReceivedHeartbeats::&lt;T&gt;::contains_key(current_session, heartbeat.authority_index);
 			<span class="kw">let </span>keys = Keys::&lt;T&gt;::get();
 			<span class="kw">let </span>public = keys.get(heartbeat.authority_index <span class="kw">as </span>usize);
 			<span class="kw">if let </span>(<span class="bool-val">false</span>, <span class="prelude-val">Some</span>(public)) = (exists, public) {
 				<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::HeartbeatReceived { authority_id: public.clone() });
 
-				<span class="kw">let </span>network_state_bounded = BoundedOpaqueNetworkState::&lt;
-					T::MaxPeerDataEncodingSize,
-					T::MaxPeerDataEncodingSize,
-					T::MaxPeerInHeartbeats,
-				&gt;::force_from(<span class="kw-2">&amp;</span>heartbeat.network_state);
-				ReceivedHeartbeats::&lt;T&gt;::insert(
-					<span class="kw-2">&amp;</span>current_session,
-					<span class="kw-2">&amp;</span>heartbeat.authority_index,
-					WrapperOpaque::from(network_state_bounded),
-				);
+				ReceivedHeartbeats::&lt;T&gt;::insert(current_session, heartbeat.authority_index, <span class="bool-val">true</span>);
 
 				<span class="prelude-val">Ok</span>(())
 			} <span class="kw">else if </span>exists {
@@ -1580,22 +1401,22 @@
 	<span class="kw">fn </span>is_online_aux(authority_index: AuthIndex, authority: <span class="kw-2">&amp;</span>ValidatorId&lt;T&gt;) -&gt; bool {
 		<span class="kw">let </span>current_session = T::ValidatorSet::session_index();
 
-		ReceivedHeartbeats::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>current_session, <span class="kw-2">&amp;</span>authority_index) ||
-			AuthoredBlocks::&lt;T&gt;::get(<span class="kw-2">&amp;</span>current_session, authority) != <span class="number">0
+		ReceivedHeartbeats::&lt;T&gt;::contains_key(current_session, authority_index) ||
+			AuthoredBlocks::&lt;T&gt;::get(current_session, authority) != <span class="number">0
 	</span>}
 
 	<span class="doccomment">/// Returns `true` if a heartbeat has been received for the authority at `authority_index` in
 	/// the authorities series, during the current session. Otherwise `false`.
 	</span><span class="kw">pub fn </span>received_heartbeat_in_current_session(authority_index: AuthIndex) -&gt; bool {
 		<span class="kw">let </span>current_session = T::ValidatorSet::session_index();
-		ReceivedHeartbeats::&lt;T&gt;::contains_key(<span class="kw-2">&amp;</span>current_session, <span class="kw-2">&amp;</span>authority_index)
+		ReceivedHeartbeats::&lt;T&gt;::contains_key(current_session, authority_index)
 	}
 
 	<span class="doccomment">/// Note that the given authority has authored a block in the current session.
 	</span><span class="kw">fn </span>note_authorship(author: ValidatorId&lt;T&gt;) {
 		<span class="kw">let </span>current_session = T::ValidatorSet::session_index();
 
-		AuthoredBlocks::&lt;T&gt;::mutate(<span class="kw-2">&amp;</span>current_session, author, |authored| <span class="kw-2">*</span>authored += <span class="number">1</span>);
+		AuthoredBlocks::&lt;T&gt;::mutate(current_session, author, |authored| <span class="kw-2">*</span>authored += <span class="number">1</span>);
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>send_heartbeats(
@@ -1667,15 +1488,8 @@
 	) -&gt; OffchainResult&lt;T, ()&gt; {
 		<span class="comment">// A helper function to prepare heartbeat call.
 		</span><span class="kw">let </span>prepare_heartbeat = || -&gt; OffchainResult&lt;T, Call&lt;T&gt;&gt; {
-			<span class="kw">let </span>network_state =
-				sp_io::offchain::network_state().map_err(|<span class="kw">_</span>| OffchainErr::NetworkState)<span class="question-mark">?</span>;
-			<span class="kw">let </span>heartbeat = Heartbeat {
-				block_number,
-				network_state,
-				session_index,
-				authority_index,
-				validators_len,
-			};
+			<span class="kw">let </span>heartbeat =
+				Heartbeat { block_number, session_index, authority_index, validators_len };
 
 			<span class="kw">let </span>signature = key.sign(<span class="kw-2">&amp;</span>heartbeat.encode()).ok_or(OffchainErr::FailedSigning)<span class="question-mark">?</span>;
 
@@ -1849,9 +1663,9 @@
 		// current session, they have already been processed and won&#39;t be needed
 		// anymore.
 		</span><span class="attr">#[allow(deprecated)]
-		</span>ReceivedHeartbeats::&lt;T&gt;::remove_prefix(<span class="kw-2">&amp;</span>T::ValidatorSet::session_index(), <span class="prelude-val">None</span>);
+		</span>ReceivedHeartbeats::&lt;T&gt;::remove_prefix(T::ValidatorSet::session_index(), <span class="prelude-val">None</span>);
 		<span class="attr">#[allow(deprecated)]
-		</span>AuthoredBlocks::&lt;T&gt;::remove_prefix(<span class="kw-2">&amp;</span>T::ValidatorSet::session_index(), <span class="prelude-val">None</span>);
+		</span>AuthoredBlocks::&lt;T&gt;::remove_prefix(T::ValidatorSet::session_index(), <span class="prelude-val">None</span>);
 
 		<span class="kw">if </span>offenders.is_empty() {
 			<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::AllGood);

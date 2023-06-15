@@ -92,17 +92,6 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -129,7 +118,6 @@
 <span class="kw">use </span>frame_benchmarking::v1::benchmarks;
 <span class="kw">use </span>frame_support::{traits::UnfilteredDispatchable, WeakBoundedVec};
 <span class="kw">use </span>frame_system::RawOrigin;
-<span class="kw">use </span>sp_core::{offchain::OpaqueMultiaddr, OpaquePeerId};
 <span class="kw">use </span>sp_runtime::{
 	traits::{ValidateUnsigned, Zero},
 	transaction_validity::TransactionSource,
@@ -138,11 +126,9 @@
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>ImOnline;
 
 <span class="kw">const </span>MAX_KEYS: u32 = <span class="number">1000</span>;
-<span class="kw">const </span>MAX_EXTERNAL_ADDRESSES: u32 = <span class="number">100</span>;
 
 <span class="kw">pub fn </span>create_heartbeat&lt;T: Config&gt;(
 	k: u32,
-	e: u32,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;
 	(<span class="kw">crate</span>::Heartbeat&lt;T::BlockNumber&gt;, &lt;T::AuthorityId <span class="kw">as </span>RuntimeAppPublic&gt;::Signature),
 	<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
@@ -155,13 +141,8 @@
 		.map_err(|()| <span class="string">&quot;More than the maximum number of keys provided&quot;</span>)<span class="question-mark">?</span>;
 	Keys::&lt;T&gt;::put(bounded_keys);
 
-	<span class="kw">let </span>network_state = OpaqueNetworkState {
-		peer_id: OpaquePeerId::default(),
-		external_addresses: <span class="macro">vec!</span>[OpaqueMultiaddr::new(<span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">32</span>]); e <span class="kw">as </span>usize],
-	};
 	<span class="kw">let </span>input_heartbeat = Heartbeat {
 		block_number: T::BlockNumber::zero(),
-		network_state,
 		session_index: <span class="number">0</span>,
 		authority_index: k - <span class="number">1</span>,
 		validators_len: keys.len() <span class="kw">as </span>u32,
@@ -178,15 +159,13 @@
 	<span class="attr">#[extra]
 	</span>heartbeat {
 		<span class="kw">let </span>k <span class="kw">in </span><span class="number">1 </span>.. MAX_KEYS;
-		<span class="kw">let </span>e <span class="kw">in </span><span class="number">1 </span>.. MAX_EXTERNAL_ADDRESSES;
-		<span class="kw">let </span>(input_heartbeat, signature) = create_heartbeat::&lt;T&gt;(k, e)<span class="question-mark">?</span>;
+		<span class="kw">let </span>(input_heartbeat, signature) = create_heartbeat::&lt;T&gt;(k)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>(RawOrigin::None, input_heartbeat, signature)
 
 	<span class="attr">#[extra]
 	</span>validate_unsigned {
 		<span class="kw">let </span>k <span class="kw">in </span><span class="number">1 </span>.. MAX_KEYS;
-		<span class="kw">let </span>e <span class="kw">in </span><span class="number">1 </span>.. MAX_EXTERNAL_ADDRESSES;
-		<span class="kw">let </span>(input_heartbeat, signature) = create_heartbeat::&lt;T&gt;(k, e)<span class="question-mark">?</span>;
+		<span class="kw">let </span>(input_heartbeat, signature) = create_heartbeat::&lt;T&gt;(k)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::heartbeat { heartbeat: input_heartbeat, signature };
 	}: {
 		ImOnline::&lt;T&gt;::validate_unsigned(TransactionSource::InBlock, <span class="kw-2">&amp;</span>call)
@@ -195,8 +174,7 @@
 
 	validate_unsigned_and_then_heartbeat {
 		<span class="kw">let </span>k <span class="kw">in </span><span class="number">1 </span>.. MAX_KEYS;
-		<span class="kw">let </span>e <span class="kw">in </span><span class="number">1 </span>.. MAX_EXTERNAL_ADDRESSES;
-		<span class="kw">let </span>(input_heartbeat, signature) = create_heartbeat::&lt;T&gt;(k, e)<span class="question-mark">?</span>;
+		<span class="kw">let </span>(input_heartbeat, signature) = create_heartbeat::&lt;T&gt;(k)<span class="question-mark">?</span>;
 		<span class="kw">let </span>call = Call::heartbeat { heartbeat: input_heartbeat, signature };
 		<span class="kw">let </span>call_enc = call.encode();
 	}: {

@@ -80,7 +80,7 @@ var sourcesIndex = JSON.parse('{\
 "pallet_glutton":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_grandpa":["",[["migrations",[],["v4.rs"]]],["benchmarking.rs","default_weights.rs","equivocation.rs","lib.rs","migrations.rs"]],\
 "pallet_identity":["",[],["benchmarking.rs","lib.rs","types.rs","weights.rs"]],\
-"pallet_im_online":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
+"pallet_im_online":["",[],["benchmarking.rs","lib.rs","migration.rs","weights.rs"]],\
 "pallet_indices":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
 "pallet_insecure_randomness_collective_flip":["",[],["lib.rs"]],\
 "pallet_lottery":["",[],["benchmarking.rs","lib.rs","weights.rs"]],\
