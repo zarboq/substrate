@@ -1738,6 +1738,29 @@
 <a href="#1738" id="1738">1738</a>
 <a href="#1739" id="1739">1739</a>
 <a href="#1740" id="1740">1740</a>
+<a href="#1741" id="1741">1741</a>
+<a href="#1742" id="1742">1742</a>
+<a href="#1743" id="1743">1743</a>
+<a href="#1744" id="1744">1744</a>
+<a href="#1745" id="1745">1745</a>
+<a href="#1746" id="1746">1746</a>
+<a href="#1747" id="1747">1747</a>
+<a href="#1748" id="1748">1748</a>
+<a href="#1749" id="1749">1749</a>
+<a href="#1750" id="1750">1750</a>
+<a href="#1751" id="1751">1751</a>
+<a href="#1752" id="1752">1752</a>
+<a href="#1753" id="1753">1753</a>
+<a href="#1754" id="1754">1754</a>
+<a href="#1755" id="1755">1755</a>
+<a href="#1756" id="1756">1756</a>
+<a href="#1757" id="1757">1757</a>
+<a href="#1758" id="1758">1758</a>
+<a href="#1759" id="1759">1759</a>
+<a href="#1760" id="1760">1760</a>
+<a href="#1761" id="1761">1761</a>
+<a href="#1762" id="1762">1762</a>
+<a href="#1763" id="1763">1763</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1777,6 +1800,7 @@
 <span class="kw">mod </span>transactional;
 <span class="kw">mod </span>tt_macro;
 
+<span class="kw">use </span>frame_support_procedural_tools::generate_crate_access_2018;
 <span class="kw">use </span>macro_magic::import_tokens_attr;
 <span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>quote::{quote, ToTokens};
@@ -2692,28 +2716,6 @@
 ///
 /// # Advanced Usage
 ///
-/// ## Importing &amp; Re-Exporting
-///
-/// Since `#[derive_impl(..)]` is a
-/// [`macro_magic`](https://docs.rs/macro_magic/latest/macro_magic/)-based attribute macro, special
-/// care must be taken when importing and re-exporting it. Glob imports will work properly, such as
-/// `use frame_support::*` to bring `derive_impl` into scope, however any other use statements
-/// involving `derive_impl` should have
-/// [`#[macro_magic::use_attr]`](https://docs.rs/macro_magic/latest/macro_magic/attr.use_attr.html)
-/// attached or your use statement will fail to fully bring the macro into scope.
-///
-/// This brings `derive_impl` into scope in the current context:
-/// ```ignore
-/// #[use_attr]
-/// use frame_support::derive_impl;
-/// ```
-///
-/// This brings `derive_impl` into scope and publicly re-exports it from the current context:
-/// ```ignore
-/// #[use_attr]
-/// pub use frame_support::derive_impl;
-/// ```
-///
 /// ## Expansion
 ///
 /// The `#[derive_impl(default_impl_path as disambiguation_path)]` attribute will expand to the
@@ -2727,7 +2729,18 @@
 /// Items that lack a `syn::Ident` for whatever reason are first checked to see if they exist,
 /// verbatim, in the local/destination trait before they are copied over, so you should not need to
 /// worry about collisions between identical unnamed items.
-</span><span class="attr">#[import_tokens_attr(frame_support::macro_magic)]
+</span><span class="attr">#[import_tokens_attr {
+    <span class="macro">format!</span>(
+        <span class="string">&quot;{}::macro_magic&quot;</span>,
+        <span class="kw">match </span>generate_crate_access_2018(<span class="string">&quot;frame-support&quot;</span>) {
+            <span class="prelude-val">Ok</span>(path) =&gt; <span class="prelude-val">Ok</span>(path),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; generate_crate_access_2018(<span class="string">&quot;frame&quot;</span>),
+        }
+        .expect(<span class="string">&quot;Failed to find either `frame-support` or `frame` in `Cargo.toml` dependencies.&quot;</span>)
+        .to_token_stream()
+        .to_string()
+    )
+}]
 #[with_custom_parsing(derive_impl::DeriveImplAttrArgs)]
 #[proc_macro_attribute]
 </span><span class="kw">pub fn </span>derive_impl(attrs: TokenStream, input: TokenStream) -&gt; TokenStream {
@@ -2774,8 +2787,41 @@
 /// 	type MaxConsumers = frame_support::traits::ConstU32&lt;16&gt;;
 /// }
 /// ```
+///
+/// ## Advanced Usage
+///
 /// This macro acts as a thin wrapper around macro_magic&#39;s `#[export_tokens]`. See the docs
-/// [here](https://docs.rs/macro_magic/latest/macro_magic/attr.export_tokens.html) for more info.
+/// [here](https://docs.rs/macro_magic/latest/macro_magic/attr.export_tokens.html) for more
+/// info.
+///
+/// There are some caveats when applying a `use` statement to bring a
+/// `#[register_default_impl]` item into scope. If you have a `#[register_default_impl]`
+/// defined in `my_crate::submodule::MyItem`, it is currently not sufficient to do something
+/// like:
+///
+/// ```ignore
+/// use my_crate::submodule::MyItem;
+/// #[derive_impl(MyItem as Whatever)]
+/// ```
+///
+/// This will fail with a mysterious message about `__export_tokens_tt_my_item` not being
+/// defined.
+///
+/// You can, however, do any of the following:
+/// ```ignore
+/// // partial path works
+/// use my_crate::submodule;
+/// #[derive_impl(submodule::MyItem as Whatever)]
+/// ```
+/// ```ignore
+/// // full path works
+/// #[derive_impl(my_crate::submodule::MyItem as Whatever)]
+/// ```
+/// ```ignore
+/// // wild-cards work
+/// use my_crate::submodule::*;
+/// #[derive_impl(MyItem as Whatever)]
+/// ```
 </span><span class="attr">#[proc_macro_attribute]
 </span><span class="kw">pub fn </span>register_default_impl(attrs: TokenStream, tokens: TokenStream) -&gt; TokenStream {
 	<span class="comment">// ensure this is a impl statement
