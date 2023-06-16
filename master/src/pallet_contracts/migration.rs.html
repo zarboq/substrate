@@ -589,6 +589,13 @@
 <a href="#589" id="589">589</a>
 <a href="#590" id="590">590</a>
 <a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -782,10 +789,14 @@
 }
 
 <span class="doccomment">/// Performs all necessary migrations based on `StorageVersion`.
-</span><span class="kw">pub struct </span>Migration&lt;T: Config&gt;(PhantomData&lt;T&gt;);
+///
+/// If `TEST_ALL_STEPS == true` and `try-runtime` is enabled, this will run all the migrations
+/// inside `on_runtime_upgrade`. This should be set to false in tests that want to ensure the step
+/// by step migration works.
+</span><span class="kw">pub struct </span>Migration&lt;T: Config, <span class="kw">const </span>TEST_ALL_STEPS: bool = <span class="bool-val">true</span>&gt;(PhantomData&lt;T&gt;);
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-</span><span class="kw">impl</span>&lt;T: Config&gt; Migration&lt;T&gt; {
+</span><span class="kw">impl</span>&lt;T: Config, <span class="kw">const </span>TEST_ALL_STEPS: bool&gt; Migration&lt;T, TEST_ALL_STEPS&gt; {
 	<span class="kw">fn </span>run_all_steps() -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>weight = Weight::zero();
 		<span class="kw">let </span>name = &lt;Pallet&lt;T&gt;&gt;::name();
@@ -812,7 +823,7 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; OnRuntimeUpgrade <span class="kw">for </span>Migration&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Config, <span class="kw">const </span>TEST_ALL_STEPS: bool&gt; OnRuntimeUpgrade <span class="kw">for </span>Migration&lt;T, TEST_ALL_STEPS&gt; {
 	<span class="kw">fn </span>on_runtime_upgrade() -&gt; Weight {
 		<span class="kw">let </span>name = &lt;Pallet&lt;T&gt;&gt;::name();
 		<span class="kw">let </span>latest_version = &lt;Pallet&lt;T&gt;&gt;::current_storage_version();
@@ -835,6 +846,7 @@
 				<span class="string">&quot;{name}: Migration already in progress {:?}&quot;</span>,
 				<span class="kw-2">&amp;</span>storage_version
 			);
+
 			<span class="kw">return </span>T::WeightInfo::on_runtime_upgrade_in_progress()
 		}
 
@@ -847,9 +859,11 @@
 		MigrationInProgress::&lt;T&gt;::set(<span class="prelude-val">Some</span>(cursor));
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="self">Self</span>::run_all_steps().unwrap();
+		</span><span class="kw">if </span>TEST_ALL_STEPS {
+			<span class="self">Self</span>::run_all_steps().unwrap();
+		}
 
-		<span class="kw">return </span>T::WeightInfo::on_runtime_upgrade()
+		T::WeightInfo::on_runtime_upgrade()
 	}
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
@@ -896,7 +910,7 @@
 	Completed { steps_done: u32 },
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; Migration&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Config, <span class="kw">const </span>TEST_ALL_STEPS: bool&gt; Migration&lt;T, TEST_ALL_STEPS&gt; {
 	<span class="doccomment">/// Verify that each migration&#39;s step of the [`T::Migrations`] sequence fits into `Cursor`.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>integrity_test() {
 		<span class="kw">let </span>max_weight = &lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get().max_block;
@@ -1051,7 +1065,7 @@
 							<span class="kw">return </span>StepResult::Completed{ steps_done }
 						}
 					}
-					<span class="kw">return  </span>StepResult::InProgress{cursor: migration.encode().try_into().expect(PROOF_ENCODE), steps_done }
+					<span class="kw">return </span>StepResult::InProgress{cursor: migration.encode().try_into().expect(PROOF_ENCODE), steps_done }
 				}
 			)*
 		);
@@ -1160,7 +1174,7 @@
 
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>migration_works() {
-		<span class="kw">type </span>TestMigration = Migration&lt;Test&gt;;
+		<span class="kw">type </span>TestMigration = Migration&lt;Test, <span class="bool-val">false</span>&gt;;
 
 		ExtBuilder::default().set_storage_version(<span class="number">0</span>).build().execute_with(|| {
 			<span class="macro">assert_eq!</span>(StorageVersion::get::&lt;Pallet&lt;Test&gt;&gt;(), <span class="number">0</span>);
