@@ -1086,6 +1086,16 @@
 <a href="#1086" id="1086">1086</a>
 <a href="#1087" id="1087">1087</a>
 <a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1131,7 +1141,7 @@
 </span><span class="kw">pub use </span>sp_core::storage::{Storage, StorageChild};
 
 <span class="kw">use </span>sp_core::{
-	crypto::{<span class="self">self</span>, ByteArray},
+	crypto::{<span class="self">self</span>, ByteArray, FromEntropy},
 	ecdsa, ed25519,
 	hash::{H256, H512},
 	sr25519,
@@ -1397,6 +1407,16 @@
 	</span>Sr25519(sr25519::Public),
 	<span class="doccomment">/// An SECP256k1/ECDSA identity (actually, the Blake2 hash of the compressed pub key).
 	</span>Ecdsa(ecdsa::Public),
+}
+
+<span class="kw">impl </span>FromEntropy <span class="kw">for </span>MultiSigner {
+	<span class="kw">fn </span>from_entropy(input: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>codec::Input) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, codec::Error&gt; {
+		<span class="prelude-val">Ok</span>(<span class="kw">match </span>input.read_byte()<span class="question-mark">? </span>% <span class="number">3 </span>{
+			<span class="number">0 </span>=&gt; <span class="self">Self</span>::Ed25519(FromEntropy::from_entropy(input)<span class="question-mark">?</span>),
+			<span class="number">1 </span>=&gt; <span class="self">Self</span>::Sr25519(FromEntropy::from_entropy(input)<span class="question-mark">?</span>),
+			<span class="number">2</span>.. =&gt; <span class="self">Self</span>::Ecdsa(FromEntropy::from_entropy(input)<span class="question-mark">?</span>),
+		})
+	}
 }
 
 <span class="doccomment">/// NOTE: This implementations is required by `SimpleAddressDeterminer`,

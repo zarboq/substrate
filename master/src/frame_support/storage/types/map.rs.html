@@ -747,6 +747,34 @@
 <a href="#747" id="747">747</a>
 <a href="#748" id="748">748</a>
 <a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -935,6 +963,14 @@
 		&lt;<span class="self">Self </span><span class="kw">as </span><span class="kw">crate</span>::storage::StorageMap&lt;Key, Value&gt;&gt;::try_mutate(key, f)
 	}
 
+	<span class="doccomment">/// Mutate the value under a key iff it exists. Do nothing and return the default value if not.
+	</span><span class="kw">pub fn </span>mutate_extant&lt;KeyArg: EncodeLike&lt;Key&gt;, R: Default, F: FnOnce(<span class="kw-2">&amp;mut </span>Value) -&gt; R&gt;(
+		key: KeyArg,
+		f: F,
+	) -&gt; R {
+		&lt;<span class="self">Self </span><span class="kw">as </span><span class="kw">crate</span>::storage::StorageMap&lt;Key, Value&gt;&gt;::mutate_extant(key, f)
+	}
+
 	<span class="doccomment">/// Mutate the value under a key. Deletes the item if mutated to a `None`.
 	</span><span class="kw">pub fn </span>mutate_exists&lt;KeyArg: EncodeLike&lt;Key&gt;, R, F: FnOnce(<span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;Value&gt;) -&gt; R&gt;(
 		key: KeyArg,
@@ -1115,6 +1151,16 @@
 		&lt;<span class="self">Self </span><span class="kw">as </span><span class="kw">crate</span>::storage::IterableStorageMap&lt;Key, Value&gt;&gt;::iter_from(starting_raw_key)
 	}
 
+	<span class="doccomment">/// Enumerate all elements in the map after a specified `starting_key` in no
+	/// particular order.
+	///
+	/// If you alter the map while doing this, you&#39;ll get undefined results.
+	</span><span class="kw">pub fn </span>iter_from_key(
+		starting_key: <span class="kw">impl </span>EncodeLike&lt;Key&gt;,
+	) -&gt; <span class="kw">crate</span>::storage::PrefixIterator&lt;(Key, Value)&gt; {
+		<span class="self">Self</span>::iter_from(<span class="self">Self</span>::hashed_key_for(starting_key))
+	}
+
 	<span class="doccomment">/// Enumerate all keys in the map in no particular order.
 	///
 	/// If you alter the map while doing this, you&#39;ll get undefined results.
@@ -1128,6 +1174,16 @@
 	/// If you alter the map while doing this, you&#39;ll get undefined results.
 	</span><span class="kw">pub fn </span>iter_keys_from(starting_raw_key: Vec&lt;u8&gt;) -&gt; <span class="kw">crate</span>::storage::KeyPrefixIterator&lt;Key&gt; {
 		&lt;<span class="self">Self </span><span class="kw">as </span><span class="kw">crate</span>::storage::IterableStorageMap&lt;Key, Value&gt;&gt;::iter_keys_from(starting_raw_key)
+	}
+
+	<span class="doccomment">/// Enumerate all keys in the map after a specified `starting_key` in no particular
+	/// order.
+	///
+	/// If you alter the map while doing this, you&#39;ll get undefined results.
+	</span><span class="kw">pub fn </span>iter_keys_from_key(
+		starting_key: <span class="kw">impl </span>EncodeLike&lt;Key&gt;,
+	) -&gt; <span class="kw">crate</span>::storage::KeyPrefixIterator&lt;Key&gt; {
+		<span class="self">Self</span>::iter_keys_from(<span class="self">Self</span>::hashed_key_for(starting_key))
 	}
 
 	<span class="doccomment">/// Remove all elements from the map and iterate through them in no particular order.

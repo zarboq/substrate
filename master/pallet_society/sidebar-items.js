@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["BidKind","Judgement","Vote","VouchingStatus"],"mod":["pallet"],"struct":["Bid","EnsureFounder","Payout"],"type":["StrikeCount"]};
+window.SIDEBAR_ITEMS = {"enum":["BidKind","Judgement","Period","VouchingStatus"],"mod":["migrations","pallet","weights"],"struct":["Bid","Candidacy","EnsureFounder","GroupParams","IntakeRecord","MemberRecord","Payout","PayoutRecord","Tally","Vote"],"type":["GroupParamsFor","IntakeRecordFor","PayoutRecordFor","PayoutsFor","Rank","RoundIndex","StrikeCount","VoteCount"]};

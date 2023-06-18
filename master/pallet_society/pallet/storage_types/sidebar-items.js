@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Bids","Candidates","Defender","DefenderVotes","Founder","Head","MaxMembers","Members","Payouts","Pot","Rules","Strikes","SuspendedCandidates","SuspendedMembers","Votes","Vouching"]};
+window.SIDEBAR_ITEMS = {"struct":["Bids","Candidates","ChallengeRoundCount","DefenderVotes","Defending","Founder","Head","MemberByIndex","MemberCount","Members","NextHead","Parameters","Payouts","Pot","RoundCount","Rules","Skeptic","SuspendedMembers","VoteClearCursor","Votes"]};

@@ -1138,6 +1138,17 @@
 <a href="#1138" id="1138">1138</a>
 <a href="#1139" id="1139">1139</a>
 <a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
+<a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1177,7 +1188,10 @@
 <span class="kw">use </span>sp_std::vec::Vec;
 
 <span class="kw">use crate</span>::{
-	crypto::{ByteArray, CryptoType, CryptoTypeId, Derive, Public <span class="kw">as </span>TraitPublic, UncheckedFrom},
+	crypto::{
+		ByteArray, CryptoType, CryptoTypeId, Derive, FromEntropy, Public <span class="kw">as </span>TraitPublic,
+		UncheckedFrom,
+	},
 	hash::{H256, H512},
 };
 <span class="kw">use </span>codec::{Decode, Encode, MaxEncodedLen};
@@ -1228,6 +1242,14 @@
 			secret: schnorrkel::SecretKey::from_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.secret.to_bytes()[..])
 				.expect(<span class="string">&quot;key is always the correct size; qed&quot;</span>),
 		})
+	}
+}
+
+<span class="kw">impl </span>FromEntropy <span class="kw">for </span>Public {
+	<span class="kw">fn </span>from_entropy(input: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>codec::Input) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, codec::Error&gt; {
+		<span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>([<span class="number">0u8</span>; <span class="number">32</span>]);
+		input.read(<span class="kw-2">&amp;mut </span>result.<span class="number">0</span>[..])<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(result)
 	}
 }
 

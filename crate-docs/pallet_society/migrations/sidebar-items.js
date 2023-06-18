@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["assert_internal_consistency","can_migrate","from_original","from_raw_past_payouts"],"struct":["MigrateToV2"]};
