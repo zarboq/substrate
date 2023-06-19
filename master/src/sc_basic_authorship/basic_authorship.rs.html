@@ -1099,6 +1099,45 @@
 <a href="#1099" id="1099">1099</a>
 <a href="#1100" id="1100">1100</a>
 <a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
 </pre><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1157,6 +1196,8 @@
 </span><span class="kw">pub const </span>DEFAULT_BLOCK_SIZE_LIMIT: usize = <span class="number">4 </span>* <span class="number">1024 </span>* <span class="number">1024 </span>+ <span class="number">512</span>;
 
 <span class="kw">const </span>DEFAULT_SOFT_DEADLINE_PERCENT: Percent = Percent::from_percent(<span class="number">50</span>);
+
+<span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;basic-authorship&quot;</span>;
 
 <span class="doccomment">/// [`Proposer`] factory.
 </span><span class="kw">pub struct </span>ProposerFactory&lt;A, B, C, PR&gt; {
@@ -1403,7 +1444,7 @@
 					</span>.propose_with(inherent_data, inherent_digests, deadline, block_size_limit)
 					.<span class="kw">await</span>;
 				<span class="kw">if </span>tx.send(res).is_err() {
-					<span class="macro">trace!</span>(<span class="string">&quot;Could not send block production result to proposer!&quot;</span>);
+					<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;Could not send block production result to proposer!&quot;</span>);
 				}
 			}),
 		);
@@ -1440,10 +1481,34 @@
 		block_size_limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Proposal&lt;Block, backend::TransactionFor&lt;B, Block&gt;, PR::Proof&gt;, sp_blockchain::Error&gt;
 	{
-		<span class="kw">let </span>propose_with_start = time::Instant::now();
+		<span class="kw">let </span>propose_with_timer = time::Instant::now();
 		<span class="kw">let </span><span class="kw-2">mut </span>block_builder =
 			<span class="self">self</span>.client.new_block_at(<span class="self">self</span>.parent_hash, inherent_digests, PR::ENABLED)<span class="question-mark">?</span>;
 
+		<span class="self">self</span>.apply_inherents(<span class="kw-2">&amp;mut </span>block_builder, inherent_data)<span class="question-mark">?</span>;
+
+		<span class="comment">// TODO call `after_inherents` and check if we should apply extrinsincs here
+		// &lt;https://github.com/paritytech/substrate/pull/14275/&gt;
+
+		</span><span class="kw">let </span>block_timer = time::Instant::now();
+		<span class="kw">let </span>end_reason =
+			<span class="self">self</span>.apply_extrinsics(<span class="kw-2">&amp;mut </span>block_builder, deadline, block_size_limit).<span class="kw">await</span><span class="question-mark">?</span>;
+		<span class="kw">let </span>(block, storage_changes, proof) = block_builder.build()<span class="question-mark">?</span>.into_inner();
+		<span class="kw">let </span>block_took = block_timer.elapsed();
+
+		<span class="kw">let </span>proof =
+			PR::into_proof(proof).map_err(|e| sp_blockchain::Error::Application(Box::new(e)))<span class="question-mark">?</span>;
+
+		<span class="self">self</span>.print_summary(<span class="kw-2">&amp;</span>block, end_reason, block_took, propose_with_timer.elapsed());
+		<span class="prelude-val">Ok</span>(Proposal { block, proof, storage_changes })
+	}
+
+	<span class="doccomment">/// Apply all inherents to the block.
+	</span><span class="kw">fn </span>apply_inherents(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		block_builder: <span class="kw-2">&amp;mut </span>sc_block_builder::BlockBuilder&lt;<span class="lifetime">&#39;_</span>, Block, C, B&gt;,
+		inherent_data: InherentData,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_blockchain::Error&gt; {
 		<span class="kw">let </span>create_inherents_start = time::Instant::now();
 		<span class="kw">let </span>inherents = block_builder.create_inherents(inherent_data)<span class="question-mark">?</span>;
 		<span class="kw">let </span>create_inherents_end = time::Instant::now();
@@ -1459,7 +1524,7 @@
 		<span class="kw">for </span>inherent <span class="kw">in </span>inherents {
 			<span class="kw">match </span>block_builder.push(inherent) {
 				<span class="prelude-val">Err</span>(ApplyExtrinsicFailed(Validity(e))) <span class="kw">if </span>e.exhausted_resources() =&gt; {
-					<span class="macro">warn!</span>(<span class="string">&quot;⚠️  Dropping non-mandatory inherent from overweight block.&quot;</span>)
+					<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;⚠️  Dropping non-mandatory inherent from overweight block.&quot;</span>)
 				},
 				<span class="prelude-val">Err</span>(ApplyExtrinsicFailed(Validity(e))) <span class="kw">if </span>e.was_mandatory() =&gt; {
 					<span class="macro">error!</span>(
@@ -1468,12 +1533,21 @@
 					<span class="kw">return </span><span class="prelude-val">Err</span>(ApplyExtrinsicFailed(Validity(e)))
 				},
 				<span class="prelude-val">Err</span>(e) =&gt; {
-					<span class="macro">warn!</span>(<span class="string">&quot;❗️ Inherent extrinsic returned unexpected error: {}. Dropping.&quot;</span>, e);
+					<span class="macro">warn!</span>(target: LOG_TARGET, <span class="string">&quot;❗️ Inherent extrinsic returned unexpected error: {}. Dropping.&quot;</span>, e);
 				},
 				<span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {},
 			}
 		}
+		<span class="prelude-val">Ok</span>(())
+	}
 
+	<span class="doccomment">/// Apply as many extrinsics as possible to the block.
+	</span><span class="kw">async fn </span>apply_extrinsics(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		block_builder: <span class="kw-2">&amp;mut </span>sc_block_builder::BlockBuilder&lt;<span class="lifetime">&#39;_</span>, Block, C, B&gt;,
+		deadline: time::Instant,
+		block_size_limit: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;EndProposingReason, sp_blockchain::Error&gt; {
 		<span class="comment">// proceed with transactions
 		// We calculate soft deadline used only in case we start skipping transactions.
 		</span><span class="kw">let </span>now = (<span class="self">self</span>.now)();
@@ -1481,7 +1555,6 @@
 		<span class="kw">let </span>left_micros: u64 = left.as_micros().saturated_into();
 		<span class="kw">let </span>soft_deadline =
 			now + time::Duration::from_micros(<span class="self">self</span>.soft_deadline_percent.mul_floor(left_micros));
-		<span class="kw">let </span>block_timer = time::Instant::now();
 		<span class="kw">let </span><span class="kw-2">mut </span>skipped = <span class="number">0</span>;
 		<span class="kw">let </span><span class="kw-2">mut </span>unqueue_invalid = Vec::new();
 
@@ -1492,7 +1565,7 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>pending_iterator = <span class="macro">select! </span>{
 			res = t1 =&gt; res,
 			<span class="kw">_ </span>= t2 =&gt; {
-				<span class="macro">log::warn!</span>(
+				<span class="macro">warn!</span>(target: LOG_TARGET,
 					<span class="string">&quot;Timeout fired waiting for transaction pool at block #{}. \
 					Proceeding with production.&quot;</span>,
 					<span class="self">self</span>.parent_number,
@@ -1503,8 +1576,8 @@
 
 		<span class="kw">let </span>block_size_limit = block_size_limit.unwrap_or(<span class="self">self</span>.default_block_size_limit);
 
-		<span class="macro">debug!</span>(<span class="string">&quot;Attempting to push transactions from the pool.&quot;</span>);
-		<span class="macro">debug!</span>(<span class="string">&quot;Pool status: {:?}&quot;</span>, <span class="self">self</span>.transaction_pool.status());
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Attempting to push transactions from the pool.&quot;</span>);
+		<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Pool status: {:?}&quot;</span>, <span class="self">self</span>.transaction_pool.status());
 		<span class="kw">let </span><span class="kw-2">mut </span>transaction_pushed = <span class="bool-val">false</span>;
 
 		<span class="kw">let </span>end_reason = <span class="kw">loop </span>{
@@ -1516,7 +1589,7 @@
 
 			<span class="kw">let </span>now = (<span class="self">self</span>.now)();
 			<span class="kw">if </span>now &gt; deadline {
-				<span class="macro">debug!</span>(
+				<span class="macro">debug!</span>(target: LOG_TARGET,
 					<span class="string">&quot;Consensus deadline reached when pushing block transactions, \
 					proceeding with proposing.&quot;
 				</span>);
@@ -1532,87 +1605,104 @@
 				pending_iterator.report_invalid(<span class="kw-2">&amp;</span>pending_tx);
 				<span class="kw">if </span>skipped &lt; MAX_SKIPPED_TRANSACTIONS {
 					skipped += <span class="number">1</span>;
-					<span class="macro">debug!</span>(
+					<span class="macro">debug!</span>(target: LOG_TARGET,
 						<span class="string">&quot;Transaction would overflow the block size limit, \
 						 but will try {} more transactions before quitting.&quot;</span>,
 						MAX_SKIPPED_TRANSACTIONS - skipped,
 					);
 					<span class="kw">continue
 				</span>} <span class="kw">else if </span>now &lt; soft_deadline {
-					<span class="macro">debug!</span>(
+					<span class="macro">debug!</span>(target: LOG_TARGET,
 						<span class="string">&quot;Transaction would overflow the block size limit, \
 						 but we still have time before the soft deadline, so \
 						 we will try a bit more.&quot;
 					</span>);
 					<span class="kw">continue
 				</span>} <span class="kw">else </span>{
-					<span class="macro">debug!</span>(<span class="string">&quot;Reached block size limit, proceeding with proposing.&quot;</span>);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Reached block size limit, proceeding with proposing.&quot;</span>);
 					<span class="kw">break </span>EndProposingReason::HitBlockSizeLimit
 				}
 			}
 
-			<span class="macro">trace!</span>(<span class="string">&quot;[{:?}] Pushing to the block.&quot;</span>, pending_tx_hash);
-			<span class="kw">match </span>sc_block_builder::BlockBuilder::push(<span class="kw-2">&amp;mut </span>block_builder, pending_tx_data) {
+			<span class="macro">trace!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Pushing to the block.&quot;</span>, pending_tx_hash);
+			<span class="kw">match </span>sc_block_builder::BlockBuilder::push(block_builder, pending_tx_data) {
 				<span class="prelude-val">Ok</span>(()) =&gt; {
 					transaction_pushed = <span class="bool-val">true</span>;
-					<span class="macro">debug!</span>(<span class="string">&quot;[{:?}] Pushed to the block.&quot;</span>, pending_tx_hash);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Pushed to the block.&quot;</span>, pending_tx_hash);
 				},
 				<span class="prelude-val">Err</span>(ApplyExtrinsicFailed(Validity(e))) <span class="kw">if </span>e.exhausted_resources() =&gt; {
 					pending_iterator.report_invalid(<span class="kw-2">&amp;</span>pending_tx);
 					<span class="kw">if </span>skipped &lt; MAX_SKIPPED_TRANSACTIONS {
 						skipped += <span class="number">1</span>;
-						<span class="macro">debug!</span>(
+						<span class="macro">debug!</span>(target: LOG_TARGET,
 							<span class="string">&quot;Block seems full, but will try {} more transactions before quitting.&quot;</span>,
 							MAX_SKIPPED_TRANSACTIONS - skipped,
 						);
 					} <span class="kw">else if </span>(<span class="self">self</span>.now)() &lt; soft_deadline {
-						<span class="macro">debug!</span>(
+						<span class="macro">debug!</span>(target: LOG_TARGET,
 							<span class="string">&quot;Block seems full, but we still have time before the soft deadline, \
 							 so we will try a bit more before quitting.&quot;
 						</span>);
 					} <span class="kw">else </span>{
-						<span class="macro">debug!</span>(<span class="string">&quot;Reached block weight limit, proceeding with proposing.&quot;</span>);
+						<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;Reached block weight limit, proceeding with proposing.&quot;</span>);
 						<span class="kw">break </span>EndProposingReason::HitBlockWeightLimit
 					}
 				},
 				<span class="prelude-val">Err</span>(e) =&gt; {
 					pending_iterator.report_invalid(<span class="kw-2">&amp;</span>pending_tx);
-					<span class="macro">debug!</span>(<span class="string">&quot;[{:?}] Invalid transaction: {}&quot;</span>, pending_tx_hash, e);
+					<span class="macro">debug!</span>(target: LOG_TARGET, <span class="string">&quot;[{:?}] Invalid transaction: {}&quot;</span>, pending_tx_hash, e);
 					unqueue_invalid.push(pending_tx_hash);
 				},
 			}
 		};
 
 		<span class="kw">if </span><span class="macro">matches!</span>(end_reason, EndProposingReason::HitBlockSizeLimit) &amp;&amp; !transaction_pushed {
-			<span class="macro">warn!</span>(
+			<span class="macro">warn!</span>(target: LOG_TARGET,
 				<span class="string">&quot;Hit block size limit of `{}` without including any transaction!&quot;</span>,
 				block_size_limit,
 			);
 		}
 
 		<span class="self">self</span>.transaction_pool.remove_invalid(<span class="kw-2">&amp;</span>unqueue_invalid);
+		<span class="prelude-val">Ok</span>(end_reason)
+	}
 
-		<span class="kw">let </span>(block, storage_changes, proof) = block_builder.build()<span class="question-mark">?</span>.into_inner();
-
+	<span class="doccomment">/// Prints a summary and does telemetry + metrics.
+	</span><span class="kw">fn </span>print_summary(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		block: <span class="kw-2">&amp;</span>Block,
+		end_reason: EndProposingReason,
+		block_took: time::Duration,
+		propose_with_took: time::Duration,
+	) {
+		<span class="kw">let </span>extrinsics = block.extrinsics();
 		<span class="self">self</span>.metrics.report(|metrics| {
-			metrics.number_of_transactions.set(block.extrinsics().len() <span class="kw">as </span>u64);
-			metrics.block_constructed.observe(block_timer.elapsed().as_secs_f64());
-
+			metrics.number_of_transactions.set(extrinsics.len() <span class="kw">as </span>u64);
+			metrics.block_constructed.observe(block_took.as_secs_f64());
 			metrics.report_end_proposing_reason(end_reason);
+			metrics.create_block_proposal_time.observe(propose_with_took.as_secs_f64());
 		});
 
+		<span class="kw">let </span>extrinsics_summary = <span class="kw">if </span>extrinsics.is_empty() {
+			<span class="string">&quot;no extrinsics&quot;</span>.to_string()
+		} <span class="kw">else </span>{
+			<span class="macro">format!</span>(
+				<span class="string">&quot;extrinsics ({}): [{}]&quot;</span>,
+				extrinsics.len(),
+				extrinsics
+					.iter()
+					.map(|xt| BlakeTwo256::hash_of(xt).to_string())
+					.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+					.join(<span class="string">&quot;, &quot;</span>)
+			)
+		};
+
 		<span class="macro">info!</span>(
-			<span class="string">&quot;🎁 Prepared block for proposing at {} ({} ms) [hash: {:?}; parent_hash: {}; extrinsics ({}): [{}]]&quot;</span>,
+			<span class="string">&quot;🎁 Prepared block for proposing at {} ({} ms) [hash: {:?}; parent_hash: {}; {extrinsics_summary}&quot;</span>,
 			block.header().number(),
-			block_timer.elapsed().as_millis(),
+			block_took.as_millis(),
 			&lt;Block <span class="kw">as </span>BlockT&gt;::Hash::from(block.header().hash()),
 			block.header().parent_hash(),
-			block.extrinsics().len(),
-			block.extrinsics()
-				.iter()
-				.map(|xt| BlakeTwo256::hash_of(xt).to_string())
-				.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-				.join(<span class="string">&quot;, &quot;</span>)
 		);
 		<span class="macro">telemetry!</span>(
 			<span class="self">self</span>.telemetry;
@@ -1621,18 +1711,6 @@
 			<span class="string">&quot;number&quot; </span>=&gt; <span class="question-mark">?</span>block.header().number(),
 			<span class="string">&quot;hash&quot; </span>=&gt; <span class="question-mark">?</span>&lt;Block <span class="kw">as </span>BlockT&gt;::Hash::from(block.header().hash()),
 		);
-
-		<span class="kw">let </span>proof =
-			PR::into_proof(proof).map_err(|e| sp_blockchain::Error::Application(Box::new(e)))<span class="question-mark">?</span>;
-
-		<span class="kw">let </span>propose_with_end = time::Instant::now();
-		<span class="self">self</span>.metrics.report(|metrics| {
-			metrics.create_block_proposal_time.observe(
-				propose_with_end.saturating_duration_since(propose_with_start).as_secs_f64(),
-			);
-		});
-
-		<span class="prelude-val">Ok</span>(Proposal { block, proof, storage_changes })
 	}
 }
 
