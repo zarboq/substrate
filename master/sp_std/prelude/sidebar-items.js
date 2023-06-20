@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["Clone","Eq","PartialEq"],"struct":["Box","Reverse","Vec"],"trait":["Clone","Eq","IntoIterator","PartialEq","ToOwned"]};
+window.SIDEBAR_ITEMS = {"derive":["Clone","Eq","PartialEq"],"struct":["Box","Reverse","Vec"],"trait":["Clone","Eq","IntoIterator","PartialEq","ToOwned"]};
