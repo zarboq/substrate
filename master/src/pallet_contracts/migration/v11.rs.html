@@ -128,6 +128,7 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -149,7 +150,7 @@
 //! See &lt;https://github.com/paritytech/substrate/pull/13702&gt;.
 
 </span><span class="kw">use crate</span>::{
-	migration::{IsFinished, Migrate},
+	migration::{IsFinished, MigrationStep},
 	weights::WeightInfo,
 	Config, Pallet, TrieId, Weight, LOG_TARGET,
 };
@@ -199,7 +200,7 @@
 	_phantom: PhantomData&lt;T&gt;,
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; Migrate <span class="kw">for </span>Migration&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Config&gt; MigrationStep <span class="kw">for </span>Migration&lt;T&gt; {
 	<span class="kw">const </span>VERSION: u16 = <span class="number">11</span>;
 
 	<span class="comment">// It would be more correct to make our use the now removed [DeletionQueueDepth](https://github.com/paritytech/substrate/pull/13702/files#diff-70e9723e9db62816e35f6f885b6770a8449c75a6c2733e9fa7a245fe52c4656c)
@@ -251,7 +252,8 @@
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
 	</span><span class="kw">fn </span>post_upgrade_step(state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
-		<span class="kw">let </span>len = &lt;u32 <span class="kw">as </span>Decode&gt;::decode(<span class="kw-2">&amp;mut &amp;</span>state[..]).unwrap();
+		<span class="kw">let </span>len = &lt;u32 <span class="kw">as </span>Decode&gt;::decode(<span class="kw-2">&amp;mut &amp;</span>state[..])
+			.expect(<span class="string">&quot;pre_upgrade_step provides a valid state; qed&quot;</span>);
 		<span class="kw">let </span>counter = &lt;DeletionQueueCounter&lt;T&gt;&gt;::get();
 		<span class="macro">ensure!</span>(counter.insert_counter == len, <span class="string">&quot;invalid insert counter&quot;</span>);
 		<span class="macro">ensure!</span>(counter.delete_counter == <span class="number">0</span>, <span class="string">&quot;invalid delete counter&quot;</span>);

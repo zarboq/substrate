@@ -1573,6 +1573,25 @@
 <a href="#1573" id="1573">1573</a>
 <a href="#1574" id="1574">1574</a>
 <a href="#1575" id="1575">1575</a>
+<a href="#1576" id="1576">1576</a>
+<a href="#1577" id="1577">1577</a>
+<a href="#1578" id="1578">1578</a>
+<a href="#1579" id="1579">1579</a>
+<a href="#1580" id="1580">1580</a>
+<a href="#1581" id="1581">1581</a>
+<a href="#1582" id="1582">1582</a>
+<a href="#1583" id="1583">1583</a>
+<a href="#1584" id="1584">1584</a>
+<a href="#1585" id="1585">1585</a>
+<a href="#1586" id="1586">1586</a>
+<a href="#1587" id="1587">1587</a>
+<a href="#1588" id="1588">1588</a>
+<a href="#1589" id="1589">1589</a>
+<a href="#1590" id="1590">1590</a>
+<a href="#1591" id="1591">1591</a>
+<a href="#1592" id="1592">1592</a>
+<a href="#1593" id="1593">1593</a>
+<a href="#1594" id="1594">1594</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1655,7 +1674,8 @@
 //! an [`eDSL`](https://wiki.haskell.org/Embedded_domain_specific_language) that enables writing
 //! WebAssembly based smart contracts in the Rust programming language.
 
-</span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
+</span><span class="attr">#![allow(rustdoc::private_intra_doc_links)]
+#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 #![cfg_attr(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>, recursion_limit = <span class="string">&quot;1024&quot;</span>)]
 
 </span><span class="kw">mod </span>address;
@@ -1903,19 +1923,35 @@
 		/// # struct Runtime {};
 		/// type Migrations = (v9::Migration&lt;Runtime&gt;, v10::Migration&lt;Runtime&gt;, v11::Migration&lt;Runtime&gt;);
 		/// ```
+		///
+		/// If you have a single migration step, you can use a tuple with a single element:
+		/// ```
+		/// use pallet_contracts::migration::v9;
+		/// # struct Runtime {};
+		/// type Migrations = (v9::Migration&lt;Runtime&gt;,);
+		/// ```
 		</span><span class="kw">type </span>Migrations: MigrateSequence;
 	}
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>on_idle(_block: T::BlockNumber, remaining_weight: Weight) -&gt; Weight {
+		<span class="kw">fn </span>on_idle(_block: T::BlockNumber, <span class="kw-2">mut </span>remaining_weight: Weight) -&gt; Weight {
 			<span class="kw">use </span>migration::MigrateResult::<span class="kw-2">*</span>;
 
-			<span class="kw">let </span>(result, weight) = Migration::&lt;T&gt;::migrate(remaining_weight);
-			<span class="kw">let </span>remaining_weight = remaining_weight.saturating_sub(weight);
+			<span class="kw">loop </span>{
+				<span class="kw">let </span>(result, weight) = Migration::&lt;T&gt;::migrate(remaining_weight);
+				remaining_weight.saturating_reduce(weight);
 
-			<span class="kw">if </span>!<span class="macro">matches!</span>(result, Completed | NoMigrationInProgress) {
-				<span class="kw">return </span>weight
+				<span class="kw">match </span>result {
+					<span class="comment">// There is not enough weight to perform a migration, or make any progress, we
+					// just return the remaining weight.
+					</span>NoMigrationPerformed | InProgress { steps_done: <span class="number">0 </span>} =&gt; <span class="kw">return </span>remaining_weight,
+					<span class="comment">// Migration is still in progress, we can start the next step.
+					</span>InProgress { .. } =&gt; <span class="kw">continue</span>,
+					<span class="comment">// Either no migration is in progress, or we are done with all migrations, we
+					// can do some more other work with the remaining weight.
+					</span>Completed | NoMigrationInProgress =&gt; <span class="kw">break</span>,
+				}
 			}
 
 			ContractInfo::&lt;T&gt;::process_deletion_queue_batch(remaining_weight)
@@ -2562,7 +2598,9 @@
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>DeletionQueueCounter&lt;T: Config&gt; =
 		StorageValue&lt;<span class="kw">_</span>, DeletionQueueManager&lt;T&gt;, ValueQuery&gt;;
 
-	<span class="attr">#[pallet::storage]
+	<span class="doccomment">/// A migration can span across multiple blocks. This storage defines a cursor to track the
+	/// progress of the migration, enabling us to resume from the last completed position.
+	</span><span class="attr">#[pallet::storage]
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>MigrationInProgress&lt;T: Config&gt; =
 		StorageValue&lt;<span class="kw">_</span>, migration::Cursor, OptionQuery&gt;;
 }

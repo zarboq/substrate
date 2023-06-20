@@ -3377,7 +3377,7 @@
 };
 <span class="kw">use crate</span>::{
 	exec::{AccountIdOf, Key},
-	migration::{v10, v11, v9, Migrate},
+	migration::{v10, v11, v9, MigrationStep},
 	wasm::CallFlags,
 	Pallet <span class="kw">as </span>Contracts, <span class="kw-2">*</span>,
 };
@@ -3584,7 +3584,7 @@
 	<span class="comment">// This benchmarks the v9 migration step. (update codeStorage)
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>v9_migration_step {
-		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. Perbill::from_percent(<span class="number">49</span>).mul_ceil(T::MaxCodeLen::get());
+		<span class="kw">let </span>c <span class="kw">in </span><span class="number">0 </span>.. T::MaxCodeLen::get();
 		v9::store_old_dummy_code::&lt;T&gt;(c <span class="kw">as </span>usize);
 		<span class="kw">let </span><span class="kw-2">mut </span>m = v9::Migration::&lt;T&gt;::default();
 	}: {
@@ -3598,7 +3598,7 @@
 			whitelisted_caller(), WasmModule::dummy(), <span class="macro">vec!</span>[],
 		)<span class="question-mark">?</span>;
 
-		v10::store_old_contrat_info::&lt;T&gt;(contract.account_id.clone(), contract.info()<span class="question-mark">?</span>);
+		v10::store_old_contract_info::&lt;T&gt;(contract.account_id.clone(), contract.info()<span class="question-mark">?</span>);
 		<span class="kw">let </span><span class="kw-2">mut </span>m = v10::Migration::&lt;T&gt;::default();
 	}: {
 		m.step();
@@ -3624,15 +3624,15 @@
 		<span class="macro">assert_eq!</span>(StorageVersion::get::&lt;Pallet&lt;T&gt;&gt;(), <span class="number">2</span>);
 	}
 
-	<span class="comment">// This benchmarks the weight of executing Migration::migrate when there are no migration in progress.
+	<span class="comment">// This benchmarks the weight of dispatching migrate to execute 1 `NoopMigraton`
 	</span><span class="attr">#[pov_mode = Measured]
 	</span>migrate {
 		StorageVersion::new(<span class="number">0</span>).put::&lt;Pallet&lt;T&gt;&gt;();
 		&lt;Migration::&lt;T, <span class="bool-val">false</span>&gt; <span class="kw">as </span>frame_support::traits::OnRuntimeUpgrade&gt;::on_runtime_upgrade();
-		<span class="kw">let </span>origin: RawOrigin&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt; = RawOrigin::Signed(whitelisted_caller());
-	}: {
-		&lt;Contracts&lt;T&gt;&gt;::migrate(origin.into(), Weight::MAX).unwrap()
-	} verify {
+		<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
+		<span class="kw">let </span>origin = RawOrigin::Signed(caller.clone());
+	}: <span class="kw">_</span>(origin, Weight::MAX)
+	verify {
 		<span class="macro">assert_eq!</span>(StorageVersion::get::&lt;Pallet&lt;T&gt;&gt;(), <span class="number">1</span>);
 	}
 

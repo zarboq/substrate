@@ -596,6 +596,19 @@
 <a href="#596" id="596">596</a>
 <a href="#597" id="597">597</a>
 <a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -613,7 +626,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="doccomment">//! Migration framework for pallets.
+</span><span class="doccomment">//! Multi-block Migration framework for pallet-contracts.
+//!
+//! This module allows us to define a migration as a sequence of [`MigrationStep`]s that can be
+//! executed across multiple blocks.
+//!
+//! # Usage
+//!
+//! A migration step is defined under `src/migration/vX.rs`, where `X` is the version number.
+//! For example, `vX.rs` defines a migration from version `X - 1` to version `X`.
+//!
+//! ## Example:
+//!
+//! To configure a migration to `v11` for a runtime using `v8` of pallet-contracts on the chain, you
+//! would set the `Migrations` type as follows:
+//!
+//! ```
+//! use pallet_contracts::migration::{v9, v10, v11};
+//! # pub enum Runtime {};
+//! type Migrations = (v9::Migration&lt;Runtime&gt;, v10::Migration&lt;Runtime&gt;, v11::Migration&lt;Runtime&gt;);
+//! ```
+//!
+//! ## Notes:
+//!
+//! - Migrations should always be tested with `try-runtime` before being deployed.
+//! - By testing with `try-runtime` against a live network, you ensure that all migration steps work
+//!   and that you have included the required steps.
+//!
+//! ## Low Level / Implementation Details
+//!
+//! When a migration starts and [`OnRuntimeUpgrade::on_runtime_upgrade`] is called, instead of
+//! performing the actual migration, we set a custom storage item [`MigrationInProgress`].
+//! This storage item defines a [`Cursor`] for the current migration.
+//!
+//! If the [`MigrationInProgress`] storage item exists, it means a migration is in progress, and its
+//! value holds a cursor for the current migration step. These migration steps are executed during
+//! [`Hooks&lt;BlockNumber&gt;::on_idle`] or when the [`Pallet::migrate`] dispatchable is
+//! called.
+//!
+//! While the migration is in progress, all dispatchables except `migrate`, are blocked, and returns
+//! a `MigrationInProgress` error.
 
 </span><span class="kw">pub mod </span>v10;
 <span class="kw">pub mod </span>v11;
@@ -626,6 +678,7 @@
 	pallet_prelude::<span class="kw-2">*</span>,
 	traits::{ConstU32, OnRuntimeUpgrade},
 };
+<span class="kw">use </span>sp_runtime::Saturating;
 <span class="kw">use </span>sp_std::marker::PhantomData;
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
@@ -642,7 +695,8 @@
 	<span class="macro">panic!</span>(<span class="string">&quot;Required migration {version:?} not supported by this runtime. This is a bug.&quot;</span>);
 }
 
-<span class="doccomment">/// The cursor used to store the state of the current migration step.
+<span class="doccomment">/// The cursor used to encode the position (usually the last iterated key) of the current migration
+/// step.
 </span><span class="kw">pub type </span>Cursor = BoundedVec&lt;u8, ConstU32&lt;<span class="number">1024</span>&gt;&gt;;
 
 <span class="doccomment">/// IsFinished describes whether a migration is finished or not.
@@ -655,7 +709,7 @@
 ///
 /// The migration is done in steps. The migration is finished when
 /// `step()` returns `IsFinished::Yes`.
-</span><span class="kw">pub trait </span>Migrate: Codec + MaxEncodedLen + Default {
+</span><span class="kw">pub trait </span>MigrationStep: Codec + MaxEncodedLen + Default {
 	<span class="doccomment">/// Returns the version of the migration.
 	</span><span class="kw">const </span>VERSION: u16;
 
@@ -708,7 +762,7 @@
 #[derive(frame_support::DefaultNoBound, Encode, Decode, MaxEncodedLen)]
 </span><span class="kw">pub struct </span>NoopMigration&lt;<span class="kw">const </span>N: u16&gt;;
 
-<span class="kw">impl</span>&lt;<span class="kw">const </span>N: u16&gt; Migrate <span class="kw">for </span>NoopMigration&lt;N&gt; {
+<span class="kw">impl</span>&lt;<span class="kw">const </span>N: u16&gt; MigrationStep <span class="kw">for </span>NoopMigration&lt;N&gt; {
 	<span class="kw">const </span>VERSION: u16 = N;
 	<span class="kw">fn </span>max_step_weight() -&gt; Weight {
 		Weight::zero()
@@ -720,10 +774,10 @@
 }
 
 <span class="kw">mod </span>private {
-	<span class="kw">use </span><span class="kw">crate</span>::migration::Migrate;
+	<span class="kw">use </span><span class="kw">crate</span>::migration::MigrationStep;
 	<span class="kw">pub trait </span>Sealed {}
 	<span class="attr">#[impl_trait_for_tuples::impl_for_tuples(<span class="number">10</span>)]
-	#[tuple_types_custom_trait_bound(Migrate)]
+	#[tuple_types_custom_trait_bound(MigrationStep)]
 	</span><span class="kw">impl </span>Sealed <span class="kw">for </span>Tuple {}
 }
 
@@ -732,11 +786,11 @@
 /// The sequence must be defined by a tuple of migrations, each of which must implement the
 /// `Migrate` trait. Migrations must be ordered by their versions with no gaps.
 </span><span class="kw">pub trait </span>MigrateSequence: private::Sealed {
-	<span class="doccomment">/// Returns the range of versions that this migration can handle.
+	<span class="doccomment">/// Returns the range of versions that this migrations sequence can handle.
 	/// Migrations must be ordered by their versions with no gaps.
-	/// The following code will fail to compile:
 	///
 	/// The following code will fail to compile:
+	///
 	/// ```compile_fail
 	///     # use pallet_contracts::{NoopMigration, MigrateSequence};
 	/// 	let _ = &lt;(NoopMigration&lt;1&gt;, NoopMigration&lt;3&gt;)&gt;::VERSION_RANGE;
@@ -770,21 +824,10 @@
 
 	<span class="doccomment">/// Returns whether migrating from `in_storage` to `target` is supported.
 	///
-	/// A migration is supported if (in_storage + 1, target) is contained by `VERSION_RANGE`.
+	/// A migration is supported if `VERSION_RANGE` is (in_storage + 1, target).
 	</span><span class="kw">fn </span>is_upgrade_supported(in_storage: StorageVersion, target: StorageVersion) -&gt; bool {
-		<span class="kw">if </span>in_storage == target {
-			<span class="kw">return </span><span class="bool-val">true
-		</span>}
-		<span class="kw">if </span>in_storage &gt; target {
-			<span class="kw">return </span><span class="bool-val">false
-		</span>}
-
 		<span class="kw">let </span>(low, high) = <span class="self">Self</span>::VERSION_RANGE;
-		<span class="kw">let </span><span class="prelude-val">Some</span>(first_supported) = low.checked_sub(<span class="number">1</span>) <span class="kw">else </span>{
-			<span class="kw">return </span><span class="bool-val">false
-		</span>};
-
-		in_storage &gt;= first_supported &amp;&amp; target == high
+		target == high &amp;&amp; in_storage + <span class="number">1 </span>== low
 	}
 }
 
@@ -874,17 +917,20 @@
 		</span><span class="kw">let </span>storage_version = &lt;Pallet&lt;T&gt;&gt;::on_chain_storage_version();
 		<span class="kw">let </span>target_version = &lt;Pallet&lt;T&gt;&gt;::current_storage_version();
 
+		<span class="macro">ensure!</span>(
+			storage_version != target_version,
+			<span class="string">&quot;No upgrade: Please remove this migration from your runtime upgrade configuration.&quot;
+		</span>);
+
 		<span class="macro">log::debug!</span>(
 			target: LOG_TARGET,
-			<span class="string">&quot;{}: Range supported {:?}, range requested {:?}&quot;</span>,
-			&lt;Pallet&lt;T&gt;&gt;::name(),
-			T::Migrations::VERSION_RANGE,
-			(storage_version, target_version)
+			<span class="string">&quot;Requested migration of {} from {:?}(on-chain storage version) to {:?}(current storage version)&quot;</span>,
+			&lt;Pallet&lt;T&gt;&gt;::name(), storage_version, target_version
 		);
 
 		<span class="macro">ensure!</span>(
 			T::Migrations::is_upgrade_supported(storage_version, target_version),
-			<span class="string">&quot;Unsupported upgrade&quot;
+			<span class="string">&quot;Unsupported upgrade: VERSION_RANGE should be (on-chain storage version + 1, current storage version)&quot;
 		</span>);
 		<span class="prelude-val">Ok</span>(Default::default())
 	}
@@ -911,7 +957,8 @@
 }
 
 <span class="kw">impl</span>&lt;T: Config, <span class="kw">const </span>TEST_ALL_STEPS: bool&gt; Migration&lt;T, TEST_ALL_STEPS&gt; {
-	<span class="doccomment">/// Verify that each migration&#39;s step of the [`T::Migrations`] sequence fits into `Cursor`.
+	<span class="doccomment">/// Verify that each migration&#39;s step of the [`Config::Migrations`] sequence fits into
+	/// `Cursor`.
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>integrity_test() {
 		<span class="kw">let </span>max_weight = &lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockWeights::get().max_block;
 		T::Migrations::integrity_test(max_weight)
@@ -992,7 +1039,7 @@
 }
 
 <span class="attr">#[impl_trait_for_tuples::impl_for_tuples(<span class="number">10</span>)]
-#[tuple_types_custom_trait_bound(Migrate)]
+#[tuple_types_custom_trait_bound(MigrationStep)]
 </span><span class="kw">impl </span>MigrateSequence <span class="kw">for </span>Tuple {
 	<span class="kw">const </span>VERSION_RANGE: (u16, u16) = {
 		<span class="kw">let </span><span class="kw-2">mut </span>versions: (u16, u16) = (<span class="number">0</span>, <span class="number">0</span>);
@@ -1059,7 +1106,7 @@
 					<span class="kw">let </span><span class="kw-2">mut </span>steps_done = <span class="number">0</span>;
 					<span class="kw">while </span>weight_left.all_gt(max_weight) {
 						<span class="kw">let </span>(finished, weight) = migration.step();
-						steps_done += <span class="number">1</span>;
+						steps_done.saturating_accrue(<span class="number">1</span>);
 						weight_left.saturating_reduce(weight);
 						<span class="kw">if </span><span class="macro">matches!</span>(finished, IsFinished::Yes) {
 							<span class="kw">return </span>StepResult::Completed{ steps_done }
@@ -1092,7 +1139,7 @@
 		</span>count: u16,
 	}
 
-	<span class="kw">impl</span>&lt;<span class="kw">const </span>N: u16&gt; Migrate <span class="kw">for </span>MockMigration&lt;N&gt; {
+	<span class="kw">impl</span>&lt;<span class="kw">const </span>N: u16&gt; MigrationStep <span class="kw">for </span>MockMigration&lt;N&gt; {
 		<span class="kw">const </span>VERSION: u16 = N;
 		<span class="kw">fn </span>max_step_weight() -&gt; Weight {
 			Weight::from_all(<span class="number">1</span>)
@@ -1117,30 +1164,9 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>is_upgrade_supported_works() {
 		<span class="kw">type </span>Migrations = (MockMigration&lt;<span class="number">9</span>&gt;, MockMigration&lt;<span class="number">10</span>&gt;, MockMigration&lt;<span class="number">11</span>&gt;);
-
-		[(<span class="number">1</span>, <span class="number">1</span>), (<span class="number">8</span>, <span class="number">11</span>), (<span class="number">9</span>, <span class="number">11</span>)].into_iter().for_each(|(from, to)| {
-			<span class="macro">assert!</span>(
-				Migrations::is_upgrade_supported(
-					StorageVersion::new(from),
-					StorageVersion::new(to)
-				),
-				<span class="string">&quot;{} -&gt; {} is supported&quot;</span>,
-				from,
-				to
-			)
-		});
-
-		[(<span class="number">1</span>, <span class="number">0</span>), (<span class="number">0</span>, <span class="number">3</span>), (<span class="number">7</span>, <span class="number">11</span>), (<span class="number">8</span>, <span class="number">10</span>)].into_iter().for_each(|(from, to)| {
-			<span class="macro">assert!</span>(
-				!Migrations::is_upgrade_supported(
-					StorageVersion::new(from),
-					StorageVersion::new(to)
-				),
-				<span class="string">&quot;{} -&gt; {} is not supported&quot;</span>,
-				from,
-				to
-			)
-		});
+		<span class="macro">assert!</span>(Migrations::is_upgrade_supported(StorageVersion::new(<span class="number">8</span>), StorageVersion::new(<span class="number">11</span>)));
+		<span class="macro">assert!</span>(!Migrations::is_upgrade_supported(StorageVersion::new(<span class="number">9</span>), StorageVersion::new(<span class="number">11</span>)));
+		<span class="macro">assert!</span>(!Migrations::is_upgrade_supported(StorageVersion::new(<span class="number">8</span>), StorageVersion::new(<span class="number">12</span>)));
 	}
 
 	<span class="attr">#[test]

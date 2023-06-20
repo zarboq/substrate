@@ -142,11 +142,6 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -167,17 +162,15 @@
 </span><span class="doccomment">//! Update `CodeStorage` with the new `determinism` field.
 
 </span><span class="kw">use crate</span>::{
-	migration::{IsFinished, Migrate},
+	migration::{IsFinished, MigrationStep},
 	weights::WeightInfo,
 	CodeHash, Config, Determinism, Pallet, Weight, LOG_TARGET,
 };
 <span class="kw">use </span>codec::{Decode, Encode};
-<span class="kw">use </span>frame_support::{
-	codec, pallet_prelude::<span class="kw-2">*</span>, storage_alias, BoundedVec, DefaultNoBound, Identity,
-};
+<span class="kw">use </span>frame_support::{codec, pallet_prelude::<span class="kw-2">*</span>, storage_alias, DefaultNoBound, Identity};
 <span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
 </span><span class="kw">use </span>sp_runtime::TryRuntimeError;
-<span class="kw">use </span>sp_std::{marker::PhantomData, prelude::<span class="kw-2">*</span>};
+<span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
 
 <span class="kw">mod </span>old {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -228,11 +221,10 @@
 
 <span class="attr">#[derive(Encode, Decode, MaxEncodedLen, DefaultNoBound)]
 </span><span class="kw">pub struct </span>Migration&lt;T: Config&gt; {
-	last_key: <span class="prelude-ty">Option</span>&lt;BoundedVec&lt;u8, ConstU32&lt;<span class="number">256</span>&gt;&gt;&gt;,
-	_phantom: PhantomData&lt;T&gt;,
+	last_code_hash: <span class="prelude-ty">Option</span>&lt;CodeHash&lt;T&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; Migrate <span class="kw">for </span>Migration&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Config&gt; MigrationStep <span class="kw">for </span>Migration&lt;T&gt; {
 	<span class="kw">const </span>VERSION: u16 = <span class="number">9</span>;
 
 	<span class="kw">fn </span>max_step_weight() -&gt; Weight {
@@ -240,8 +232,8 @@
 	}
 
 	<span class="kw">fn </span>step(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; (IsFinished, Weight) {
-		<span class="kw">let </span><span class="kw-2">mut </span>iter = <span class="kw">if let </span><span class="prelude-val">Some</span>(last_key) = <span class="self">self</span>.last_key.take() {
-			old::CodeStorage::&lt;T&gt;::iter_from(last_key.to_vec())
+		<span class="kw">let </span><span class="kw-2">mut </span>iter = <span class="kw">if let </span><span class="prelude-val">Some</span>(last_key) = <span class="self">self</span>.last_code_hash.take() {
+			old::CodeStorage::&lt;T&gt;::iter_from(old::CodeStorage::&lt;T&gt;::hashed_key_for(last_key))
 		} <span class="kw">else </span>{
 			old::CodeStorage::&lt;T&gt;::iter()
 		};
@@ -257,7 +249,7 @@
 				determinism: Determinism::Enforced,
 			};
 			CodeStorage::&lt;T&gt;::insert(key, module);
-			<span class="self">self</span>.last_key = <span class="prelude-val">Some</span>(iter.last_raw_key().to_vec().try_into().unwrap());
+			<span class="self">self</span>.last_code_hash = <span class="prelude-val">Some</span>(key);
 			(IsFinished::No, T::WeightInfo::v9_migration_step(len))
 		} <span class="kw">else </span>{
 			<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;No more contracts code to migrate&quot;</span>);
@@ -275,8 +267,8 @@
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
 	</span><span class="kw">fn </span>post_upgrade_step(state: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
-		<span class="kw">let </span>sample =
-			&lt;Vec&lt;(CodeHash&lt;T&gt;, old::PrefabWasmModule)&gt; <span class="kw">as </span>Decode&gt;::decode(<span class="kw-2">&amp;mut &amp;</span>state[..]).unwrap();
+		<span class="kw">let </span>sample = &lt;Vec&lt;(CodeHash&lt;T&gt;, old::PrefabWasmModule)&gt; <span class="kw">as </span>Decode&gt;::decode(<span class="kw-2">&amp;mut &amp;</span>state[..])
+			.expect(<span class="string">&quot;pre_upgrade_step provides a valid state; qed&quot;</span>);
 
 		<span class="macro">log::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Validating sample of {} contract codes&quot;</span>, sample.len());
 		<span class="kw">for </span>(code_hash, old) <span class="kw">in </span>sample {
@@ -287,8 +279,6 @@
 			</span>);
 			<span class="macro">ensure!</span>(module.determinism == Determinism::Enforced, <span class="string">&quot;invalid determinism&quot;</span>);
 			<span class="macro">ensure!</span>(module.initial == old.initial, <span class="string">&quot;invalid initial&quot;</span>);
-			<span class="macro">ensure!</span>(module.maximum == old.maximum, <span class="string">&quot;invalid maximum&quot;</span>);
-			<span class="macro">ensure!</span>(module.code == old.code, <span class="string">&quot;invalid code&quot;</span>);
 			<span class="macro">ensure!</span>(module.maximum == old.maximum, <span class="string">&quot;invalid maximum&quot;</span>);
 			<span class="macro">ensure!</span>(module.code == old.code, <span class="string">&quot;invalid code&quot;</span>);
 		}
