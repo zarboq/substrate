@@ -1366,6 +1366,52 @@
 <a href="#1366" id="1366">1366</a>
 <a href="#1367" id="1367">1367</a>
 <a href="#1368" id="1368">1368</a>
+<a href="#1369" id="1369">1369</a>
+<a href="#1370" id="1370">1370</a>
+<a href="#1371" id="1371">1371</a>
+<a href="#1372" id="1372">1372</a>
+<a href="#1373" id="1373">1373</a>
+<a href="#1374" id="1374">1374</a>
+<a href="#1375" id="1375">1375</a>
+<a href="#1376" id="1376">1376</a>
+<a href="#1377" id="1377">1377</a>
+<a href="#1378" id="1378">1378</a>
+<a href="#1379" id="1379">1379</a>
+<a href="#1380" id="1380">1380</a>
+<a href="#1381" id="1381">1381</a>
+<a href="#1382" id="1382">1382</a>
+<a href="#1383" id="1383">1383</a>
+<a href="#1384" id="1384">1384</a>
+<a href="#1385" id="1385">1385</a>
+<a href="#1386" id="1386">1386</a>
+<a href="#1387" id="1387">1387</a>
+<a href="#1388" id="1388">1388</a>
+<a href="#1389" id="1389">1389</a>
+<a href="#1390" id="1390">1390</a>
+<a href="#1391" id="1391">1391</a>
+<a href="#1392" id="1392">1392</a>
+<a href="#1393" id="1393">1393</a>
+<a href="#1394" id="1394">1394</a>
+<a href="#1395" id="1395">1395</a>
+<a href="#1396" id="1396">1396</a>
+<a href="#1397" id="1397">1397</a>
+<a href="#1398" id="1398">1398</a>
+<a href="#1399" id="1399">1399</a>
+<a href="#1400" id="1400">1400</a>
+<a href="#1401" id="1401">1401</a>
+<a href="#1402" id="1402">1402</a>
+<a href="#1403" id="1403">1403</a>
+<a href="#1404" id="1404">1404</a>
+<a href="#1405" id="1405">1405</a>
+<a href="#1406" id="1406">1406</a>
+<a href="#1407" id="1407">1407</a>
+<a href="#1408" id="1408">1408</a>
+<a href="#1409" id="1409">1409</a>
+<a href="#1410" id="1410">1410</a>
+<a href="#1411" id="1411">1411</a>
+<a href="#1412" id="1412">1412</a>
+<a href="#1413" id="1413">1413</a>
+<a href="#1414" id="1414">1414</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1909,7 +1955,6 @@
 			</span>.rpc_get_keys_paged(prefix.clone(), at)
 			.<span class="kw">await</span><span class="question-mark">?
 			</span>.into_iter()
-			.filter(|k| !is_default_child_storage_key(<span class="kw-2">&amp;</span>k.<span class="number">0</span>))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 		sp.stop_with_message(<span class="macro">format!</span>(
 			<span class="string">&quot;✅ Found {} keys ({:.2}s)&quot;</span>,
@@ -1977,7 +2022,14 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>sp = Spinner::with_timer(Spinners::Dots, <span class="string">&quot;Inserting keys into DB...&quot;</span>.into());
 		<span class="kw">let </span>start = Instant::now();
-		pending_ext.batch_insert(key_values.clone().into_iter().map(|(k, v)| (k.<span class="number">0</span>, v.<span class="number">0</span>)));
+		pending_ext.batch_insert(key_values.clone().into_iter().filter_map(|(k, v)| {
+			<span class="comment">// Don&#39;t insert the child keys here, they need to be inserted seperately with all their
+			// data in the load_child_remote function.
+			</span><span class="kw">match </span>is_default_child_storage_key(<span class="kw-2">&amp;</span>k.<span class="number">0</span>) {
+				<span class="bool-val">true </span>=&gt; <span class="prelude-val">None</span>,
+				<span class="bool-val">false </span>=&gt; <span class="prelude-val">Some</span>((k.<span class="number">0</span>, v.<span class="number">0</span>)),
+			}
+		}));
 		sp.stop_with_message(<span class="macro">format!</span>(
 			<span class="string">&quot;✅ Inserted keys into DB ({:.2}s)&quot;</span>,
 			start.elapsed().as_secs_f32()
@@ -2095,6 +2147,10 @@
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
 		<span class="kw">if </span>child_roots.is_empty() {
+			<span class="macro">info!</span>(
+				target: LOG_TARGET,
+				<span class="string">&quot;👩‍👦 no child roots found to scrape&quot;</span>,
+			);
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(Default::default())
 		}
 
@@ -2556,6 +2612,42 @@
 			</span>.unwrap();
 
 		<span class="macro">assert_eq!</span>(ext.block_hash, cached_ext.block_hash);
+	}
+
+	<span class="attr">#[tokio::test]
+	</span><span class="kw">async fn </span>child_keys_are_loaded() {
+		<span class="kw">const </span>CACHE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;snapshot_retains_storage&quot;</span>;
+		init_logger();
+
+		<span class="comment">// create an ext with children keys
+		</span><span class="kw">let </span>child_ext = Builder::&lt;Block&gt;::new()
+			.mode(Mode::Online(OnlineConfig {
+				pallets: <span class="macro">vec!</span>[<span class="string">&quot;Proxy&quot;</span>.to_owned()],
+				child_trie: <span class="bool-val">true</span>,
+				state_snapshot: <span class="prelude-val">Some</span>(SnapshotConfig::new(CACHE)),
+				..Default::default()
+			}))
+			.build()
+			.<span class="kw">await
+			</span>.unwrap();
+
+		<span class="comment">// create an ext without children keys
+		</span><span class="kw">let </span>ext = Builder::&lt;Block&gt;::new()
+			.mode(Mode::Online(OnlineConfig {
+				pallets: <span class="macro">vec!</span>[<span class="string">&quot;Proxy&quot;</span>.to_owned()],
+				child_trie: <span class="bool-val">false</span>,
+				state_snapshot: <span class="prelude-val">Some</span>(SnapshotConfig::new(CACHE)),
+				..Default::default()
+			}))
+			.build()
+			.<span class="kw">await
+			</span>.unwrap();
+
+		<span class="comment">// there should be more keys in the child ext.
+		</span><span class="macro">assert!</span>(
+			child_ext.as_backend().backend_storage().keys().len() &gt;
+				ext.as_backend().backend_storage().keys().len()
+		);
 	}
 
 	<span class="attr">#[tokio::test]
