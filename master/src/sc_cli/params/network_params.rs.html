@@ -291,6 +291,14 @@
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
 <a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -321,7 +329,7 @@
 	config::{Multiaddr, MultiaddrWithPeerId},
 	ChainSpec, ChainType,
 };
-<span class="kw">use </span>std::{borrow::Cow, path::PathBuf};
+<span class="kw">use </span>std::{borrow::Cow, num::NonZeroUsize, path::PathBuf};
 
 <span class="doccomment">/// Parameters used to create the network configuration.
 </span><span class="attr">#[derive(Debug, Clone, Args)]
@@ -413,6 +421,13 @@
 	/// security improvements.
 	</span><span class="attr">#[arg(long)]
 	</span><span class="kw">pub </span>kademlia_disjoint_query_paths: bool,
+
+	<span class="doccomment">/// Kademlia replication factor determines to how many closest peers a record is replicated to.
+	///
+	/// Discovery mechanism requires successful replication to all
+	/// `kademlia_replication_factor` peers to consider record successfully put.
+	</span><span class="attr">#[arg(long, default_value = <span class="string">&quot;20&quot;</span>)]
+	</span><span class="kw">pub </span>kademlia_replication_factor: NonZeroUsize,
 
 	<span class="doccomment">/// Join the IPFS network and serve transactions over bitswap protocol.
 	</span><span class="attr">#[arg(long)]
@@ -526,6 +541,7 @@
 			enable_dht_random_walk: !<span class="self">self</span>.reserved_only,
 			allow_non_globals_in_dht,
 			kademlia_disjoint_query_paths: <span class="self">self</span>.kademlia_disjoint_query_paths,
+			kademlia_replication_factor: <span class="self">self</span>.kademlia_replication_factor,
 			yamux_window_size: <span class="prelude-val">None</span>,
 			ipfs_server: <span class="self">self</span>.ipfs_server,
 			sync_mode: <span class="self">self</span>.sync.into(),

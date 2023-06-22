@@ -1174,6 +1174,22 @@
 <a href="#1174" id="1174">1174</a>
 <a href="#1175" id="1175">1175</a>
 <a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1263,6 +1279,10 @@
 /// a given address.
 </span><span class="kw">const </span>MAX_KNOWN_EXTERNAL_ADDRESSES: usize = <span class="number">32</span>;
 
+<span class="doccomment">/// Default value for Kademlia replication factor which  determines to how many closest peers a
+/// record is replicated to.
+</span><span class="kw">pub const </span>DEFAULT_KADEMLIA_REPLICATION_FACTOR: usize = <span class="number">20</span>;
+
 <span class="doccomment">/// `DiscoveryBehaviour` configuration.
 ///
 /// Note: In order to discover nodes or load and store values via Kademlia one has to add
@@ -1277,6 +1297,7 @@
 	enable_mdns: bool,
 	kademlia_disjoint_query_paths: bool,
 	kademlia_protocols: Vec&lt;Vec&lt;u8&gt;&gt;,
+	kademlia_replication_factor: NonZeroUsize,
 }
 
 <span class="kw">impl </span>DiscoveryConfig {
@@ -1292,6 +1313,8 @@
 			enable_mdns: <span class="bool-val">false</span>,
 			kademlia_disjoint_query_paths: <span class="bool-val">false</span>,
 			kademlia_protocols: Vec::new(),
+			kademlia_replication_factor: NonZeroUsize::new(DEFAULT_KADEMLIA_REPLICATION_FACTOR)
+				.expect(<span class="string">&quot;value is a constant; constant is non-zero; qed.&quot;</span>),
 		}
 	}
 
@@ -1358,6 +1381,12 @@
 		<span class="self">self
 	</span>}
 
+	<span class="doccomment">/// Sets Kademlia replication factor.
+	</span><span class="kw">pub fn </span>with_kademlia_replication_factor(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: NonZeroUsize) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
+		<span class="self">self</span>.kademlia_replication_factor = value;
+		<span class="self">self
+	</span>}
+
 	<span class="doccomment">/// Create a `DiscoveryBehaviour` from this config.
 	</span><span class="kw">pub fn </span>finish(<span class="self">self</span>) -&gt; DiscoveryBehaviour {
 		<span class="kw">let </span><span class="self">Self </span>{
@@ -1370,10 +1399,13 @@
 			enable_mdns,
 			kademlia_disjoint_query_paths,
 			kademlia_protocols,
+			kademlia_replication_factor,
 		} = <span class="self">self</span>;
 
 		<span class="kw">let </span>kademlia = <span class="kw">if </span>!kademlia_protocols.is_empty() {
 			<span class="kw">let </span><span class="kw-2">mut </span>config = KademliaConfig::default();
+
+			config.set_replication_factor(kademlia_replication_factor);
 			config.set_protocol_names(kademlia_protocols.into_iter().map(Into::into).collect());
 			<span class="comment">// By default Kademlia attempts to insert all peers into its routing table once a
 			// dialing attempt succeeds. In order to control which peer is added, disable the

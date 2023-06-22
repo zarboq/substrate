@@ -805,6 +805,16 @@
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -829,6 +839,7 @@
 //! See the documentation of [`Params`].
 
 </span><span class="kw">pub use crate</span>::{
+	discovery::DEFAULT_KADEMLIA_REPLICATION_FACTOR,
 	protocol::NotificationsSink,
 	request_responses::{
 		IncomingRequest, OutgoingResponse, ProtocolConfig <span class="kw">as </span>RequestResponseConfig,
@@ -857,6 +868,7 @@
 	io::{<span class="self">self</span>, Write},
 	iter,
 	net::Ipv4Addr,
+	num::NonZeroUsize,
 	path::{Path, PathBuf},
 	pin::Pin,
 	str::{<span class="self">self</span>, FromStr},
@@ -1412,6 +1424,12 @@
 	/// the presence of potentially adversarial nodes.
 	</span><span class="kw">pub </span>kademlia_disjoint_query_paths: bool,
 
+	<span class="doccomment">/// Kademlia replication factor determines to how many closest peers a record is replicated to.
+	///
+	/// Discovery mechanism requires successful replication to all
+	/// `kademlia_replication_factor` peers to consider record successfully put.
+	</span><span class="kw">pub </span>kademlia_replication_factor: NonZeroUsize,
+
 	<span class="doccomment">/// Enable serving block data over IPFS bitswap.
 	</span><span class="kw">pub </span>ipfs_server: bool,
 
@@ -1463,6 +1481,8 @@
 			enable_dht_random_walk: <span class="bool-val">true</span>,
 			allow_non_globals_in_dht: <span class="bool-val">false</span>,
 			kademlia_disjoint_query_paths: <span class="bool-val">false</span>,
+			kademlia_replication_factor: NonZeroUsize::new(DEFAULT_KADEMLIA_REPLICATION_FACTOR)
+				.expect(<span class="string">&quot;value is a constant; constant is non-zero; qed.&quot;</span>),
 			yamux_window_size: <span class="prelude-val">None</span>,
 			ipfs_server: <span class="bool-val">false</span>,
 		}
