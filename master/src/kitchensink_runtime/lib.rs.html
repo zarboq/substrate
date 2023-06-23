@@ -2631,6 +2631,14 @@
 <a href="#2631" id="2631">2631</a>
 <a href="#2632" id="2632">2632</a>
 <a href="#2633" id="2633">2633</a>
+<a href="#2634" id="2634">2634</a>
+<a href="#2635" id="2635">2635</a>
+<a href="#2636" id="2636">2636</a>
+<a href="#2637" id="2637">2637</a>
+<a href="#2638" id="2638">2638</a>
+<a href="#2639" id="2639">2639</a>
+<a href="#2640" id="2640">2640</a>
+<a href="#2641" id="2641">2641</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3124,6 +3132,13 @@
 		pallet_assets::BalanceToAssetBalance&lt;Balances, Runtime, ConvertInto, Instance1&gt;,
 		CreditToBlockAuthor,
 	&gt;;
+}
+
+<span class="kw">impl </span>pallet_asset_conversion_tx_payment::Config <span class="kw">for </span>Runtime {
+	<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
+	<span class="kw">type </span>Fungibles = Assets;
+	<span class="kw">type </span>OnChargeAssetTransaction =
+		pallet_asset_conversion_tx_payment::AssetConversionAdapter&lt;Balances, AssetConversion&gt;;
 }
 
 <span class="macro">parameter_types! </span>{
@@ -3925,7 +3940,7 @@
 			frame_system::CheckEra::&lt;Runtime&gt;::from(era),
 			frame_system::CheckNonce::&lt;Runtime&gt;::from(nonce),
 			frame_system::CheckWeight::&lt;Runtime&gt;::new(),
-			pallet_asset_tx_payment::ChargeAssetTxPayment::&lt;Runtime&gt;::from(tip, <span class="prelude-val">None</span>),
+			pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::&lt;Runtime&gt;::from(tip, <span class="prelude-val">None</span>),
 		);
 		<span class="kw">let </span>raw_payload = SignedPayload::new(call, extra)
 			.map_err(|e| {
@@ -4509,6 +4524,7 @@
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		AssetTxPayment: pallet_asset_tx_payment,
+		AssetConversionTxPayment: pallet_asset_conversion_tx_payment,
 		ElectionProviderMultiPhase: pallet_election_provider_multi_phase,
 		Staking: pallet_staking,
 		Session: pallet_session,
@@ -4593,7 +4609,7 @@
 	frame_system::CheckEra&lt;Runtime&gt;,
 	frame_system::CheckNonce&lt;Runtime&gt;,
 	frame_system::CheckWeight&lt;Runtime&gt;,
-	pallet_asset_tx_payment::ChargeAssetTxPayment&lt;Runtime&gt;,
+	pallet_asset_conversion_tx_payment::ChargeAssetTxPayment&lt;Runtime&gt;,
 );
 
 <span class="doccomment">/// Unchecked extrinsic type as expected by this runtime.
