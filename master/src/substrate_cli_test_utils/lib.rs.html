@@ -300,6 +300,27 @@
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -327,6 +348,7 @@
 };
 <span class="kw">use </span>node_primitives::{Hash, Header};
 <span class="kw">use </span>regex::Regex;
+<span class="kw">use </span>sp_rpc::{list::ListOrValue, number::NumberOrHex};
 <span class="kw">use </span>std::{
 	env,
 	io::{BufRead, BufReader, Read},
@@ -479,7 +501,8 @@
 	<span class="kw">use </span>substrate_rpc_client::{ws_client, ChainApi};
 
 	<span class="kw">let </span><span class="kw-2">mut </span>built_blocks = std::collections::HashSet::new();
-	<span class="kw">let </span><span class="kw-2">mut </span>interval = tokio::time::interval(Duration::from_secs(<span class="number">2</span>));
+	<span class="kw">let </span>block_duration = Duration::from_secs(<span class="number">2</span>);
+	<span class="kw">let </span><span class="kw-2">mut </span>interval = tokio::time::interval(block_duration);
 	<span class="kw">let </span>rpc = ws_client(url).<span class="kw">await</span>.unwrap();
 
 	<span class="kw">loop </span>{
@@ -521,6 +544,25 @@
 	})
 	.<span class="kw">await
 </span>}
+
+<span class="kw">pub async fn </span>block_hash(block_number: u64, url: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Hash, String&gt; {
+	<span class="kw">use </span>substrate_rpc_client::{ws_client, ChainApi};
+
+	<span class="kw">let </span>rpc = ws_client(url).<span class="kw">await</span>.unwrap();
+
+	<span class="kw">let </span>result = ChainApi::&lt;(), Hash, Header, ()&gt;::block_hash(
+		<span class="kw-2">&amp;</span>rpc,
+		<span class="prelude-val">Some</span>(ListOrValue::Value(NumberOrHex::Number(block_number))),
+	)
+	.<span class="kw">await
+	</span>.map_err(|<span class="kw">_</span>| <span class="string">&quot;Couldn&#39;t get block hash&quot;</span>.to_string())<span class="question-mark">?</span>;
+
+	<span class="kw">match </span>result {
+		ListOrValue::Value(maybe_block_hash) <span class="kw">if </span>maybe_block_hash.is_some() =&gt;
+			<span class="prelude-val">Ok</span>(maybe_block_hash.unwrap()),
+		<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Couldn&#39;t get block hash&quot;</span>.to_string()),
+	}
+}
 
 <span class="kw">pub struct </span>KillChildOnDrop(<span class="kw">pub </span>Child);
 
