@@ -217,6 +217,7 @@ var sourcesIndex = JSON.parse('{\
 "sp_database":["",[],["error.rs","kvdb.rs","lib.rs","mem.rs"]],\
 "sp_debug_derive":["",[],["impls.rs","lib.rs"]],\
 "sp_externalities":["",[],["extensions.rs","lib.rs","scope_limited.rs"]],\
+"sp_genesis_builder":["",[],["lib.rs"]],\
 "sp_inherents":["",[],["client_side.rs","lib.rs"]],\
 "sp_io":["",[],["lib.rs"]],\
 "sp_keyring":["",[],["ed25519.rs","lib.rs","sr25519.rs"]],\
