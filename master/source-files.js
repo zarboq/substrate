@@ -197,7 +197,7 @@ var sourcesIndex = JSON.parse('{\
 "sc_utils":["",[["notification",[],["registry.rs"]]],["id_sequence.rs","lib.rs","metrics.rs","mpsc.rs","notification.rs","pubsub.rs","status_sinks.rs"]],\
 "sp_api":["",[],["lib.rs"]],\
 "sp_api_proc_macro":["",[],["common.rs","decl_runtime_apis.rs","impl_runtime_apis.rs","lib.rs","mock_impl_runtime_apis.rs","runtime_metadata.rs","utils.rs"]],\
-"sp_application_crypto":["",[],["ecdsa.rs","ed25519.rs","lib.rs","sr25519.rs","traits.rs"]],\
+"sp_application_crypto":["",[],["bls377.rs","bls381.rs","ecdsa.rs","ed25519.rs","lib.rs","sr25519.rs","traits.rs"]],\
 "sp_application_crypto_test":["",[],["lib.rs"]],\
 "sp_arithmetic":["",[],["biguint.rs","fixed_point.rs","helpers_128bit.rs","lib.rs","per_things.rs","rational.rs","traits.rs"]],\
 "sp_authority_discovery":["",[],["lib.rs"]],\
