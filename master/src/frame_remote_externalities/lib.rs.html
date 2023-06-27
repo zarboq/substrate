@@ -1412,6 +1412,43 @@
 <a href="#1412" id="1412">1412</a>
 <a href="#1413" id="1413">1413</a>
 <a href="#1414" id="1414">1414</a>
+<a href="#1415" id="1415">1415</a>
+<a href="#1416" id="1416">1416</a>
+<a href="#1417" id="1417">1417</a>
+<a href="#1418" id="1418">1418</a>
+<a href="#1419" id="1419">1419</a>
+<a href="#1420" id="1420">1420</a>
+<a href="#1421" id="1421">1421</a>
+<a href="#1422" id="1422">1422</a>
+<a href="#1423" id="1423">1423</a>
+<a href="#1424" id="1424">1424</a>
+<a href="#1425" id="1425">1425</a>
+<a href="#1426" id="1426">1426</a>
+<a href="#1427" id="1427">1427</a>
+<a href="#1428" id="1428">1428</a>
+<a href="#1429" id="1429">1429</a>
+<a href="#1430" id="1430">1430</a>
+<a href="#1431" id="1431">1431</a>
+<a href="#1432" id="1432">1432</a>
+<a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1435,7 +1472,7 @@
 //! based chain, or a local state snapshot file.
 
 </span><span class="kw">use </span>async_recursion::async_recursion;
-<span class="kw">use </span>codec::{Decode, Encode};
+<span class="kw">use </span>codec::{Compact, Decode, Encode};
 <span class="kw">use </span>indicatif::{ProgressBar, ProgressStyle};
 <span class="kw">use </span>jsonrpsee::{
 	core::params::ArrayParams,
@@ -1468,16 +1505,59 @@
 <span class="kw">type </span>KeyValue = (StorageKey, StorageData);
 <span class="kw">type </span>TopKeyValues = Vec&lt;KeyValue&gt;;
 <span class="kw">type </span>ChildKeyValues = Vec&lt;(ChildInfo, Vec&lt;KeyValue&gt;)&gt;;
+<span class="kw">type </span>SnapshotVersion = Compact&lt;u16&gt;;
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;remote-ext&quot;</span>;
 <span class="kw">const </span>DEFAULT_HTTP_ENDPOINT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://rpc.polkadot.io:443&quot;</span>;
+<span class="kw">const </span>SNAPSHOT_VERSION: SnapshotVersion = Compact(<span class="number">2</span>);
+
 <span class="doccomment">/// The snapshot that we store on disk.
 </span><span class="attr">#[derive(Decode, Encode)]
 </span><span class="kw">struct </span>Snapshot&lt;B: BlockT&gt; {
+	snapshot_version: SnapshotVersion,
 	state_version: StateVersion,
 	block_hash: B::Hash,
-	raw_storage: Vec&lt;(H256, Vec&lt;u8&gt;)&gt;,
+	<span class="comment">// &lt;Vec&lt;Key, (Value, MemoryDbRefCount)&gt;&gt;
+	</span>raw_storage: Vec&lt;(H256, (Vec&lt;u8&gt;, i32))&gt;,
 	storage_root: H256,
+}
+
+<span class="kw">impl</span>&lt;B: BlockT&gt; Snapshot&lt;B&gt; {
+	<span class="kw">pub fn </span>new(
+		state_version: StateVersion,
+		block_hash: B::Hash,
+		raw_storage: Vec&lt;(H256, (Vec&lt;u8&gt;, i32))&gt;,
+		storage_root: H256,
+	) -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{
+			snapshot_version: SNAPSHOT_VERSION,
+			state_version,
+			block_hash,
+			raw_storage,
+			storage_root,
+		}
+	}
+
+	<span class="kw">fn </span>load(path: <span class="kw-2">&amp;</span>PathBuf) -&gt; <span class="prelude-ty">Result</span>&lt;Snapshot&lt;B&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+		<span class="kw">let </span>bytes = fs::read(path).map_err(|<span class="kw">_</span>| <span class="string">&quot;fs::read failed.&quot;</span>)<span class="question-mark">?</span>;
+		<span class="comment">// The first item in the SCALE encoded struct bytes is the snapshot version. We decode and
+		// check that first, before proceeding to decode the rest of the snapshot.
+		</span><span class="kw">let </span>maybe_version: <span class="prelude-ty">Result</span>&lt;SnapshotVersion, <span class="kw">_</span>&gt; = Decode::decode(<span class="kw-2">&amp;mut &amp;*</span>bytes);
+		<span class="kw">match </span>maybe_version {
+			<span class="prelude-val">Ok</span>(snapshot_version) =&gt; {
+				<span class="kw">if </span>snapshot_version != SNAPSHOT_VERSION {
+					<span class="kw">return </span><span class="prelude-val">Err</span>(
+						<span class="string">&quot;Unsupported snapshot version detected. Please create a new snapshot.&quot;</span>,
+					)
+				}
+				<span class="kw">match </span>Decode::decode(<span class="kw-2">&amp;mut &amp;*</span>bytes) {
+					<span class="prelude-val">Ok</span>(snapshot) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(snapshot),
+					<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Decode failed&quot;</span>),
+				}
+			},
+			<span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Decode failed&quot;</span>),
+		}
+	}
 }
 
 <span class="doccomment">/// An externalities that acts exactly the same as [`sp_io::TestExternalities`] but has a few extra
@@ -2322,15 +2402,14 @@
 		<span class="comment">// If we need to save a snapshot, save the raw storage and root hash to the snapshot.
 		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(path) = <span class="self">self</span>.as_online().state_snapshot.clone().map(|c| c.path) {
 			<span class="kw">let </span>(raw_storage, storage_root) = pending_ext.into_raw_snapshot();
-			<span class="kw">let </span>snapshot = Snapshot::&lt;B&gt; {
+			<span class="kw">let </span>snapshot = Snapshot::&lt;B&gt;::new(
 				state_version,
-				block_hash: <span class="self">self
-					</span>.as_online()
+				<span class="self">self</span>.as_online()
 					.at
 					.expect(<span class="string">&quot;set to `Some` in `init_remote_client`; must be called before; qed&quot;</span>),
-				raw_storage: raw_storage.clone(),
+				raw_storage.clone(),
 				storage_root,
-			};
+			);
 			<span class="kw">let </span>encoded = snapshot.encode();
 			<span class="macro">log::info!</span>(
 				target: LOG_TARGET,
@@ -2353,12 +2432,6 @@
 		<span class="prelude-val">Ok</span>(pending_ext)
 	}
 
-	<span class="kw">fn </span>load_snapshot(<span class="kw-2">&amp;mut </span><span class="self">self</span>, path: PathBuf) -&gt; <span class="prelude-ty">Result</span>&lt;Snapshot&lt;B&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-		<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;loading data from snapshot {:?}&quot;</span>, path);
-		<span class="kw">let </span>bytes = fs::read(path).map_err(|<span class="kw">_</span>| <span class="string">&quot;fs::read failed.&quot;</span>)<span class="question-mark">?</span>;
-		Decode::decode(<span class="kw-2">&amp;mut &amp;*</span>bytes).map_err(|<span class="kw">_</span>| <span class="string">&quot;decode failed&quot;</span>)
-	}
-
 	<span class="kw">async fn </span>do_load_remote(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;RemoteExternalities&lt;B&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="self">self</span>.init_remote_client().<span class="kw">await</span><span class="question-mark">?</span>;
 		<span class="kw">let </span>block_hash = <span class="self">self</span>.as_online().at_expected();
@@ -2372,8 +2445,9 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;RemoteExternalities&lt;B&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>sp = Spinner::with_timer(Spinners::Dots, <span class="string">&quot;Loading snapshot...&quot;</span>.into());
 		<span class="kw">let </span>start = Instant::now();
-		<span class="kw">let </span>Snapshot { block_hash, state_version, raw_storage, storage_root } =
-			<span class="self">self</span>.load_snapshot(config.state_snapshot.path.clone())<span class="question-mark">?</span>;
+		<span class="macro">info!</span>(target: LOG_TARGET, <span class="string">&quot;Loading snapshot from {:?}&quot;</span>, <span class="kw-2">&amp;</span>config.state_snapshot.path);
+		<span class="kw">let </span>Snapshot { snapshot_version: <span class="kw">_</span>, block_hash, state_version, raw_storage, storage_root } =
+			Snapshot::&lt;B&gt;::load(<span class="kw-2">&amp;</span>config.state_snapshot.path)<span class="question-mark">?</span>;
 
 		<span class="kw">let </span><span class="kw-2">mut </span>inner_ext = TestExternalities::new_with_code_and_state(
 			Default::default(),
