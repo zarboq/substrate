@@ -1762,6 +1762,24 @@
 <a href="#1762" id="1762">1762</a>
 <a href="#1763" id="1763">1763</a>
 <a href="#1764" id="1764">1764</a>
+<a href="#1765" id="1765">1765</a>
+<a href="#1766" id="1766">1766</a>
+<a href="#1767" id="1767">1767</a>
+<a href="#1768" id="1768">1768</a>
+<a href="#1769" id="1769">1769</a>
+<a href="#1770" id="1770">1770</a>
+<a href="#1771" id="1771">1771</a>
+<a href="#1772" id="1772">1772</a>
+<a href="#1773" id="1773">1773</a>
+<a href="#1774" id="1774">1774</a>
+<a href="#1775" id="1775">1775</a>
+<a href="#1776" id="1776">1776</a>
+<a href="#1777" id="1777">1777</a>
+<a href="#1778" id="1778">1778</a>
+<a href="#1779" id="1779">1779</a>
+<a href="#1780" id="1780">1780</a>
+<a href="#1781" id="1781">1781</a>
+<a href="#1782" id="1782">1782</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1793,7 +1811,7 @@
 
 </span><span class="kw">use crate</span>::{
 	behaviour::{<span class="self">self</span>, Behaviour, BehaviourOut},
-	config::{FullNetworkConfiguration, MultiaddrWithPeerId, Params, TransportConfig},
+	config::{parse_addr, FullNetworkConfiguration, MultiaddrWithPeerId, Params, TransportConfig},
 	discovery::DiscoveryConfig,
 	error::Error,
 	event::{DhtEvent, Event},
@@ -2035,11 +2053,14 @@
 		)<span class="question-mark">?</span>;
 
 		<span class="comment">// List of multiaddresses that we know in the network.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>boot_node_ids = HashSet::new();
+		</span><span class="kw">let </span><span class="kw-2">mut </span>boot_node_ids = HashMap::&lt;PeerId, Vec&lt;Multiaddr&gt;&gt;::new();
 
 		<span class="comment">// Process the bootnodes.
 		</span><span class="kw">for </span>bootnode <span class="kw">in </span>network_config.boot_nodes.iter() {
-			boot_node_ids.insert(bootnode.peer_id);
+			boot_node_ids
+				.entry(bootnode.peer_id)
+				.or_default()
+				.push(bootnode.multiaddr.clone());
 			known_addresses.push((bootnode.peer_id, bootnode.multiaddr.clone()));
 		}
 
@@ -2214,6 +2235,7 @@
 			peers_notifications_sinks,
 			metrics,
 			boot_node_ids,
+			reported_invalid_boot_nodes: Default::default(),
 			_marker: Default::default(),
 			_block: Default::default(),
 		})
@@ -2908,8 +2930,10 @@
 	</span>event_streams: out_events::OutChannels,
 	<span class="doccomment">/// Prometheus network metrics.
 	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
-	<span class="doccomment">/// The `PeerId`&#39;s of all boot nodes.
-	</span>boot_node_ids: Arc&lt;HashSet&lt;PeerId&gt;&gt;,
+	<span class="doccomment">/// The `PeerId`&#39;s of all boot nodes mapped to the registered addresses.
+	</span>boot_node_ids: Arc&lt;HashMap&lt;PeerId, Vec&lt;Multiaddr&gt;&gt;&gt;,
+	<span class="doccomment">/// Boot nodes that we already have reported as invalid.
+	</span>reported_invalid_boot_nodes: HashSet&lt;PeerId&gt;,
 	<span class="doccomment">/// For each peer and protocol combination, an object that allows sending notifications to
 	/// that peer. Shared with the [`NetworkService`].
 	</span>peers_notifications_sinks: Arc&lt;Mutex&lt;HashMap&lt;(PeerId, ProtocolName), NotificationsSink&gt;&gt;&gt;,
@@ -3367,15 +3391,27 @@
 						peer_id, error,
 					);
 
-					<span class="kw">if </span><span class="self">self</span>.boot_node_ids.contains(<span class="kw-2">&amp;</span>peer_id) {
+					<span class="kw">let </span>not_reported = !<span class="self">self</span>.reported_invalid_boot_nodes.contains(<span class="kw-2">&amp;</span>peer_id);
+
+					<span class="kw">if let </span><span class="prelude-val">Some</span>(addresses) =
+						not_reported.then(|| <span class="self">self</span>.boot_node_ids.get(<span class="kw-2">&amp;</span>peer_id)).flatten()
+					{
 						<span class="kw">if let </span>DialError::WrongPeerId { obtained, endpoint } = <span class="kw-2">&amp;</span>error {
 							<span class="kw">if let </span>ConnectedPoint::Dialer { address, role_override: <span class="kw">_ </span>} = endpoint {
-								<span class="macro">warn!</span>(
-									<span class="string">&quot;💔 The bootnode you want to connect to at `{}` provided a different peer ID `{}` than the one you expect `{}`.&quot;</span>,
-									address,
-									obtained,
-									peer_id,
-								);
+								<span class="kw">let </span>address_without_peer_id = parse_addr(address.clone())
+									.map_or_else(|<span class="kw">_</span>| address.clone(), |r| r.<span class="number">1</span>);
+
+								<span class="comment">// Only report for address of boot node that was added at startup of
+								// the node and not for any address that the node learned of the
+								// boot node.
+								</span><span class="kw">if </span>addresses.iter().any(|a| address_without_peer_id == <span class="kw-2">*</span>a) {
+									<span class="macro">warn!</span>(
+										<span class="string">&quot;💔 The bootnode you want to connect to at `{address}` provided a \
+										 different peer ID `{obtained}` than the one you expect `{peer_id}`.&quot;</span>,
+									);
+
+									<span class="self">self</span>.reported_invalid_boot_nodes.insert(peer_id);
+								}
 							}
 						}
 					}
