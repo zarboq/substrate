@@ -943,7 +943,7 @@
 
 </span><span class="kw">use crate</span>::{
 	backend::{Consolidate, IterArgs, StorageIterator},
-	trie_backend::AsLocalTrieCache,
+	trie_backend::TrieCacheProvider,
 	warn, StorageKey, StorageValue,
 };
 <span class="kw">use </span>codec::Codec;
@@ -962,7 +962,6 @@
 };
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>std::{collections::HashMap, sync::Arc};
-
 <span class="comment">// In this module, we only use layout for read operation and empty root,
 // where V1 and V0 are equivalent.
 </span><span class="kw">use </span>sp_trie::LayoutV1 <span class="kw">as </span>Layout;
@@ -1023,7 +1022,7 @@
 	</span>H: Hasher,
 	S: TrieBackendStorage&lt;H&gt;,
 	H::Out: Codec + Ord,
-	C: AsLocalTrieCache&lt;H&gt; + Send + Sync,
+	C: TrieCacheProvider&lt;H&gt; + Send + Sync,
 {
 	<span class="attr">#[inline]
 	</span><span class="kw">fn </span>prepare&lt;R&gt;(
@@ -1083,7 +1082,7 @@
 	</span>H: Hasher,
 	S: TrieBackendStorage&lt;H&gt;,
 	H::Out: Codec + Ord,
-	C: AsLocalTrieCache&lt;H&gt; + Send + Sync,
+	C: TrieCacheProvider&lt;H&gt; + Send + Sync,
 {
 	<span class="kw">type </span>Backend = <span class="kw">crate</span>::TrieBackend&lt;S, H, C&gt;;
 	<span class="kw">type </span>Error = <span class="kw">crate</span>::DefaultError;
@@ -1132,29 +1131,28 @@
 	empty: H::Out,
 	<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) cache: Arc&lt;RwLock&lt;Cache&lt;H::Out&gt;&gt;&gt;,
-	<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) trie_node_cache: <span class="prelude-ty">Option</span>&lt;C&gt;,
+	<span class="kw">pub</span>(<span class="kw">crate</span>) trie_node_cache: <span class="prelude-ty">Option</span>&lt;C&gt;,
 	<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) recorder: <span class="prelude-ty">Option</span>&lt;Recorder&lt;H&gt;&gt;,
-	<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
-	</span>_phantom: PhantomData&lt;C&gt;,
 }
 
 <span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C&gt; TrieBackendEssence&lt;S, H, C&gt; {
 	<span class="doccomment">/// Create new trie-based backend.
 	</span><span class="kw">pub fn </span>new(storage: S, root: H::Out) -&gt; <span class="self">Self </span>{
+		<span class="self">Self</span>::new_with_cache(storage, root, <span class="prelude-val">None</span>)
+	}
+
+	<span class="doccomment">/// Create new trie-based backend.
+	</span><span class="kw">pub fn </span>new_with_cache(storage: S, root: H::Out, cache: <span class="prelude-ty">Option</span>&lt;C&gt;) -&gt; <span class="self">Self </span>{
 		TrieBackendEssence {
 			storage,
 			root,
 			empty: H::hash(<span class="kw-2">&amp;</span>[<span class="number">0u8</span>]),
 			<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 			</span>cache: Arc::new(RwLock::new(Cache::new())),
-			<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-			</span>trie_node_cache: <span class="prelude-val">None</span>,
+			trie_node_cache: cache,
 			<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 			</span>recorder: <span class="prelude-val">None</span>,
-			<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
-			</span>_phantom: PhantomData,
 		}
 	}
 
@@ -1212,12 +1210,11 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: AsLocalTrieCache&lt;H&gt;&gt; TrieBackendEssence&lt;S, H, C&gt; {
+<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: TrieCacheProvider&lt;H&gt;&gt; TrieBackendEssence&lt;S, H, C&gt; {
 	<span class="doccomment">/// Call the given closure passing it the recorder and the cache.
 	///
 	/// If the given `storage_root` is `None`, `self.root` will be used.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
-	#[inline]
+	</span><span class="attr">#[inline]
 	</span><span class="kw">fn </span>with_recorder_and_cache&lt;R&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
 		storage_root: <span class="prelude-ty">Option</span>&lt;H::Out&gt;,
@@ -1227,32 +1224,23 @@
 		) -&gt; R,
 	) -&gt; R {
 		<span class="kw">let </span>storage_root = storage_root.unwrap_or_else(|| <span class="self">self</span>.root);
-		<span class="kw">let </span><span class="kw-2">mut </span>recorder = <span class="self">self</span>.recorder.as_ref().map(|r| r.as_trie_recorder(storage_root));
-		<span class="kw">let </span>recorder = <span class="kw">match </span>recorder.as_mut() {
-			<span class="prelude-val">Some</span>(recorder) =&gt; <span class="prelude-val">Some</span>(recorder <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>TrieRecorder&lt;H::Out&gt;),
-			<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-		};
-
-		<span class="kw">let </span><span class="kw-2">mut </span>cache = <span class="self">self
-			</span>.trie_node_cache
-			.as_ref()
-			.map(|c| c.as_local_trie_cache().as_trie_db_cache(storage_root));
+		<span class="kw">let </span><span class="kw-2">mut </span>cache = <span class="self">self</span>.trie_node_cache.as_ref().map(|c| c.as_trie_db_cache(storage_root));
 		<span class="kw">let </span>cache = cache.as_mut().map(|c| c <span class="kw">as _</span>);
 
-		callback(recorder, cache)
-	}
+		<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+		</span>{
+			<span class="kw">let </span><span class="kw-2">mut </span>recorder = <span class="self">self</span>.recorder.as_ref().map(|r| r.as_trie_recorder(storage_root));
+			<span class="kw">let </span>recorder = <span class="kw">match </span>recorder.as_mut() {
+				<span class="prelude-val">Some</span>(recorder) =&gt; <span class="prelude-val">Some</span>(recorder <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>TrieRecorder&lt;H::Out&gt;),
+				<span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+			};
+			callback(recorder, cache)
+		}
 
-	<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
-	#[inline]
-	</span><span class="kw">fn </span>with_recorder_and_cache&lt;R&gt;(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;H::Out&gt;,
-		callback: <span class="kw">impl </span>FnOnce(
-			<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>TrieRecorder&lt;H::Out&gt;&gt;,
-			<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>TrieCache&lt;NodeCodec&lt;H&gt;&gt;&gt;,
-		) -&gt; R,
-	) -&gt; R {
-		callback(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
+		<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+		</span>{
+			callback(<span class="prelude-val">None</span>, cache)
+		}
 	}
 
 	<span class="doccomment">/// Call the given closure passing it the recorder and the cache.
@@ -1279,12 +1267,12 @@
 		};
 
 		<span class="kw">let </span>result = <span class="kw">if let </span><span class="prelude-val">Some</span>(local_cache) = <span class="self">self</span>.trie_node_cache.as_ref() {
-			<span class="kw">let </span><span class="kw-2">mut </span>cache = local_cache.as_local_trie_cache().as_trie_db_mut_cache();
+			<span class="kw">let </span><span class="kw-2">mut </span>cache = local_cache.as_trie_db_mut_cache();
 
 			<span class="kw">let </span>(new_root, r) = callback(recorder, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>cache));
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(new_root) = new_root {
-				cache.merge_into(local_cache.as_local_trie_cache(), new_root);
+				local_cache.merge(cache, new_root);
 			}
 
 			r
@@ -1298,17 +1286,29 @@
 	<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
 	</span><span class="kw">fn </span>with_recorder_and_cache_for_storage_root&lt;R&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		<span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;H::Out&gt;,
+		_storage_root: <span class="prelude-ty">Option</span>&lt;H::Out&gt;,
 		callback: <span class="kw">impl </span>FnOnce(
 			<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>TrieRecorder&lt;H::Out&gt;&gt;,
 			<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>TrieCache&lt;NodeCodec&lt;H&gt;&gt;&gt;,
 		) -&gt; (<span class="prelude-ty">Option</span>&lt;H::Out&gt;, R),
 	) -&gt; R {
-		callback(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>).<span class="number">1
-	</span>}
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(local_cache) = <span class="self">self</span>.trie_node_cache.as_ref() {
+			<span class="kw">let </span><span class="kw-2">mut </span>cache = local_cache.as_trie_db_mut_cache();
+
+			<span class="kw">let </span>(new_root, r) = callback(<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>cache));
+
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(new_root) = new_root {
+				local_cache.merge(cache, new_root);
+			}
+
+			r
+		} <span class="kw">else </span>{
+			callback(<span class="prelude-val">None</span>, <span class="prelude-val">None</span>).<span class="number">1
+		</span>}
+	}
 }
 
-<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: AsLocalTrieCache&lt;H&gt; + Send + Sync&gt;
+<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: TrieCacheProvider&lt;H&gt; + Send + Sync&gt;
 	TrieBackendEssence&lt;S, H, C&gt;
 <span class="kw">where
 	</span>H::Out: Codec + Ord,
@@ -1728,8 +1728,8 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: AsLocalTrieCache&lt;H&gt; + Send + Sync&gt; AsHashDB&lt;H, DBValue&gt;
-	<span class="kw">for </span>TrieBackendEssence&lt;S, H, C&gt;
+<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: TrieCacheProvider&lt;H&gt; + Send + Sync&gt;
+	AsHashDB&lt;H, DBValue&gt; <span class="kw">for </span>TrieBackendEssence&lt;S, H, C&gt;
 {
 	<span class="kw">fn </span>as_hash_db&lt;<span class="lifetime">&#39;b</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span>(<span class="kw">dyn </span>HashDB&lt;H, DBValue&gt; + <span class="lifetime">&#39;b</span>) {
 		<span class="self">self
@@ -1739,7 +1739,7 @@
 	</span>}
 }
 
-<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: AsLocalTrieCache&lt;H&gt; + Send + Sync&gt; HashDB&lt;H, DBValue&gt;
+<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: TrieCacheProvider&lt;H&gt; + Send + Sync&gt; HashDB&lt;H, DBValue&gt;
 	<span class="kw">for </span>TrieBackendEssence&lt;S, H, C&gt;
 {
 	<span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>H::Out, prefix: Prefix) -&gt; <span class="prelude-ty">Option</span>&lt;DBValue&gt; {
@@ -1772,7 +1772,7 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: AsLocalTrieCache&lt;H&gt; + Send + Sync&gt;
+<span class="kw">impl</span>&lt;S: TrieBackendStorage&lt;H&gt;, H: Hasher, C: TrieCacheProvider&lt;H&gt; + Send + Sync&gt;
 	HashDBRef&lt;H, DBValue&gt; <span class="kw">for </span>TrieBackendEssence&lt;S, H, C&gt;
 {
 	<span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>H::Out, prefix: Prefix) -&gt; <span class="prelude-ty">Option</span>&lt;DBValue&gt; {
