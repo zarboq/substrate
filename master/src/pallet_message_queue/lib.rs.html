@@ -1331,6 +1331,27 @@
 <a href="#1331" id="1331">1331</a>
 <a href="#1332" id="1332">1332</a>
 <a href="#1333" id="1333">1333</a>
+<a href="#1334" id="1334">1334</a>
+<a href="#1335" id="1335">1335</a>
+<a href="#1336" id="1336">1336</a>
+<a href="#1337" id="1337">1337</a>
+<a href="#1338" id="1338">1338</a>
+<a href="#1339" id="1339">1339</a>
+<a href="#1340" id="1340">1340</a>
+<a href="#1341" id="1341">1341</a>
+<a href="#1342" id="1342">1342</a>
+<a href="#1343" id="1343">1343</a>
+<a href="#1344" id="1344">1344</a>
+<a href="#1345" id="1345">1345</a>
+<a href="#1346" id="1346">1346</a>
+<a href="#1347" id="1347">1347</a>
+<a href="#1348" id="1348">1348</a>
+<a href="#1349" id="1349">1349</a>
+<a href="#1350" id="1350">1350</a>
+<a href="#1351" id="1351">1351</a>
+<a href="#1352" id="1352">1352</a>
+<a href="#1353" id="1353">1353</a>
+<a href="#1354" id="1354">1354</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1528,7 +1549,7 @@
 	pallet_prelude::<span class="kw-2">*</span>,
 	traits::{
 		DefensiveTruncateFrom, EnqueueMessage, ExecuteOverweightError, Footprint, ProcessMessage,
-		ProcessMessageError, ServiceQueues,
+		ProcessMessageError, QueuePausedQuery, ServiceQueues,
 	},
 	BoundedSlice, CloneNoBound, DefaultNoBound,
 };
@@ -1806,6 +1827,13 @@
 		/// removed.
 		</span><span class="kw">type </span>QueueChangeHandler: OnQueueChanged&lt;&lt;<span class="self">Self</span>::MessageProcessor <span class="kw">as </span>ProcessMessage&gt;::Origin&gt;;
 
+		<span class="doccomment">/// Queried by the pallet to check whether a queue can be serviced.
+		///
+		/// This also applies to manual servicing via `execute_overweight` and `service_queues`. The
+		/// value of this is only polled once before servicing the queue. This means that changes to
+		/// it that happen *within* the servicing will not be reflected.
+		</span><span class="kw">type </span>QueuePausedQuery: QueuePausedQuery&lt;&lt;<span class="self">Self</span>::MessageProcessor <span class="kw">as </span>ProcessMessage&gt;::Origin&gt;;
+
 		<span class="doccomment">/// The size of the page; this implies the maximum message size which can be sent.
 		///
 		/// A good value depends on the expected message sizes, their weights, the weight that is
@@ -1867,6 +1895,10 @@
 		/// Such errors are expected, but not guaranteed, to resolve themselves eventually through
 		/// retrying.
 		</span>TemporarilyUnprocessable,
+		<span class="doccomment">/// The queue is paused and no message can be executed from it.
+		///
+		/// This can change at any time and may resolve in the future by re-trying.
+		</span>QueuePaused,
 	}
 
 	<span class="doccomment">/// The index of the first and last (non-empty) pages.
@@ -2136,6 +2168,8 @@
 		weight_limit: Weight,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;Weight, Error&lt;T&gt;&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>book_state = BookStateFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>origin);
+		<span class="macro">ensure!</span>(!T::QueuePausedQuery::is_paused(<span class="kw-2">&amp;</span>origin), Error::&lt;T&gt;::QueuePaused);
+
 		<span class="kw">let </span><span class="kw-2">mut </span>page = Pages::&lt;T&gt;::get(<span class="kw-2">&amp;</span>origin, page_index).ok_or(Error::&lt;T&gt;::NoPage)<span class="question-mark">?</span>;
 		<span class="kw">let </span>(pos, is_processed, payload) =
 			page.peek_index(index.into() <span class="kw">as </span>usize).ok_or(Error::&lt;T&gt;::NoMessage)<span class="question-mark">?</span>;
@@ -2276,6 +2310,10 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>book_state = BookStateFor::&lt;T&gt;::get(<span class="kw-2">&amp;</span>origin);
 		<span class="kw">let </span><span class="kw-2">mut </span>total_processed = <span class="number">0</span>;
+		<span class="kw">if </span>T::QueuePausedQuery::is_paused(<span class="kw-2">&amp;</span>origin) {
+			<span class="kw">let </span>next_ready = book_state.ready_neighbours.as_ref().map(|x| x.next.clone());
+			<span class="kw">return </span>(<span class="bool-val">false</span>, next_ready)
+		}
 
 		<span class="kw">while </span>book_state.end &gt; book_state.begin {
 			<span class="kw">let </span>(processed, status) =
@@ -2617,7 +2655,11 @@
 		Pallet::&lt;T&gt;::do_execute_overweight(message_origin, page, index, weight.remaining()).map_err(
 			|e| <span class="kw">match </span>e {
 				Error::&lt;T&gt;::InsufficientWeight =&gt; ExecuteOverweightError::InsufficientWeight,
-				<span class="kw">_ </span>=&gt; ExecuteOverweightError::NotFound,
+				Error::&lt;T&gt;::AlreadyProcessed =&gt; ExecuteOverweightError::AlreadyProcessed,
+				Error::&lt;T&gt;::QueuePaused =&gt; ExecuteOverweightError::QueuePaused,
+				Error::&lt;T&gt;::NoPage | Error::&lt;T&gt;::NoMessage | Error::&lt;T&gt;::Queued =&gt;
+					ExecuteOverweightError::NotFound,
+				<span class="kw">_ </span>=&gt; ExecuteOverweightError::Other,
 			},
 		)
 	}
