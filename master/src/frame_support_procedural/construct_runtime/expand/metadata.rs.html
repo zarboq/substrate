@@ -228,6 +228,14 @@
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -245,7 +253,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License
 
-</span><span class="kw">use </span><span class="kw">crate</span>::construct_runtime::Pallet;
+</span><span class="kw">use </span><span class="kw">crate</span>::construct_runtime::{parse::PalletPath, Pallet};
 <span class="kw">use </span>proc_macro2::TokenStream;
 <span class="kw">use </span>quote::quote;
 <span class="kw">use </span>std::str::FromStr;
@@ -256,6 +264,7 @@
 	pallet_declarations: <span class="kw-2">&amp;</span>[Pallet],
 	scrate: <span class="kw-2">&amp;</span>TokenStream,
 	extrinsic: <span class="kw-2">&amp;</span>TypePath,
+	system_path: <span class="kw-2">&amp;</span>PalletPath,
 ) -&gt; TokenStream {
 	<span class="kw">let </span>pallets = pallet_declarations
 		.iter()
@@ -345,6 +354,13 @@
 					},
 					ty: #scrate::scale_info::meta_type::&lt;#runtime&gt;(),
 					apis: (<span class="kw-2">&amp;</span>rt).runtime_metadata(),
+					outer_enums: #scrate::metadata_ir::OuterEnumsIR {
+						call_enum_ty: #scrate::scale_info::meta_type::&lt;
+								&lt;#runtime <span class="kw">as </span>#system_path::Config&gt;::RuntimeCall
+							&gt;(),
+						event_enum_ty: #scrate::scale_info::meta_type::&lt;RuntimeEvent&gt;(),
+						error_enum_ty: #scrate::scale_info::meta_type::&lt;RuntimeError&gt;(),
+					}
 				}
 			}
 

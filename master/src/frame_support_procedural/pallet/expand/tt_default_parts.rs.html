@@ -108,6 +108,38 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -136,6 +168,8 @@
 	<span class="kw">let </span>count = COUNTER.with(|counter| counter.borrow_mut().inc());
 	<span class="kw">let </span>default_parts_unique_id =
 		syn::Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__tt_default_parts_{}&quot;</span>, count), def.item.span());
+	<span class="kw">let </span>extra_parts_unique_id =
+		syn::Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__tt_extra_parts_{}&quot;</span>, count), def.item.span());
 
 	<span class="kw">let </span>call_part = def.call.as_ref().map(|<span class="kw">_</span>| <span class="macro">quote::quote!</span>(Call,));
 
@@ -145,6 +179,8 @@
 		<span class="kw">let </span>gen = event.gen_kind.is_generic().then(|| <span class="macro">quote::quote!</span>( &lt;T&gt; ));
 		<span class="macro">quote::quote!</span>( Event #gen , )
 	});
+
+	<span class="kw">let </span>error_part = def.error.as_ref().map(|<span class="kw">_</span>| <span class="macro">quote::quote!</span>(Error&lt;T&gt;,));
 
 	<span class="kw">let </span>origin_part = def.origin.as_ref().map(|origin| {
 		<span class="kw">let </span>gen = origin.is_generic.then(|| <span class="macro">quote::quote!</span>( &lt;T&gt; ));
@@ -205,8 +241,8 @@
 				$(<span class="macro-nonterminal">$frame_support</span>)<span class="kw-2">*</span><span class="macro">::tt_return! </span>{
 					<span class="macro-nonterminal">$caller
 					</span>tokens = [{
-						::{
-							Pallet, #call_part #storage_part #event_part #origin_part #config_part
+						expanded::{
+							Pallet, #call_part #storage_part #event_part #error_part #origin_part #config_part
 							#inherent_part #validate_unsigned_part #freeze_reason_part
 							#hold_reason_part #lock_id_part #slash_reason_part
 						}
@@ -216,6 +252,34 @@
 		}
 
 		<span class="kw">pub use </span>#default_parts_unique_id <span class="kw">as </span>tt_default_parts;
+
+
+		<span class="comment">// This macro is similar to the `tt_default_parts!`. It expands the pallets thare are declared
+		// explicitly (`System: frame_system::{Pallet, Call}`) with extra parts.
+		//
+		// For example, after expansion an explicit pallet would look like:
+		// `System: expanded::{Error} ::{Pallet, Call}`.
+		//
+		// The `expanded` keyword is a marker of the final state of the `construct_runtime!`.
+		</span><span class="attr">#[macro_export]
+		#[doc(hidden)]
+		</span><span class="macro">macro_rules! </span>#extra_parts_unique_id {
+			{
+				<span class="macro-nonterminal">$caller</span>:tt
+				frame_support = [{ $(<span class="macro-nonterminal">$frame_support</span>:ident)::* }]
+			} =&gt; {
+				$(<span class="macro-nonterminal">$frame_support</span>)<span class="kw-2">*</span><span class="macro">::tt_return! </span>{
+					<span class="macro-nonterminal">$caller
+					</span>tokens = [{
+						expanded::{
+							#error_part
+						}
+					}]
+				}
+			};
+		}
+
+		<span class="kw">pub use </span>#extra_parts_unique_id <span class="kw">as </span>tt_extra_parts;
 	)
 }
 </code></pre></div></section></main></body></html>
