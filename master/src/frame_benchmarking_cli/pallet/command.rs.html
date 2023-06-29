@@ -757,6 +757,8 @@
 <a href="#757" id="757">757</a>
 <a href="#758" id="758">758</a>
 <a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -786,8 +788,8 @@
 	execution_method_from_cli, CliConfiguration, ExecutionStrategy, <span class="prelude-ty">Result</span>, SharedParams,
 };
 <span class="kw">use </span>sc_client_db::BenchmarkingState;
-<span class="kw">use </span>sc_executor::{NativeElseWasmExecutor, WasmExecutor};
-<span class="kw">use </span>sc_service::{Configuration, NativeExecutionDispatch};
+<span class="kw">use </span>sc_executor::WasmExecutor;
+<span class="kw">use </span>sc_service::Configuration;
 <span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>sp_core::{
 	offchain::{
@@ -902,11 +904,11 @@ not created by a node that was compiled with the flag&quot;</span>;
 
 <span class="kw">impl </span>PalletCmd {
 	<span class="doccomment">/// Runs the command and benchmarks the chain.
-	</span><span class="kw">pub fn </span>run&lt;BB, ExecDispatch&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Configuration) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
+	</span><span class="kw">pub fn </span>run&lt;BB, ExtraHostFunctions&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Configuration) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;
 	<span class="kw">where
 		</span>BB: BlockT + Debug,
 		&lt;&lt;&lt;BB <span class="kw">as </span>BlockT&gt;::Header <span class="kw">as </span>HeaderT&gt;::Number <span class="kw">as </span>std::str::FromStr&gt;::Err: std::fmt::Debug,
-		ExecDispatch: NativeExecutionDispatch + <span class="lifetime">&#39;static</span>,
+		ExtraHostFunctions: sp_wasm_interface::HostFunctions,
 	{
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(output_path) = <span class="kw-2">&amp;</span><span class="self">self</span>.output {
 			<span class="kw">if </span>!output_path.is_dir() &amp;&amp; output_path.file_name().is_none() {
@@ -941,7 +943,7 @@ not created by a node that was compiled with the flag&quot;</span>;
 		}
 
 		<span class="kw">let </span>spec = config.chain_spec;
-		<span class="kw">let </span>strategy = <span class="self">self</span>.execution.unwrap_or(ExecutionStrategy::Native);
+		<span class="kw">let </span>strategy = <span class="self">self</span>.execution.unwrap_or(ExecutionStrategy::Wasm);
 		<span class="kw">let </span>pallet = <span class="self">self</span>.pallet.clone().unwrap_or_default();
 		<span class="kw">let </span>pallet = pallet.as_bytes();
 		<span class="kw">let </span>extrinsic = <span class="self">self</span>.extrinsic.clone().unwrap_or_default();
@@ -971,13 +973,15 @@ not created by a node that was compiled with the flag&quot;</span>;
 		<span class="kw">let </span>method =
 			execution_method_from_cli(<span class="self">self</span>.wasm_method, <span class="self">self</span>.wasmtime_instantiation_strategy);
 
-		<span class="kw">let </span>executor = NativeElseWasmExecutor::&lt;ExecDispatch&gt;::new_with_wasm_executor(
-			WasmExecutor::builder()
-				.with_execution_method(method)
-				.with_max_runtime_instances(<span class="number">2</span>)
-				.with_runtime_cache_size(<span class="number">2</span>)
-				.build(),
-		);
+		<span class="kw">let </span>executor = WasmExecutor::&lt;(
+			sp_io::SubstrateHostFunctions,
+			frame_benchmarking::benchmarking::HostFunctions,
+			ExtraHostFunctions,
+		)&gt;::builder()
+		.with_execution_method(method)
+		.with_max_runtime_instances(<span class="number">2</span>)
+		.with_runtime_cache_size(<span class="number">2</span>)
+		.build();
 
 		<span class="kw">let </span>extensions = || -&gt; Extensions {
 			<span class="kw">let </span><span class="kw-2">mut </span>extensions = Extensions::default();
