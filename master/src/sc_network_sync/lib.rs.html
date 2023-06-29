@@ -4189,33 +4189,6 @@
 <a href="#4189" id="4189">4189</a>
 <a href="#4190" id="4190">4190</a>
 <a href="#4191" id="4191">4191</a>
-<a href="#4192" id="4192">4192</a>
-<a href="#4193" id="4193">4193</a>
-<a href="#4194" id="4194">4194</a>
-<a href="#4195" id="4195">4195</a>
-<a href="#4196" id="4196">4196</a>
-<a href="#4197" id="4197">4197</a>
-<a href="#4198" id="4198">4198</a>
-<a href="#4199" id="4199">4199</a>
-<a href="#4200" id="4200">4200</a>
-<a href="#4201" id="4201">4201</a>
-<a href="#4202" id="4202">4202</a>
-<a href="#4203" id="4203">4203</a>
-<a href="#4204" id="4204">4204</a>
-<a href="#4205" id="4205">4205</a>
-<a href="#4206" id="4206">4206</a>
-<a href="#4207" id="4207">4207</a>
-<a href="#4208" id="4208">4208</a>
-<a href="#4209" id="4209">4209</a>
-<a href="#4210" id="4210">4210</a>
-<a href="#4211" id="4211">4211</a>
-<a href="#4212" id="4212">4212</a>
-<a href="#4213" id="4213">4213</a>
-<a href="#4214" id="4214">4214</a>
-<a href="#4215" id="4215">4215</a>
-<a href="#4216" id="4216">4216</a>
-<a href="#4217" id="4217">4217</a>
-<a href="#4218" id="4218">4218</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -5221,19 +5194,6 @@
 		<span class="prelude-val">Ok</span>(<span class="self">self</span>.validate_and_queue_blocks(new_blocks, gap))
 	}
 
-	<span class="kw">fn </span>process_block_response_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, blocks_to_import: <span class="prelude-ty">Result</span>&lt;OnBlockData&lt;B&gt;, BadPeer&gt;) {
-		<span class="kw">match </span>blocks_to_import {
-			<span class="prelude-val">Ok</span>(OnBlockData::Import(origin, blocks)) =&gt; <span class="self">self</span>.import_blocks(origin, blocks),
-			<span class="prelude-val">Ok</span>(OnBlockData::Request(peer, req)) =&gt; <span class="self">self</span>.send_block_request(peer, req),
-			<span class="prelude-val">Ok</span>(OnBlockData::Continue) =&gt; {},
-			<span class="prelude-val">Err</span>(BadPeer(id, repu)) =&gt; {
-				<span class="self">self</span>.network_service
-					.disconnect_peer(id, <span class="self">self</span>.block_announce_protocol_name.clone());
-				<span class="self">self</span>.network_service.report_peer(id, repu);
-			},
-		}
-	}
-
 	<span class="kw">fn </span>on_block_justification(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		who: PeerId,
@@ -5717,7 +5677,6 @@
 		<span class="kw">match </span><span class="self">self</span>.mode {
 			SyncMode::Full =&gt;
 				BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION | BlockAttributes::BODY,
-			SyncMode::Light =&gt; BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION,
 			SyncMode::LightState { storage_chain_mode: <span class="bool-val">false</span>, .. } | SyncMode::Warp =&gt;
 				BlockAttributes::HEADER | BlockAttributes::JUSTIFICATION | BlockAttributes::BODY,
 			SyncMode::LightState { storage_chain_mode: <span class="bool-val">true</span>, .. } =&gt;
@@ -5730,7 +5689,6 @@
 	<span class="kw">fn </span>skip_execution(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
 		<span class="kw">match </span><span class="self">self</span>.mode {
 			SyncMode::Full =&gt; <span class="bool-val">false</span>,
-			SyncMode::Light =&gt; <span class="bool-val">true</span>,
 			SyncMode::LightState { .. } =&gt; <span class="bool-val">true</span>,
 			SyncMode::Warp =&gt; <span class="bool-val">true</span>,
 		}
@@ -5975,18 +5933,6 @@
 				announce.header,
 			);
 			<span class="kw">return </span>PollBlockAnnounceValidation::Nothing { is_best, who, announce }
-		}
-
-		<span class="kw">let </span>requires_additional_data = <span class="self">self</span>.mode != SyncMode::Light || !known_parent;
-		<span class="kw">if </span>!requires_additional_data {
-			<span class="macro">trace!</span>(
-				target: <span class="string">&quot;sync&quot;</span>,
-				<span class="string">&quot;Importing new header announced from {}: {} {:?}&quot;</span>,
-				who,
-				hash,
-				announce.header,
-			);
-			<span class="kw">return </span>PollBlockAnnounceValidation::ImportHeader { is_best, announce, who }
 		}
 
 		<span class="kw">if </span><span class="self">self</span>.status().state == SyncState::Idle {

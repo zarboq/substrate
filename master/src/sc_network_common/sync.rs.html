@@ -457,6 +457,8 @@
 <a href="#457" id="457">457</a>
 <a href="#458" id="458">458</a>
 <a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -644,32 +646,43 @@
 		<span class="doccomment">/// The announcement.
 		</span>announce: BlockAnnounce&lt;H&gt;,
 	},
-	<span class="doccomment">/// The announcement header should be imported.
-	</span>ImportHeader {
-		<span class="doccomment">/// Who sent the processed block announcement?
-		</span>who: PeerId,
-		<span class="doccomment">/// Was this their new best block?
-		</span>is_best: bool,
-		<span class="doccomment">/// The announcement.
-		</span>announce: BlockAnnounce&lt;H&gt;,
-	},
 	<span class="doccomment">/// The block announcement should be skipped.
 	</span>Skip,
 }
 
-<span class="doccomment">/// Operation mode.
-</span><span class="attr">#[derive(Debug, PartialEq, Eq)]
+<span class="doccomment">/// Sync operation mode.
+</span><span class="attr">#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 </span><span class="kw">pub enum </span>SyncMode {
-	<span class="comment">// Sync headers only
-	</span>Light,
-	<span class="comment">// Sync headers and block bodies
+	<span class="doccomment">/// Full block download and verification.
 	</span>Full,
-	<span class="comment">// Sync headers and the last finalied state
-	</span>LightState { storage_chain_mode: bool, skip_proofs: bool },
-	<span class="comment">// Warp sync mode.
+	<span class="doccomment">/// Download blocks and the latest state.
+	</span>LightState {
+		<span class="doccomment">/// Skip state proof download and verification.
+		</span>skip_proofs: bool,
+		<span class="doccomment">/// Download indexed transactions for recent blocks.
+		</span>storage_chain_mode: bool,
+	},
+	<span class="doccomment">/// Warp sync - verify authority set transitions and the latest state.
 	</span>Warp,
 }
 
+<span class="kw">impl </span>SyncMode {
+	<span class="doccomment">/// Returns `true` if `self` is [`Self::Warp`].
+	</span><span class="kw">pub fn </span>is_warp(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::Warp)
+	}
+
+	<span class="doccomment">/// Returns `true` if `self` is [`Self::LightState`].
+	</span><span class="kw">pub fn </span>light_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+		<span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::LightState { .. })
+	}
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>SyncMode {
+	<span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+		<span class="self">Self</span>::Full
+	}
+}
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Metrics {
 	<span class="kw">pub </span>queued_blocks: u32,
@@ -835,12 +848,6 @@
 		response: BlockResponse&lt;Block&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;OnBlockData&lt;Block&gt;, BadPeer&gt;;
 
-	<span class="doccomment">/// Procss received block data.
-	</span><span class="kw">fn </span>process_block_response_data(
-		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		blocks_to_import: <span class="prelude-ty">Result</span>&lt;OnBlockData&lt;Block&gt;, BadPeer&gt;,
-	);
-
 	<span class="doccomment">/// Handle a response from the remote to a justification request that we made.
 	///
 	/// `request` must be the original request that triggered `response`.
@@ -880,9 +887,6 @@
 	/// [`ChainSync::push_block_announce_validation`].
 	///
 	/// This should be polled until it returns [`Poll::Pending`].
-	///
-	/// If [`PollBlockAnnounceValidation::ImportHeader`] is returned, then the caller MUST try to
-	/// import passed header (call `on_block_data`). The network request isn&#39;t sent in this case.
 	</span><span class="kw">fn </span>poll_block_announce_validation(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		cx: <span class="kw-2">&amp;mut </span>std::task::Context&lt;<span class="lifetime">&#39;_</span>&gt;,
