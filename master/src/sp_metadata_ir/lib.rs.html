@@ -116,7 +116,6 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -144,7 +143,7 @@
 </span><span class="kw">pub use </span>frame_metadata;
 
 <span class="kw">mod </span>types;
-<span class="kw">use </span>frame_metadata::{RuntimeMetadataPrefixed, RuntimeMetadataV14};
+<span class="kw">use </span>frame_metadata::RuntimeMetadataPrefixed;
 <span class="kw">pub use </span>types::<span class="kw-2">*</span>;
 
 <span class="kw">mod </span>v14;
@@ -154,25 +153,18 @@
 </span><span class="kw">const </span>V14: u32 = <span class="number">14</span>;
 
 <span class="doccomment">/// Metadata V15.
-///
-/// Not yet stable, thus we set it to `u32::MAX`.
-</span><span class="kw">const </span>V15: u32 = u32::MAX;
+</span><span class="kw">const </span>V15: u32 = <span class="number">15</span>;
 
 <span class="doccomment">/// Transform the IR to the specified version.
 ///
 /// Use [`supported_versions`] to find supported versions.
 </span><span class="kw">pub fn </span>into_version(metadata: MetadataIR, version: u32) -&gt; <span class="prelude-ty">Option</span>&lt;RuntimeMetadataPrefixed&gt; {
-	<span class="kw">match </span>version {
+	<span class="comment">// Note: Unstable metadata version is `u32::MAX` until stabilized.
+	</span><span class="kw">match </span>version {
 		<span class="comment">// Latest stable version.
-		</span>V14 =&gt; {
-			<span class="kw">let </span>v14: frame_metadata::v14::RuntimeMetadataV14 = metadata.into();
-			<span class="prelude-val">Some</span>(v14.into())
-		},
+		</span>V14 =&gt; <span class="prelude-val">Some</span>(into_v14(metadata)),
 		<span class="comment">// Unstable metadata.
-		</span>V15 =&gt; {
-			<span class="kw">let </span>v15: frame_metadata::v15::RuntimeMetadataV15 = metadata.into();
-			<span class="prelude-val">Some</span>(v15.into())
-		},
+		</span>V15 =&gt; <span class="prelude-val">Some</span>(into_latest(metadata)),
 		<span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 	}
 }
@@ -184,7 +176,13 @@
 
 <span class="doccomment">/// Transform the IR to the latest stable metadata version.
 </span><span class="kw">pub fn </span>into_latest(metadata: MetadataIR) -&gt; RuntimeMetadataPrefixed {
-	<span class="kw">let </span>latest: RuntimeMetadataV14 = metadata.into();
+	<span class="kw">let </span>latest: frame_metadata::v15::RuntimeMetadataV15 = metadata.into();
+	latest.into()
+}
+
+<span class="doccomment">/// Transform the IR to metadata version 14.
+</span><span class="kw">pub fn </span>into_v14(metadata: MetadataIR) -&gt; RuntimeMetadataPrefixed {
+	<span class="kw">let </span>latest: frame_metadata::v14::RuntimeMetadataV14 = metadata.into();
 	latest.into()
 }
 
