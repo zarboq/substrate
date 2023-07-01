@@ -1003,6 +1003,17 @@
 <a href="#1003" id="1003">1003</a>
 <a href="#1004" id="1004">1004</a>
 <a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1023,7 +1034,7 @@
 </span><span class="doccomment">//! Functions for the Assets pallet.
 
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
-<span class="kw">use </span>frame_support::{traits::Get, BoundedVec};
+<span class="kw">use </span>frame_support::{defensive, traits::Get, BoundedVec};
 
 <span class="attr">#[must_use]
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>DeadConsequence {
@@ -1765,11 +1776,22 @@
 				<span class="kw">let </span><span class="kw-2">mut </span>details = maybe_details.as_mut().ok_or(Error::&lt;T, I&gt;::Unknown)<span class="question-mark">?</span>;
 				<span class="comment">// Should only destroy accounts while the asset is in a destroying state
 				</span><span class="macro">ensure!</span>(details.status == AssetStatus::Destroying, Error::&lt;T, I&gt;::IncorrectStatus);
-
-				<span class="kw">for </span>(who, v) <span class="kw">in </span>Account::&lt;T, I&gt;::drain_prefix(<span class="kw-2">&amp;</span>id) {
-					<span class="kw">let _ </span>= <span class="self">Self</span>::dead_account(<span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;mut </span>details, <span class="kw-2">&amp;</span>v.reason, <span class="bool-val">true</span>);
-					dead_accounts.push(who);
-					<span class="kw">if </span>dead_accounts.len() &gt;= (max_items <span class="kw">as </span>usize) {
+				<span class="kw">for </span>(i, (who, <span class="kw-2">mut </span>v)) <span class="kw">in </span>Account::&lt;T, I&gt;::iter_prefix(<span class="kw-2">&amp;</span>id).enumerate() {
+					<span class="comment">// unreserve the existence deposit if any
+					</span><span class="kw">if let </span><span class="prelude-val">Some</span>((depositor, deposit)) = v.reason.take_deposit_from() {
+						T::Currency::unreserve(<span class="kw-2">&amp;</span>depositor, deposit);
+					} <span class="kw">else if let </span><span class="prelude-val">Some</span>(deposit) = v.reason.take_deposit() {
+						T::Currency::unreserve(<span class="kw-2">&amp;</span>who, deposit);
+					}
+					<span class="kw">if let </span>Remove = <span class="self">Self</span>::dead_account(<span class="kw-2">&amp;</span>who, <span class="kw-2">&amp;mut </span>details, <span class="kw-2">&amp;</span>v.reason, <span class="bool-val">false</span>) {
+						Account::&lt;T, I&gt;::remove(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>who);
+						dead_accounts.push(who);
+					} <span class="kw">else </span>{
+						<span class="comment">// deposit may have been released, need to update `Account`
+						</span>Account::&lt;T, I&gt;::insert(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>who, v);
+						<span class="macro">defensive!</span>(<span class="string">&quot;destroy did not result in dead account?!&quot;</span>);
+					}
+					<span class="kw">if </span>i + <span class="number">1 </span>&gt;= (max_items <span class="kw">as </span>usize) {
 						<span class="kw">break
 					</span>}
 				}
