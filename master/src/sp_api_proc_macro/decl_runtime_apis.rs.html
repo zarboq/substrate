@@ -765,6 +765,9 @@
 <a href="#765" id="765">765</a>
 <a href="#766" id="766">766</a>
 <a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -787,7 +790,6 @@
 		API_VERSION_ATTRIBUTE, BLOCK_GENERIC_IDENT, CHANGED_IN_ATTRIBUTE, CORE_TRAIT_ATTRIBUTE,
 		RENAMED_ATTRIBUTE, SUPPORTED_ATTRIBUTE_NAMES,
 	},
-	runtime_metadata::generate_decl_runtime_metadata,
 	utils::{
 		extract_parameter_names_types_and_borrows, fold_fn_decl_for_client_side,
 		generate_crate_access, generate_runtime_mod_name_for_trait, parse_runtime_api_version,
@@ -955,12 +957,16 @@
 		<span class="kw">let </span><span class="kw-2">mut </span>decl = decl.clone();
 		<span class="kw">let </span>decl_span = decl.span();
 		extend_generics_with_block(<span class="kw-2">&amp;mut </span>decl.generics);
-		<span class="kw">let </span>metadata = generate_decl_runtime_metadata(<span class="kw-2">&amp;</span>decl);
 		<span class="kw">let </span>mod_name = generate_runtime_mod_name_for_trait(<span class="kw-2">&amp;</span>decl.ident);
 		<span class="kw">let </span>found_attributes = remove_supported_attributes(<span class="kw-2">&amp;mut </span>decl.attrs);
 		<span class="kw">let </span>api_version =
 			get_api_version(<span class="kw-2">&amp;</span>found_attributes).map(|v| generate_runtime_api_version(v <span class="kw">as </span>u32))<span class="question-mark">?</span>;
 		<span class="kw">let </span>id = generate_runtime_api_id(<span class="kw-2">&amp;</span>decl.ident.to_string());
+
+		<span class="attr">#[cfg(feature = <span class="string">&quot;frame-metadata&quot;</span>)]
+		</span><span class="kw">let </span>metadata = <span class="kw">crate</span>::runtime_metadata::generate_decl_runtime_metadata(<span class="kw-2">&amp;</span>decl);
+		<span class="attr">#[cfg(not(feature = <span class="string">&quot;frame-metadata&quot;</span>))]
+		</span><span class="kw">let </span>metadata = <span class="macro">quote!</span>();
 
 		<span class="kw">let </span>trait_api_version = get_api_version(<span class="kw-2">&amp;</span>found_attributes)<span class="question-mark">?</span>;
 

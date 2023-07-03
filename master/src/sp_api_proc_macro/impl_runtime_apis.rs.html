@@ -780,6 +780,9 @@
 <a href="#780" id="780">780</a>
 <a href="#781" id="781">781</a>
 <a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -799,7 +802,6 @@
 
 </span><span class="kw">use crate</span>::{
 	common::API_VERSION_ATTRIBUTE,
-	runtime_metadata::generate_impl_runtime_metadata,
 	utils::{
 		extract_all_signature_types, extract_block_type_from_trait_path, extract_impl_trait,
 		extract_parameter_names_types_and_borrows, generate_crate_access,
@@ -1476,7 +1478,11 @@
 	<span class="kw">let </span>runtime_api_versions = generate_runtime_api_versions(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>wasm_interface = generate_wasm_interface(api_impls)<span class="question-mark">?</span>;
 	<span class="kw">let </span>api_impls_for_runtime_api = generate_api_impl_for_runtime_api(api_impls)<span class="question-mark">?</span>;
-	<span class="kw">let </span>runtime_metadata = generate_impl_runtime_metadata(api_impls)<span class="question-mark">?</span>;
+
+	<span class="attr">#[cfg(feature = <span class="string">&quot;frame-metadata&quot;</span>)]
+	</span><span class="kw">let </span>runtime_metadata = <span class="kw">crate</span>::runtime_metadata::generate_impl_runtime_metadata(api_impls)<span class="question-mark">?</span>;
+	<span class="attr">#[cfg(not(feature = <span class="string">&quot;frame-metadata&quot;</span>))]
+	</span><span class="kw">let </span>runtime_metadata = <span class="macro">quote!</span>();
 
 	<span class="kw">let </span>impl_ = <span class="macro">quote!</span>(
 		#base_runtime_api
