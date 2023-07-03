@@ -3729,6 +3729,7 @@
 <a href="#3729" id="3729">3729</a>
 <a href="#3730" id="3730">3730</a>
 <a href="#3731" id="3731">3731</a>
+<a href="#3732" id="3732">3732</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3866,7 +3867,7 @@
 
 	<span class="doccomment">/// Call (possibly transferring some amount of funds) into the specified account.
 	///
-	/// Returns the original code size of the called contract.
+	/// Returns the code size of the called contract.
 	</span><span class="kw">fn </span>call(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		gas_limit: Weight,
@@ -3879,7 +3880,7 @@
 
 	<span class="doccomment">/// Execute code in the current frame.
 	///
-	/// Returns the original code size of the called contract.
+	/// Returns the code size of the called contract.
 	</span><span class="kw">fn </span>delegate_call(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		code: CodeHash&lt;<span class="self">Self</span>::T&gt;,
@@ -3890,7 +3891,7 @@
 	///
 	/// Returns the original code size of the called contract.
 	/// The newly created account will be associated with `code`. `value` specifies the amount of
-	/// value transferred from this to the newly created account.
+	/// value transferred from the caller to the newly created account.
 	</span><span class="kw">fn </span>instantiate(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
 		gas_limit: Weight,
@@ -3994,8 +3995,11 @@
 	<span class="doccomment">/// Get a reference to the schedule used by the current call.
 	</span><span class="kw">fn </span>schedule(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Schedule&lt;<span class="self">Self</span>::T&gt;;
 
+	<span class="doccomment">/// Get an immutable reference to the nested gas meter.
+	</span><span class="kw">fn </span>gas_meter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>GasMeter&lt;<span class="self">Self</span>::T&gt;;
+
 	<span class="doccomment">/// Get a mutable reference to the nested gas meter.
-	</span><span class="kw">fn </span>gas_meter(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GasMeter&lt;<span class="self">Self</span>::T&gt;;
+	</span><span class="kw">fn </span>gas_meter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GasMeter&lt;<span class="self">Self</span>::T&gt;;
 
 	<span class="doccomment">/// Append a string to the debug buffer.
 	///
@@ -4056,24 +4060,27 @@
 	<span class="doccomment">/// Load the executable from storage.
 	///
 	/// # Note
-	/// Charges size base load and instrumentation weight from the gas meter.
+	/// Charges size base load weight from the gas meter.
 	</span><span class="kw">fn </span>from_storage(
 		code_hash: CodeHash&lt;T&gt;,
-		schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
 		gas_meter: <span class="kw-2">&amp;mut </span>GasMeter&lt;T&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, DispatchError&gt;;
 
-	<span class="doccomment">/// Increment the refcount of a code in-storage by one.
-	///
-	/// This is needed when the code is not set via instantiate but `seal_set_code_hash`.
+	<span class="doccomment">/// Increment the reference count of a of a stored code by one.
 	///
 	/// # Errors
 	///
-	/// [`Error::CodeNotFound`] is returned if the specified `code_hash` does not exist.
-	</span><span class="kw">fn </span>add_user(code_hash: CodeHash&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt;;
+	/// [`Error::CodeNotFound`] is returned if no stored code found having the specified
+	/// `code_hash`.
+	</span><span class="kw">fn </span>increment_refcount(code_hash: CodeHash&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt;;
 
-	<span class="doccomment">/// Decrement the refcount by one if the code exists.
-	</span><span class="kw">fn </span>remove_user(code_hash: CodeHash&lt;T&gt;);
+	<span class="doccomment">/// Decrement the reference count of a stored code by one.
+	///
+	/// # Note
+	///
+	/// A contract whose reference count dropped to zero isn&#39;t automatically removed. A
+	/// `remove_code` transaction must be submitted by the original uploader to do so.
+	</span><span class="kw">fn </span>decrement_refcount(code_hash: CodeHash&lt;T&gt;);
 
 	<span class="doccomment">/// Execute the specified exported function and return the result.
 	///
@@ -4094,7 +4101,7 @@
 	<span class="doccomment">/// The code hash of the executable.
 	</span><span class="kw">fn </span>code_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CodeHash&lt;T&gt;;
 
-	<span class="doccomment">/// Size of the instrumented code in bytes.
+	<span class="doccomment">/// Size of the contract code in bytes.
 	</span><span class="kw">fn </span>code_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32;
 
 	<span class="doccomment">/// The code does not contain any instructions which could lead to indeterminism.
@@ -4434,9 +4441,9 @@
 			Weight::zero(),
 			storage_meter,
 			BalanceOf::&lt;T&gt;::zero(),
-			schedule,
 			determinism,
 		)<span class="question-mark">?</span>;
+
 		<span class="kw">let </span>stack = <span class="self">Self </span>{
 			origin,
 			schedule,
@@ -4466,7 +4473,6 @@
 		gas_limit: Weight,
 		storage_meter: <span class="kw-2">&amp;mut </span>storage::meter::GenericMeter&lt;T, S&gt;,
 		deposit_limit: BalanceOf&lt;T&gt;,
-		schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
 		determinism: Determinism,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(Frame&lt;T&gt;, E, <span class="prelude-ty">Option</span>&lt;u64&gt;), ExecError&gt; {
 		<span class="kw">let </span>(account_id, contract_info, executable, delegate_caller, entry_point, nonce) =
@@ -4482,7 +4488,7 @@
 						<span class="kw">if let </span><span class="prelude-val">Some</span>(DelegatedCall { executable, caller }) = delegated_call {
 							(executable, <span class="prelude-val">Some</span>(caller))
 						} <span class="kw">else </span>{
-							(E::from_storage(contract.code_hash, schedule, gas_meter)<span class="question-mark">?</span>, <span class="prelude-val">None</span>)
+							(E::from_storage(contract.code_hash, gas_meter)<span class="question-mark">?</span>, <span class="prelude-val">None</span>)
 						};
 
 					(dest, contract, executable, delegate_caller, ExportedFunction::Call, <span class="prelude-val">None</span>)
@@ -4490,7 +4496,7 @@
 				FrameArgs::Instantiate { sender, nonce, executable, salt, input_data } =&gt; {
 					<span class="kw">let </span>account_id = Contracts::&lt;T&gt;::contract_address(
 						<span class="kw-2">&amp;</span>sender,
-						executable.code_hash(),
+						<span class="kw-2">&amp;</span>executable.code_hash(),
 						input_data,
 						salt,
 					);
@@ -4562,7 +4568,6 @@
 			gas_limit,
 			nested_storage,
 			deposit_limit,
-			<span class="self">self</span>.schedule,
 			<span class="self">self</span>.determinism,
 		)<span class="question-mark">?</span>;
 		<span class="self">self</span>.frames.push(frame);
@@ -4595,7 +4600,7 @@
 			<span class="comment">// Every non delegate call or instantiate also optionally transfers the balance.
 			</span><span class="self">self</span>.initial_transfer()<span class="question-mark">?</span>;
 
-			<span class="comment">// Call into the wasm blob.
+			<span class="comment">// Call into the Wasm blob.
 			</span><span class="kw">let </span>output = executable
 				.execute(<span class="self">self</span>, <span class="kw-2">&amp;</span>entry_point, input_data)
 				.map_err(|e| ExecError { error: e.error, origin: ErrorOrigin::Callee })<span class="question-mark">?</span>;
@@ -4924,7 +4929,7 @@
 		code_hash: CodeHash&lt;<span class="self">Self</span>::T&gt;,
 		input_data: Vec&lt;u8&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;ExecReturnValue, ExecError&gt; {
-		<span class="kw">let </span>executable = E::from_storage(code_hash, <span class="self">self</span>.schedule, <span class="self">self</span>.gas_meter())<span class="question-mark">?</span>;
+		<span class="kw">let </span>executable = E::from_storage(code_hash, <span class="self">self</span>.gas_meter_mut())<span class="question-mark">?</span>;
 		<span class="kw">let </span>top_frame = <span class="self">self</span>.top_frame_mut();
 		<span class="kw">let </span>contract_info = top_frame.contract_info().clone();
 		<span class="kw">let </span>account_id = top_frame.account_id.clone();
@@ -4951,7 +4956,7 @@
 		input_data: Vec&lt;u8&gt;,
 		salt: <span class="kw-2">&amp;</span>[u8],
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(AccountIdOf&lt;T&gt;, ExecReturnValue), ExecError&gt; {
-		<span class="kw">let </span>executable = E::from_storage(code_hash, <span class="self">self</span>.schedule, <span class="self">self</span>.gas_meter())<span class="question-mark">?</span>;
+		<span class="kw">let </span>executable = E::from_storage(code_hash, <span class="self">self</span>.gas_meter_mut())<span class="question-mark">?</span>;
 		<span class="kw">let </span>nonce = <span class="self">self</span>.next_nonce();
 		<span class="kw">let </span>executable = <span class="self">self</span>.push_frame(
 			FrameArgs::Instantiate {
@@ -4986,7 +4991,7 @@
 		)<span class="question-mark">?</span>;
 		info.queue_trie_for_deletion();
 		ContractInfoOf::&lt;T&gt;::remove(<span class="kw-2">&amp;</span>frame.account_id);
-		E::remove_user(info.code_hash);
+		E::decrement_refcount(info.code_hash);
 		Contracts::&lt;T&gt;::deposit_event(
 			<span class="macro">vec!</span>[T::Hashing::hash_of(<span class="kw-2">&amp;</span>frame.account_id), T::Hashing::hash_of(<span class="kw-2">&amp;</span>beneficiary)],
 			Event::Terminated {
@@ -5103,7 +5108,11 @@
 		<span class="self">self</span>.schedule
 	}
 
-	<span class="kw">fn </span>gas_meter(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GasMeter&lt;<span class="self">Self</span>::T&gt; {
+	<span class="kw">fn </span>gas_meter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>GasMeter&lt;<span class="self">Self</span>::T&gt; {
+		<span class="kw-2">&amp;</span><span class="self">self</span>.top_frame().nested_gas
+	}
+
+	<span class="kw">fn </span>gas_meter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GasMeter&lt;<span class="self">Self</span>::T&gt; {
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>.top_frame_mut().nested_gas
 	}
 
@@ -5154,12 +5163,12 @@
 
 	<span class="kw">fn </span>set_code_hash(<span class="kw-2">&amp;mut </span><span class="self">self</span>, hash: CodeHash&lt;<span class="self">Self</span>::T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
 		<span class="kw">let </span>frame = <span class="macro">top_frame_mut!</span>(<span class="self">self</span>);
-		<span class="kw">if </span>!E::from_storage(hash, <span class="self">self</span>.schedule, <span class="kw-2">&amp;mut </span>frame.nested_gas)<span class="question-mark">?</span>.is_deterministic() {
+		<span class="kw">if </span>!E::from_storage(hash, <span class="kw-2">&amp;mut </span>frame.nested_gas)<span class="question-mark">?</span>.is_deterministic() {
 			<span class="kw">return </span><span class="prelude-val">Err</span>(&lt;Error&lt;T&gt;&gt;::Indeterministic.into())
 		}
-		E::add_user(hash)<span class="question-mark">?</span>;
+		E::increment_refcount(hash)<span class="question-mark">?</span>;
 		<span class="kw">let </span>prev_hash = frame.contract_info().code_hash;
-		E::remove_user(prev_hash);
+		E::decrement_refcount(prev_hash);
 		frame.contract_info().code_hash = hash;
 		Contracts::&lt;<span class="self">Self</span>::T&gt;::deposit_event(
 			<span class="macro">vec!</span>[T::Hashing::hash_of(<span class="kw-2">&amp;</span>frame.account_id), hash, prev_hash],
@@ -5322,7 +5331,6 @@
 	<span class="kw">impl </span>Executable&lt;Test&gt; <span class="kw">for </span>MockExecutable {
 		<span class="kw">fn </span>from_storage(
 			code_hash: CodeHash&lt;Test&gt;,
-			_schedule: <span class="kw-2">&amp;</span>Schedule&lt;Test&gt;,
 			_gas_meter: <span class="kw-2">&amp;mut </span>GasMeter&lt;Test&gt;,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, DispatchError&gt; {
 			Loader::mutate(|loader| {
@@ -5330,11 +5338,11 @@
 			})
 		}
 
-		<span class="kw">fn </span>add_user(code_hash: CodeHash&lt;Test&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
+		<span class="kw">fn </span>increment_refcount(code_hash: CodeHash&lt;Test&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
 			MockLoader::increment_refcount(code_hash)
 		}
 
-		<span class="kw">fn </span>remove_user(code_hash: CodeHash&lt;Test&gt;) {
+		<span class="kw">fn </span>decrement_refcount(code_hash: CodeHash&lt;Test&gt;) {
 			MockLoader::decrement_refcount(code_hash);
 		}
 
@@ -5345,7 +5353,7 @@
 			input_data: Vec&lt;u8&gt;,
 		) -&gt; ExecResult {
 			<span class="kw">if let </span><span class="kw-2">&amp;</span>Constructor = function {
-				<span class="self">Self</span>::add_user(<span class="self">self</span>.code_hash).unwrap();
+				<span class="self">Self</span>::increment_refcount(<span class="self">self</span>.code_hash).unwrap();
 			}
 			<span class="kw">if </span>function == <span class="kw-2">&amp;</span><span class="self">self</span>.func_type {
 				(<span class="self">self</span>.func)(MockCtx { ext, input_data }, <span class="kw-2">&amp;</span><span class="self">self</span>)
@@ -5683,8 +5691,7 @@
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
 			<span class="kw">let </span>min_balance = &lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
-			<span class="kw">let </span>executable =
-				MockExecutable::from_storage(input_data_ch, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+			<span class="kw">let </span>executable = MockExecutable::from_storage(input_data_ch, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">10_000</span>);
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(ALICE);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
@@ -6097,8 +6104,7 @@
 		ExtBuilder::default().existential_deposit(<span class="number">15</span>).build().execute_with(|| {
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
-			<span class="kw">let </span>executable =
-				MockExecutable::from_storage(dummy_ch, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+			<span class="kw">let </span>executable = MockExecutable::from_storage(dummy_ch, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(ALICE);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
 				storage::meter::Meter::new(<span class="kw-2">&amp;</span>contract_origin, <span class="prelude-val">Some</span>(<span class="number">0</span>), <span class="number">0</span>).unwrap();
@@ -6130,8 +6136,7 @@
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
 			<span class="kw">let </span>min_balance = &lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
-			<span class="kw">let </span>executable =
-				MockExecutable::from_storage(dummy_ch, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+			<span class="kw">let </span>executable = MockExecutable::from_storage(dummy_ch, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">1000</span>);
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(ALICE);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
@@ -6176,8 +6181,7 @@
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
 			<span class="kw">let </span>min_balance = &lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
-			<span class="kw">let </span>executable =
-				MockExecutable::from_storage(dummy_ch, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+			<span class="kw">let </span>executable = MockExecutable::from_storage(dummy_ch, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">1000</span>);
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(ALICE);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
@@ -6345,8 +6349,7 @@
 		ExtBuilder::default().existential_deposit(<span class="number">15</span>).build().execute_with(|| {
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
-			<span class="kw">let </span>executable =
-				MockExecutable::from_storage(terminate_ch, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+			<span class="kw">let </span>executable = MockExecutable::from_storage(terminate_ch, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			set_balance(<span class="kw-2">&amp;</span>ALICE, <span class="number">10_000</span>);
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(ALICE);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
@@ -6448,7 +6451,7 @@
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
 			<span class="kw">let </span>min_balance = &lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
-			<span class="kw">let </span>executable = MockExecutable::from_storage(code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+			<span class="kw">let </span>executable = MockExecutable::from_storage(code, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">10_000</span>);
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(ALICE);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
@@ -6872,14 +6875,13 @@
 			<span class="kw">let </span>schedule = &lt;Test <span class="kw">as </span>Config&gt;::Schedule::get();
 			<span class="kw">let </span>min_balance = &lt;Test <span class="kw">as </span>Config&gt;::Currency::minimum_balance();
 			<span class="kw">let </span><span class="kw-2">mut </span>gas_meter = GasMeter::&lt;Test&gt;::new(GAS_LIMIT);
-			<span class="kw">let </span>fail_executable =
-				MockExecutable::from_storage(fail_code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+			<span class="kw">let </span>fail_executable = MockExecutable::from_storage(fail_code, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			<span class="kw">let </span>success_executable =
-				MockExecutable::from_storage(success_code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+				MockExecutable::from_storage(success_code, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			<span class="kw">let </span>succ_fail_executable =
-				MockExecutable::from_storage(succ_fail_code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+				MockExecutable::from_storage(succ_fail_code, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			<span class="kw">let </span>succ_succ_executable =
-				MockExecutable::from_storage(succ_succ_code, <span class="kw-2">&amp;</span>schedule, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
+				MockExecutable::from_storage(succ_succ_code, <span class="kw-2">&amp;mut </span>gas_meter).unwrap();
 			set_balance(<span class="kw-2">&amp;</span>ALICE, min_balance * <span class="number">10_000</span>);
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(ALICE);
 			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =

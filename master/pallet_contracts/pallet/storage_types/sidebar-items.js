@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["CodeStorage","ContractInfoOf","DeletionQueue","DeletionQueueCounter","MigrationInProgress","Nonce","OwnerInfoOf","PristineCode"]};
+window.SIDEBAR_ITEMS = {"struct":["CodeInfoOf","ContractInfoOf","DeletionQueue","DeletionQueueCounter","MigrationInProgress","Nonce","PristineCode"]};

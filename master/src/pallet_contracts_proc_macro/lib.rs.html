@@ -826,6 +826,40 @@
 <a href="#826" id="826">826</a>
 <a href="#827" id="827">827</a>
 <a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1452,19 +1486,15 @@
 			<span class="kw">let </span>trace_fmt_str = <span class="macro">format!</span>(<span class="string">&quot;{}::{}({}) = {{:?}}\n&quot;</span>, module, name, params_fmt_str);
 
 			<span class="macro">quote! </span>{
+				<span class="kw">let </span>result = #body;
 				<span class="kw">if </span><span class="macro">::log::log_enabled!</span>(target: <span class="string">&quot;runtime::contracts::strace&quot;</span>, ::log::Level::Trace) {
-					<span class="kw">let </span>result = #body;
-					{
 						<span class="kw">use </span>sp_std::fmt::Write;
 						<span class="kw">let </span><span class="kw-2">mut </span>w = sp_std::Writer::default();
 						<span class="kw">let _ </span>= <span class="macro">core::write!</span>(<span class="kw-2">&amp;mut </span>w, #trace_fmt_str, #( #trace_fmt_args, )* result);
 						<span class="kw">let </span>msg = core::str::from_utf8(<span class="kw-2">&amp;</span>w.inner()).unwrap_or_default();
 						ctx.ext().append_debug_buffer(msg);
-					}
-					result
-				} <span class="kw">else </span>{
-					#body
 				}
+				result
 			}
 		};
 
@@ -1489,7 +1519,7 @@
 				</span><span class="macro">::core::unreachable!</span>()
 			} }
 		};
-		<span class="kw">let </span>map_err = <span class="kw">if </span>expand_blocks {
+		<span class="kw">let </span>into_host = <span class="kw">if </span>expand_blocks {
 			<span class="macro">quote! </span>{
 				|reason| {
 					::wasmi::core::Trap::from(reason)
@@ -1505,6 +1535,43 @@
 		} <span class="kw">else </span>{
 			<span class="macro">quote! </span>{ <span class="attr">#[allow(unused_variables)] </span>}
 		};
+		<span class="kw">let </span>sync_gas_before = <span class="kw">if </span>expand_blocks {
+			<span class="macro">quote! </span>{
+				<span class="comment">// Gas left in the gas meter right before switching to engine execution.
+				</span><span class="kw">let </span>__gas_before__ = {
+					<span class="kw">let </span>engine_consumed_total =
+						__caller__.fuel_consumed().expect(<span class="string">&quot;Fuel metering is enabled; qed&quot;</span>);
+					<span class="kw">let </span>gas_meter = __caller__.data_mut().ext().gas_meter_mut();
+					gas_meter
+						.charge_fuel(engine_consumed_total)
+						.map_err(TrapReason::from)
+						.map_err(#into_host)<span class="question-mark">?
+						</span>.ref_time()
+				};
+			}
+		} <span class="kw">else </span>{
+			<span class="macro">quote! </span>{ }
+		};
+		<span class="comment">// Gas left in the gas meter right after returning from engine execution.
+		</span><span class="kw">let </span>sync_gas_after = <span class="kw">if </span>expand_blocks {
+			<span class="macro">quote! </span>{
+				<span class="kw">let </span><span class="kw-2">mut </span>gas_after = __caller__.data_mut().ext().gas_meter().gas_left().ref_time();
+				<span class="kw">let </span><span class="kw-2">mut </span>host_consumed = __gas_before__.saturating_sub(gas_after);
+				<span class="comment">// Possible undercharge of at max 1 fuel here, if host consumed less than `instruction_weights.base`
+				// Not a problem though, as soon as host accounts its spent gas properly.
+				</span><span class="kw">let </span>fuel_consumed = host_consumed
+					.checked_div(__caller__.data_mut().ext().schedule().instruction_weights.base <span class="kw">as </span>u64)
+					.ok_or(Error::&lt;E::T&gt;::InvalidSchedule)
+					.map_err(TrapReason::from)
+					.map_err(#into_host)<span class="question-mark">?</span>;
+				 __caller__
+					 .consume_fuel(fuel_consumed)
+					 .map_err(|<span class="kw">_</span>| TrapReason::from(Error::&lt;E::T&gt;::OutOfGas))
+					 .map_err(#into_host)<span class="question-mark">?</span>;
+			}
+		} <span class="kw">else </span>{
+			<span class="macro">quote! </span>{ }
+		};
 
 		<span class="macro">quote! </span>{
 			<span class="comment">// We need to allow all interfaces when runtime benchmarks are performed because
@@ -1516,10 +1583,11 @@
 			{
 				#allow_unused
 				linker.define(#module, #name, ::wasmi::Func::wrap(<span class="kw-2">&amp;mut*</span>store, |<span class="kw-2">mut </span>__caller__: ::wasmi::Caller&lt;#host_state&gt;, #( #params, )<span class="kw-2">*</span>| -&gt; #wasm_output {
+ 					#sync_gas_before
 					<span class="kw">let </span><span class="kw-2">mut </span>func = #inner;
-					func()
-						.map_err(#map_err)
-						.map(::core::convert::Into::into)
+					<span class="kw">let </span>result = func().map_err(#into_host).map(::core::convert::Into::into);
+					#sync_gas_after
+					result
 				}))<span class="question-mark">?</span>;
 			}
 		}
