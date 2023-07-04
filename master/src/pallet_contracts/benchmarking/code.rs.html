@@ -423,6 +423,7 @@
 <a href="#423" id="423">423</a>
 <a href="#424" id="424">424</a>
 <a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -547,7 +548,7 @@
 		<span class="comment">// internal functions start at that offset.
 		</span><span class="kw">let </span>func_offset = u32::try_from(def.imported_functions.len()).unwrap();
 
-		<span class="comment">// Every contract must export &quot;deploy&quot; and &quot;call&quot; functions
+		<span class="comment">// Every contract must export &quot;deploy&quot; and &quot;call&quot; functions.
 		</span><span class="kw">let </span><span class="kw-2">mut </span>contract = builder::module()
 			<span class="comment">// deploy function (first internal function)
 			</span>.function()
@@ -588,15 +589,16 @@
 		}
 
 		<span class="comment">// Grant access to linear memory.
-		</span><span class="kw">if let </span><span class="prelude-val">Some</span>(memory) = <span class="kw-2">&amp;</span>def.memory {
-			contract = contract
-				.import()
-				.module(<span class="string">&quot;env&quot;</span>)
-				.field(<span class="string">&quot;memory&quot;</span>)
-				.external()
-				.memory(memory.min_pages, <span class="prelude-val">Some</span>(memory.max_pages))
-				.build();
-		}
+		// Every contract module is required to have an imported memory.
+		// If no memory is specified in the passed ModuleDefenition, then
+		// default to (1, 1).
+		</span><span class="kw">let </span>(init, max) = <span class="kw">if let </span><span class="prelude-val">Some</span>(memory) = <span class="kw-2">&amp;</span>def.memory {
+			(memory.min_pages, <span class="prelude-val">Some</span>(memory.max_pages))
+		} <span class="kw">else </span>{
+			(<span class="number">1</span>, <span class="prelude-val">Some</span>(<span class="number">1</span>))
+		};
+
+		contract = contract.import().path(<span class="string">&quot;env&quot;</span>, <span class="string">&quot;memory&quot;</span>).external().memory(init, max).build();
 
 		<span class="comment">// Import supervisor functions. They start with idx 0.
 		</span><span class="kw">for </span>func <span class="kw">in </span>def.imported_functions {
