@@ -308,13 +308,13 @@
 	assert_ok,
 	storage::bounded_vec::BoundedVec,
 	traits::{
-		fungible::{Inspect <span class="kw">as </span>InspectFungible, Unbalanced},
+		fungible::{Inspect <span class="kw">as </span>InspectFungible, Mutate <span class="kw">as </span>MutateFungible, Unbalanced},
 		fungibles::{Create, Inspect, Mutate},
 	},
 };
 <span class="kw">use </span>frame_system::RawOrigin <span class="kw">as </span>SystemOrigin;
 <span class="kw">use </span>sp_runtime::traits::{Bounded, StaticLookup};
-<span class="kw">use </span>sp_std::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>sp_std::{ops::Div, prelude::<span class="kw-2">*</span>};
 
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>AssetConversion;
 
@@ -340,7 +340,7 @@
 	<span class="kw">let </span>caller: T::AccountId = whitelisted_caller();
 	<span class="kw">let </span>caller_lookup = T::Lookup::unlookup(caller.clone());
 	<span class="kw">if let </span><span class="prelude-val">Ok</span>(asset_id) = T::MultiAssetIdConverter::try_convert(asset) {
-		<span class="macro">assert_ok!</span>(T::Currency::write_balance(<span class="kw-2">&amp;</span>caller, BalanceOf::&lt;T&gt;::max_value()));
+		T::Currency::set_balance(<span class="kw-2">&amp;</span>caller, BalanceOf::&lt;T&gt;::max_value().div(<span class="number">1000u32</span>.into()));
 		<span class="macro">assert_ok!</span>(T::Assets::create(asset_id.clone(), caller.clone(), <span class="bool-val">true</span>, <span class="number">1</span>.into()));
 		<span class="macro">assert_ok!</span>(T::Assets::mint_into(asset_id, <span class="kw-2">&amp;</span>caller, INITIAL_ASSET_BALANCE.into()));
 	}
