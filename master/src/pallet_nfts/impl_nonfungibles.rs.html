@@ -396,6 +396,13 @@
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
 <a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -739,6 +746,13 @@
 	}
 
 	<span class="kw">fn </span>disable_transfer(collection: <span class="kw-2">&amp;</span><span class="self">Self</span>::CollectionId, item: <span class="kw-2">&amp;</span><span class="self">Self</span>::ItemId) -&gt; DispatchResult {
+		<span class="kw">let </span>transfer_disabled =
+			<span class="self">Self</span>::has_system_attribute(<span class="kw-2">&amp;</span>collection, <span class="kw-2">&amp;</span>item, PalletAttributes::TransferDisabled)<span class="question-mark">?</span>;
+		<span class="comment">// Can&#39;t lock the item twice
+		</span><span class="kw">if </span>transfer_disabled {
+			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::&lt;T, I&gt;::ItemLocked.into())
+		}
+
 		&lt;<span class="self">Self </span><span class="kw">as </span>Mutate&lt;T::AccountId, ItemConfig&gt;&gt;::set_attribute(
 			collection,
 			item,
