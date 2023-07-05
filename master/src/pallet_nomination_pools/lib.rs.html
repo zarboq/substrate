@@ -3292,6 +3292,8 @@
 <a href="#3292" id="3292">3292</a>
 <a href="#3293" id="3293">3293</a>
 <a href="#3294" id="3294">3294</a>
+<a href="#3295" id="3295">3295</a>
+<a href="#3296" id="3296">3296</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -6429,16 +6431,18 @@
 		RewardPools::&lt;T&gt;::iter_keys().try_for_each(|id| -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="comment">// the sum of the pending rewards must be less than the leftover balance. Since the
 			// reward math rounds down, we might accumulate some dust here.
-			</span><span class="macro">log!</span>(
-				trace,
-				<span class="string">&quot;pool {:?}, sum pending rewards = {:?}, remaining balance = {:?}&quot;</span>,
-				id,
-				pools_members_pending_rewards.get(<span class="kw-2">&amp;</span>id),
-				RewardPool::&lt;T&gt;::current_balance(id)
-			);
+			</span><span class="kw">let </span>pending_rewards_lt_leftover_bal = RewardPool::&lt;T&gt;::current_balance(id) &gt;=
+				pools_members_pending_rewards.get(<span class="kw-2">&amp;</span>id).copied().unwrap_or_default();
+			<span class="kw">if </span>!pending_rewards_lt_leftover_bal {
+				<span class="macro">log::warn!</span>(
+					<span class="string">&quot;pool {:?}, sum pending rewards = {:?}, remaining balance = {:?}&quot;</span>,
+					id,
+					pools_members_pending_rewards.get(<span class="kw-2">&amp;</span>id),
+					RewardPool::&lt;T&gt;::current_balance(id)
+				);
+			}
 			<span class="macro">ensure!</span>(
-				RewardPool::&lt;T&gt;::current_balance(id) &gt;=
-					pools_members_pending_rewards.get(<span class="kw-2">&amp;</span>id).copied().unwrap_or_default(),
+				pending_rewards_lt_leftover_bal,
 				<span class="string">&quot;The sum of the pending rewards must be less than the leftover balance.&quot;
 			</span>);
 			<span class="prelude-val">Ok</span>(())
