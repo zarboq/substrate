@@ -807,12 +807,6 @@
 <a href="#807" id="807">807</a>
 <a href="#808" id="808">808</a>
 <a href="#809" id="809">809</a>
-<a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
-<a href="#813" id="813">813</a>
-<a href="#814" id="814">814</a>
-<a href="#815" id="815">815</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1017,7 +1011,7 @@
 		collect_proof
 			.proof
 			.iter()
-			.map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s.as_ref()))
+			.map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s))
 			.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 	);
 
@@ -1087,10 +1081,10 @@
 		<span class="attr">#[cfg(feature = <span class="string">&quot;debug&quot;</span>)]
 		</span><span class="macro">log::debug!</span>(
 			<span class="string">&quot;[verify_proof]: (a, b) {:?}, {:?} =&gt; {:?} ({:?}) hash&quot;</span>,
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>a.as_ref()),
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>b.as_ref()),
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>hash.as_ref()),
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>combined.as_ref())
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, a),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, b),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, hash),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>combined)
 		);
 		position /= <span class="number">2</span>;
 		width = ((width - <span class="number">1</span>) / <span class="number">2</span>) + <span class="number">1</span>;
@@ -1131,8 +1125,8 @@
 		<span class="attr">#[cfg(feature = <span class="string">&quot;debug&quot;</span>)]
 		</span><span class="macro">log::debug!</span>(
 			<span class="string">&quot;  {:?}\n  {:?}&quot;</span>,
-			a.as_ref().map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s.as_ref())),
-			b.as_ref().map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s.as_ref()))
+			a.as_ref().map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s)),
+			b.as_ref().map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s))
 		);
 
 		index += <span class="number">2</span>;
@@ -1154,7 +1148,7 @@
 				<span class="attr">#[cfg(feature = <span class="string">&quot;debug&quot;</span>)]
 				</span><span class="macro">log::debug!</span>(
 					<span class="string">&quot;[merkelize_row] Next: {:?}&quot;</span>,
-					next.iter().map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s.as_ref())).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+					next.iter().map(|s| array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, s)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
 				);
 				<span class="kw">return </span><span class="prelude-val">Err</span>(next)
 			},
@@ -1179,7 +1173,7 @@
 
 		<span class="comment">// then
 		</span><span class="macro">assert_eq!</span>(
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, out.as_ref()),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, out),
 			<span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000000&quot;
 		</span>);
 	}
@@ -1188,7 +1182,7 @@
 	</span><span class="kw">fn </span>should_generate_single_root() {
 		<span class="comment">// given
 		</span><span class="kw">let _ </span>= env_logger::try_init();
-		<span class="kw">let </span>data = <span class="macro">vec!</span>[array_bytes::hex2array_unchecked::&lt;<span class="number">20</span>&gt;(
+		<span class="kw">let </span>data = <span class="macro">vec!</span>[array_bytes::hex2array_unchecked::&lt;<span class="kw">_</span>, <span class="number">20</span>&gt;(
 			<span class="string">&quot;E04CC55ebEE1cBCE552f250e85c57B70B2E2625b&quot;</span>,
 		)];
 
@@ -1197,7 +1191,7 @@
 
 		<span class="comment">// then
 		</span><span class="macro">assert_eq!</span>(
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, out.as_ref()),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, out),
 			<span class="string">&quot;aeb47a269393297f4b0a3c9c9cfd00c7a4195255274cf39d83dabc2fcc9ff3d7&quot;
 		</span>);
 	}
@@ -1207,8 +1201,8 @@
 		<span class="comment">// given
 		</span><span class="kw">let _ </span>= env_logger::try_init();
 		<span class="kw">let </span>data = <span class="macro">vec!</span>[
-			array_bytes::hex2array_unchecked::&lt;<span class="number">20</span>&gt;(<span class="string">&quot;E04CC55ebEE1cBCE552f250e85c57B70B2E2625b&quot;</span>),
-			array_bytes::hex2array_unchecked::&lt;<span class="number">20</span>&gt;(<span class="string">&quot;25451A4de12dcCc2D166922fA938E900fCc4ED24&quot;</span>),
+			array_bytes::hex2array_unchecked::&lt;<span class="kw">_</span>, <span class="number">20</span>&gt;(<span class="string">&quot;E04CC55ebEE1cBCE552f250e85c57B70B2E2625b&quot;</span>),
+			array_bytes::hex2array_unchecked::&lt;<span class="kw">_</span>, <span class="number">20</span>&gt;(<span class="string">&quot;25451A4de12dcCc2D166922fA938E900fCc4ED24&quot;</span>),
 		];
 
 		<span class="comment">// when
@@ -1216,7 +1210,7 @@
 
 		<span class="comment">// then
 		</span><span class="macro">assert_eq!</span>(
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, out.as_ref()),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, out),
 			<span class="string">&quot;697ea2a8fe5b03468548a7a413424a6292ab44a82a6f5cc594c3fa7dda7ce402&quot;
 		</span>);
 	}
@@ -1225,10 +1219,7 @@
 	</span><span class="kw">fn </span>should_generate_root_complex() {
 		<span class="kw">let _ </span>= env_logger::try_init();
 		<span class="kw">let </span>test = |root, data| {
-			<span class="macro">assert_eq!</span>(
-				array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>merkle_root::&lt;Keccak256, <span class="kw">_</span>&gt;(data).as_ref()),
-				root
-			);
+			<span class="macro">assert_eq!</span>(array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>merkle_root::&lt;Keccak256, <span class="kw">_</span>&gt;(data)), root);
 		};
 
 		test(
@@ -1288,12 +1279,12 @@
 
 		<span class="comment">// then
 		</span><span class="macro">assert_eq!</span>(
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof0.root.as_ref()),
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof1.root.as_ref())
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof0.root),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof1.root)
 		);
 		<span class="macro">assert_eq!</span>(
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof2.root.as_ref()),
-			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof1.root.as_ref())
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof2.root),
+			array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof1.root)
 		);
 
 		<span class="macro">assert!</span>(!verify_proof::&lt;Keccak256, <span class="kw">_</span>, <span class="kw">_</span>&gt;(
@@ -1577,10 +1568,7 @@
 		<span class="kw">for </span>l <span class="kw">in </span><span class="number">0</span>..data.len() {
 			<span class="comment">// when
 			</span><span class="kw">let </span>proof = merkle_proof::&lt;Keccak256, <span class="kw">_</span>, <span class="kw">_</span>&gt;(data.clone(), l);
-			<span class="macro">assert_eq!</span>(
-				array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof.root.as_ref()),
-				array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>root.as_ref())
-			);
+			<span class="macro">assert_eq!</span>(array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>proof.root), array_bytes::bytes2hex(<span class="string">&quot;&quot;</span>, <span class="kw-2">&amp;</span>root));
 			<span class="macro">assert_eq!</span>(proof.leaf_index, l);
 			<span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>proof.leaf, <span class="kw-2">&amp;</span>data[l]);
 
@@ -1620,7 +1608,7 @@
 				],
 				number_of_leaves: data.len(),
 				leaf_index: data.len() - <span class="number">1</span>,
-				leaf: array_bytes::hex2array_unchecked::&lt;<span class="number">20</span>&gt;(
+				leaf: array_bytes::hex2array_unchecked::&lt;<span class="kw">_</span>, <span class="number">20</span>&gt;(
 					<span class="string">&quot;c26B34D375533fFc4c5276282Fa5D660F3d8cbcB&quot;
 				</span>)
 				.to_vec(),
