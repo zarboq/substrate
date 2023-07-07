@@ -1572,6 +1572,51 @@
 <a href="#1572" id="1572">1572</a>
 <a href="#1573" id="1573">1573</a>
 <a href="#1574" id="1574">1574</a>
+<a href="#1575" id="1575">1575</a>
+<a href="#1576" id="1576">1576</a>
+<a href="#1577" id="1577">1577</a>
+<a href="#1578" id="1578">1578</a>
+<a href="#1579" id="1579">1579</a>
+<a href="#1580" id="1580">1580</a>
+<a href="#1581" id="1581">1581</a>
+<a href="#1582" id="1582">1582</a>
+<a href="#1583" id="1583">1583</a>
+<a href="#1584" id="1584">1584</a>
+<a href="#1585" id="1585">1585</a>
+<a href="#1586" id="1586">1586</a>
+<a href="#1587" id="1587">1587</a>
+<a href="#1588" id="1588">1588</a>
+<a href="#1589" id="1589">1589</a>
+<a href="#1590" id="1590">1590</a>
+<a href="#1591" id="1591">1591</a>
+<a href="#1592" id="1592">1592</a>
+<a href="#1593" id="1593">1593</a>
+<a href="#1594" id="1594">1594</a>
+<a href="#1595" id="1595">1595</a>
+<a href="#1596" id="1596">1596</a>
+<a href="#1597" id="1597">1597</a>
+<a href="#1598" id="1598">1598</a>
+<a href="#1599" id="1599">1599</a>
+<a href="#1600" id="1600">1600</a>
+<a href="#1601" id="1601">1601</a>
+<a href="#1602" id="1602">1602</a>
+<a href="#1603" id="1603">1603</a>
+<a href="#1604" id="1604">1604</a>
+<a href="#1605" id="1605">1605</a>
+<a href="#1606" id="1606">1606</a>
+<a href="#1607" id="1607">1607</a>
+<a href="#1608" id="1608">1608</a>
+<a href="#1609" id="1609">1609</a>
+<a href="#1610" id="1610">1610</a>
+<a href="#1611" id="1611">1611</a>
+<a href="#1612" id="1612">1612</a>
+<a href="#1613" id="1613">1613</a>
+<a href="#1614" id="1614">1614</a>
+<a href="#1615" id="1615">1615</a>
+<a href="#1616" id="1616">1616</a>
+<a href="#1617" id="1617">1617</a>
+<a href="#1618" id="1618">1618</a>
+<a href="#1619" id="1619">1619</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1649,8 +1694,8 @@
 //!   allowed to code owner.
 //! * [`Pallet::set_code`] - Changes the code of an existing contract. Only allowed to `Root`
 //!   origin.
-//! * [`Pallet::migrate`] - Runs migration steps of curent multi-block migration in priority, before
-//!   [`Hooks::on_idle`][frame_support::traits::Hooks::on_idle] activates.
+//! * [`Pallet::migrate`] - Runs migration steps of current multi-block migration in priority,
+//!   before [`Hooks::on_idle`][frame_support::traits::Hooks::on_idle] activates.
 //!
 //! ## Usage
 //!
@@ -1679,7 +1724,7 @@
 	exec::{AccountIdOf, ErrorOrigin, ExecError, Executable, Key, Stack <span class="kw">as </span>ExecStack},
 	gas::GasMeter,
 	storage::{meter::Meter <span class="kw">as </span>StorageMeter, ContractInfo, DeletionQueueManager},
-	wasm::{CodeInfo, TryInstantiate, WasmBlob},
+	wasm::{CodeInfo, WasmBlob},
 };
 <span class="kw">use </span>codec::{Codec, Decode, Encode, HasCompact};
 <span class="kw">use </span>environmental::<span class="kw-2">*</span>;
@@ -2269,24 +2314,40 @@
 			salt: Vec&lt;u8&gt;,
 		) -&gt; DispatchResultWithPostInfo {
 			Migration::&lt;T&gt;::ensure_migrated()<span class="question-mark">?</span>;
+			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>code_len = code.len() <span class="kw">as </span>u32;
+
+			<span class="kw">let </span>(module, upload_deposit) = <span class="self">Self</span>::try_upload_code(
+				origin.clone(),
+				code,
+				storage_deposit_limit.clone().map(Into::into),
+				Determinism::Enforced,
+				<span class="prelude-val">None</span>,
+			)<span class="question-mark">?</span>;
+
+			<span class="comment">// Reduces the storage deposit limit by the amount that was reserved for the upload.
+			</span><span class="kw">let </span>storage_deposit_limit =
+				storage_deposit_limit.map(|limit| limit.into().saturating_sub(upload_deposit));
+
 			<span class="kw">let </span>data_len = data.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>salt_len = salt.len() <span class="kw">as </span>u32;
 			<span class="kw">let </span>common = CommonInput {
-				origin: Origin::from_runtime_origin(origin)<span class="question-mark">?</span>,
+				origin: Origin::from_account_id(origin),
 				value,
 				data,
 				gas_limit,
-				storage_deposit_limit: storage_deposit_limit.map(Into::into),
+				storage_deposit_limit,
 				debug_message: <span class="prelude-val">None</span>,
 			};
+
 			<span class="kw">let </span><span class="kw-2">mut </span>output =
-				InstantiateInput::&lt;T&gt; { code: Code::Upload(code), salt }.run_guarded(common);
+				InstantiateInput::&lt;T&gt; { code: WasmCode::Wasm(module), salt }.run_guarded(common);
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>(retval) = <span class="kw-2">&amp;</span>output.result {
 				<span class="kw">if </span>retval.<span class="number">1</span>.did_revert() {
 					output.result = <span class="prelude-val">Err</span>(&lt;Error&lt;T&gt;&gt;::ContractReverted.into());
 				}
 			}
+
 			output.gas_meter.into_dispatch_result(
 				output.result.map(|(_address, result)| result),
 				T::WeightInfo::instantiate_with_code(code_len, data_len, salt_len),
@@ -2322,8 +2383,8 @@
 				storage_deposit_limit: storage_deposit_limit.map(Into::into),
 				debug_message: <span class="prelude-val">None</span>,
 			};
-			<span class="kw">let </span><span class="kw-2">mut </span>output =
-				InstantiateInput::&lt;T&gt; { code: Code::Existing(code_hash), salt }.run_guarded(common);
+			<span class="kw">let </span><span class="kw-2">mut </span>output = InstantiateInput::&lt;T&gt; { code: WasmCode::CodeHash(code_hash), salt }
+				.run_guarded(common);
 			<span class="kw">if let </span><span class="prelude-val">Ok</span>(retval) = <span class="kw-2">&amp;</span>output.result {
 				<span class="kw">if </span>retval.<span class="number">1</span>.did_revert() {
 					output.result = <span class="prelude-val">Err</span>(&lt;Error&lt;T&gt;&gt;::ContractReverted.into());
@@ -2626,9 +2687,15 @@
 	determinism: Determinism,
 }
 
+<span class="doccomment">/// Reference to an existing code hash or a new wasm module.
+</span><span class="kw">enum </span>WasmCode&lt;T: Config&gt; {
+	Wasm(WasmBlob&lt;T&gt;),
+	CodeHash(CodeHash&lt;T&gt;),
+}
+
 <span class="doccomment">/// Input specific to a contract instantiation invocation.
 </span><span class="kw">struct </span>InstantiateInput&lt;T: Config&gt; {
-	code: Code&lt;CodeHash&lt;T&gt;&gt;,
+	code: WasmCode&lt;T&gt;,
 	salt: Vec&lt;u8&gt;,
 }
 
@@ -2673,7 +2740,7 @@
 
 <span class="doccomment">/// Helper trait to wrap contract execution entry points into a single function
 /// [`Invokable::run_guarded`].
-</span><span class="kw">trait </span>Invokable&lt;T: Config&gt; {
+</span><span class="kw">trait </span>Invokable&lt;T: Config&gt;: Sized {
 	<span class="doccomment">/// What is returned as a result of a successful invocation.
 	</span><span class="kw">type </span>Output;
 
@@ -2685,7 +2752,7 @@
 	///
 	/// We enforce a re-entrancy guard here by initializing and checking a boolean flag through a
 	/// global reference.
-	</span><span class="kw">fn </span>run_guarded(<span class="kw-2">&amp;</span><span class="self">self</span>, common: CommonInput&lt;T&gt;) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
+	</span><span class="kw">fn </span>run_guarded(<span class="self">self</span>, common: CommonInput&lt;T&gt;) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
 		<span class="comment">// Set up a global reference to the boolean flag used for the re-entrancy guard.
 		</span><span class="macro">environmental!</span>(executing_contract: bool);
 
@@ -2733,11 +2800,8 @@
 	/// contract or a instantiation of a new one.
 	///
 	/// Called by dispatchables and public functions through the [`Invokable::run_guarded`].
-	</span><span class="kw">fn </span>run(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		common: CommonInput&lt;T&gt;,
-		gas_meter: GasMeter&lt;T&gt;,
-	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt;;
+	</span><span class="kw">fn </span>run(<span class="self">self</span>, common: CommonInput&lt;T&gt;, gas_meter: GasMeter&lt;T&gt;)
+		-&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt;;
 
 	<span class="doccomment">/// This method ensures that the given `origin` is allowed to invoke the current `Invokable`.
 	///
@@ -2749,7 +2813,7 @@
 	<span class="kw">type </span>Output = ExecReturnValue;
 
 	<span class="kw">fn </span>run(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		<span class="self">self</span>,
 		common: CommonInput&lt;T&gt;,
 		<span class="kw-2">mut </span>gas_meter: GasMeter&lt;T&gt;,
 	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
@@ -2775,7 +2839,7 @@
 			value,
 			data.clone(),
 			debug_message,
-			<span class="kw-2">*</span>determinism,
+			determinism,
 		);
 
 		<span class="kw">match </span>storage_meter.try_into_deposit(<span class="kw-2">&amp;</span>origin) {
@@ -2797,8 +2861,8 @@
 	<span class="kw">type </span>Output = (AccountIdOf&lt;T&gt;, ExecReturnValue);
 
 	<span class="kw">fn </span>run(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		<span class="kw-2">mut </span>common: CommonInput&lt;T&gt;,
+		<span class="self">self</span>,
+		common: CommonInput&lt;T&gt;,
 		<span class="kw-2">mut </span>gas_meter: GasMeter&lt;T&gt;,
 	) -&gt; InternalOutput&lt;T, <span class="self">Self</span>::Output&gt; {
 		<span class="kw">let </span><span class="kw-2">mut </span>storage_deposit = Default::default();
@@ -2807,37 +2871,15 @@
 			<span class="kw">let </span>InstantiateInput { salt, .. } = <span class="self">self</span>;
 			<span class="kw">let </span>CommonInput { origin: contract_origin, .. } = common;
 			<span class="kw">let </span>origin = contract_origin.account_id()<span class="question-mark">?</span>;
-			<span class="kw">let </span>(extra_deposit, executable) = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.code {
-				Code::Upload(binary) =&gt; {
-					<span class="kw">let </span>executable = WasmBlob::from_code(
-						binary.clone(),
-						<span class="kw-2">&amp;</span>schedule,
-						origin.clone(),
-						Determinism::Enforced,
-						TryInstantiate::Skip,
-					)
-					.map_err(|(err, msg)| {
-						common
-							.debug_message
-							.as_mut()
-							.map(|buffer| buffer.try_extend(<span class="kw-2">&amp;mut </span>msg.bytes()));
-						err
-					})<span class="question-mark">?</span>;
-					<span class="comment">// The open deposit will be charged during execution when the
-					// uploaded module does not already exist. This deposit is not part of the
-					// storage meter because it is not transferred to the contract but
-					// reserved on the uploading account.
-					</span>(executable.open_deposit(<span class="kw-2">&amp;</span>executable.code_info()), executable)
-				},
-				Code::Existing(hash) =&gt;
-					(Default::default(), WasmBlob::from_storage(<span class="kw-2">*</span>hash, <span class="kw-2">&amp;mut </span>gas_meter)<span class="question-mark">?</span>),
+
+			<span class="kw">let </span>executable = <span class="kw">match </span><span class="self">self</span>.code {
+				WasmCode::Wasm(module) =&gt; module,
+				WasmCode::CodeHash(code_hash) =&gt; WasmBlob::from_storage(code_hash, <span class="kw-2">&amp;mut </span>gas_meter)<span class="question-mark">?</span>,
 			};
+
 			<span class="kw">let </span>contract_origin = Origin::from_account_id(origin.clone());
-			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter = StorageMeter::new(
-				<span class="kw-2">&amp;</span>contract_origin,
-				common.storage_deposit_limit,
-				common.value.saturating_add(extra_deposit),
-			)<span class="question-mark">?</span>;
+			<span class="kw">let </span><span class="kw-2">mut </span>storage_meter =
+				StorageMeter::new(<span class="kw-2">&amp;</span>contract_origin, common.storage_deposit_limit, common.value)<span class="question-mark">?</span>;
 			<span class="kw">let </span>CommonInput { value, data, debug_message, .. } = common;
 			<span class="kw">let </span>result = ExecStack::&lt;T, WasmBlob&lt;T&gt;&gt;::run_instantiate(
 				origin.clone(),
@@ -2851,9 +2893,7 @@
 				debug_message,
 			);
 
-			storage_deposit = storage_meter
-				.try_into_deposit(<span class="kw-2">&amp;</span>contract_origin)<span class="question-mark">?
-				</span>.saturating_add(<span class="kw-2">&amp;</span>StorageDeposit::Charge(extra_deposit));
+			storage_deposit = storage_meter.try_into_deposit(<span class="kw-2">&amp;</span>contract_origin)<span class="question-mark">?</span>;
 			result
 		};
 		InternalOutput { result: try_exec(), gas_meter, storage_deposit }
@@ -2957,7 +2997,7 @@
 		origin: T::AccountId,
 		value: BalanceOf&lt;T&gt;,
 		gas_limit: Weight,
-		storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
+		<span class="kw-2">mut </span>storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
 		code: Code&lt;CodeHash&lt;T&gt;&gt;,
 		data: Vec&lt;u8&gt;,
 		salt: Vec&lt;u8&gt;,
@@ -2971,6 +3011,45 @@
 		} <span class="kw">else </span>{
 			<span class="prelude-val">None
 		</span>};
+		<span class="comment">// collect events if CollectEvents is UnsafeCollect
+		</span><span class="kw">let </span>events = || {
+			<span class="kw">if </span>collect_events == CollectEvents::UnsafeCollect {
+				<span class="prelude-val">Some</span>(System::&lt;T&gt;::read_events_no_consensus().map(|e| <span class="kw-2">*</span>e).collect())
+			} <span class="kw">else </span>{
+				<span class="prelude-val">None
+			</span>}
+		};
+
+		<span class="kw">let </span>(code, upload_deposit): (WasmCode&lt;T&gt;, BalanceOf&lt;T&gt;) = <span class="kw">match </span>code {
+			Code::Upload(code) =&gt; {
+				<span class="kw">let </span>result = <span class="self">Self</span>::try_upload_code(
+					origin.clone(),
+					code,
+					storage_deposit_limit.map(Into::into),
+					Determinism::Enforced,
+					debug_message.as_mut(),
+				);
+
+				<span class="kw">let </span>(module, deposit) = <span class="kw">match </span>result {
+					<span class="prelude-val">Ok</span>(result) =&gt; result,
+					<span class="prelude-val">Err</span>(error) =&gt;
+						<span class="kw">return </span>ContractResult {
+							gas_consumed: Zero::zero(),
+							gas_required: Zero::zero(),
+							storage_deposit: Default::default(),
+							debug_message: debug_message.unwrap_or(Default::default()).into(),
+							result: <span class="prelude-val">Err</span>(error),
+							events: events(),
+						},
+				};
+
+				storage_deposit_limit =
+					storage_deposit_limit.map(|l| l.saturating_sub(deposit.into()));
+				(WasmCode::Wasm(module), deposit)
+			},
+			Code::Existing(hash) =&gt; (WasmCode::CodeHash(hash), Default::default()),
+		};
+
 		<span class="kw">let </span>common = CommonInput {
 			origin: Origin::from_account_id(origin),
 			value,
@@ -2979,13 +3058,8 @@
 			storage_deposit_limit,
 			debug_message: debug_message.as_mut(),
 		};
+
 		<span class="kw">let </span>output = InstantiateInput::&lt;T&gt; { code, salt }.run_guarded(common);
-		<span class="comment">// collect events if CollectEvents is UnsafeCollect
-		</span><span class="kw">let </span>events = <span class="kw">if </span>collect_events == CollectEvents::UnsafeCollect {
-			<span class="prelude-val">Some</span>(System::&lt;T&gt;::read_events_no_consensus().map(|e| <span class="kw-2">*</span>e).collect())
-		} <span class="kw">else </span>{
-			<span class="prelude-val">None
-		</span>};
 		ContractInstantiateResult {
 			result: output
 				.result
@@ -2993,9 +3067,11 @@
 				.map_err(|e| e.error),
 			gas_consumed: output.gas_meter.gas_consumed(),
 			gas_required: output.gas_meter.gas_required(),
-			storage_deposit: output.storage_deposit,
+			storage_deposit: output
+				.storage_deposit
+				.saturating_add(<span class="kw-2">&amp;</span>StorageDeposit::Charge(upload_deposit)),
 			debug_message: debug_message.unwrap_or_default().to_vec(),
-			events,
+			events: events(),
 		}
 	}
 
@@ -3010,17 +3086,31 @@
 		determinism: Determinism,
 	) -&gt; CodeUploadResult&lt;CodeHash&lt;T&gt;, BalanceOf&lt;T&gt;&gt; {
 		Migration::&lt;T&gt;::ensure_migrated()<span class="question-mark">?</span>;
+		<span class="kw">let </span>(module, deposit) =
+			<span class="self">Self</span>::try_upload_code(origin, code, storage_deposit_limit, determinism, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+		<span class="prelude-val">Ok</span>(CodeUploadReturnValue { code_hash: <span class="kw-2">*</span>module.code_hash(), deposit })
+	}
+
+	<span class="doccomment">/// Uploads new code and returns the Wasm blob and deposit amount collected.
+	</span><span class="kw">fn </span>try_upload_code(
+		origin: T::AccountId,
+		code: Vec&lt;u8&gt;,
+		storage_deposit_limit: <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt;,
+		determinism: Determinism,
+		<span class="kw-2">mut </span>debug_message: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>DebugBufferVec&lt;T&gt;&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(WasmBlob&lt;T&gt;, BalanceOf&lt;T&gt;), DispatchError&gt; {
 		<span class="kw">let </span>schedule = T::Schedule::get();
-		<span class="kw">let </span>module =
-			WasmBlob::from_code(code, <span class="kw-2">&amp;</span>schedule, origin, determinism, TryInstantiate::Instantiate)
-				.map_err(|(err, <span class="kw">_</span>)| err)<span class="question-mark">?</span>;
-		<span class="kw">let </span>deposit = module.open_deposit(<span class="kw-2">&amp;</span>module.code_info());
+		<span class="kw">let </span><span class="kw-2">mut </span>module =
+			WasmBlob::from_code(code, <span class="kw-2">&amp;</span>schedule, origin, determinism).map_err(|(err, msg)| {
+				debug_message.as_mut().map(|d| d.try_extend(msg.bytes()));
+				err
+			})<span class="question-mark">?</span>;
+		<span class="kw">let </span>deposit = module.store_code()<span class="question-mark">?</span>;
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(storage_deposit_limit) = storage_deposit_limit {
 			<span class="macro">ensure!</span>(storage_deposit_limit &gt;= deposit, &lt;Error&lt;T&gt;&gt;::StorageDepositLimitExhausted);
 		}
-		<span class="kw">let </span>result = CodeUploadReturnValue { code_hash: <span class="kw-2">*</span>module.code_hash(), deposit };
-		module.store()<span class="question-mark">?</span>;
-		<span class="prelude-val">Ok</span>(result)
+
+		<span class="prelude-val">Ok</span>((module, deposit))
 	}
 
 	<span class="doccomment">/// Query storage of a specified contract under a specified key.
@@ -3064,7 +3154,7 @@
 		owner: T::AccountId,
 	) -&gt; frame_support::dispatch::DispatchResult {
 		<span class="kw">let </span>schedule = T::Schedule::get();
-		WasmBlob::store_code_unchecked(code, <span class="kw-2">&amp;</span>schedule, owner)<span class="question-mark">?</span>;
+		WasmBlob::&lt;T&gt;::from_code_unchecked(code, <span class="kw-2">&amp;</span>schedule, owner)<span class="question-mark">?</span>.store_code()<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(())
 	}
 

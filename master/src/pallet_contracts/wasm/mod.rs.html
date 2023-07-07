@@ -3325,71 +3325,6 @@
 <a href="#3325" id="3325">3325</a>
 <a href="#3326" id="3326">3326</a>
 <a href="#3327" id="3327">3327</a>
-<a href="#3328" id="3328">3328</a>
-<a href="#3329" id="3329">3329</a>
-<a href="#3330" id="3330">3330</a>
-<a href="#3331" id="3331">3331</a>
-<a href="#3332" id="3332">3332</a>
-<a href="#3333" id="3333">3333</a>
-<a href="#3334" id="3334">3334</a>
-<a href="#3335" id="3335">3335</a>
-<a href="#3336" id="3336">3336</a>
-<a href="#3337" id="3337">3337</a>
-<a href="#3338" id="3338">3338</a>
-<a href="#3339" id="3339">3339</a>
-<a href="#3340" id="3340">3340</a>
-<a href="#3341" id="3341">3341</a>
-<a href="#3342" id="3342">3342</a>
-<a href="#3343" id="3343">3343</a>
-<a href="#3344" id="3344">3344</a>
-<a href="#3345" id="3345">3345</a>
-<a href="#3346" id="3346">3346</a>
-<a href="#3347" id="3347">3347</a>
-<a href="#3348" id="3348">3348</a>
-<a href="#3349" id="3349">3349</a>
-<a href="#3350" id="3350">3350</a>
-<a href="#3351" id="3351">3351</a>
-<a href="#3352" id="3352">3352</a>
-<a href="#3353" id="3353">3353</a>
-<a href="#3354" id="3354">3354</a>
-<a href="#3355" id="3355">3355</a>
-<a href="#3356" id="3356">3356</a>
-<a href="#3357" id="3357">3357</a>
-<a href="#3358" id="3358">3358</a>
-<a href="#3359" id="3359">3359</a>
-<a href="#3360" id="3360">3360</a>
-<a href="#3361" id="3361">3361</a>
-<a href="#3362" id="3362">3362</a>
-<a href="#3363" id="3363">3363</a>
-<a href="#3364" id="3364">3364</a>
-<a href="#3365" id="3365">3365</a>
-<a href="#3366" id="3366">3366</a>
-<a href="#3367" id="3367">3367</a>
-<a href="#3368" id="3368">3368</a>
-<a href="#3369" id="3369">3369</a>
-<a href="#3370" id="3370">3370</a>
-<a href="#3371" id="3371">3371</a>
-<a href="#3372" id="3372">3372</a>
-<a href="#3373" id="3373">3373</a>
-<a href="#3374" id="3374">3374</a>
-<a href="#3375" id="3375">3375</a>
-<a href="#3376" id="3376">3376</a>
-<a href="#3377" id="3377">3377</a>
-<a href="#3378" id="3378">3378</a>
-<a href="#3379" id="3379">3379</a>
-<a href="#3380" id="3380">3380</a>
-<a href="#3381" id="3381">3381</a>
-<a href="#3382" id="3382">3382</a>
-<a href="#3383" id="3383">3383</a>
-<a href="#3384" id="3384">3384</a>
-<a href="#3385" id="3385">3385</a>
-<a href="#3386" id="3386">3386</a>
-<a href="#3387" id="3387">3387</a>
-<a href="#3388" id="3388">3388</a>
-<a href="#3389" id="3389">3389</a>
-<a href="#3390" id="3390">3390</a>
-<a href="#3391" id="3391">3391</a>
-<a href="#3392" id="3392">3392</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3419,12 +3354,9 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">pub use </span>tests::MockExt;
 
-<span class="kw">pub use </span><span class="kw">crate</span>::wasm::{
-	prepare::TryInstantiate,
-	runtime::{
-		AllowDeprecatedInterface, AllowUnstableInterface, CallFlags, Environment, ReturnCode,
-		Runtime, RuntimeCosts,
-	},
+<span class="kw">pub use </span><span class="kw">crate</span>::wasm::runtime::{
+	AllowDeprecatedInterface, AllowUnstableInterface, CallFlags, Environment, ReturnCode, Runtime,
+	RuntimeCosts,
 };
 
 <span class="kw">use crate</span>::{
@@ -3539,31 +3471,18 @@
 
 <span class="kw">impl</span>&lt;T: Config&gt; WasmBlob&lt;T&gt; {
 	<span class="doccomment">/// Create the module by checking the `code`.
-	///
-	/// This does **not** store the module. For this one need to either call [`Self::store`]
-	/// or [`&lt;Self as Executable&gt;::execute`][`Executable::execute`].
 	</span><span class="kw">pub fn </span>from_code(
 		code: Vec&lt;u8&gt;,
 		schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
 		owner: AccountIdOf&lt;T&gt;,
 		determinism: Determinism,
-		try_instantiate: TryInstantiate,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, (DispatchError, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str)&gt; {
 		prepare::prepare::&lt;runtime::Env, T&gt;(
 			code.try_into().map_err(|<span class="kw">_</span>| (&lt;Error&lt;T&gt;&gt;::CodeTooLarge.into(), <span class="string">&quot;&quot;</span>))<span class="question-mark">?</span>,
 			schedule,
 			owner,
 			determinism,
-			try_instantiate,
 		)
-	}
-
-	<span class="doccomment">/// Store the code without instantiating it.
-	///
-	/// Otherwise the code is stored when [`&lt;Self as Executable&gt;::execute`][`Executable::execute`]
-	/// is called.
-	</span><span class="kw">pub fn </span>store(<span class="self">self</span>) -&gt; DispatchResult {
-		<span class="self">Self</span>::store_code(<span class="self">self</span>, <span class="bool-val">false</span>)
 	}
 
 	<span class="doccomment">/// Remove the code from storage and refund the deposit to its owner.
@@ -3571,18 +3490,6 @@
 	/// Applies all necessary checks before removing the code.
 	</span><span class="kw">pub fn </span>remove(origin: <span class="kw-2">&amp;</span>T::AccountId, code_hash: CodeHash&lt;T&gt;) -&gt; DispatchResult {
 		<span class="self">Self</span>::try_remove_code(origin, code_hash)
-	}
-
-	<span class="doccomment">/// Returns whether there is a deposit to be paid for this module.
-	///
-	/// Returns `0` if the module is already in storage and hence no deposit will
-	/// be charged for storing it.
-	</span><span class="kw">pub fn </span>open_deposit(<span class="kw-2">&amp;</span><span class="self">self</span>, code_info: <span class="kw-2">&amp;</span>CodeInfo&lt;T&gt;) -&gt; BalanceOf&lt;T&gt; {
-		<span class="kw">if </span>&lt;CodeInfoOf&lt;T&gt;&gt;::contains_key(<span class="self">self</span>.code_hash()) {
-			<span class="number">0u32</span>.into()
-		} <span class="kw">else </span>{
-			code_info.deposit
-		}
 	}
 
 	<span class="doccomment">/// Creates and returns an instance of the supplied code.
@@ -3619,7 +3526,7 @@
 		<span class="comment">// Query wasmi for memory limits specified in the module&#39;s import entry.
 		</span><span class="kw">let </span>memory_limits = contract.scan_imports::&lt;T&gt;(schedule)<span class="question-mark">?</span>;
 		<span class="comment">// Here we allocate this memory in the _store_. It allocates _inital_ value, but allows it
-		// to grow up to maximum number of memory pages, if neccesary.
+		// to grow up to maximum number of memory pages, if necessary.
 		</span><span class="kw">let </span>qed = <span class="string">&quot;We checked the limits versus our Schedule,
 					 which specifies the max amount of memory pages
 					 well below u16::MAX; qed&quot;</span>;
@@ -3642,50 +3549,26 @@
 		<span class="prelude-val">Ok</span>((store, memory, instance))
 	}
 
-	<span class="doccomment">/// Getter method for the code_info.
-	</span><span class="kw">pub fn </span>code_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CodeInfo&lt;T&gt; {
-		<span class="kw-2">&amp;</span><span class="self">self</span>.code_info
-	}
-
-	<span class="doccomment">/// Put the module blob into storage.
-	///
-	/// Increments the reference count of the in-storage `WasmBlob`, if it already exists in
-	/// storage.
-	</span><span class="kw">fn </span>store_code(<span class="kw-2">mut </span>module: <span class="self">Self</span>, instantiated: bool) -&gt; DispatchResult {
-		<span class="kw">let </span>code_hash = <span class="kw-2">&amp;</span>module.code_hash().clone();
+	<span class="doccomment">/// Puts the module blob into storage, and returns the deposit collected for the storage.
+	</span><span class="kw">pub fn </span>store_code(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;BalanceOf&lt;T&gt;, Error&lt;T&gt;&gt; {
+		<span class="kw">let </span>code_hash = <span class="kw-2">*</span><span class="self">self</span>.code_hash();
 		&lt;CodeInfoOf&lt;T&gt;&gt;::mutate(code_hash, |stored_code_info| {
 			<span class="kw">match </span>stored_code_info {
-				<span class="comment">// Instantiate existing contract.
-				</span><span class="prelude-val">Some</span>(stored_code_info) <span class="kw">if </span>instantiated =&gt; {
-					stored_code_info.refcount = stored_code_info.refcount.checked_add(<span class="number">1</span>).expect(
-						<span class="string">&quot;
-					 refcount is 64bit. Generating this overflow would require to store
-					 _at least_ 18 exabyte of data assuming that a contract consumes only
-					 one byte of data. Any node would run out of storage space before hitting
-					 this overflow;
-					 qed
-					&quot;</span>,
-					);
-					<span class="prelude-val">Ok</span>(())
-				},
 				<span class="comment">// Contract code is already stored in storage. Nothing to be done here.
-				</span><span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
+				</span><span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(Default::default()),
 				<span class="comment">// Upload a new contract code.
-				//
 				// We need to store the code and its code_info, and collect the deposit.
+				// This `None` case happens only with freshly uploaded modules. This means that
+				// the `owner` is always the origin of the current transaction.
 				</span><span class="prelude-val">None </span>=&gt; {
-					<span class="comment">// This `None` case happens only in freshly uploaded modules. This means that
-					// the `owner` is always the origin of the current transaction.
-					</span>T::Currency::reserve(<span class="kw-2">&amp;</span>module.code_info.owner, module.code_info.deposit)
+					<span class="kw">let </span>deposit = <span class="self">self</span>.code_info.deposit;
+					T::Currency::reserve(<span class="kw-2">&amp;</span><span class="self">self</span>.code_info.owner, deposit)
 						.map_err(|<span class="kw">_</span>| &lt;Error&lt;T&gt;&gt;::StorageDepositNotEnoughFunds)<span class="question-mark">?</span>;
-					module.code_info.refcount = <span class="kw">if </span>instantiated { <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>};
-					&lt;PristineCode&lt;T&gt;&gt;::insert(code_hash, module.code);
-					<span class="kw-2">*</span>stored_code_info = <span class="prelude-val">Some</span>(module.code_info);
-					&lt;Pallet&lt;T&gt;&gt;::deposit_event(
-						<span class="macro">vec!</span>[<span class="kw-2">*</span>code_hash],
-						Event::CodeStored { code_hash: <span class="kw-2">*</span>code_hash },
-					);
-					<span class="prelude-val">Ok</span>(())
+					<span class="self">self</span>.code_info.refcount = <span class="number">0</span>;
+					&lt;PristineCode&lt;T&gt;&gt;::insert(code_hash, <span class="kw-2">&amp;</span><span class="self">self</span>.code);
+					<span class="kw-2">*</span>stored_code_info = <span class="prelude-val">Some</span>(<span class="self">self</span>.code_info.clone());
+					&lt;Pallet&lt;T&gt;&gt;::deposit_event(<span class="macro">vec!</span>[code_hash], Event::CodeStored { code_hash });
+					<span class="prelude-val">Ok</span>(deposit)
 				},
 			}
 		})
@@ -3723,17 +3606,6 @@
 		<span class="prelude-val">Ok</span>(code)
 	}
 
-	<span class="doccomment">/// See [`Self::from_code_unchecked`].
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
-	</span><span class="kw">pub fn </span>store_code_unchecked(
-		code: Vec&lt;u8&gt;,
-		schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
-		owner: T::AccountId,
-	) -&gt; DispatchResult {
-		<span class="kw">let </span>executable = <span class="self">Self</span>::from_code_unchecked(code, schedule, owner)<span class="question-mark">?</span>;
-		<span class="self">Self</span>::store_code(executable, <span class="bool-val">false</span>)
-	}
-
 	<span class="doccomment">/// Create the module without checking the passed code.
 	///
 	/// # Note
@@ -3742,7 +3614,7 @@
 	/// our results. This also does not collect any deposit from the `owner`. Also useful
 	/// during testing when we want to deploy codes that do not pass the instantiation checks.
 	</span><span class="attr">#[cfg(any(test, feature = <span class="string">&quot;runtime-benchmarks&quot;</span>))]
-	</span><span class="kw">fn </span>from_code_unchecked(
+	</span><span class="kw">pub fn </span>from_code_unchecked(
 		code: Vec&lt;u8&gt;,
 		schedule: <span class="kw-2">&amp;</span>Schedule&lt;T&gt;,
 		owner: T::AccountId,
@@ -3842,9 +3714,8 @@
 				Error::&lt;T&gt;::CodeRejected
 			})<span class="question-mark">?</span>;
 
-		<span class="comment">// We store before executing so that the code hash is available in the constructor.
-		</span><span class="kw">if let </span><span class="kw-2">&amp;</span>ExportedFunction::Constructor = function {
-			<span class="self">Self</span>::store_code(<span class="self">self</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+		<span class="kw">if let </span><span class="kw-2">&amp;</span>ExportedFunction::Constructor = function {
+			WasmBlob::&lt;T&gt;::increment_refcount(<span class="self">self</span>.code_hash)<span class="question-mark">?</span>;
 		}
 
 		<span class="kw">let </span>result = exported_func.call(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;mut </span>[]);
@@ -4182,7 +4053,6 @@
 				ext.borrow_mut().schedule(),
 				ALICE,
 				Determinism::Enforced,
-				TryInstantiate::Instantiate,
 			)
 			.map_err(|err| err.<span class="number">0</span>)<span class="question-mark">?
 		</span>};
