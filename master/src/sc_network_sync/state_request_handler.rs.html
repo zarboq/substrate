@@ -283,8 +283,6 @@
 <a href="#283" id="283">283</a>
 <a href="#284" id="284">284</a>
 <a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
@@ -310,8 +308,8 @@
 <span class="kw">use </span>futures::{channel::oneshot, stream::StreamExt};
 <span class="kw">use </span>libp2p::PeerId;
 <span class="kw">use </span>log::{debug, trace};
-<span class="kw">use </span>lru::LruCache;
 <span class="kw">use </span>prost::Message;
+<span class="kw">use </span>schnellru::{ByLength, LruMap};
 
 <span class="kw">use </span>sc_client_api::{BlockBackend, ProofProvider};
 <span class="kw">use </span>sc_network::{
@@ -322,7 +320,6 @@
 
 <span class="kw">use </span>std::{
 	hash::{Hash, Hasher},
-	num::NonZeroUsize,
 	sync::Arc,
 	time::Duration,
 };
@@ -402,7 +399,7 @@
 	<span class="doccomment">/// Maps from request to number of times we have seen this request.
 	///
 	/// This is used to check if a peer is spamming us with the same request.
-	</span>seen_requests: LruCache&lt;SeenRequestsKey&lt;B&gt;, SeenRequestsValue&gt;,
+	</span>seen_requests: LruMap&lt;SeenRequestsKey&lt;B&gt;, SeenRequestsValue&gt;,
 }
 
 <span class="kw">impl</span>&lt;B, Client&gt; StateRequestHandler&lt;B, Client&gt;
@@ -432,9 +429,8 @@
 		);
 		protocol_config.inbound_queue = <span class="prelude-val">Some</span>(tx);
 
-		<span class="kw">let </span>capacity =
-			NonZeroUsize::new(num_peer_hint.max(<span class="number">1</span>) * <span class="number">2</span>).expect(<span class="string">&quot;cache capacity is not zero&quot;</span>);
-		<span class="kw">let </span>seen_requests = LruCache::new(capacity);
+		<span class="kw">let </span>capacity = ByLength::new(num_peer_hint.max(<span class="number">1</span>) <span class="kw">as </span>u32 * <span class="number">2</span>);
+		<span class="kw">let </span>seen_requests = LruMap::new(capacity);
 
 		(<span class="self">Self </span>{ client, request_receiver, seen_requests }, protocol_config)
 	}
@@ -467,7 +463,7 @@
 
 		<span class="kw">let </span><span class="kw-2">mut </span>reputation_changes = Vec::new();
 
-		<span class="kw">match </span><span class="self">self</span>.seen_requests.get_mut(<span class="kw-2">&amp;</span>key) {
+		<span class="kw">match </span><span class="self">self</span>.seen_requests.get(<span class="kw-2">&amp;</span>key) {
 			<span class="prelude-val">Some</span>(SeenRequestsValue::First) =&gt; {},
 			<span class="prelude-val">Some</span>(SeenRequestsValue::Fulfilled(<span class="kw-2">ref mut </span>requests)) =&gt; {
 				<span class="kw-2">*</span>requests = requests.saturating_add(<span class="number">1</span>);
@@ -477,7 +473,7 @@
 				}
 			},
 			<span class="prelude-val">None </span>=&gt; {
-				<span class="self">self</span>.seen_requests.put(key.clone(), SeenRequestsValue::First);
+				<span class="self">self</span>.seen_requests.insert(key.clone(), SeenRequestsValue::First);
 			},
 		}
 
@@ -534,7 +530,7 @@
 					.last()
 					.map(|e| sp_core::hexdisplay::HexDisplay::from(<span class="kw-2">&amp;</span>e.key))),
 			);
-			<span class="kw">if let </span><span class="prelude-val">Some</span>(value) = <span class="self">self</span>.seen_requests.get_mut(<span class="kw-2">&amp;</span>key) {
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(value) = <span class="self">self</span>.seen_requests.get(<span class="kw-2">&amp;</span>key) {
 				<span class="comment">// If this is the first time we have processed this request, we need to change
 				// it to `Fulfilled`.
 				</span><span class="kw">if let </span>SeenRequestsValue::First = value {

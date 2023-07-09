@@ -918,9 +918,6 @@
 <a href="#918" id="918">918</a>
 <a href="#919" id="919">919</a>
 <a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2023 Parity Technologies (UK) Ltd.
@@ -951,10 +948,10 @@
 <span class="kw">use </span>futures::{FutureExt, StreamExt};
 <span class="kw">use </span>futures_timer::Delay;
 <span class="kw">use </span>libp2p::PeerId;
-<span class="kw">use </span>lru::LruCache;
 <span class="kw">use </span>prometheus_endpoint::{
 	register, Gauge, GaugeVec, MetricSource, Opts, PrometheusError, Registry, SourcedGauge, U64,
 };
+<span class="kw">use </span>schnellru::{ByLength, LruMap};
 
 <span class="kw">use </span>sc_client_api::{BlockBackend, HeaderBackend, ProofProvider};
 <span class="kw">use </span>sc_consensus::import_queue::ImportQueueService;
@@ -1162,7 +1159,7 @@
 	</span>default_peers_set_num_light: usize,
 
 	<span class="doccomment">/// A cache for the data that was associated to a block announcement.
-	</span>block_announce_data_cache: LruCache&lt;B::Hash, Vec&lt;u8&gt;&gt;,
+	</span>block_announce_data_cache: LruMap&lt;B::Hash, Vec&lt;u8&gt;&gt;,
 
 	<span class="doccomment">/// The `PeerId`&#39;s of all boot nodes.
 	</span>boot_node_ids: HashSet&lt;PeerId&gt;,
@@ -1217,12 +1214,9 @@
 		} <span class="kw">else </span>{
 			net_config.network_config.max_blocks_per_request
 		};
-		<span class="kw">let </span>cache_capacity = NonZeroUsize::new(
-			(net_config.network_config.default_peers_set.in_peers <span class="kw">as </span>usize +
-				net_config.network_config.default_peers_set.out_peers <span class="kw">as </span>usize)
-				.max(<span class="number">1</span>),
-		)
-		.expect(<span class="string">&quot;cache capacity is not zero&quot;</span>);
+		<span class="kw">let </span>cache_capacity = (net_config.network_config.default_peers_set.in_peers +
+			net_config.network_config.default_peers_set.out_peers)
+			.max(<span class="number">1</span>);
 		<span class="kw">let </span>important_peers = {
 			<span class="kw">let </span><span class="kw-2">mut </span>imp_p = HashSet::new();
 			<span class="kw">for </span>reserved <span class="kw">in </span><span class="kw-2">&amp;</span>net_config.network_config.default_peers_set.reserved_nodes {
@@ -1304,7 +1298,7 @@
 				network_service,
 				peers: HashMap::new(),
 				evicted: HashSet::new(),
-				block_announce_data_cache: LruCache::new(cache_capacity),
+				block_announce_data_cache: LruMap::new(ByLength::new(cache_capacity)),
 				block_announce_protocol_name,
 				num_connected: num_connected.clone(),
 				is_major_syncing: is_major_syncing.clone(),
@@ -1388,7 +1382,7 @@
 
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(data) = announce.data {
 					<span class="kw">if </span>!data.is_empty() {
-						<span class="self">self</span>.block_announce_data_cache.put(announce.header.hash(), data);
+						<span class="self">self</span>.block_announce_data_cache.insert(announce.header.hash(), data);
 					}
 				}
 			},

@@ -555,7 +555,6 @@
 <a href="#555" id="555">555</a>
 <a href="#556" id="556">556</a>
 <a href="#557" id="557">557</a>
-<a href="#558" id="558">558</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -580,23 +579,23 @@
 //! components of the runtime that are expensive to initialize.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::error::{Error, WasmError};
+
 <span class="kw">use </span>codec::Decode;
-<span class="kw">use </span>lru::LruCache;
 <span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>sc_executor_common::{
 	runtime_blob::RuntimeBlob,
 	wasm_runtime::{HeapAllocStrategy, WasmInstance, WasmModule},
 };
+<span class="kw">use </span>schnellru::{ByLength, LruMap};
 <span class="kw">use </span>sp_core::traits::{Externalities, FetchRuntimeCode, RuntimeCode};
 <span class="kw">use </span>sp_version::RuntimeVersion;
+<span class="kw">use </span>sp_wasm_interface::HostFunctions;
+
 <span class="kw">use </span>std::{
-	num::NonZeroUsize,
 	panic::AssertUnwindSafe,
 	path::{Path, PathBuf},
 	sync::Arc,
 };
-
-<span class="kw">use </span>sp_wasm_interface::HostFunctions;
 
 <span class="doccomment">/// Specification of different methods of executing the runtime Wasm code.
 </span><span class="attr">#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -721,7 +720,7 @@
 	<span class="doccomment">/// A cache of runtimes along with metadata.
 	///
 	/// Runtimes sorted by recent usage. The most recently used is at the front.
-	</span>runtimes: Mutex&lt;LruCache&lt;VersionedRuntimeId, Arc&lt;VersionedRuntime&gt;&gt;&gt;,
+	</span>runtimes: Mutex&lt;LruMap&lt;VersionedRuntimeId, Arc&lt;VersionedRuntime&gt;&gt;&gt;,
 	<span class="doccomment">/// The size of the instances cache for each runtime.
 	</span>max_runtime_instances: usize,
 	cache_path: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
@@ -743,9 +742,8 @@
 		cache_path: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 		runtime_cache_size: u8,
 	) -&gt; RuntimeCache {
-		<span class="kw">let </span>cap =
-			NonZeroUsize::new(runtime_cache_size.max(<span class="number">1</span>) <span class="kw">as </span>usize).expect(<span class="string">&quot;cache size is not zero&quot;</span>);
-		RuntimeCache { runtimes: Mutex::new(LruCache::new(cap)), max_runtime_instances, cache_path }
+		<span class="kw">let </span>cap = ByLength::new(runtime_cache_size.max(<span class="number">1</span>) <span class="kw">as </span>u32);
+		RuntimeCache { runtimes: Mutex::new(LruMap::new(cap)), max_runtime_instances, cache_path }
 	}
 
 	<span class="doccomment">/// Prepares a WASM module instance and executes given function for it.
@@ -833,7 +831,7 @@
 			<span class="kw">let </span>versioned_runtime = Arc::new(result<span class="question-mark">?</span>);
 
 			<span class="comment">// Save new versioned wasm runtime in cache
-			</span>runtimes.put(versioned_runtime_id, versioned_runtime.clone());
+			</span>runtimes.insert(versioned_runtime_id, versioned_runtime.clone());
 
 			versioned_runtime
 		};

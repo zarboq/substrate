@@ -835,9 +835,6 @@
 <a href="#835" id="835">835</a>
 <a href="#836" id="836">836</a>
 <a href="#837" id="837">837</a>
-<a href="#838" id="838">838</a>
-<a href="#839" id="839">839</a>
-<a href="#840" id="840">840</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -860,12 +857,13 @@
 
 <span class="kw">use </span>ahash::AHashSet;
 <span class="kw">use </span>libp2p::PeerId;
-<span class="kw">use </span>lru::LruCache;
+<span class="kw">use </span>schnellru::{ByLength, LruMap};
+
 <span class="kw">use </span>prometheus_endpoint::{register, Counter, PrometheusError, Registry, U64};
 <span class="kw">use </span>sc_network::types::ProtocolName;
 <span class="kw">use </span>sc_network_common::role::ObservedRole;
 <span class="kw">use </span>sp_runtime::traits::{Block <span class="kw">as </span>BlockT, Hash, HashFor};
-<span class="kw">use </span>std::{collections::HashMap, iter, num::NonZeroUsize, sync::Arc, time, time::Instant};
+<span class="kw">use </span>std::{collections::HashMap, iter, sync::Arc, time, time::Instant};
 
 <span class="comment">// FIXME: Add additional spam/DoS attack protection: https://github.com/paritytech/substrate/issues/1115
 // NOTE: The current value is adjusted based on largest production network deployment (Kusama) and
@@ -876,7 +874,7 @@
 //
 // Assuming that each known message is tracked with a 32 byte hash (common for `Block::Hash`), then
 // this cache should take about 256 KB of memory.
-</span><span class="kw">const </span>KNOWN_MESSAGES_CACHE_SIZE: usize = <span class="number">8192</span>;
+</span><span class="kw">const </span>KNOWN_MESSAGES_CACHE_SIZE: u32 = <span class="number">8192</span>;
 
 <span class="kw">const </span>REBROADCAST_INTERVAL: time::Duration = time::Duration::from_millis(<span class="number">750</span>);
 
@@ -995,7 +993,7 @@
 </span><span class="kw">pub struct </span>ConsensusGossip&lt;B: BlockT&gt; {
 	peers: HashMap&lt;PeerId, PeerConsensus&lt;B::Hash&gt;&gt;,
 	messages: Vec&lt;MessageEntry&lt;B&gt;&gt;,
-	known_messages: LruCache&lt;B::Hash, ()&gt;,
+	known_messages: LruMap&lt;B::Hash, ()&gt;,
 	protocol: ProtocolName,
 	validator: Arc&lt;<span class="kw">dyn </span>Validator&lt;B&gt;&gt;,
 	next_broadcast: Instant,
@@ -1021,11 +1019,7 @@
 		ConsensusGossip {
 			peers: HashMap::new(),
 			messages: Default::default(),
-			known_messages: {
-				<span class="kw">let </span>cap = NonZeroUsize::new(KNOWN_MESSAGES_CACHE_SIZE)
-					.expect(<span class="string">&quot;cache capacity is not zero&quot;</span>);
-				LruCache::new(cap)
-			},
+			known_messages: { LruMap::new(ByLength::new(KNOWN_MESSAGES_CACHE_SIZE)) },
 			protocol,
 			validator,
 			next_broadcast: Instant::now() + REBROADCAST_INTERVAL,
@@ -1056,7 +1050,7 @@
 		message: Vec&lt;u8&gt;,
 		sender: <span class="prelude-ty">Option</span>&lt;PeerId&gt;,
 	) {
-		<span class="kw">if </span><span class="self">self</span>.known_messages.put(message_hash, ()).is_none() {
+		<span class="kw">if </span><span class="self">self</span>.known_messages.insert(message_hash, ()) {
 			<span class="self">self</span>.messages.push(MessageEntry { message_hash, topic, message, sender });
 
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>metrics) = <span class="self">self</span>.metrics {
@@ -1153,7 +1147,7 @@
 		);
 
 		<span class="kw">for </span>(<span class="kw">_</span>, <span class="kw-2">ref mut </span>peer) <span class="kw">in </span><span class="self">self</span>.peers.iter_mut() {
-			peer.known_messages.retain(|h| known_messages.contains(h));
+			peer.known_messages.retain(|h| known_messages.get(h).is_some());
 		}
 	}
 
@@ -1188,7 +1182,7 @@
 		<span class="kw">for </span>message <span class="kw">in </span>messages {
 			<span class="kw">let </span>message_hash = HashFor::&lt;B&gt;::hash(<span class="kw-2">&amp;</span>message[..]);
 
-			<span class="kw">if </span><span class="self">self</span>.known_messages.contains(<span class="kw-2">&amp;</span>message_hash) {
+			<span class="kw">if </span><span class="self">self</span>.known_messages.get(<span class="kw-2">&amp;</span>message_hash).is_some() {
 				<span class="macro">tracing::trace!</span>(
 					target: <span class="string">&quot;gossip&quot;</span>,
 					%who,
@@ -1385,7 +1379,7 @@
 
 	<span class="macro">macro_rules! </span>push_msg {
 		(<span class="macro-nonterminal">$consensus</span>:expr, <span class="macro-nonterminal">$topic</span>:expr, <span class="macro-nonterminal">$hash</span>: expr, <span class="macro-nonterminal">$m</span>:expr) =&gt; {
-			<span class="kw">if </span><span class="macro-nonterminal">$consensus</span>.known_messages.put(<span class="macro-nonterminal">$hash</span>, ()).is_none() {
+			<span class="kw">if </span><span class="macro-nonterminal">$consensus</span>.known_messages.insert(<span class="macro-nonterminal">$hash</span>, ()) {
 				<span class="macro-nonterminal">$consensus</span>.messages.push(MessageEntry {
 					message_hash: <span class="macro-nonterminal">$hash</span>,
 					topic: <span class="macro-nonterminal">$topic</span>,
@@ -1560,8 +1554,8 @@
 
 		<span class="macro">push_msg!</span>(consensus, prev_hash, m1_hash, m1);
 		<span class="macro">push_msg!</span>(consensus, best_hash, m2_hash, m2);
-		consensus.known_messages.put(m1_hash, ());
-		consensus.known_messages.put(m2_hash, ());
+		consensus.known_messages.insert(m1_hash, ());
+		consensus.known_messages.insert(m2_hash, ());
 
 		consensus.collect_garbage();
 		<span class="macro">assert_eq!</span>(consensus.messages.len(), <span class="number">2</span>);
@@ -1574,7 +1568,7 @@
 		<span class="macro">assert_eq!</span>(consensus.messages.len(), <span class="number">1</span>);
 		<span class="comment">// known messages are only pruned based on size.
 		</span><span class="macro">assert_eq!</span>(consensus.known_messages.len(), <span class="number">2</span>);
-		<span class="macro">assert!</span>(consensus.known_messages.contains(<span class="kw-2">&amp;</span>m2_hash));
+		<span class="macro">assert!</span>(consensus.known_messages.get(<span class="kw-2">&amp;</span>m2_hash).is_some());
 	}
 
 	<span class="attr">#[test]
