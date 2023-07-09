@@ -216,6 +216,63 @@
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -238,12 +295,16 @@
 </span><span class="doccomment">//! A crate which contains primitives that are useful for implementation that uses staking
 //! approaches in general. Definitions related to sessions, slashing, etc go here.
 
-</span><span class="kw">use </span>scale_info::TypeInfo;
+</span><span class="kw">use </span><span class="kw">crate</span>::currency_to_vote::CurrencyToVote;
+<span class="kw">use </span>codec::{FullCodec, MaxEncodedLen};
+<span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_core::RuntimeDebug;
-<span class="kw">use </span>sp_runtime::{DispatchError, DispatchResult};
-<span class="kw">use </span>sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+<span class="kw">use </span>sp_runtime::{DispatchError, DispatchResult, Saturating};
+<span class="kw">use </span>sp_std::{collections::btree_map::BTreeMap, ops::Sub, vec::Vec};
 
 <span class="kw">pub mod </span>offence;
+
+<span class="kw">pub mod </span>currency_to_vote;
 
 <span class="doccomment">/// Simple index type with which we can count sessions.
 </span><span class="kw">pub type </span>SessionIndex = u32;
@@ -263,32 +324,9 @@
 	</span>Nominator(Vec&lt;AccountId&gt;),
 }
 
-<span class="doccomment">/// Trait describing something that implements a hook for any operations to perform when a staker is
-/// slashed.
-</span><span class="kw">pub trait </span>OnStakerSlash&lt;AccountId, Balance&gt; {
-	<span class="doccomment">/// A hook for any operations to perform when a staker is slashed.
-	///
-	/// # Arguments
-	///
-	/// * `stash` - The stash of the staker whom the slash was applied to.
-	/// * `slashed_active` - The new bonded balance of the staker after the slash was applied.
-	/// * `slashed_unlocking` - A map of slashed eras, and the balance of that unlocking chunk after
-	///   the slash is applied. Any era not present in the map is not affected at all.
-	</span><span class="kw">fn </span>on_slash(
-		stash: <span class="kw-2">&amp;</span>AccountId,
-		slashed_active: Balance,
-		slashed_unlocking: <span class="kw-2">&amp;</span>BTreeMap&lt;EraIndex, Balance&gt;,
-	);
-}
-
-<span class="kw">impl</span>&lt;AccountId, Balance&gt; OnStakerSlash&lt;AccountId, Balance&gt; <span class="kw">for </span>() {
-	<span class="kw">fn </span>on_slash(<span class="kw">_</span>: <span class="kw-2">&amp;</span>AccountId, <span class="kw">_</span>: Balance, <span class="kw">_</span>: <span class="kw-2">&amp;</span>BTreeMap&lt;EraIndex, Balance&gt;) {
-		<span class="comment">// Nothing to do here
-	</span>}
-}
-
 <span class="doccomment">/// A struct that reflects stake that an account has in the staking system. Provides a set of
 /// methods to operate on it&#39;s properties. Aimed at making `StakingInterface` more concise.
+</span><span class="attr">#[derive(RuntimeDebug, Clone, Copy, Eq, PartialEq, Default)]
 </span><span class="kw">pub struct </span>Stake&lt;Balance&gt; {
 	<span class="doccomment">/// The total stake that `stash` has in the staking system. This includes the
 	/// `active` stake, and any funds currently in the process of unbonding via
@@ -305,16 +343,88 @@
 	</span><span class="kw">pub </span>active: Balance,
 }
 
+<span class="doccomment">/// A generic staking event listener.
+///
+/// Note that the interface is designed in a way that the events are fired post-action, so any
+/// pre-action data that is needed needs to be passed to interface methods. The rest of the data can
+/// be retrieved by using `StakingInterface`.
+</span><span class="attr">#[impl_trait_for_tuples::impl_for_tuples(<span class="number">10</span>)]
+</span><span class="kw">pub trait </span>OnStakingUpdate&lt;AccountId, Balance&gt; {
+	<span class="doccomment">/// Fired when the stake amount of someone updates.
+	///
+	/// This is effectively any changes to the bond amount, such as bonding more funds, and
+	/// unbonding.
+	</span><span class="kw">fn </span>on_stake_update(_who: <span class="kw-2">&amp;</span>AccountId, _prev_stake: <span class="prelude-ty">Option</span>&lt;Stake&lt;Balance&gt;&gt;) {}
+
+	<span class="doccomment">/// Fired when someone sets their intention to nominate.
+	///
+	/// This should never be fired for existing nominators.
+	</span><span class="kw">fn </span>on_nominator_add(_who: <span class="kw-2">&amp;</span>AccountId) {}
+
+	<span class="doccomment">/// Fired when an existing nominator updates their nominations.
+	///
+	/// Note that this is not fired when a nominator changes their stake. For that,
+	/// `on_stake_update` should be used, followed by querying whether `who` was a validator or a
+	/// nominator.
+	</span><span class="kw">fn </span>on_nominator_update(_who: <span class="kw-2">&amp;</span>AccountId, _prev_nominations: Vec&lt;AccountId&gt;) {}
+
+	<span class="doccomment">/// Fired when someone removes their intention to nominate, either due to chill or validating.
+	///
+	/// The set of nominations at the time of removal is provided as it can no longer be fetched in
+	/// any way.
+	</span><span class="kw">fn </span>on_nominator_remove(_who: <span class="kw-2">&amp;</span>AccountId, _nominations: Vec&lt;AccountId&gt;) {}
+
+	<span class="doccomment">/// Fired when someone sets their intention to validate.
+	///
+	/// Note validator preference changes are not communicated, but could be added if needed.
+	</span><span class="kw">fn </span>on_validator_add(_who: <span class="kw-2">&amp;</span>AccountId) {}
+
+	<span class="doccomment">/// Fired when an existing validator updates their preferences.
+	///
+	/// Note validator preference changes are not communicated, but could be added if needed.
+	</span><span class="kw">fn </span>on_validator_update(_who: <span class="kw-2">&amp;</span>AccountId) {}
+
+	<span class="doccomment">/// Fired when someone removes their intention to validate, either due to chill or nominating.
+	</span><span class="kw">fn </span>on_validator_remove(_who: <span class="kw-2">&amp;</span>AccountId) {}
+
+	<span class="doccomment">/// Fired when someone is fully unstaked.
+	</span><span class="kw">fn </span>on_unstake(_who: <span class="kw-2">&amp;</span>AccountId) {}
+
+	<span class="doccomment">/// Fired when a staker is slashed.
+	///
+	/// * `stash` - The stash of the staker whom the slash was applied to.
+	/// * `slashed_active` - The new bonded balance of the staker after the slash was applied.
+	/// * `slashed_unlocking` - A map of slashed eras, and the balance of that unlocking chunk after
+	///   the slash is applied. Any era not present in the map is not affected at all.
+	</span><span class="kw">fn </span>on_slash(
+		_stash: <span class="kw-2">&amp;</span>AccountId,
+		_slashed_active: Balance,
+		_slashed_unlocking: <span class="kw-2">&amp;</span>BTreeMap&lt;EraIndex, Balance&gt;,
+	) {
+	}
+}
+
 <span class="doccomment">/// A generic representation of a staking implementation.
 ///
 /// This interface uses the terminology of NPoS, but it is aims to be generic enough to cover other
 /// implementations as well.
 </span><span class="kw">pub trait </span>StakingInterface {
 	<span class="doccomment">/// Balance type used by the staking system.
-	</span><span class="kw">type </span>Balance: PartialEq;
+	</span><span class="kw">type </span>Balance: Sub&lt;Output = <span class="self">Self</span>::Balance&gt;
+		+ Ord
+		+ PartialEq
+		+ Default
+		+ Copy
+		+ MaxEncodedLen
+		+ FullCodec
+		+ TypeInfo
+		+ Saturating;
 
-	<span class="doccomment">/// AccountId type used by the staking system
-	</span><span class="kw">type </span>AccountId;
+	<span class="doccomment">/// AccountId type used by the staking system.
+	</span><span class="kw">type </span>AccountId: Clone + sp_std::fmt::Debug;
+
+	<span class="doccomment">/// Means of converting Currency to VoteWeight.
+	</span><span class="kw">type </span>CurrencyToVote: CurrencyToVote&lt;<span class="self">Self</span>::Balance&gt;;
 
 	<span class="doccomment">/// The minimum amount required to bond in order to set nomination intentions. This does not
 	/// necessarily mean the nomination will be counted in an election, but instead just enough to
@@ -413,8 +523,12 @@
 	<span class="doccomment">/// Return the status of the given staker, `None` if not staked at all.
 	</span><span class="kw">fn </span>status(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;StakerStatus&lt;<span class="self">Self</span>::AccountId&gt;, DispatchError&gt;;
 
+	<span class="doccomment">/// Checks whether or not this is a validator account.
+	</span><span class="kw">fn </span>is_validator(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; bool {
+		<span class="self">Self</span>::status(who).map(|s| <span class="macro">matches!</span>(s, StakerStatus::Validator)).unwrap_or(<span class="bool-val">false</span>)
+	}
+
 	<span class="doccomment">/// Get the nominations of a stash, if they are a nominator, `None` otherwise.
-	</span><span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">fn </span>nominations(who: <span class="kw-2">&amp;</span><span class="self">Self</span>::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;<span class="self">Self</span>::AccountId&gt;&gt; {
 		<span class="kw">match </span><span class="self">Self</span>::status(who) {
 			<span class="prelude-val">Ok</span>(StakerStatus::Nominator(t)) =&gt; <span class="prelude-val">Some</span>(t),

@@ -1837,6 +1837,7 @@
 <a href="#1837" id="1837">1837</a>
 <a href="#1838" id="1838">1838</a>
 <a href="#1839" id="1839">1839</a>
+<a href="#1840" id="1840">1840</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1865,8 +1866,8 @@
 	dispatch::WithPostDispatchInfo,
 	pallet_prelude::<span class="kw-2">*</span>,
 	traits::{
-		Currency, CurrencyToVote, Defensive, DefensiveResult, EstimateNextNewSession, Get,
-		Imbalance, LockableCurrency, OnUnbalanced, TryCollect, UnixTime, WithdrawReasons,
+		Currency, Defensive, DefensiveResult, EstimateNextNewSession, Get, Imbalance,
+		LockableCurrency, OnUnbalanced, TryCollect, UnixTime, WithdrawReasons,
 	},
 	weights::Weight,
 };
@@ -1877,6 +1878,7 @@
 	Perbill,
 };
 <span class="kw">use </span>sp_staking::{
+	currency_to_vote::CurrencyToVote,
 	offence::{DisableStrategy, OffenceDetails, OnOffenceHandler},
 	EraIndex, SessionIndex, Stake, StakingInterface,
 };
@@ -3407,10 +3409,10 @@
 	}
 }
 
-<span class="comment">// NOTE: in this entire impl block, the assumption is that `who` is a stash account.
-</span><span class="kw">impl</span>&lt;T: Config&gt; StakingInterface <span class="kw">for </span>Pallet&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Config&gt; StakingInterface <span class="kw">for </span>Pallet&lt;T&gt; {
 	<span class="kw">type </span>AccountId = T::AccountId;
 	<span class="kw">type </span>Balance = BalanceOf&lt;T&gt;;
+	<span class="kw">type </span>CurrencyToVote = T::CurrencyToVote;
 
 	<span class="kw">fn </span>minimum_nominator_bond() -&gt; <span class="self">Self</span>::Balance {
 		MinNominatorBond::&lt;T&gt;::get()

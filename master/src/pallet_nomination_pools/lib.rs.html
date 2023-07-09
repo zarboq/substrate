@@ -3290,10 +3290,6 @@
 <a href="#3290" id="3290">3290</a>
 <a href="#3291" id="3291">3291</a>
 <a href="#3292" id="3292">3292</a>
-<a href="#3293" id="3293">3293</a>
-<a href="#3294" id="3294">3294</a>
-<a href="#3295" id="3295">3295</a>
-<a href="#3296" id="3296">3296</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3622,7 +3618,7 @@
 //!
 //! This section assumes that the slash computation is executed by
 //! `pallet_staking::StakingLedger::slash`, which passes the information to this pallet via
-//! [`sp_staking::OnStakerSlash::on_slash`].
+//! [`sp_staking::OnStakingUpdate::on_slash`].
 //!
 //! Unbonding pools need to be slashed to ensure all nominators whom where in the bonded pool while
 //! it was backing a validator that equivocated are punished. Without these measures a member could
@@ -3636,10 +3632,6 @@
 //! To be fair to joiners, this implementation also need joining pools, which are actively staking,
 //! in addition to the unbonding pools. For maintenance simplicity these are not implemented.
 //! Related: &lt;https://github.com/paritytech/substrate/issues/10860&gt;
-//!
-//! **Relevant methods:**
-//!
-//! * [`Pallet::on_slash`]
 //!
 //! ### Limitations
 //!
@@ -3671,7 +3663,7 @@
 	},
 	FixedPointNumber, Perbill,
 };
-<span class="kw">use </span>sp_staking::{EraIndex, OnStakerSlash, StakingInterface};
+<span class="kw">use </span>sp_staking::{EraIndex, StakingInterface};
 <span class="kw">use </span>sp_std::{collections::btree_map::BTreeMap, fmt::Debug, ops::Div, vec::Vec};
 
 <span class="attr">#[cfg(any(feature = <span class="string">&quot;try-runtime&quot;</span>, feature = <span class="string">&quot;fuzzing&quot;</span>, test, debug_assertions))]
@@ -6561,7 +6553,7 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; OnStakerSlash&lt;T::AccountId, BalanceOf&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Config&gt; sp_staking::OnStakingUpdate&lt;T::AccountId, BalanceOf&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 	<span class="kw">fn </span>on_slash(
 		pool_account: <span class="kw-2">&amp;</span>T::AccountId,
 		<span class="comment">// Bonded balance is always read directly from staking, therefore we don&#39;t need to update

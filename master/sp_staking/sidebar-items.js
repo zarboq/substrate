@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["StakerStatus"],"macro":["_runtime_benchmarks_enabled"],"mod":["offence"],"struct":["Stake"],"trait":["OnStakerSlash","StakingInterface"],"type":["EraIndex","SessionIndex"]};
+window.SIDEBAR_ITEMS = {"enum":["StakerStatus"],"macro":["_runtime_benchmarks_enabled"],"mod":["currency_to_vote","offence"],"struct":["Stake"],"trait":["OnStakingUpdate","StakingInterface"],"type":["EraIndex","SessionIndex"]};
