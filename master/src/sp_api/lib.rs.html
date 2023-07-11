@@ -748,6 +748,29 @@
 <a href="#748" id="748">748</a>
 <a href="#749" id="749">749</a>
 <a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -828,11 +851,17 @@
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub use </span>scale_info;
 <span class="attr">#[doc(hidden)]
+</span><span class="kw">pub use </span>sp_core::offchain;
+<span class="attr">#[doc(hidden)]
 #[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
 </span><span class="kw">pub use </span>sp_core::to_substrate_wasm_fn_return_value;
+<span class="attr">#[doc(hidden)]
+#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="kw">pub use </span>sp_core::traits::CallContext;
 <span class="kw">use </span>sp_core::OpaqueMetadata;
 <span class="attr">#[doc(hidden)]
-</span><span class="kw">pub use </span>sp_core::{offchain, ExecutionContext};
+#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="kw">pub use </span>sp_externalities::{Extension, Extensions};
 <span class="attr">#[doc(hidden)]
 #[cfg(feature = <span class="string">&quot;frame-metadata&quot;</span>)]
 </span><span class="kw">pub use </span>sp_metadata_ir::{<span class="self">self </span><span class="kw">as </span>metadata_ir, frame_metadata <span class="kw">as </span>metadata};
@@ -1268,6 +1297,8 @@
 	</span>Application(<span class="attr">#[from] </span>Box&lt;<span class="kw">dyn </span>std::error::Error + Send + Sync&gt;),
 	<span class="attr">#[error(<span class="string">&quot;Api called for an unknown Block: {0}&quot;</span>)]
 	</span>UnknownBlock(String),
+	<span class="attr">#[error(<span class="string">&quot;Using the same api instance to call into multiple independent blocks.&quot;</span>)]
+	</span>UsingSameInstanceForDifferentBlocks,
 }
 
 <span class="doccomment">/// Extends the runtime api implementation with some common functionality.
@@ -1331,6 +1362,12 @@
 	) -&gt; <span class="prelude-ty">Result</span>&lt;StorageChanges&lt;<span class="self">Self</span>::StateBackend, Block&gt;, String&gt;
 	<span class="kw">where
 		</span><span class="self">Self</span>: Sized;
+
+	<span class="doccomment">/// Set the [`CallContext`] to be used by the runtime api calls done by this instance.
+	</span><span class="kw">fn </span>set_call_context(<span class="kw-2">&amp;mut </span><span class="self">self</span>, call_context: CallContext);
+
+	<span class="doccomment">/// Register an [`Extension`] that will be accessible while executing a runtime api call.
+	</span><span class="kw">fn </span>register_extension&lt;E: Extension&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, extension: E);
 }
 
 <span class="doccomment">/// Parameters for [`CallApiAt::call_api_at`].
@@ -1346,10 +1383,12 @@
 	</span><span class="kw">pub </span>overlayed_changes: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RefCell&lt;OverlayedChanges&gt;,
 	<span class="doccomment">/// The cache for storage transactions.
 	</span><span class="kw">pub </span>storage_transaction_cache: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RefCell&lt;StorageTransactionCache&lt;Block, Backend&gt;&gt;,
-	<span class="doccomment">/// The context this function is executed in.
-	</span><span class="kw">pub </span>context: ExecutionContext,
+	<span class="doccomment">/// The call context of this call.
+	</span><span class="kw">pub </span>call_context: CallContext,
 	<span class="doccomment">/// The optional proof recorder for recording storage accesses.
 	</span><span class="kw">pub </span>recorder: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="prelude-ty">Option</span>&lt;ProofRecorder&lt;Block&gt;&gt;,
+	<span class="doccomment">/// The extensions that should be used for this call.
+	</span><span class="kw">pub </span>extensions: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RefCell&lt;Extensions&gt;,
 }
 
 <span class="doccomment">/// Something that can call into the an api at a given block.
@@ -1370,6 +1409,13 @@
 
 	<span class="doccomment">/// Get the state `at` the given block.
 	</span><span class="kw">fn </span>state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, at: Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::StateBackend, ApiError&gt;;
+
+	<span class="doccomment">/// Initialize the `extensions` for the given block `at` by using the global extensions factory.
+	</span><span class="kw">fn </span>initialize_extensions(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		at: Block::Hash,
+		extensions: <span class="kw-2">&amp;mut </span>Extensions,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), ApiError&gt;;
 }
 
 <span class="doccomment">/// Auxiliary wrapper that holds an api instance and binds it to the given lifetime.

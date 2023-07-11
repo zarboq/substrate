@@ -353,7 +353,6 @@
 <a href="#353" id="353">353</a>
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -386,9 +385,12 @@
 };
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use </span>sp_api::{NumberFor, ProvideRuntimeApi};
+<span class="kw">use </span>sp_api::{ApiExt, NumberFor, ProvideRuntimeApi};
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
-<span class="kw">use </span>sp_core::Bytes;
+<span class="kw">use </span>sp_core::{
+	offchain::{storage::OffchainDb, OffchainDbExt, OffchainStorage},
+	Bytes,
+};
 <span class="kw">use </span>sp_mmr_primitives::{Error <span class="kw">as </span>MmrError, Proof};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 
@@ -483,26 +485,28 @@
 }
 
 <span class="doccomment">/// MMR RPC methods.
-</span><span class="kw">pub struct </span>Mmr&lt;Client, Block&gt; {
+</span><span class="kw">pub struct </span>Mmr&lt;Client, Block, S&gt; {
 	client: Arc&lt;Client&gt;,
+	offchain_db: OffchainDb&lt;S&gt;,
 	_marker: PhantomData&lt;Block&gt;,
 }
 
-<span class="kw">impl</span>&lt;C, B&gt; Mmr&lt;C, B&gt; {
+<span class="kw">impl</span>&lt;C, B, S&gt; Mmr&lt;C, B, S&gt; {
 	<span class="doccomment">/// Create new `Mmr` with the given reference to the client.
-	</span><span class="kw">pub fn </span>new(client: Arc&lt;C&gt;) -&gt; <span class="self">Self </span>{
-		<span class="self">Self </span>{ client, _marker: Default::default() }
+	</span><span class="kw">pub fn </span>new(client: Arc&lt;C&gt;, offchain_storage: S) -&gt; <span class="self">Self </span>{
+		<span class="self">Self </span>{ client, _marker: Default::default(), offchain_db: OffchainDb::new(offchain_storage) }
 	}
 }
 
 <span class="attr">#[async_trait]
-</span><span class="kw">impl</span>&lt;Client, Block, MmrHash&gt; MmrApiServer&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash, NumberFor&lt;Block&gt;, MmrHash&gt;
-	<span class="kw">for </span>Mmr&lt;Client, (Block, MmrHash)&gt;
+</span><span class="kw">impl</span>&lt;Client, Block, MmrHash, S&gt; MmrApiServer&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash, NumberFor&lt;Block&gt;, MmrHash&gt;
+	<span class="kw">for </span>Mmr&lt;Client, (Block, MmrHash), S&gt;
 <span class="kw">where
 	</span>Block: BlockT,
 	Client: Send + Sync + <span class="lifetime">&#39;static </span>+ ProvideRuntimeApi&lt;Block&gt; + HeaderBackend&lt;Block&gt;,
 	Client::Api: MmrRuntimeApi&lt;Block, MmrHash, NumberFor&lt;Block&gt;&gt;,
 	MmrHash: Codec + Send + Sync + <span class="lifetime">&#39;static</span>,
+	S: OffchainStorage + <span class="lifetime">&#39;static</span>,
 {
 	<span class="kw">fn </span>mmr_root(<span class="kw-2">&amp;</span><span class="self">self</span>, at: <span class="prelude-ty">Option</span>&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt;) -&gt; RpcResult&lt;MmrHash&gt; {
 		<span class="kw">let </span>block_hash = at.unwrap_or_else(||
@@ -522,18 +526,15 @@
 		best_known_block_number: <span class="prelude-ty">Option</span>&lt;NumberFor&lt;Block&gt;&gt;,
 		at: <span class="prelude-ty">Option</span>&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt;,
 	) -&gt; RpcResult&lt;LeavesProof&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt;&gt; {
-		<span class="kw">let </span>api = <span class="self">self</span>.client.runtime_api();
+		<span class="kw">let </span><span class="kw-2">mut </span>api = <span class="self">self</span>.client.runtime_api();
 		<span class="kw">let </span>block_hash = at.unwrap_or_else(||
 			<span class="comment">// If the block hash is not supplied assume the best block.
 			</span><span class="self">self</span>.client.info().best_hash);
 
+		api.register_extension(OffchainDbExt::new(<span class="self">self</span>.offchain_db.clone()));
+
 		<span class="kw">let </span>(leaves, proof) = api
-			.generate_proof_with_context(
-				block_hash,
-				sp_core::ExecutionContext::OffchainCall(<span class="prelude-val">None</span>),
-				block_numbers,
-				best_known_block_number,
-			)
+			.generate_proof(block_hash, block_numbers, best_known_block_number)
 			.map_err(runtime_error_into_rpc_error)<span class="question-mark">?
 			</span>.map_err(mmr_error_into_rpc_error)<span class="question-mark">?</span>;
 
@@ -541,7 +542,7 @@
 	}
 
 	<span class="kw">fn </span>verify_proof(<span class="kw-2">&amp;</span><span class="self">self</span>, proof: LeavesProof&lt;&lt;Block <span class="kw">as </span>BlockT&gt;::Hash&gt;) -&gt; RpcResult&lt;bool&gt; {
-		<span class="kw">let </span>api = <span class="self">self</span>.client.runtime_api();
+		<span class="kw">let </span><span class="kw-2">mut </span>api = <span class="self">self</span>.client.runtime_api();
 
 		<span class="kw">let </span>leaves = Decode::decode(<span class="kw-2">&amp;mut &amp;</span>proof.leaves.<span class="number">0</span>[..])
 			.map_err(|e| CallError::InvalidParams(anyhow::Error::new(e)))<span class="question-mark">?</span>;
@@ -549,14 +550,11 @@
 		<span class="kw">let </span>decoded_proof = Decode::decode(<span class="kw-2">&amp;mut &amp;</span>proof.proof.<span class="number">0</span>[..])
 			.map_err(|e| CallError::InvalidParams(anyhow::Error::new(e)))<span class="question-mark">?</span>;
 
-		api.verify_proof_with_context(
-			proof.block_hash,
-			sp_core::ExecutionContext::OffchainCall(<span class="prelude-val">None</span>),
-			leaves,
-			decoded_proof,
-		)
-		.map_err(runtime_error_into_rpc_error)<span class="question-mark">?
-		</span>.map_err(mmr_error_into_rpc_error)<span class="question-mark">?</span>;
+		api.register_extension(OffchainDbExt::new(<span class="self">self</span>.offchain_db.clone()));
+
+		api.verify_proof(proof.block_hash, leaves, decoded_proof)
+			.map_err(runtime_error_into_rpc_error)<span class="question-mark">?
+			</span>.map_err(mmr_error_into_rpc_error)<span class="question-mark">?</span>;
 
 		<span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
 	}

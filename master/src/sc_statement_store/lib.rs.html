@@ -1224,6 +1224,12 @@
 <a href="#1224" id="1224">1224</a>
 <a href="#1225" id="1225">1225</a>
 <a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
+<a href="#1232" id="1232">1232</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1285,7 +1291,9 @@
 <span class="kw">use </span>sp_core::{hexdisplay::HexDisplay, traits::SpawnNamed, Decode, Encode};
 <span class="kw">use </span>sp_runtime::traits::Block <span class="kw">as </span>BlockT;
 <span class="kw">use </span>sp_statement_store::{
-	runtime_api::{InvalidStatement, StatementSource, ValidStatement, ValidateStatement},
+	runtime_api::{
+		InvalidStatement, StatementSource, StatementStoreExt, ValidStatement, ValidateStatement,
+	},
 	AccountId, BlockHash, Channel, DecryptionKey, Hash, NetworkPriority, Proof, <span class="prelude-ty">Result</span>, Statement,
 	SubmitResult, Topic,
 };
@@ -1717,8 +1725,7 @@
 			+ <span class="lifetime">&#39;static</span>,
 		Client::Api: ValidateStatement&lt;Block&gt;,
 	{
-		<span class="kw">let </span>store = Arc::new(<span class="self">Self</span>::new(path, options, client.clone(), prometheus)<span class="question-mark">?</span>);
-		client.execution_extensions().register_statement_store(store.clone());
+		<span class="kw">let </span>store = Arc::new(<span class="self">Self</span>::new(path, options, client, prometheus)<span class="question-mark">?</span>);
 
 		<span class="comment">// Perform periodic statement store maintenance
 		</span><span class="kw">let </span>worker_store = store.clone();
@@ -1921,6 +1928,11 @@
 	<span class="attr">#[cfg(test)]
 	</span><span class="kw">fn </span>set_time(<span class="kw-2">&amp;mut </span><span class="self">self</span>, time: u64) {
 		<span class="self">self</span>.time_override = <span class="prelude-val">Some</span>(time);
+	}
+
+	<span class="doccomment">/// Returns `self` as [`StatementStoreExt`].
+	</span><span class="kw">pub fn </span>as_statement_store_ext(<span class="self">self</span>: Arc&lt;<span class="self">Self</span>&gt;) -&gt; StatementStoreExt {
+		StatementStoreExt::new(<span class="self">self</span>)
 	}
 }
 

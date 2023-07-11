@@ -447,37 +447,6 @@
 <a href="#447" id="447">447</a>
 <a href="#448" id="448">448</a>
 <a href="#449" id="449">449</a>
-<a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
-<a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
-<a href="#456" id="456">456</a>
-<a href="#457" id="457">457</a>
-<a href="#458" id="458">458</a>
-<a href="#459" id="459">459</a>
-<a href="#460" id="460">460</a>
-<a href="#461" id="461">461</a>
-<a href="#462" id="462">462</a>
-<a href="#463" id="463">463</a>
-<a href="#464" id="464">464</a>
-<a href="#465" id="465">465</a>
-<a href="#466" id="466">466</a>
-<a href="#467" id="467">467</a>
-<a href="#468" id="468">468</a>
-<a href="#469" id="469">469</a>
-<a href="#470" id="470">470</a>
-<a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
-<a href="#475" id="475">475</a>
-<a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
-<a href="#478" id="478">478</a>
-<a href="#479" id="479">479</a>
-<a href="#480" id="480">480</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -502,10 +471,7 @@
 </span><span class="kw">pub mod </span>client_ext;
 
 <span class="kw">pub use </span><span class="self">self</span>::client_ext::{ClientBlockImportExt, ClientExt};
-<span class="kw">pub use </span>sc_client_api::{
-	execution_extensions::{ExecutionExtensions, ExecutionStrategies},
-	BadBlocks, ForkBlocks,
-};
+<span class="kw">pub use </span>sc_client_api::{execution_extensions::ExecutionExtensions, BadBlocks, ForkBlocks};
 <span class="kw">pub use </span>sc_client_db::{<span class="self">self</span>, Backend, BlocksPruning};
 <span class="kw">pub use </span>sc_executor::{<span class="self">self</span>, NativeElseWasmExecutor, WasmExecutionMethod, WasmExecutor};
 <span class="kw">pub use </span>sc_service::{client, RpcHandlers};
@@ -515,7 +481,6 @@
 };
 <span class="kw">pub use </span>sp_keystore::{Keystore, KeystorePtr};
 <span class="kw">pub use </span>sp_runtime::{Storage, StorageChild};
-<span class="kw">pub use </span>sp_state_machine::ExecutionStrategy;
 
 <span class="kw">use </span>futures::{future::Future, stream::StreamExt};
 <span class="kw">use </span>sc_client_api::BlockchainEvents;
@@ -547,14 +512,12 @@
 
 <span class="doccomment">/// A builder for creating a test client instance.
 </span><span class="kw">pub struct </span>TestClientBuilder&lt;Block: BlockT, ExecutorDispatch, Backend: <span class="lifetime">&#39;static</span>, G: GenesisInit&gt; {
-	execution_strategies: ExecutionStrategies,
 	genesis_init: G,
 	<span class="doccomment">/// The key is an unprefixed storage key, this only contains
 	/// default child trie content.
 	</span>child_storage_extension: HashMap&lt;Vec&lt;u8&gt;, StorageChild&gt;,
 	backend: Arc&lt;Backend&gt;,
 	_executor: std::marker::PhantomData&lt;ExecutorDispatch&gt;,
-	keystore: <span class="prelude-ty">Option</span>&lt;KeystorePtr&gt;,
 	fork_blocks: ForkBlocks&lt;Block&gt;,
 	bad_blocks: BadBlocks&lt;Block&gt;,
 	enable_offchain_indexing_api: bool,
@@ -599,23 +562,15 @@
 	</span><span class="kw">pub fn </span>with_backend(backend: Arc&lt;Backend&gt;) -&gt; <span class="self">Self </span>{
 		TestClientBuilder {
 			backend,
-			execution_strategies: ExecutionStrategies::default(),
 			child_storage_extension: Default::default(),
 			genesis_init: Default::default(),
 			_executor: Default::default(),
-			keystore: <span class="prelude-val">None</span>,
 			fork_blocks: <span class="prelude-val">None</span>,
 			bad_blocks: <span class="prelude-val">None</span>,
 			enable_offchain_indexing_api: <span class="bool-val">false</span>,
 			no_genesis: <span class="bool-val">false</span>,
 		}
 	}
-
-	<span class="doccomment">/// Set the keystore that should be used by the externalities.
-	</span><span class="kw">pub fn </span>set_keystore(<span class="kw-2">mut </span><span class="self">self</span>, keystore: KeystorePtr) -&gt; <span class="self">Self </span>{
-		<span class="self">self</span>.keystore = <span class="prelude-val">Some</span>(keystore);
-		<span class="self">self
-	</span>}
 
 	<span class="doccomment">/// Alter the genesis storage parameters.
 	</span><span class="kw">pub fn </span>genesis_init_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>G {
@@ -639,18 +594,6 @@
 			StorageChild { data: Default::default(), child_info: child_info.clone() }
 		});
 		entry.data.insert(key.as_ref().to_vec(), value.as_ref().to_vec());
-		<span class="self">self
-	</span>}
-
-	<span class="doccomment">/// Set the execution strategy that should be used by all contexts.
-	</span><span class="kw">pub fn </span>set_execution_strategy(<span class="kw-2">mut </span><span class="self">self</span>, execution_strategy: ExecutionStrategy) -&gt; <span class="self">Self </span>{
-		<span class="self">self</span>.execution_strategies = ExecutionStrategies {
-			syncing: execution_strategy,
-			importing: execution_strategy,
-			block_construction: execution_strategy,
-			offchain_worker: execution_strategy,
-			other: execution_strategy,
-		};
 		<span class="self">self
 	</span>}
 
@@ -776,12 +719,7 @@
 			<span class="self">self</span>.backend.clone(),
 			executor.clone(),
 			Default::default(),
-			ExecutionExtensions::new(
-				<span class="self">self</span>.execution_strategies.clone(),
-				<span class="self">self</span>.keystore.clone(),
-				sc_offchain::OffchainDb::factory_from_backend(<span class="kw-2">&amp;*</span><span class="self">self</span>.backend),
-				Arc::new(executor),
-			),
+			ExecutionExtensions::new(<span class="prelude-val">None</span>, Arc::new(executor)),
 		)
 		.expect(<span class="string">&quot;Creates LocalCallExecutor&quot;</span>);
 

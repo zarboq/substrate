@@ -392,6 +392,99 @@
 <a href="#392" id="392">392</a>
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -429,22 +522,26 @@
 
 </span><span class="attr">#![warn(missing_docs)]
 
-</span><span class="kw">use </span>std::{fmt, marker::PhantomData, sync::Arc};
+</span><span class="kw">use </span>std::{fmt, sync::Arc};
 
 <span class="kw">use </span>futures::{
 	future::{ready, Future},
 	prelude::<span class="kw-2">*</span>,
 };
 <span class="kw">use </span>parking_lot::Mutex;
+<span class="kw">use </span>sc_client_api::BlockchainEvents;
 <span class="kw">use </span>sc_network::{NetworkPeers, NetworkStateInfo};
+<span class="kw">use </span>sc_transaction_pool_api::OffchainTransactionPoolFactory;
 <span class="kw">use </span>sp_api::{ApiExt, ProvideRuntimeApi};
-<span class="kw">use </span>sp_core::{offchain, traits::SpawnNamed, ExecutionContext};
+<span class="kw">use </span>sp_core::{offchain, traits::SpawnNamed};
+<span class="kw">use </span>sp_externalities::Extension;
+<span class="kw">use </span>sp_keystore::{KeystoreExt, KeystorePtr};
 <span class="kw">use </span>sp_runtime::traits::{<span class="self">self</span>, Header};
 <span class="kw">use </span>threadpool::ThreadPool;
 
 <span class="kw">mod </span>api;
 
-<span class="kw">pub use </span>api::Db <span class="kw">as </span>OffchainDb;
+<span class="kw">pub use </span>sp_core::offchain::storage::OffchainDb;
 <span class="kw">pub use </span>sp_offchain::{OffchainWorkerApi, STORAGE_PREFIX};
 
 <span class="kw">const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;offchain-worker&quot;</span>;
@@ -455,65 +552,160 @@
 
 <span class="kw">impl</span>&lt;T&gt; NetworkProvider <span class="kw">for </span>T <span class="kw">where </span>T: NetworkStateInfo + NetworkPeers {}
 
+<span class="doccomment">/// Special type that implements [`OffchainStorage`](offchain::OffchainStorage).
+///
+/// This type can not be constructed and should only be used when passing `None` as `offchain_db` to
+/// [`OffchainWorkerOptions`] to make the compiler happy.
+</span><span class="attr">#[derive(Clone)]
+</span><span class="kw">pub enum </span>NoOffchainStorage {}
+
+<span class="kw">impl </span>offchain::OffchainStorage <span class="kw">for </span>NoOffchainStorage {
+	<span class="kw">fn </span>set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8], <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8], <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8]) {
+		<span class="macro">unimplemented!</span>(<span class="string">&quot;`NoOffchainStorage` can not be constructed!&quot;</span>)
+	}
+
+	<span class="kw">fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8], <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8]) {
+		<span class="macro">unimplemented!</span>(<span class="string">&quot;`NoOffchainStorage` can not be constructed!&quot;</span>)
+	}
+
+	<span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8], <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+		<span class="macro">unimplemented!</span>(<span class="string">&quot;`NoOffchainStorage` can not be constructed!&quot;</span>)
+	}
+
+	<span class="kw">fn </span>compare_and_set(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8], <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8], <span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, <span class="kw">_</span>: <span class="kw-2">&amp;</span>[u8]) -&gt; bool {
+		<span class="macro">unimplemented!</span>(<span class="string">&quot;`NoOffchainStorage` can not be constructed!&quot;</span>)
+	}
+}
+
 <span class="doccomment">/// Options for [`OffchainWorkers`]
-</span><span class="kw">pub struct </span>OffchainWorkerOptions {
+</span><span class="kw">pub struct </span>OffchainWorkerOptions&lt;RA, Block: traits::Block, Storage, CE&gt; {
+	<span class="doccomment">/// Provides access to the runtime api.
+	</span><span class="kw">pub </span>runtime_api_provider: Arc&lt;RA&gt;,
+	<span class="doccomment">/// Provides access to the keystore.
+	</span><span class="kw">pub </span>keystore: <span class="prelude-ty">Option</span>&lt;KeystorePtr&gt;,
+	<span class="doccomment">/// Provides access to the offchain database.
+	///
+	/// Use [`NoOffchainStorage`] as type when passing `None` to have some type that works.
+	</span><span class="kw">pub </span>offchain_db: <span class="prelude-ty">Option</span>&lt;Storage&gt;,
+	<span class="doccomment">/// Provides access to the transaction pool.
+	</span><span class="kw">pub </span>transaction_pool: <span class="prelude-ty">Option</span>&lt;OffchainTransactionPoolFactory&lt;Block&gt;&gt;,
+	<span class="doccomment">/// Provides access to network information.
+	</span><span class="kw">pub </span>network_provider: Arc&lt;<span class="kw">dyn </span>NetworkProvider + Send + Sync&gt;,
+	<span class="doccomment">/// Is the node running as validator?
+	</span><span class="kw">pub </span>is_validator: bool,
 	<span class="doccomment">/// Enable http requests from offchain workers?
 	///
 	/// If not enabled, any http request will panic.
 	</span><span class="kw">pub </span>enable_http_requests: bool,
+	<span class="doccomment">/// Callback to create custom [`Extension`]s that should be registered for the
+	/// `offchain_worker` runtime call.
+	///
+	/// These [`Extension`]s are registered along-side the default extensions and are accessible in
+	/// the host functions.
+	///
+	/// # Example:
+	///
+	/// ```nocompile
+	/// custom_extensions: |block_hash| {
+	///     vec![MyCustomExtension::new()]
+	/// }
+	/// ```
+	</span><span class="kw">pub </span>custom_extensions: CE,
 }
 
 <span class="doccomment">/// An offchain workers manager.
-</span><span class="kw">pub struct </span>OffchainWorkers&lt;Client, Block: traits::Block&gt; {
-	client: Arc&lt;Client&gt;,
-	_block: PhantomData&lt;Block&gt;,
+</span><span class="kw">pub struct </span>OffchainWorkers&lt;RA, Block: traits::Block, Storage&gt; {
+	runtime_api_provider: Arc&lt;RA&gt;,
 	thread_pool: Mutex&lt;ThreadPool&gt;,
 	shared_http_client: api::SharedClient,
-	enable_http: bool,
+	enable_http_requests: bool,
+	keystore: <span class="prelude-ty">Option</span>&lt;KeystorePtr&gt;,
+	offchain_db: <span class="prelude-ty">Option</span>&lt;OffchainDb&lt;Storage&gt;&gt;,
+	transaction_pool: <span class="prelude-ty">Option</span>&lt;OffchainTransactionPoolFactory&lt;Block&gt;&gt;,
+	network_provider: Arc&lt;<span class="kw">dyn </span>NetworkProvider + Send + Sync&gt;,
+	is_validator: bool,
+	custom_extensions: Box&lt;<span class="kw">dyn </span>Fn(Block::Hash) -&gt; Vec&lt;Box&lt;<span class="kw">dyn </span>Extension&gt;&gt; + Send&gt;,
 }
 
-<span class="kw">impl</span>&lt;Client, Block: traits::Block&gt; OffchainWorkers&lt;Client, Block&gt; {
+<span class="kw">impl</span>&lt;RA, Block: traits::Block, Storage&gt; OffchainWorkers&lt;RA, Block, Storage&gt; {
 	<span class="doccomment">/// Creates new [`OffchainWorkers`].
-	</span><span class="kw">pub fn </span>new(client: Arc&lt;Client&gt;) -&gt; <span class="self">Self </span>{
-		<span class="self">Self</span>::new_with_options(client, OffchainWorkerOptions { enable_http_requests: <span class="bool-val">true </span>})
-	}
-
-	<span class="doccomment">/// Creates new [`OffchainWorkers`] using the given `options`.
-	</span><span class="kw">pub fn </span>new_with_options(client: Arc&lt;Client&gt;, options: OffchainWorkerOptions) -&gt; <span class="self">Self </span>{
+	</span><span class="kw">pub fn </span>new&lt;CE: Fn(Block::Hash) -&gt; Vec&lt;Box&lt;<span class="kw">dyn </span>Extension&gt;&gt; + Send + <span class="lifetime">&#39;static</span>&gt;(
+		OffchainWorkerOptions {
+			runtime_api_provider,
+			keystore,
+			offchain_db,
+			transaction_pool,
+			network_provider,
+			is_validator,
+			enable_http_requests,
+			custom_extensions,
+		}: OffchainWorkerOptions&lt;RA, Block, Storage, CE&gt;,
+	) -&gt; <span class="self">Self </span>{
 		<span class="self">Self </span>{
-			client,
-			_block: PhantomData,
+			runtime_api_provider,
 			thread_pool: Mutex::new(ThreadPool::with_name(
 				<span class="string">&quot;offchain-worker&quot;</span>.into(),
 				num_cpus::get(),
 			)),
 			shared_http_client: api::SharedClient::new(),
-			enable_http: options.enable_http_requests,
+			enable_http_requests,
+			keystore,
+			offchain_db: offchain_db.map(OffchainDb::new),
+			transaction_pool,
+			is_validator,
+			network_provider,
+			custom_extensions: Box::new(custom_extensions),
 		}
 	}
 }
 
-<span class="kw">impl</span>&lt;Client, Block: traits::Block&gt; fmt::Debug <span class="kw">for </span>OffchainWorkers&lt;Client, Block&gt; {
+<span class="kw">impl</span>&lt;RA, Block: traits::Block, Storage: offchain::OffchainStorage&gt; fmt::Debug
+	<span class="kw">for </span>OffchainWorkers&lt;RA, Block, Storage&gt;
+{
 	<span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
 		f.debug_tuple(<span class="string">&quot;OffchainWorkers&quot;</span>).finish()
 	}
 }
 
-<span class="kw">impl</span>&lt;Client, Block&gt; OffchainWorkers&lt;Client, Block&gt;
+<span class="kw">impl</span>&lt;RA, Block, Storage&gt; OffchainWorkers&lt;RA, Block, Storage&gt;
 <span class="kw">where
 	</span>Block: traits::Block,
-	Client: ProvideRuntimeApi&lt;Block&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
-	Client::Api: OffchainWorkerApi&lt;Block&gt;,
+	RA: ProvideRuntimeApi&lt;Block&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
+	RA::Api: OffchainWorkerApi&lt;Block&gt;,
+	Storage: offchain::OffchainStorage + <span class="lifetime">&#39;static</span>,
 {
+	<span class="doccomment">/// Run the offchain workers on every block import.
+	</span><span class="kw">pub async fn </span>run&lt;BE: BlockchainEvents&lt;Block&gt;&gt;(
+		<span class="self">self</span>,
+		import_events: Arc&lt;BE&gt;,
+		spawner: <span class="kw">impl </span>SpawnNamed,
+	) {
+		import_events
+			.import_notification_stream()
+			.for_each(<span class="kw">move </span>|n| {
+				<span class="kw">if </span>n.is_new_best {
+					spawner.spawn(
+						<span class="string">&quot;offchain-on-block&quot;</span>,
+						<span class="prelude-val">Some</span>(<span class="string">&quot;offchain-worker&quot;</span>),
+						<span class="self">self</span>.on_block_imported(<span class="kw-2">&amp;</span>n.header).boxed(),
+					);
+				} <span class="kw">else </span>{
+					<span class="macro">tracing::debug!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Skipping offchain workers for non-canon block: {:?}&quot;</span>,
+						n.header,
+					)
+				}
+
+				ready(())
+			})
+			.<span class="kw">await</span>;
+	}
+
 	<span class="doccomment">/// Start the offchain workers after given block.
 	</span><span class="attr">#[must_use]
-	</span><span class="kw">pub fn </span>on_block_imported(
-		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		header: <span class="kw-2">&amp;</span>Block::Header,
-		network_provider: Arc&lt;<span class="kw">dyn </span>NetworkProvider + Send + Sync&gt;,
-		is_validator: bool,
-	) -&gt; <span class="kw">impl </span>Future&lt;Output = ()&gt; {
-		<span class="kw">let </span>runtime = <span class="self">self</span>.client.runtime_api();
+	</span><span class="kw">fn </span>on_block_imported(<span class="kw-2">&amp;</span><span class="self">self</span>, header: <span class="kw-2">&amp;</span>Block::Header) -&gt; <span class="kw">impl </span>Future&lt;Output = ()&gt; {
+		<span class="kw">let </span>runtime = <span class="self">self</span>.runtime_api_provider.runtime_api();
 		<span class="kw">let </span>hash = header.hash();
 		<span class="kw">let </span>has_api_v1 = runtime.has_api_with::&lt;<span class="kw">dyn </span>OffchainWorkerApi&lt;Block&gt;, <span class="kw">_</span>&gt;(hash, |v| v == <span class="number">1</span>);
 		<span class="kw">let </span>has_api_v2 = runtime.has_api_with::&lt;<span class="kw">dyn </span>OffchainWorkerApi&lt;Block&gt;, <span class="kw">_</span>&gt;(hash, |v| v == <span class="number">2</span>);
@@ -534,36 +726,59 @@
 		};
 		<span class="macro">tracing::debug!</span>(
 			target: LOG_TARGET,
-			<span class="string">&quot;Checking offchain workers at {:?}: version:{}&quot;</span>,
-			hash,
-			version
+			<span class="string">&quot;Checking offchain workers at {hash:?}: version: {version}&quot;</span>,
 		);
+
 		<span class="kw">let </span>process = (version &gt; <span class="number">0</span>).then(|| {
-			<span class="kw">let </span>(api, runner) =
-				api::AsyncApi::new(network_provider, is_validator, <span class="self">self</span>.shared_http_client.clone());
-			<span class="macro">tracing::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Spawning offchain workers at {:?}&quot;</span>, hash);
+			<span class="kw">let </span>(api, runner) = api::AsyncApi::new(
+				<span class="self">self</span>.network_provider.clone(),
+				<span class="self">self</span>.is_validator,
+				<span class="self">self</span>.shared_http_client.clone(),
+			);
+			<span class="macro">tracing::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Spawning offchain workers at {hash:?}&quot;</span>);
 			<span class="kw">let </span>header = header.clone();
-			<span class="kw">let </span>client = <span class="self">self</span>.client.clone();
+			<span class="kw">let </span>client = <span class="self">self</span>.runtime_api_provider.clone();
 
 			<span class="kw">let </span><span class="kw-2">mut </span>capabilities = offchain::Capabilities::all();
+			capabilities.set(offchain::Capabilities::HTTP, <span class="self">self</span>.enable_http_requests);
 
-			capabilities.set(offchain::Capabilities::HTTP, <span class="self">self</span>.enable_http);
+			<span class="kw">let </span>keystore = <span class="self">self</span>.keystore.clone();
+			<span class="kw">let </span>db = <span class="self">self</span>.offchain_db.clone();
+			<span class="kw">let </span>tx_pool = <span class="self">self</span>.transaction_pool.clone();
+			<span class="kw">let </span>custom_extensions = (<span class="kw-2">*</span><span class="self">self</span>.custom_extensions)(hash);
+
 			<span class="self">self</span>.spawn_worker(<span class="kw">move </span>|| {
-				<span class="kw">let </span>runtime = client.runtime_api();
+				<span class="kw">let </span><span class="kw-2">mut </span>runtime = client.runtime_api();
 				<span class="kw">let </span>api = Box::new(api);
-				<span class="macro">tracing::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Running offchain workers at {:?}&quot;</span>, hash);
+				<span class="macro">tracing::debug!</span>(target: LOG_TARGET, <span class="string">&quot;Running offchain workers at {hash:?}&quot;</span>);
 
-				<span class="kw">let </span>context = ExecutionContext::OffchainCall(<span class="prelude-val">Some</span>((api, capabilities)));
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(keystore) = keystore {
+					runtime.register_extension(KeystoreExt(keystore.clone()));
+				}
+
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(pool) = tx_pool {
+					runtime.register_extension(pool.offchain_transaction_pool(hash));
+				}
+
+				<span class="kw">if let </span><span class="prelude-val">Some</span>(offchain_db) = db {
+					runtime.register_extension(offchain::OffchainDbExt::new(
+						offchain::LimitedExternalities::new(capabilities, offchain_db.clone()),
+					));
+				}
+
+				runtime.register_extension(offchain::OffchainWorkerExt::new(
+					offchain::LimitedExternalities::new(capabilities, api),
+				));
+
+				custom_extensions.into_iter().for_each(|ext| runtime.register_extension(ext));
+
 				<span class="kw">let </span>run = <span class="kw">if </span>version == <span class="number">2 </span>{
-					runtime.offchain_worker_with_context(hash, context, <span class="kw-2">&amp;</span>header)
+					runtime.offchain_worker(hash, <span class="kw-2">&amp;</span>header)
 				} <span class="kw">else </span>{
 					<span class="attr">#[allow(deprecated)]
-					</span>runtime.offchain_worker_before_version_2_with_context(
-						hash,
-						context,
-						<span class="kw-2">*</span>header.number(),
-					)
+					</span>runtime.offchain_worker_before_version_2(hash, <span class="kw-2">*</span>header.number())
 				};
+
 				<span class="kw">if let </span><span class="prelude-val">Err</span>(e) = run {
 					<span class="macro">tracing::error!</span>(
 						target: LOG_TARGET,
@@ -593,44 +808,6 @@
 	</span><span class="kw">fn </span>spawn_worker(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw">impl </span>FnOnce() -&gt; () + Send + <span class="lifetime">&#39;static</span>) {
 		<span class="self">self</span>.thread_pool.lock().execute(f);
 	}
-}
-
-<span class="doccomment">/// Inform the offchain worker about new imported blocks
-</span><span class="kw">pub async fn </span>notification_future&lt;Client, Block, Spawner&gt;(
-	is_validator: bool,
-	client: Arc&lt;Client&gt;,
-	offchain: Arc&lt;OffchainWorkers&lt;Client, Block&gt;&gt;,
-	spawner: Spawner,
-	network_provider: Arc&lt;<span class="kw">dyn </span>NetworkProvider + Send + Sync&gt;,
-) <span class="kw">where
-	</span>Block: traits::Block,
-	Client:
-		ProvideRuntimeApi&lt;Block&gt; + sc_client_api::BlockchainEvents&lt;Block&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
-	Client::Api: OffchainWorkerApi&lt;Block&gt;,
-	Spawner: SpawnNamed,
-{
-	client
-		.import_notification_stream()
-		.for_each(<span class="kw">move </span>|n| {
-			<span class="kw">if </span>n.is_new_best {
-				spawner.spawn(
-					<span class="string">&quot;offchain-on-block&quot;</span>,
-					<span class="prelude-val">Some</span>(<span class="string">&quot;offchain-worker&quot;</span>),
-					offchain
-						.on_block_imported(<span class="kw-2">&amp;</span>n.header, network_provider.clone(), is_validator)
-						.boxed(),
-				);
-			} <span class="kw">else </span>{
-				<span class="macro">tracing::debug!</span>(
-					target: LOG_TARGET,
-					<span class="string">&quot;Skipping offchain workers for non-canon block: {:?}&quot;</span>,
-					n.header,
-				)
-			}
-
-			ready(())
-		})
-		.<span class="kw">await</span>;
 }
 
 <span class="attr">#[cfg(test)]
@@ -742,8 +919,17 @@
 		<span class="kw">let </span>header = client.header(client.chain_info().genesis_hash).unwrap().unwrap();
 
 		<span class="comment">// when
-		</span><span class="kw">let </span>offchain = OffchainWorkers::new(client);
-		futures::executor::block_on(offchain.on_block_imported(<span class="kw-2">&amp;</span>header, network, <span class="bool-val">false</span>));
+		</span><span class="kw">let </span>offchain = OffchainWorkers::new(OffchainWorkerOptions {
+			runtime_api_provider: client,
+			keystore: <span class="prelude-val">None</span>,
+			offchain_db: <span class="prelude-val">None</span>::&lt;NoOffchainStorage&gt;,
+			transaction_pool: <span class="prelude-val">Some</span>(OffchainTransactionPoolFactory::new(pool.clone())),
+			network_provider: network,
+			is_validator: <span class="bool-val">false</span>,
+			enable_http_requests: <span class="bool-val">false</span>,
+			custom_extensions: |<span class="kw">_</span>| Vec::new(),
+		});
+		futures::executor::block_on(offchain.on_block_imported(<span class="kw-2">&amp;</span>header));
 
 		<span class="comment">// then
 		</span><span class="macro">assert_eq!</span>(pool.status().ready, <span class="number">1</span>);

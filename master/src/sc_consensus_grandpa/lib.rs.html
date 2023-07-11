@@ -1195,6 +1195,16 @@
 <a href="#1195" id="1195">1195</a>
 <a href="#1196" id="1196">1196</a>
 <a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1261,12 +1271,13 @@
 <span class="kw">use </span>sc_client_api::{
 	backend::{AuxStore, Backend},
 	utils::is_descendent_of,
-	BlockchainEvents, CallExecutor, ExecutionStrategy, ExecutorProvider, Finalizer, LockImportRun,
-	StorageProvider, TransactionFor,
+	BlockchainEvents, CallExecutor, ExecutorProvider, Finalizer, LockImportRun, StorageProvider,
+	TransactionFor,
 };
 <span class="kw">use </span>sc_consensus::BlockImport;
 <span class="kw">use </span>sc_network::types::ProtocolName;
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_DEBUG, CONSENSUS_INFO};
+<span class="kw">use </span>sc_transaction_pool_api::OffchainTransactionPoolFactory;
 <span class="kw">use </span>sc_utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver};
 <span class="kw">use </span>sp_api::ProvideRuntimeApi;
 <span class="kw">use </span>sp_application_crypto::AppCrypto;
@@ -1676,7 +1687,6 @@
 				<span class="self">self</span>.expect_block_hash_from_id(<span class="kw-2">&amp;</span>BlockId::Number(Zero::zero()))<span class="question-mark">?</span>,
 				<span class="string">&quot;GrandpaApi_grandpa_authorities&quot;</span>,
 				<span class="kw-2">&amp;</span>[],
-				ExecutionStrategy::NativeElseWasm,
 				CallContext::Offchain,
 			)
 			.and_then(|call_result| {
@@ -1885,6 +1895,11 @@
 	</span><span class="kw">pub </span>shared_voter_state: SharedVoterState,
 	<span class="doccomment">/// TelemetryHandle instance.
 	</span><span class="kw">pub </span>telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
+	<span class="doccomment">/// Offchain transaction pool factory.
+	///
+	/// This will be used to create an offchain transaction pool instance for sending an
+	/// equivocation report from the runtime.
+	</span><span class="kw">pub </span>offchain_tx_pool_factory: OffchainTransactionPoolFactory&lt;Block&gt;,
 }
 
 <span class="doccomment">/// Returns the configuration value to put in
@@ -1933,6 +1948,7 @@
 		prometheus_registry,
 		shared_voter_state,
 		telemetry,
+		offchain_tx_pool_factory,
 	} = grandpa_params;
 
 	<span class="comment">// NOTE: we have recently removed `run_grandpa_observer` from the public
@@ -2007,6 +2023,7 @@
 		shared_voter_state,
 		justification_sender,
 		telemetry,
+		offchain_tx_pool_factory,
 	);
 
 	<span class="kw">let </span>voter_work = voter_work.map(|res| <span class="kw">match </span>res {
@@ -2076,6 +2093,7 @@
 		shared_voter_state: SharedVoterState,
 		justification_sender: GrandpaJustificationSender&lt;Block&gt;,
 		telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
+		offchain_tx_pool_factory: OffchainTransactionPoolFactory&lt;Block&gt;,
 	) -&gt; <span class="self">Self </span>{
 		<span class="kw">let </span>metrics = <span class="kw">match </span>prometheus_registry.as_ref().map(Metrics::register) {
 			<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(metrics)) =&gt; <span class="prelude-val">Some</span>(metrics),
@@ -2100,6 +2118,7 @@
 			metrics: metrics.as_ref().map(|m| m.environment.clone()),
 			justification_sender: <span class="prelude-val">Some</span>(justification_sender),
 			telemetry: telemetry.clone(),
+			offchain_tx_pool_factory,
 			_phantom: PhantomData,
 		});
 
@@ -2251,6 +2270,7 @@
 					metrics: <span class="self">self</span>.env.metrics.clone(),
 					justification_sender: <span class="self">self</span>.env.justification_sender.clone(),
 					telemetry: <span class="self">self</span>.telemetry.clone(),
+					offchain_tx_pool_factory: <span class="self">self</span>.env.offchain_tx_pool_factory.clone(),
 					_phantom: PhantomData,
 				});
 

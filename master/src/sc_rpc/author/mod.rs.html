@@ -213,6 +213,9 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -252,10 +255,10 @@
 	error::IntoPoolError, BlockHash, InPoolTransaction, TransactionFor, TransactionPool,
 	TransactionSource, TxHash,
 };
-<span class="kw">use </span>sp_api::ProvideRuntimeApi;
+<span class="kw">use </span>sp_api::{ApiExt, ProvideRuntimeApi};
 <span class="kw">use </span>sp_blockchain::HeaderBackend;
 <span class="kw">use </span>sp_core::Bytes;
-<span class="kw">use </span>sp_keystore::KeystorePtr;
+<span class="kw">use </span>sp_keystore::{KeystoreExt, KeystorePtr};
 <span class="kw">use </span>sp_runtime::{generic, traits::Block <span class="kw">as </span>BlockT};
 <span class="kw">use </span>sp_session::SessionKeys;
 
@@ -337,8 +340,11 @@
 		<span class="self">self</span>.deny_unsafe.check_if_safe()<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>best_block_hash = <span class="self">self</span>.client.info().best_hash;
-		<span class="self">self</span>.client
-			.runtime_api()
+		<span class="kw">let </span><span class="kw-2">mut </span>runtime_api = <span class="self">self</span>.client.runtime_api();
+
+		runtime_api.register_extension(KeystoreExt::from(<span class="self">self</span>.keystore.clone()));
+
+		runtime_api
 			.generate_session_keys(best_block_hash, <span class="prelude-val">None</span>)
 			.map(Into::into)
 			.map_err(|api_err| Error::Client(Box::new(api_err)).into())

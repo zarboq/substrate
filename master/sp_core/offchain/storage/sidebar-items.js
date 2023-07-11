@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["InMemOffchainStorage"]};
+window.SIDEBAR_ITEMS = {"struct":["InMemOffchainStorage","OffchainDb"]};

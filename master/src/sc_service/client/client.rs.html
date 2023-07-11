@@ -2148,6 +2148,9 @@
 <a href="#2148" id="2148">2148</a>
 <a href="#2149" id="2149">2149</a>
 <a href="#2150" id="2150">2150</a>
+<a href="#2151" id="2151">2151</a>
+<a href="#2152" id="2152">2152</a>
+<a href="#2153" id="2153">2153</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2212,10 +2215,8 @@
 		well_known_keys, ChildInfo, ChildType, PrefixedStorageKey, StorageChild, StorageData,
 		StorageKey,
 	},
-	traits::SpawnNamed,
+	traits::{CallContext, SpawnNamed},
 };
-<span class="attr">#[cfg(feature = <span class="string">&quot;test-helpers&quot;</span>)]
-</span><span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::{
 	generic::{BlockId, SignedBlock},
 	traits::{
@@ -2311,7 +2312,6 @@
 	backend: Arc&lt;in_mem::Backend&lt;Block&gt;&gt;,
 	executor: E,
 	genesis_block_builder: G,
-	keystore: <span class="prelude-ty">Option</span>&lt;KeystorePtr&gt;,
 	prometheus_registry: <span class="prelude-ty">Option</span>&lt;Registry&gt;,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
 	spawn_handle: Box&lt;<span class="kw">dyn </span>SpawnNamed&gt;,
@@ -2331,7 +2331,6 @@
 		backend,
 		executor,
 		genesis_block_builder,
-		keystore,
 		spawn_handle,
 		prometheus_registry,
 		telemetry,
@@ -2374,7 +2373,6 @@
 	backend: Arc&lt;B&gt;,
 	executor: E,
 	genesis_block_builder: G,
-	keystore: <span class="prelude-ty">Option</span>&lt;KeystorePtr&gt;,
 	spawn_handle: Box&lt;<span class="kw">dyn </span>SpawnNamed&gt;,
 	prometheus_registry: <span class="prelude-ty">Option</span>&lt;Registry&gt;,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
@@ -2389,12 +2387,7 @@
 	Block: BlockT,
 	B: backend::LocalBackend&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 {
-	<span class="kw">let </span>extensions = ExecutionExtensions::new(
-		Default::default(),
-		keystore,
-		sc_offchain::OffchainDb::factory_from_backend(<span class="kw-2">&amp;*</span>backend),
-		Arc::new(executor.clone()),
-	);
+	<span class="kw">let </span>extensions = ExecutionExtensions::new(<span class="prelude-val">None</span>, Arc::new(executor.clone()));
 
 	<span class="kw">let </span>call_executor =
 		LocalCallExecutor::new(backend.clone(), executor, config.clone(), extensions)<span class="question-mark">?</span>;
@@ -3025,12 +3018,12 @@
 			<span class="comment">// We should enact state, but don&#39;t have any storage changes, so we need to execute the
 			// block.
 			</span>(<span class="bool-val">true</span>, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>body)) =&gt; {
-				<span class="kw">let </span>runtime_api = <span class="self">self</span>.runtime_api();
-				<span class="kw">let </span>execution_context = import_block.origin.into();
+				<span class="kw">let </span><span class="kw-2">mut </span>runtime_api = <span class="self">self</span>.runtime_api();
 
-				runtime_api.execute_block_with_context(
+				runtime_api.set_call_context(CallContext::Onchain);
+
+				runtime_api.execute_block(
 					<span class="kw-2">*</span>parent_hash,
-					execution_context,
 					Block::new(import_block.header.clone(), body.clone()),
 				)<span class="question-mark">?</span>;
 
@@ -3877,7 +3870,8 @@
 				params.overlayed_changes,
 				<span class="prelude-val">Some</span>(params.storage_transaction_cache),
 				params.recorder,
-				params.context,
+				params.call_context,
+				params.extensions,
 			)
 			.map_err(Into::into)
 	}
@@ -3888,6 +3882,18 @@
 
 	<span class="kw">fn </span>state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, at: Block::Hash) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::StateBackend, sp_api::ApiError&gt; {
 		<span class="self">self</span>.state_at(at).map_err(Into::into)
+	}
+
+	<span class="kw">fn </span>initialize_extensions(
+		<span class="kw-2">&amp;</span><span class="self">self</span>,
+		at: Block::Hash,
+		extensions: <span class="kw-2">&amp;mut </span>sp_externalities::Extensions,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), sp_api::ApiError&gt; {
+		<span class="kw">let </span>block_number = <span class="self">self</span>.expect_block_number_from_id(<span class="kw-2">&amp;</span>BlockId::Hash(at))<span class="question-mark">?</span>;
+
+		extensions.merge(<span class="self">self</span>.executor.execution_extensions().extensions(at, block_number));
+
+		<span class="prelude-val">Ok</span>(())
 	}
 }
 

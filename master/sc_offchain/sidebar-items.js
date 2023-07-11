@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["STORAGE_PREFIX"],"fn":["notification_future"],"struct":["OffchainDb","OffchainWorkerOptions","OffchainWorkers"],"trait":["NetworkProvider","OffchainWorkerApi"]};
+window.SIDEBAR_ITEMS = {"constant":["STORAGE_PREFIX"],"enum":["NoOffchainStorage"],"struct":["OffchainDb","OffchainWorkerOptions","OffchainWorkers"],"trait":["NetworkProvider","OffchainWorkerApi"]};

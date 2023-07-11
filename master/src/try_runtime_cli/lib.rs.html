@@ -1881,7 +1881,7 @@
 	executor: <span class="kw-2">&amp;</span>WasmExecutor&lt;HostFns&gt;,
 	method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 	data: <span class="kw-2">&amp;</span>[u8],
-	extensions: Extensions,
+	<span class="kw-2">mut </span>extensions: Extensions,
 ) -&gt; sc_cli::Result&lt;(OverlayedChanges, Vec&lt;u8&gt;)&gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>changes = Default::default();
 	<span class="kw">let </span>encoded_results = StateMachine::new(
@@ -1890,11 +1890,11 @@
 		executor,
 		method,
 		data,
-		extensions,
+		<span class="kw-2">&amp;mut </span>extensions,
 		<span class="kw-2">&amp;</span>sp_state_machine::backend::BackendRuntimeCode::new(<span class="kw-2">&amp;</span>ext.backend).runtime_code()<span class="question-mark">?</span>,
 		CallContext::Offchain,
 	)
-	.execute(sp_state_machine::ExecutionStrategy::AlwaysWasm)
+	.execute()
 	.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;failed to execute &#39;{}&#39;: {}&quot;</span>, method, e))
 	.map_err::&lt;sc_cli::Error, <span class="kw">_</span>&gt;(Into::into)<span class="question-mark">?</span>;
 
@@ -1910,7 +1910,7 @@
 	executor: <span class="kw-2">&amp;</span>WasmExecutor&lt;HostFns&gt;,
 	method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 	data: <span class="kw-2">&amp;</span>[u8],
-	extensions: Extensions,
+	<span class="kw-2">mut </span>extensions: Extensions,
 	maybe_export_proof: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 ) -&gt; sc_cli::Result&lt;(OverlayedChanges, Vec&lt;u8&gt;)&gt; {
 	<span class="kw">use </span>parity_scale_codec::Encode;
@@ -1929,11 +1929,11 @@
 		executor,
 		method,
 		data,
-		extensions,
+		<span class="kw-2">&amp;mut </span>extensions,
 		<span class="kw-2">&amp;</span>runtime_code,
 		CallContext::Offchain,
 	)
-	.execute(sp_state_machine::ExecutionStrategy::AlwaysWasm)
+	.execute()
 	.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;failed to execute {}: {}&quot;</span>, method, e))
 	.map_err::&lt;sc_cli::Error, <span class="kw">_</span>&gt;(Into::into)<span class="question-mark">?</span>;
 

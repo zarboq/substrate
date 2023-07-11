@@ -1908,6 +1908,48 @@
 <a href="#1908" id="1908">1908</a>
 <a href="#1909" id="1909">1909</a>
 <a href="#1910" id="1910">1910</a>
+<a href="#1911" id="1911">1911</a>
+<a href="#1912" id="1912">1912</a>
+<a href="#1913" id="1913">1913</a>
+<a href="#1914" id="1914">1914</a>
+<a href="#1915" id="1915">1915</a>
+<a href="#1916" id="1916">1916</a>
+<a href="#1917" id="1917">1917</a>
+<a href="#1918" id="1918">1918</a>
+<a href="#1919" id="1919">1919</a>
+<a href="#1920" id="1920">1920</a>
+<a href="#1921" id="1921">1921</a>
+<a href="#1922" id="1922">1922</a>
+<a href="#1923" id="1923">1923</a>
+<a href="#1924" id="1924">1924</a>
+<a href="#1925" id="1925">1925</a>
+<a href="#1926" id="1926">1926</a>
+<a href="#1927" id="1927">1927</a>
+<a href="#1928" id="1928">1928</a>
+<a href="#1929" id="1929">1929</a>
+<a href="#1930" id="1930">1930</a>
+<a href="#1931" id="1931">1931</a>
+<a href="#1932" id="1932">1932</a>
+<a href="#1933" id="1933">1933</a>
+<a href="#1934" id="1934">1934</a>
+<a href="#1935" id="1935">1935</a>
+<a href="#1936" id="1936">1936</a>
+<a href="#1937" id="1937">1937</a>
+<a href="#1938" id="1938">1938</a>
+<a href="#1939" id="1939">1939</a>
+<a href="#1940" id="1940">1940</a>
+<a href="#1941" id="1941">1941</a>
+<a href="#1942" id="1942">1942</a>
+<a href="#1943" id="1943">1943</a>
+<a href="#1944" id="1944">1944</a>
+<a href="#1945" id="1945">1945</a>
+<a href="#1946" id="1946">1946</a>
+<a href="#1947" id="1947">1947</a>
+<a href="#1948" id="1948">1948</a>
+<a href="#1949" id="1949">1949</a>
+<a href="#1950" id="1950">1950</a>
+<a href="#1951" id="1951">1951</a>
+<a href="#1952" id="1952">1952</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2016,6 +2058,7 @@
 	SlotInfo, StorageChanges,
 };
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_DEBUG, CONSENSUS_TRACE};
+<span class="kw">use </span>sc_transaction_pool_api::OffchainTransactionPoolFactory;
 <span class="kw">use </span>sp_api::{ApiExt, ProvideRuntimeApi};
 <span class="kw">use </span>sp_application_crypto::AppCrypto;
 <span class="kw">use </span>sp_block_builder::BlockBuilder <span class="kw">as </span>BlockBuilderApi;
@@ -2026,7 +2069,7 @@
 <span class="kw">use </span>sp_consensus::{BlockOrigin, Environment, Error <span class="kw">as </span>ConsensusError, Proposer, SelectChain};
 <span class="kw">use </span>sp_consensus_babe::inherents::BabeInherentData;
 <span class="kw">use </span>sp_consensus_slots::Slot;
-<span class="kw">use </span>sp_core::ExecutionContext;
+<span class="kw">use </span>sp_core::traits::SpawnEssentialNamed;
 <span class="kw">use </span>sp_inherents::{CreateInherentDataProviders, InherentData, InherentDataProvider};
 <span class="kw">use </span>sp_keystore::KeystorePtr;
 <span class="kw">use </span>sp_runtime::{
@@ -2902,6 +2945,7 @@
 	config: BabeConfiguration,
 	epoch_changes: SharedEpochChanges&lt;Block, Epoch&gt;,
 	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
+	offchain_tx_pool_factory: OffchainTransactionPoolFactory&lt;Block&gt;,
 }
 
 <span class="kw">impl</span>&lt;Block, Client, SelectChain, CIDP&gt; BabeVerifier&lt;Block, Client, SelectChain, CIDP&gt;
@@ -2918,12 +2962,11 @@
 		at_hash: Block::Hash,
 		inherent_data: InherentData,
 		create_inherent_data_providers: CIDP::InherentDataProviders,
-		execution_context: ExecutionContext,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&lt;Block&gt;&gt; {
 		<span class="kw">let </span>inherent_res = <span class="self">self
 			</span>.client
 			.runtime_api()
-			.check_inherents_with_context(at_hash, execution_context, block, inherent_data)
+			.check_inherents(at_hash, block, inherent_data)
 			.map_err(Error::RuntimeApi)<span class="question-mark">?</span>;
 
 		<span class="kw">if </span>!inherent_res.ok() {
@@ -3008,8 +3051,13 @@
 		};
 
 		<span class="comment">// submit equivocation report at best block.
-		</span><span class="self">self</span>.client
-			.runtime_api()
+		</span><span class="kw">let </span><span class="kw-2">mut </span>runtime_api = <span class="self">self</span>.client.runtime_api();
+
+		<span class="comment">// Register the offchain tx pool to be able to use it from the runtime.
+		</span>runtime_api
+			.register_extension(<span class="self">self</span>.offchain_tx_pool_factory.offchain_transaction_pool(best_hash));
+
+		runtime_api
 			.submit_report_equivocation_unsigned_extrinsic(
 				best_hash,
 				equivocation_proof,
@@ -3160,7 +3208,6 @@
 							parent_hash,
 							inherent_data,
 							create_inherent_data_providers,
-							block.origin.into(),
 						)
 						.<span class="kw">await</span><span class="question-mark">?</span>;
 					}
@@ -3678,6 +3725,38 @@
 	<span class="prelude-val">Ok</span>((import, link))
 }
 
+<span class="doccomment">/// Parameters passed to [`import_queue`].
+</span><span class="kw">pub struct </span>ImportQueueParams&lt;<span class="lifetime">&#39;a</span>, Block: BlockT, BI, Client, CIDP, SelectChain, Spawn&gt; {
+	<span class="doccomment">/// The BABE link that is created by [`block_import`].
+	</span><span class="kw">pub </span>link: BabeLink&lt;Block&gt;,
+	<span class="doccomment">/// The block import that should be wrapped.
+	</span><span class="kw">pub </span>block_import: BI,
+	<span class="doccomment">/// Optional justification import.
+	</span><span class="kw">pub </span>justification_import: <span class="prelude-ty">Option</span>&lt;BoxJustificationImport&lt;Block&gt;&gt;,
+	<span class="doccomment">/// The client to interact with the internals of the node.
+	</span><span class="kw">pub </span>client: Arc&lt;Client&gt;,
+	<span class="doccomment">/// A [`SelectChain`] implementation.
+	///
+	/// Used to determine the best block that should be used as basis when sending an equivocation
+	/// report.
+	</span><span class="kw">pub </span>select_chain: SelectChain,
+	<span class="doccomment">/// Used to crate the inherent data providers.
+	///
+	/// These inherent data providers are then used to create the inherent data that is
+	/// passed to the `check_inherents` runtime call.
+	</span><span class="kw">pub </span>create_inherent_data_providers: CIDP,
+	<span class="doccomment">/// Spawner for spawning futures.
+	</span><span class="kw">pub </span>spawner: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Spawn,
+	<span class="doccomment">/// Registry for prometheus metrics.
+	</span><span class="kw">pub </span>registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Registry&gt;,
+	<span class="doccomment">/// Optional telemetry handle to report telemetry events.
+	</span><span class="kw">pub </span>telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
+	<span class="doccomment">/// The offchain transaction pool factory.
+	///
+	/// Will be used when sending equivocation reports.
+	</span><span class="kw">pub </span>offchain_tx_pool_factory: OffchainTransactionPoolFactory&lt;Block&gt;,
+}
+
 <span class="doccomment">/// Start an import queue for the BABE consensus algorithm.
 ///
 /// This method returns the import queue, some data that needs to be passed to the block authoring
@@ -3687,19 +3766,22 @@
 ///
 /// The block import object provided must be the `BabeBlockImport` or a wrapper
 /// of it, otherwise crucial import logic will be omitted.
-</span><span class="kw">pub fn </span>import_queue&lt;Block: BlockT, Client, SelectChain, Inner, CIDP&gt;(
-	babe_link: BabeLink&lt;Block&gt;,
-	block_import: Inner,
-	justification_import: <span class="prelude-ty">Option</span>&lt;BoxJustificationImport&lt;Block&gt;&gt;,
-	client: Arc&lt;Client&gt;,
-	select_chain: SelectChain,
-	create_inherent_data_providers: CIDP,
-	spawner: <span class="kw-2">&amp;</span><span class="kw">impl </span>sp_core::traits::SpawnEssentialNamed,
-	registry: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Registry&gt;,
-	telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
+</span><span class="kw">pub fn </span>import_queue&lt;Block: BlockT, Client, SelectChain, BI, CIDP, Spawn&gt;(
+	ImportQueueParams {
+		link: babe_link,
+		block_import,
+		justification_import,
+		client,
+		select_chain,
+		create_inherent_data_providers,
+		spawner,
+		registry,
+		telemetry,
+		offchain_tx_pool_factory,
+	}: ImportQueueParams&lt;<span class="lifetime">&#39;_</span>, Block, BI, Client, CIDP, SelectChain, Spawn&gt;,
 ) -&gt; ClientResult&lt;(DefaultImportQueue&lt;Block, Client&gt;, BabeWorkerHandle&lt;Block&gt;)&gt;
 <span class="kw">where
-	</span>Inner: BlockImport&lt;
+	</span>BI: BlockImport&lt;
 			Block,
 			Error = ConsensusError,
 			Transaction = sp_api::TransactionFor&lt;Client, Block&gt;,
@@ -3717,6 +3799,7 @@
 	SelectChain: sp_consensus::SelectChain&lt;Block&gt; + <span class="lifetime">&#39;static</span>,
 	CIDP: CreateInherentDataProviders&lt;Block, ()&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
 	CIDP::InherentDataProviders: InherentDataProviderExt + Send + Sync,
+	Spawn: SpawnEssentialNamed,
 {
 	<span class="kw">const </span>HANDLE_BUFFER_SIZE: usize = <span class="number">1024</span>;
 
@@ -3727,6 +3810,7 @@
 		epoch_changes: babe_link.epoch_changes.clone(),
 		telemetry,
 		client: client.clone(),
+		offchain_tx_pool_factory,
 	};
 
 	<span class="kw">let </span>(worker_tx, worker_rx) = channel(HANDLE_BUFFER_SIZE);

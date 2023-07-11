@@ -1511,6 +1511,14 @@
 <a href="#1511" id="1511">1511</a>
 <a href="#1512" id="1512">1512</a>
 <a href="#1513" id="1513">1513</a>
+<a href="#1514" id="1514">1514</a>
+<a href="#1515" id="1515">1515</a>
+<a href="#1516" id="1516">1516</a>
+<a href="#1517" id="1517">1517</a>
+<a href="#1518" id="1518">1518</a>
+<a href="#1519" id="1519">1519</a>
+<a href="#1520" id="1520">1520</a>
+<a href="#1521" id="1521">1521</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1553,6 +1561,8 @@
 	utils::is_descendent_of,
 };
 <span class="kw">use </span>sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_DEBUG, CONSENSUS_INFO};
+<span class="kw">use </span>sc_transaction_pool_api::OffchainTransactionPoolFactory;
+<span class="kw">use </span>sp_api::ApiExt;
 <span class="kw">use </span>sp_blockchain::HeaderMetadata;
 <span class="kw">use </span>sp_consensus::SelectChain <span class="kw">as </span>SelectChainT;
 <span class="kw">use </span>sp_consensus_grandpa::{
@@ -1957,6 +1967,7 @@
 	<span class="kw">pub</span>(<span class="kw">crate</span>) metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 	<span class="kw">pub</span>(<span class="kw">crate</span>) justification_sender: <span class="prelude-ty">Option</span>&lt;GrandpaJustificationSender&lt;Block&gt;&gt;,
 	<span class="kw">pub</span>(<span class="kw">crate</span>) telemetry: <span class="prelude-ty">Option</span>&lt;TelemetryHandle&gt;,
+	<span class="kw">pub</span>(<span class="kw">crate</span>) offchain_tx_pool_factory: OffchainTransactionPoolFactory&lt;Block&gt;,
 	<span class="kw">pub</span>(<span class="kw">crate</span>) _phantom: PhantomData&lt;Backend&gt;,
 }
 
@@ -2083,8 +2094,13 @@
 		<span class="comment">// submit equivocation report at **best** block
 		</span><span class="kw">let </span>equivocation_proof = EquivocationProof::new(authority_set.set_id, equivocation);
 
-		<span class="self">self</span>.client
-			.runtime_api()
+		<span class="kw">let </span><span class="kw-2">mut </span>runtime_api = <span class="self">self</span>.client.runtime_api();
+
+		runtime_api.register_extension(
+			<span class="self">self</span>.offchain_tx_pool_factory.offchain_transaction_pool(best_block_hash),
+		);
+
+		runtime_api
 			.submit_report_equivocation_unsigned_extrinsic(
 				best_block_hash,
 				equivocation_proof,

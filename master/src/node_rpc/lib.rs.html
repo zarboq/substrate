@@ -189,6 +189,15 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -281,12 +290,23 @@
 	</span><span class="kw">pub </span>grandpa: GrandpaDeps&lt;B&gt;,
 	<span class="doccomment">/// Shared statement store reference.
 	</span><span class="kw">pub </span>statement_store: Arc&lt;<span class="kw">dyn </span>sp_statement_store::StatementStore&gt;,
+	<span class="doccomment">/// The backend used by the node.
+	</span><span class="kw">pub </span>backend: Arc&lt;B&gt;,
 }
 
 <span class="doccomment">/// Instantiate all Full RPC extensions.
 </span><span class="kw">pub fn </span>create_full&lt;C, P, SC, B&gt;(
-	deps: FullDeps&lt;C, P, SC, B&gt;,
-	backend: Arc&lt;B&gt;,
+	FullDeps {
+		client,
+		pool,
+		select_chain,
+		chain_spec,
+		deny_unsafe,
+		babe,
+		grandpa,
+		statement_store,
+		backend,
+	}: FullDeps&lt;C, P, SC, B&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;RpcModule&lt;()&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error + Send + Sync&gt;&gt;
 <span class="kw">where
 	</span>C: ProvideRuntimeApi&lt;Block&gt;
@@ -321,16 +341,6 @@
 	<span class="kw">use </span>substrate_state_trie_migration_rpc::{StateMigration, StateMigrationApiServer};
 
 	<span class="kw">let </span><span class="kw-2">mut </span>io = RpcModule::new(());
-	<span class="kw">let </span>FullDeps {
-		client,
-		pool,
-		select_chain,
-		chain_spec,
-		deny_unsafe,
-		babe,
-		grandpa,
-		statement_store,
-	} = deps;
 
 	<span class="kw">let </span>BabeDeps { keystore, babe_worker_handle } = babe;
 	<span class="kw">let </span>GrandpaDeps {
@@ -350,7 +360,15 @@
 	<span class="comment">// Making synchronous calls in light client freezes the browser currently,
 	// more context: https://github.com/paritytech/substrate/pull/3480
 	// These RPCs should use an asynchronous caller instead.
-	</span>io.merge(Mmr::new(client.clone()).into_rpc())<span class="question-mark">?</span>;
+	</span>io.merge(
+		Mmr::new(
+			client.clone(),
+			backend
+				.offchain_storage()
+				.ok_or_else(|| <span class="string">&quot;Backend doesn&#39;t provide an offchain storage&quot;</span>)<span class="question-mark">?</span>,
+		)
+		.into_rpc(),
+	)<span class="question-mark">?</span>;
 	io.merge(TransactionPayment::new(client.clone()).into_rpc())<span class="question-mark">?</span>;
 	io.merge(
 		Babe::new(client.clone(), babe_worker_handle.clone(), keystore, select_chain, deny_unsafe)

@@ -756,9 +756,6 @@
 <a href="#756" id="756">756</a>
 <a href="#757" id="757">757</a>
 <a href="#758" id="758">758</a>
-<a href="#759" id="759">759</a>
-<a href="#760" id="760">760</a>
-<a href="#761" id="761">761</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -784,9 +781,7 @@
 };
 <span class="kw">use </span>frame_support::traits::StorageInfo;
 <span class="kw">use </span>linked_hash_map::LinkedHashMap;
-<span class="kw">use </span>sc_cli::{
-	execution_method_from_cli, CliConfiguration, ExecutionStrategy, <span class="prelude-ty">Result</span>, SharedParams,
-};
+<span class="kw">use </span>sc_cli::{execution_method_from_cli, CliConfiguration, <span class="prelude-ty">Result</span>, SharedParams};
 <span class="kw">use </span>sc_client_db::BenchmarkingState;
 <span class="kw">use </span>sc_executor::WasmExecutor;
 <span class="kw">use </span>sc_service::Configuration;
@@ -943,7 +938,6 @@ not created by a node that was compiled with the flag&quot;</span>;
 		}
 
 		<span class="kw">let </span>spec = config.chain_spec;
-		<span class="kw">let </span>strategy = <span class="self">self</span>.execution.unwrap_or(ExecutionStrategy::Wasm);
 		<span class="kw">let </span>pallet = <span class="self">self</span>.pallet.clone().unwrap_or_default();
 		<span class="kw">let </span>pallet = pallet.as_bytes();
 		<span class="kw">let </span>extrinsic = <span class="self">self</span>.extrinsic.clone().unwrap_or_default();
@@ -1004,11 +998,11 @@ not created by a node that was compiled with the flag&quot;</span>;
 			<span class="kw-2">&amp;</span>executor,
 			<span class="string">&quot;Benchmark_benchmark_metadata&quot;</span>,
 			<span class="kw-2">&amp;</span>(<span class="self">self</span>.extra).encode(),
-			extensions(),
+			<span class="kw-2">&amp;mut </span>extensions(),
 			<span class="kw-2">&amp;</span>sp_state_machine::backend::BackendRuntimeCode::new(state).runtime_code()<span class="question-mark">?</span>,
 			CallContext::Offchain,
 		)
-		.execute(strategy.into())
+		.execute()
 		.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{}: {}&quot;</span>, ERROR_METADATA_NOT_FOUND, e))<span class="question-mark">?</span>;
 
 		<span class="kw">let </span>(list, storage_info) =
@@ -1140,12 +1134,12 @@ not created by a node that was compiled with the flag&quot;</span>;
 							</span><span class="number">1</span>,    <span class="comment">// no need to do internal repeats
 						</span>)
 							.encode(),
-						extensions(),
+						<span class="kw-2">&amp;mut </span>extensions(),
 						<span class="kw-2">&amp;</span>sp_state_machine::backend::BackendRuntimeCode::new(state)
 							.runtime_code()<span class="question-mark">?</span>,
 						CallContext::Offchain,
 					)
-					.execute(strategy.into())
+					.execute()
 					.map_err(|e| {
 						<span class="macro">format!</span>(<span class="string">&quot;Error executing and verifying runtime benchmark: {}&quot;</span>, e)
 					})<span class="question-mark">?</span>;
@@ -1180,12 +1174,12 @@ not created by a node that was compiled with the flag&quot;</span>;
 							</span><span class="self">self</span>.repeat,
 						)
 							.encode(),
-						extensions(),
+						<span class="kw-2">&amp;mut </span>extensions(),
 						<span class="kw-2">&amp;</span>sp_state_machine::backend::BackendRuntimeCode::new(state)
 							.runtime_code()<span class="question-mark">?</span>,
 						CallContext::Offchain,
 					)
-					.execute(strategy.into())
+					.execute()
 					.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Error executing runtime benchmark: {}&quot;</span>, e))<span class="question-mark">?</span>;
 
 					<span class="kw">let </span>batch =
@@ -1212,12 +1206,12 @@ not created by a node that was compiled with the flag&quot;</span>;
 							</span><span class="self">self</span>.repeat,
 						)
 							.encode(),
-						extensions(),
+						<span class="kw-2">&amp;mut </span>extensions(),
 						<span class="kw-2">&amp;</span>sp_state_machine::backend::BackendRuntimeCode::new(state)
 							.runtime_code()<span class="question-mark">?</span>,
 						CallContext::Offchain,
 					)
-					.execute(strategy.into())
+					.execute()
 					.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Error executing runtime benchmark: {}&quot;</span>, e))<span class="question-mark">?</span>;
 
 					<span class="kw">let </span>batch =
