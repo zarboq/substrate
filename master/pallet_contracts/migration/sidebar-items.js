@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["IsFinished","MigrateResult","StepResult"],"mod":["v10","v11","v12","v9"],"struct":["Migration"],"trait":["MigrateSequence","MigrationStep"],"type":["Cursor"]};
+window.SIDEBAR_ITEMS = {"enum":["IsFinished","MigrateResult","StepResult"],"mod":["v09","v10","v11","v12"],"struct":["Migration"],"trait":["MigrateSequence","MigrationStep"],"type":["Cursor"]};
