@@ -1069,8 +1069,8 @@
 			SystemOrigin::Signed(new_account.clone()).into(),
 			asset_id
 		).is_ok());
-		<span class="comment">// `touch` should reserve some balance of the caller...
-		</span><span class="macro">assert!</span>(!T::Currency::reserved_balance(<span class="kw-2">&amp;</span>new_account).is_zero());
+		<span class="comment">// `touch` should reserve balance of the caller according to the `AssetAccountDeposit` amount...
+		</span><span class="macro">assert_eq!</span>(T::Currency::reserved_balance(<span class="kw-2">&amp;</span>new_account), T::AssetAccountDeposit::get());
 		<span class="comment">// ...and also create an `Account` entry.
 		</span><span class="macro">assert!</span>(Account::&lt;T, I&gt;::contains_key(asset_id.into(), <span class="kw-2">&amp;</span>new_account));
 	}: <span class="kw">_</span>(SystemOrigin::Signed(new_account.clone()), asset_id, <span class="bool-val">true</span>)
@@ -1090,8 +1090,8 @@
 			asset_id,
 			new_account_lookup.clone()
 		).is_ok());
-		<span class="comment">// `touch_other` should reserve balance of the freezer
-		</span><span class="macro">assert!</span>(!T::Currency::reserved_balance(<span class="kw-2">&amp;</span>asset_owner).is_zero());
+		<span class="comment">// `touch` should reserve balance of the caller according to the `AssetAccountDeposit` amount...
+		</span><span class="macro">assert_eq!</span>(T::Currency::reserved_balance(<span class="kw-2">&amp;</span>asset_owner), T::AssetAccountDeposit::get());
 		<span class="macro">assert!</span>(Account::&lt;T, I&gt;::contains_key(asset_id.into(), <span class="kw-2">&amp;</span>new_account));
 	}: <span class="kw">_</span>(SystemOrigin::Signed(asset_owner.clone()), asset_id, new_account_lookup.clone())
 	verify {
