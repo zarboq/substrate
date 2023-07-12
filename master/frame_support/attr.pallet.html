@@ -482,7 +482,7 @@ storage’s default value. This attribute can be used multiple times.</p>
 <p>The <code>#[pallet::genesis_config]</code> attribute allows you to define the genesis configuration
 for the pallet.</p>
 <p>Item is defined as either an enum or a struct. It needs to be public and implement the
-trait <a href="traits/trait.GenesisBuild.html" title="trait frame_support::traits::GenesisBuild"><code>GenesisBuild</code></a> with
+trait <a href="traits/trait.BuildGenesisConfig.html" title="trait frame_support::traits::BuildGenesisConfig"><code>BuildGenesisConfig</code></a> with
 <a href="#genesis-build-palletgenesis_build-optional"><code>#[pallet::genesis_build]</code></a>. The type
 generics are constrained to be either none, or <code>T</code> or <code>T: Config</code>.</p>
 <p>E.g:</p>
@@ -712,14 +712,15 @@ instance, it is important to bound by <code>= ()</code> on every type.</p>
 	//
 	// Type must implement the `Default` trait.
 	</span><span class="attr">#[pallet::genesis_config]
-	#[derive(Default)]
-	</span><span class="kw">pub struct </span>GenesisConfig {
+	#[derive(frame_support::DefaultNoBound)]
+	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&gt; {
+	    _config: sp_std::marker::PhantomData&lt;T&gt;,
 		_myfield: u32,
 	}
 
 	<span class="comment">// Declare genesis builder. (This is need only if GenesisConfig is declared)
 	</span><span class="attr">#[pallet::genesis_build]
-	</span><span class="kw">impl</span>&lt;T: Config&gt; GenesisBuild&lt;T&gt; <span class="kw">for </span>GenesisConfig {
+	</span><span class="kw">impl</span>&lt;T: Config&gt; BuildGenesisConfig <span class="kw">for </span>GenesisConfig&lt;T&gt; {
 		<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
 	}
 
@@ -845,13 +846,14 @@ instance, it is important to bound by <code>= ()</code> on every type.</p>
 		StorageMap&lt;Hasher = Blake2_128Concat, Key = u32, Value = u32&gt;;
 
 	<span class="attr">#[pallet::genesis_config]
-	#[derive(Default)]
-	</span><span class="kw">pub struct </span>GenesisConfig {
+	#[derive(frame_support::DefaultNoBound)]
+	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; {
+		 _config: sp_std::marker::PhantomData&lt;(T,I)&gt;,
 		_myfield: u32,
 	}
 
 	<span class="attr">#[pallet::genesis_build]
-	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; GenesisBuild&lt;T, I&gt; <span class="kw">for </span>GenesisConfig {
+	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; BuildGenesisConfig <span class="kw">for </span>GenesisConfig&lt;T, I&gt; {
 		<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
 	}
 

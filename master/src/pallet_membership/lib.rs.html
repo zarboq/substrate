@@ -829,6 +829,8 @@
 <a href="#829" id="829">829</a>
 <a href="#830" id="830">830</a>
 <a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -939,11 +941,12 @@
 	#[derive(frame_support::DefaultNoBound)]
 	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static </span>= ()&gt; {
 		<span class="kw">pub </span>members: BoundedVec&lt;T::AccountId, T::MaxMembers&gt;,
-		<span class="kw">pub </span>phantom: PhantomData&lt;I&gt;,
+		<span class="attr">#[serde(skip)]
+		</span><span class="kw">pub </span>phantom: PhantomData&lt;I&gt;,
 	}
 
 	<span class="attr">#[pallet::genesis_build]
-	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; GenesisBuild&lt;T, I&gt; <span class="kw">for </span>GenesisConfig&lt;T, I&gt; {
+	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; BuildGenesisConfig <span class="kw">for </span>GenesisConfig&lt;T, I&gt; {
 		<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {
 			<span class="kw">use </span>sp_std::collections::btree_set::BTreeSet;
 			<span class="kw">let </span>members_set: BTreeSet&lt;<span class="kw">_</span>&gt; = <span class="self">self</span>.members.iter().collect();
@@ -1357,11 +1360,12 @@
 	<span class="kw">use </span>sp_runtime::{
 		testing::Header,
 		traits::{BadOrigin, BlakeTwo256, IdentityLookup},
+		BuildStorage,
 	};
 
 	<span class="kw">use </span>frame_support::{
 		assert_noop, assert_ok, bounded_vec, ord_parameter_types, parameter_types,
-		traits::{ConstU32, ConstU64, GenesisBuild, StorageVersion},
+		traits::{ConstU32, ConstU64, StorageVersion},
 	};
 	<span class="kw">use </span>frame_system::EnsureSignedBy;
 
@@ -1374,7 +1378,7 @@
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, Call, Config, Storage, Event&lt;T&gt;},
+			System: frame_system::{Pallet, Call, Config&lt;T&gt;, Storage, Event&lt;T&gt;},
 			Membership: pallet_membership::{Pallet, Call, Storage, Config&lt;T&gt;, Event&lt;T&gt;},
 		}
 	);
@@ -1460,7 +1464,7 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new_test_ext() -&gt; sp_io::TestExternalities {
-		<span class="kw">let </span><span class="kw-2">mut </span>t = frame_system::GenesisConfig::default().build_storage::&lt;Test&gt;().unwrap();
+		<span class="kw">let </span><span class="kw-2">mut </span>t = frame_system::GenesisConfig::&lt;Test&gt;::default().build_storage().unwrap();
 		<span class="comment">// We use default for brevity, but you can configure as desired if needed.
 		</span>pallet_membership::GenesisConfig::&lt;Test&gt; {
 			members: <span class="macro">bounded_vec!</span>[<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>],
@@ -1473,7 +1477,7 @@
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new_bench_ext() -&gt; sp_io::TestExternalities {
-		frame_system::GenesisConfig::default().build_storage::&lt;Test&gt;().unwrap().into()
+		frame_system::GenesisConfig::&lt;Test&gt;::default().build_storage().unwrap().into()
 	}
 
 	<span class="attr">#[cfg(feature = <span class="string">&quot;runtime-benchmarks&quot;</span>)]

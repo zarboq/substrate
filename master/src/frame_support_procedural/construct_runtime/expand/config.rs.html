@@ -138,16 +138,6 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -179,7 +169,7 @@
 ) -&gt; TokenStream {
 	<span class="kw">let </span><span class="kw-2">mut </span>types = TokenStream::new();
 	<span class="kw">let </span><span class="kw-2">mut </span>fields = TokenStream::new();
-	<span class="kw">let </span><span class="kw-2">mut </span>build_storage_calls = TokenStream::new();
+	<span class="kw">let </span><span class="kw-2">mut </span>genesis_build_calls = TokenStream::new();
 	<span class="kw">let </span><span class="kw-2">mut </span>query_genesis_config_part_macros = Vec::new();
 
 	<span class="kw">for </span>decl <span class="kw">in </span>pallet_decls {
@@ -202,8 +192,8 @@
 
 			types.extend(expand_config_types(attr, runtime, decl, <span class="kw-2">&amp;</span>config, part_is_generic));
 			fields.extend(<span class="macro">quote!</span>(#attr <span class="kw">pub </span>#field_name: #config,));
-			build_storage_calls
-				.extend(expand_config_build_storage_call(scrate, attr, runtime, decl, field_name));
+			genesis_build_calls
+				.extend(expand_config_build_storage_call(scrate, <span class="kw-2">&amp;</span>config, attr, field_name));
 			query_genesis_config_part_macros.push(<span class="macro">quote! </span>{
 				#<span class="macro">path::__substrate_genesis_config_check::is_genesis_config_defined!</span>(#pallet_name);
 				<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
@@ -217,10 +207,8 @@
 
 		#types
 
-		<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-		</span><span class="kw">use </span>#scrate::serde <span class="kw">as </span>__genesis_config_serde_import__;
-		<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-		#[derive(#scrate::serde::Serialize, #scrate::serde::Deserialize, Default)]
+		<span class="kw">use </span>#scrate::serde <span class="kw">as </span>__genesis_config_serde_import__;
+		<span class="attr">#[derive(#scrate::serde::Serialize, #scrate::serde::Deserialize, Default)]
 		#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
 		#[serde(deny_unknown_fields)]
 		#[serde(<span class="kw">crate </span>= <span class="string">&quot;__genesis_config_serde_import__&quot;</span>)]
@@ -238,13 +226,17 @@
 				<span class="kw-2">&amp;</span><span class="self">self</span>,
 				storage: <span class="kw-2">&amp;mut </span>#scrate::sp_runtime::Storage,
 			) -&gt; std::result::Result&lt;(), String&gt; {
-				#build_storage_calls
-
 				#scrate::BasicExternalities::execute_with_storage(storage, || {
-					&lt;AllPalletsWithSystem <span class="kw">as </span>#scrate::traits::OnGenesis&gt;::on_genesis();
-				});
+					&lt;<span class="self">Self </span><span class="kw">as </span>#scrate::traits::BuildGenesisConfig&gt;::build(<span class="kw-2">&amp;</span><span class="self">self</span>);
+					<span class="prelude-val">Ok</span>(())
+				})
+			}
+		}
 
-				<span class="prelude-val">Ok</span>(())
+		<span class="kw">impl </span>#scrate::traits::BuildGenesisConfig <span class="kw">for </span>RuntimeGenesisConfig {
+			<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+				#genesis_build_calls
+				&lt;AllPalletsWithSystem <span class="kw">as </span>#scrate::traits::OnGenesis&gt;::on_genesis();
 			}
 		}
 	}
@@ -262,40 +254,28 @@
 	<span class="kw">match </span>(decl.instance.as_ref(), part_is_generic) {
 		(<span class="prelude-val">Some</span>(inst), <span class="bool-val">true</span>) =&gt; <span class="macro">quote! </span>{
 			#attr
-			<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-			</span><span class="kw">pub type </span>#config = #path::GenesisConfig&lt;#runtime, #path::#inst&gt;;
+			<span class="kw">pub type </span>#config = #path::GenesisConfig&lt;#runtime, #path::#inst&gt;;
 		},
 		(<span class="prelude-val">None</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">quote! </span>{
 			#attr
-			<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-			</span><span class="kw">pub type </span>#config = #path::GenesisConfig&lt;#runtime&gt;;
+			<span class="kw">pub type </span>#config = #path::GenesisConfig&lt;#runtime&gt;;
 		},
 		(<span class="kw">_</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">quote! </span>{
 			#attr
-			<span class="attr">#[cfg(any(feature = <span class="string">&quot;std&quot;</span>, test))]
-			</span><span class="kw">pub type </span>#config = #path::GenesisConfig;
+			<span class="kw">pub type </span>#config = #path::GenesisConfig;
 		},
 	}
 }
 
 <span class="kw">fn </span>expand_config_build_storage_call(
 	scrate: <span class="kw-2">&amp;</span>TokenStream,
+	pallet_genesis_config: <span class="kw-2">&amp;</span>Ident,
 	attr: <span class="kw-2">&amp;</span>TokenStream,
-	runtime: <span class="kw-2">&amp;</span>Ident,
-	decl: <span class="kw-2">&amp;</span>Pallet,
 	field_name: <span class="kw-2">&amp;</span>Ident,
 ) -&gt; TokenStream {
-	<span class="kw">let </span>path = <span class="kw-2">&amp;</span>decl.path;
-	<span class="kw">let </span>instance = <span class="kw">if let </span><span class="prelude-val">Some</span>(inst) = decl.instance.as_ref() {
-		<span class="macro">quote!</span>(#path::#inst)
-	} <span class="kw">else </span>{
-		<span class="macro">quote!</span>(#path::__InherentHiddenInstance)
-	};
-
 	<span class="macro">quote! </span>{
 		#attr
-		#scrate::sp_runtime::BuildModuleGenesisStorage::
-			&lt;#runtime, #instance&gt;::build_module_genesis_storage(<span class="kw-2">&amp;</span><span class="self">self</span>.#field_name, storage)<span class="question-mark">?</span>;
+		&lt;#pallet_genesis_config <span class="kw">as </span>#scrate::traits::BuildGenesisConfig&gt;::build(<span class="kw-2">&amp;</span><span class="self">self</span>.#field_name);
 	}
 }
 </code></pre></div></section></main></body></html>

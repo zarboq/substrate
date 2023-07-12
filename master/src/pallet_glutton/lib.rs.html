@@ -364,6 +364,8 @@
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -496,14 +498,16 @@
 
 	<span class="attr">#[pallet::genesis_config]
 	#[derive(DefaultNoBound)]
-	</span><span class="kw">pub struct </span>GenesisConfig {
+	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&gt; {
 		<span class="kw">pub </span>compute: FixedU64,
 		<span class="kw">pub </span>storage: FixedU64,
 		<span class="kw">pub </span>trash_data_count: u32,
+		<span class="attr">#[serde(skip)]
+		</span><span class="kw">pub </span>_config: sp_std::marker::PhantomData&lt;T&gt;,
 	}
 
 	<span class="attr">#[pallet::genesis_build]
-	</span><span class="kw">impl</span>&lt;T: Config&gt; GenesisBuild&lt;T&gt; <span class="kw">for </span>GenesisConfig {
+	</span><span class="kw">impl</span>&lt;T: Config&gt; BuildGenesisConfig <span class="kw">for </span>GenesisConfig&lt;T&gt; {
 		<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {
 			<span class="macro">assert!</span>(
 				<span class="self">self</span>.trash_data_count &lt;= MAX_TRASH_DATA_ENTRIES,

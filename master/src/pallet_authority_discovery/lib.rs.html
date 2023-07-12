@@ -437,14 +437,16 @@
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>NextKeys&lt;T: Config&gt; =
 		StorageValue&lt;<span class="kw">_</span>, WeakBoundedVec&lt;AuthorityId, T::MaxAuthorities&gt;, ValueQuery&gt;;
 
-	<span class="attr">#[derive(Default)]
+	<span class="attr">#[derive(frame_support::DefaultNoBound)]
 	#[pallet::genesis_config]
-	</span><span class="kw">pub struct </span>GenesisConfig {
+	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&gt; {
 		<span class="kw">pub </span>keys: Vec&lt;AuthorityId&gt;,
+		<span class="attr">#[serde(skip)]
+		</span><span class="kw">pub </span>_config: sp_std::marker::PhantomData&lt;T&gt;,
 	}
 
 	<span class="attr">#[pallet::genesis_build]
-	</span><span class="kw">impl</span>&lt;T: Config&gt; GenesisBuild&lt;T&gt; <span class="kw">for </span>GenesisConfig {
+	</span><span class="kw">impl</span>&lt;T: Config&gt; BuildGenesisConfig <span class="kw">for </span>GenesisConfig&lt;T&gt; {
 		<span class="kw">fn </span>build(<span class="kw-2">&amp;</span><span class="self">self</span>) {
 			Pallet::&lt;T&gt;::initialize_keys(<span class="kw-2">&amp;</span><span class="self">self</span>.keys)
 		}
@@ -546,7 +548,7 @@
 	<span class="kw">use crate as </span>pallet_authority_discovery;
 	<span class="kw">use </span>frame_support::{
 		parameter_types,
-		traits::{ConstU32, ConstU64, GenesisBuild},
+		traits::{ConstU32, ConstU64},
 	};
 	<span class="kw">use </span>sp_application_crypto::Pair;
 	<span class="kw">use </span>sp_authority_discovery::AuthorityPair;
@@ -555,7 +557,7 @@
 	<span class="kw">use </span>sp_runtime::{
 		testing::{Header, UintAuthorityId},
 		traits::{ConvertInto, IdentityLookup, OpaqueKeys},
-		KeyTypeId, Perbill,
+		BuildStorage, KeyTypeId, Perbill,
 	};
 
 	<span class="kw">type </span>UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic&lt;Test&gt;;
@@ -567,9 +569,9 @@
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic,
 		{
-			System: frame_system::{Pallet, Call, Config, Storage, Event&lt;T&gt;},
+			System: frame_system::{Pallet, Call, Config&lt;T&gt;, Storage, Event&lt;T&gt;},
 			Session: pallet_session::{Pallet, Call, Storage, Event, Config&lt;T&gt;},
-			AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config},
+			AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config&lt;T&gt;},
 		}
 	);
 
@@ -686,13 +688,11 @@
 			.collect::&lt;Vec&lt;(<span class="kw-2">&amp;</span>AuthorityId, AuthorityId)&gt;&gt;();
 
 		<span class="comment">// Build genesis.
-		</span><span class="kw">let </span><span class="kw-2">mut </span>t = frame_system::GenesisConfig::default().build_storage::&lt;Test&gt;().unwrap();
+		</span><span class="kw">let </span><span class="kw-2">mut </span>t = frame_system::GenesisConfig::&lt;Test&gt;::default().build_storage().unwrap();
 
-		GenesisBuild::&lt;Test&gt;::assimilate_storage(
-			<span class="kw-2">&amp;</span>pallet_authority_discovery::GenesisConfig { keys: <span class="macro">vec!</span>[] },
-			<span class="kw-2">&amp;mut </span>t,
-		)
-		.unwrap();
+		pallet_authority_discovery::GenesisConfig::&lt;Test&gt; { keys: <span class="macro">vec!</span>[], ..Default::default() }
+			.assimilate_storage(<span class="kw-2">&amp;mut </span>t)
+			.unwrap();
 
 		<span class="comment">// Create externalities.
 		</span><span class="kw">let </span><span class="kw-2">mut </span>externalities = TestExternalities::new(t);
