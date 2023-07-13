@@ -126,6 +126,49 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2022 Parity Technologies (UK) Ltd.
@@ -161,7 +204,7 @@
 
 <span class="doccomment">/// A trait that converts between a MultiAssetId and either the native currency or an AssetId.
 </span><span class="kw">pub trait </span>MultiAssetIdConverter&lt;MultiAssetId, AssetId&gt; {
-	<span class="doccomment">/// Returns the MultiAssetId reperesenting the native currency of the chain.
+	<span class="doccomment">/// Returns the MultiAssetId representing the native currency of the chain.
 	</span><span class="kw">fn </span>get_native() -&gt; MultiAssetId;
 
 	<span class="doccomment">/// Returns true if the given MultiAssetId is the native currency.
@@ -170,7 +213,7 @@
 	<span class="doccomment">/// If it&#39;s not native, returns the AssetId for the given MultiAssetId.
 	</span><span class="kw">fn </span>try_convert(asset: <span class="kw-2">&amp;</span>MultiAssetId) -&gt; <span class="prelude-ty">Result</span>&lt;AssetId, ()&gt;;
 
-	<span class="doccomment">/// Wrapps an AssetId as a MultiAssetId.
+	<span class="doccomment">/// Wraps an AssetId as a MultiAssetId.
 	</span><span class="kw">fn </span>into_multiasset_id(asset: <span class="kw-2">&amp;</span>AssetId) -&gt; MultiAssetId;
 }
 
@@ -202,6 +245,12 @@
 	</span>Native,
 	<span class="doccomment">/// A non-native asset id.
 	</span>Asset(AssetId),
+}
+
+<span class="kw">impl</span>&lt;AssetId: Ord&gt; From&lt;AssetId&gt; <span class="kw">for </span>NativeOrAssetId&lt;AssetId&gt; {
+	<span class="kw">fn </span>from(asset: AssetId) -&gt; <span class="self">Self </span>{
+		<span class="self">Self</span>::Asset(asset)
+	}
 }
 
 <span class="kw">impl</span>&lt;AssetId: Ord&gt; Ord <span class="kw">for </span>NativeOrAssetId&lt;AssetId&gt; {
@@ -253,5 +302,42 @@
 	<span class="kw">fn </span>into_multiasset_id(asset: <span class="kw-2">&amp;</span>AssetId) -&gt; NativeOrAssetId&lt;AssetId&gt; {
 		NativeOrAssetId::Asset((<span class="kw-2">*</span>asset).clone())
 	}
+}
+
+<span class="doccomment">/// Trait for providing methods to swap between the various asset classes.
+</span><span class="kw">pub trait </span>Swap&lt;AccountId, Balance, MultiAssetId&gt; {
+	<span class="doccomment">/// Swap exactly `amount_in` of asset `path[0]` for asset `path[1]`.
+	/// If an `amount_out_min` is specified, it will return an error if it is unable to acquire
+	/// the amount desired.
+	///
+	/// Withdraws the `path[0]` asset from `sender`, deposits the `path[1]` asset to `send_to`,
+	/// respecting `keep_alive`.
+	///
+	/// If successful, returns the amount of `path[1]` acquired for the `amount_in`.
+	</span><span class="kw">fn </span>swap_exact_tokens_for_tokens(
+		sender: AccountId,
+		path: Vec&lt;MultiAssetId&gt;,
+		amount_in: Balance,
+		amount_out_min: <span class="prelude-ty">Option</span>&lt;Balance&gt;,
+		send_to: AccountId,
+		keep_alive: bool,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Balance, DispatchError&gt;;
+
+	<span class="doccomment">/// Take the `path[0]` asset and swap some amount for `amount_out` of the `path[1]`. If an
+	/// `amount_in_max` is specified, it will return an error if acquiring `amount_out` would be
+	/// too costly.
+	///
+	/// Withdraws `path[0]` asset from `sender`, deposits `path[1]` asset to `send_to`,
+	/// respecting `keep_alive`.
+	///
+	/// If successful returns the amount of the `path[0]` taken to provide `path[1]`.
+	</span><span class="kw">fn </span>swap_tokens_for_exact_tokens(
+		sender: AccountId,
+		path: Vec&lt;MultiAssetId&gt;,
+		amount_out: Balance,
+		amount_in_max: <span class="prelude-ty">Option</span>&lt;Balance&gt;,
+		send_to: AccountId,
+		keep_alive: bool,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;Balance, DispatchError&gt;;
 }
 </code></pre></div></section></main></body></html>
