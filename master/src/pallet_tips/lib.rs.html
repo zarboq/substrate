@@ -599,6 +599,7 @@
 <a href="#599" id="599">599</a>
 <a href="#600" id="600">600</a>
 <a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -675,6 +676,7 @@
 	},
 	Parameter,
 };
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 
 <span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>weights::WeightInfo;
@@ -744,7 +746,7 @@
 
 		<span class="doccomment">/// The period for which a tip remains open after is has achieved threshold tippers.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>TipCountdown: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>TipCountdown: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The percent of the final tip which goes to the original reporter of the tip.
 		</span><span class="attr">#[pallet::constant]
@@ -774,7 +776,7 @@
 		<span class="kw">_</span>,
 		Twox64Concat,
 		T::Hash,
-		OpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, T::BlockNumber, T::Hash&gt;,
+		OpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, BlockNumberFor&lt;T&gt;, T::Hash&gt;,
 		OptionQuery,
 	&gt;;
 
@@ -1071,7 +1073,7 @@
 	///
 	/// `O(T)` and one storage access.
 	</span><span class="kw">fn </span>insert_tip_and_check_closing(
-		tip: <span class="kw-2">&amp;mut </span>OpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, T::BlockNumber, T::Hash&gt;,
+		tip: <span class="kw-2">&amp;mut </span>OpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, BlockNumberFor&lt;T&gt;, T::Hash&gt;,
 		tipper: T::AccountId,
 		tip_value: BalanceOf&lt;T, I&gt;,
 	) -&gt; bool {
@@ -1116,7 +1118,7 @@
 	/// Plus `O(T)` (`T` is Tippers length).
 	</span><span class="kw">fn </span>payout_tip(
 		hash: T::Hash,
-		tip: OpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, T::BlockNumber, T::Hash&gt;,
+		tip: OpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, BlockNumberFor&lt;T&gt;, T::Hash&gt;,
 	) {
 		<span class="kw">let </span><span class="kw-2">mut </span>tips = tip.tips;
 		<span class="self">Self</span>::retain_active_tips(<span class="kw-2">&amp;mut </span>tips);
@@ -1178,7 +1180,7 @@
 
 		<span class="kw">for </span>(hash, old_tip) <span class="kw">in </span>storage_key_iter::&lt;
 			T::Hash,
-			OldOpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, T::BlockNumber, T::Hash&gt;,
+			OldOpenTip&lt;T::AccountId, BalanceOf&lt;T, I&gt;, BlockNumberFor&lt;T&gt;, T::Hash&gt;,
 			Twox64Concat,
 		&gt;(module, item)
 		.drain()

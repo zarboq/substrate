@@ -338,7 +338,7 @@
 </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
-<span class="kw">use </span>frame_system::RawOrigin;
+<span class="kw">use </span>frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>ChildBounties;
 <span class="kw">use </span>pallet_bounties::Pallet <span class="kw">as </span>Bounties;
@@ -430,7 +430,7 @@
 	<span class="kw">let </span>approve_origin =
 		T::SpendOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	Bounties::&lt;T&gt;::approve_bounty(approve_origin, child_bounty_setup.bounty_id)<span class="question-mark">?</span>;
-	Treasury::&lt;T&gt;::on_initialize(T::BlockNumber::zero());
+	Treasury::&lt;T&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 	Bounties::&lt;T&gt;::propose_curator(
 		RawOrigin::Root.into(),
 		child_bounty_setup.bounty_id,
@@ -545,7 +545,7 @@
 	</span>unassign_curator {
 		setup_pot_account::&lt;T&gt;();
 		<span class="kw">let </span>bounty_setup = activate_child_bounty::&lt;T&gt;(<span class="number">0</span>, T::MaximumReasonLength::get())<span class="question-mark">?</span>;
-		Treasury::&lt;T&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 		frame_system::Pallet::&lt;T&gt;::set_block_number(T::BountyUpdatePeriod::get() + <span class="number">1u32</span>.into());
 		<span class="kw">let </span>caller = whitelisted_caller();
 	}: <span class="kw">_</span>(RawOrigin::Signed(caller), bounty_setup.bounty_id,
@@ -619,7 +619,7 @@
 	</span>close_child_bounty_active {
 		setup_pot_account::&lt;T&gt;();
 		<span class="kw">let </span>bounty_setup = activate_child_bounty::&lt;T&gt;(<span class="number">0</span>, T::MaximumReasonLength::get())<span class="question-mark">?</span>;
-		Treasury::&lt;T&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 	}: close_child_bounty(RawOrigin::Root, bounty_setup.bounty_id, bounty_setup.child_bounty_id)
 	verify {
 		assert_last_event::&lt;T&gt;(Event::Canceled {

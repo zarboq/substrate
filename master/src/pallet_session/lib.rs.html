@@ -937,6 +937,7 @@
 <a href="#937" id="937">937</a>
 <a href="#938" id="938">938</a>
 <a href="#939" id="939">939</a>
+<a href="#940" id="940">940</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1065,6 +1066,7 @@
 	weights::Weight,
 	Parameter,
 };
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>sp_runtime::{
 	traits::{AtLeast32BitUnsigned, Convert, Member, One, OpaqueKeys, Zero},
 	ConsensusEngineId, KeyTypeId, Permill, RuntimeAppPublic,
@@ -1332,12 +1334,12 @@
 		</span><span class="kw">type </span>ValidatorIdOf: Convert&lt;<span class="self">Self</span>::AccountId, <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::ValidatorId&gt;&gt;;
 
 		<span class="doccomment">/// Indicator for when to end the session.
-		</span><span class="kw">type </span>ShouldEndSession: ShouldEndSession&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>ShouldEndSession: ShouldEndSession&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// Something that can predict the next session rotation. This should typically come from
 		/// the same logical unit that provides [`ShouldEndSession`], yet, it gives a best effort
 		/// estimate. It is helpful to implement [`EstimateNextNewSession`].
-		</span><span class="kw">type </span>NextSessionRotation: EstimateNextSessionRotation&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>NextSessionRotation: EstimateNextSessionRotation&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// Handler for managing new session.
 		</span><span class="kw">type </span>SessionManager: SessionManager&lt;<span class="self">Self</span>::ValidatorId&gt;;
@@ -1498,7 +1500,7 @@
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 		<span class="doccomment">/// Called when a block is initialized. Will rotate session if it is the last
 		/// block of the current session.
-		</span><span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
+		</span><span class="kw">fn </span>on_initialize(n: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			<span class="kw">if </span>T::ShouldEndSession::should_end_session(n) {
 				<span class="self">Self</span>::rotate_session();
 				T::BlockWeights::get().max_block
@@ -1840,14 +1842,14 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; EstimateNextNewSession&lt;T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-	<span class="kw">fn </span>average_session_length() -&gt; T::BlockNumber {
+<span class="kw">impl</span>&lt;T: Config&gt; EstimateNextNewSession&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+	<span class="kw">fn </span>average_session_length() -&gt; BlockNumberFor&lt;T&gt; {
 		T::NextSessionRotation::average_session_length()
 	}
 
 	<span class="doccomment">/// This session pallet always calls new_session and next_session at the same time, hence we
 	/// do a simple proxy and pass the function to next rotation.
-	</span><span class="kw">fn </span>estimate_next_new_session(now: T::BlockNumber) -&gt; (<span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;, Weight) {
+	</span><span class="kw">fn </span>estimate_next_new_session(now: BlockNumberFor&lt;T&gt;) -&gt; (<span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;, Weight) {
 		T::NextSessionRotation::estimate_next_session_rotation(now)
 	}
 }

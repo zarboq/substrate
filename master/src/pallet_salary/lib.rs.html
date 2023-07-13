@@ -448,7 +448,6 @@
 <a href="#448" id="448">448</a>
 <a href="#449" id="449">449</a>
 <a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
@@ -577,14 +576,14 @@
 		/// The number of blocks between sequential payout cycles is the sum of this and
 		/// `PayoutPeriod`.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>RegistrationPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>RegistrationPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The number of blocks within a cycle which accounts have to claim the payout.
 		///
 		/// The number of blocks between sequential payout cycles is the sum of this and
 		/// `RegistrationPeriod`.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>PayoutPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>PayoutPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The total budget per cycle.
 		///
@@ -593,11 +592,10 @@
 		</span><span class="kw">type </span>Budget: Get&lt;BalanceOf&lt;<span class="self">Self</span>, I&gt;&gt;;
 	}
 
-	<span class="kw">pub type </span>CycleIndexOf&lt;T&gt; = &lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber;
+	<span class="kw">pub type </span>CycleIndexOf&lt;T&gt; = BlockNumberFor&lt;T&gt;;
 	<span class="kw">pub type </span>BalanceOf&lt;T, I&gt; = &lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Paymaster <span class="kw">as </span>Pay&gt;::Balance;
 	<span class="kw">pub type </span>IdOf&lt;T, I&gt; = &lt;&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::Paymaster <span class="kw">as </span>Pay&gt;::Id;
-	<span class="kw">pub type </span>StatusOf&lt;T, I&gt; =
-		StatusType&lt;CycleIndexOf&lt;T&gt;, &lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber, BalanceOf&lt;T, I&gt;&gt;;
+	<span class="kw">pub type </span>StatusOf&lt;T, I&gt; = StatusType&lt;CycleIndexOf&lt;T&gt;, BlockNumberFor&lt;T&gt;, BalanceOf&lt;T, I&gt;&gt;;
 	<span class="kw">pub type </span>ClaimantStatusOf&lt;T, I&gt; = ClaimantStatus&lt;CycleIndexOf&lt;T&gt;, BalanceOf&lt;T, I&gt;, IdOf&lt;T, I&gt;&gt;;
 
 	<span class="doccomment">/// The overall status of the system.
@@ -840,7 +838,7 @@
 		<span class="kw">pub fn </span>last_active(who: <span class="kw-2">&amp;</span>T::AccountId) -&gt; <span class="prelude-ty">Result</span>&lt;CycleIndexOf&lt;T&gt;, DispatchError&gt; {
 			<span class="prelude-val">Ok</span>(Claimant::&lt;T, I&gt;::get(<span class="kw-2">&amp;</span>who).ok_or(Error::&lt;T, I&gt;::NotInducted)<span class="question-mark">?</span>.last_active)
 		}
-		<span class="kw">pub fn </span>cycle_period() -&gt; T::BlockNumber {
+		<span class="kw">pub fn </span>cycle_period() -&gt; BlockNumberFor&lt;T&gt; {
 			T::RegistrationPeriod::get() + T::PayoutPeriod::get()
 		}
 		<span class="kw">fn </span>do_payout(who: T::AccountId, beneficiary: T::AccountId) -&gt; DispatchResult {

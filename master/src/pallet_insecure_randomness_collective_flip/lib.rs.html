@@ -304,12 +304,6 @@
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -386,11 +380,12 @@
 
 <span class="kw">use </span>codec::Encode;
 <span class="kw">use </span>frame_support::{pallet_prelude::Weight, traits::Randomness};
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>sp_runtime::traits::{Hash, Saturating};
 
 <span class="kw">const </span>RANDOM_MATERIAL_LEN: u32 = <span class="number">81</span>;
 
-<span class="kw">fn </span>block_number_to_index&lt;T: Config&gt;(block_number: T::BlockNumber) -&gt; usize {
+<span class="kw">fn </span>block_number_to_index&lt;T: Config&gt;(block_number: BlockNumberFor&lt;T&gt;) -&gt; usize {
 	<span class="comment">// on_initialize is called on the first block after genesis
 	</span><span class="kw">let </span>index = (block_number - <span class="number">1u32</span>.into()) % RANDOM_MATERIAL_LEN.into();
 	index.try_into().ok().expect(<span class="string">&quot;Something % 81 is always smaller than usize; qed&quot;</span>)
@@ -402,7 +397,6 @@
 </span><span class="kw">pub mod </span>pallet {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>frame_support::pallet_prelude::<span class="kw-2">*</span>;
-	<span class="kw">use </span>frame_system::pallet_prelude::<span class="kw-2">*</span>;
 
 	<span class="attr">#[pallet::pallet]
 	</span><span class="kw">pub struct </span>Pallet&lt;T&gt;(<span class="kw">_</span>);
@@ -412,7 +406,7 @@
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>on_initialize(block_number: T::BlockNumber) -&gt; Weight {
+		<span class="kw">fn </span>on_initialize(block_number: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			<span class="kw">let </span>parent_hash = &lt;frame_system::Pallet&lt;T&gt;&gt;::parent_hash();
 
 			&lt;RandomMaterial&lt;T&gt;&gt;::mutate(|<span class="kw-2">ref mut </span>values| {
@@ -435,7 +429,7 @@
 		StorageValue&lt;<span class="kw">_</span>, BoundedVec&lt;T::Hash, ConstU32&lt;RANDOM_MATERIAL_LEN&gt;&gt;, ValueQuery&gt;;
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; Randomness&lt;T::Hash, T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: Config&gt; Randomness&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 	<span class="doccomment">/// This randomness uses a low-influence function, drawing upon the block hashes from the
 	/// previous 81 blocks. Its result for any given subject will be known far in advance by anyone
 	/// observing the chain. Any block producer has significant influence over their block hashes
@@ -446,7 +440,7 @@
 	/// WARNING: Hashing the result of this function will remove any low-influence properties it has
 	/// and mean that all bits of the resulting value are entirely manipulatable by the author of
 	/// the parent block, who can determine the value of `parent_hash`.
-	</span><span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, T::BlockNumber) {
+	</span><span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, BlockNumberFor&lt;T&gt;) {
 		<span class="kw">let </span>block_number = &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number();
 		<span class="kw">let </span>index = block_number_to_index::&lt;T&gt;(block_number);
 
@@ -476,7 +470,6 @@
 
 	<span class="kw">use </span>sp_core::H256;
 	<span class="kw">use </span>sp_runtime::{
-		testing::Header,
 		traits::{BlakeTwo256, Header <span class="kw">as _</span>, IdentityLookup},
 		BuildStorage,
 	};
@@ -487,14 +480,10 @@
 	};
 	<span class="kw">use </span>frame_system::limits;
 
-	<span class="kw">type </span>UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic&lt;Test&gt;;
 	<span class="kw">type </span>Block = frame_system::mocking::MockBlock&lt;Test&gt;;
 
 	<span class="macro">frame_support::construct_runtime!</span>(
-		<span class="kw">pub enum </span>Test <span class="kw">where
-			</span>Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
+		<span class="kw">pub enum </span>Test
 		{
 			System: frame_system::{Pallet, Call, Config&lt;T&gt;, Storage, Event&lt;T&gt;},
 			CollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage},
@@ -513,13 +502,12 @@
 		<span class="kw">type </span>DbWeight = ();
 		<span class="kw">type </span>RuntimeOrigin = RuntimeOrigin;
 		<span class="kw">type </span>Index = u64;
-		<span class="kw">type </span>BlockNumber = u64;
 		<span class="kw">type </span>RuntimeCall = RuntimeCall;
 		<span class="kw">type </span>Hash = H256;
 		<span class="kw">type </span>Hashing = BlakeTwo256;
 		<span class="kw">type </span>AccountId = u64;
 		<span class="kw">type </span>Lookup = IdentityLookup&lt;<span class="self">Self</span>::AccountId&gt;;
-		<span class="kw">type </span>Header = Header;
+		<span class="kw">type </span>Block = Block;
 		<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
 		<span class="kw">type </span>BlockHashCount = ConstU64&lt;<span class="number">250</span>&gt;;
 		<span class="kw">type </span>Version = ();

@@ -720,6 +720,10 @@
 <a href="#720" id="720">720</a>
 <a href="#721" id="721">721</a>
 <a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -775,6 +779,7 @@
 		AppCrypto, CreateSignedTransaction, SendSignedTransaction, SendUnsignedTransaction,
 		SignedPayload, Signer, SigningTypes, SubmitTransaction,
 	},
+	pallet_prelude::BlockNumberFor,
 };
 <span class="kw">use </span>lite_json::json::JsonValue;
 <span class="kw">use </span>sp_core::crypto::KeyTypeId;
@@ -858,14 +863,14 @@
 		/// every `GRACE_PERIOD` blocks. We use Local Storage to coordinate
 		/// sending between distinct runs of this offchain worker.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>GracePeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>GracePeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// Number of blocks of cooldown after unsigned transaction is included.
 		///
 		/// This ensures that we only accept unsigned transactions once, every `UnsignedInterval`
 		/// blocks.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>UnsignedInterval: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>UnsignedInterval: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// A configuration for base priority of unsigned transactions.
 		///
@@ -893,7 +898,7 @@
 		/// be cases where some blocks are skipped, or for some the worker runs twice (re-orgs),
 		/// so the code should be able to handle that.
 		/// You can use `Local Storage` API to coordinate runs of the worker.
-		</span><span class="kw">fn </span>offchain_worker(block_number: T::BlockNumber) {
+		</span><span class="kw">fn </span>offchain_worker(block_number: BlockNumberFor&lt;T&gt;) {
 			<span class="comment">// Note that having logs compiled to WASM may cause the size of the blob to increase
 			// significantly. You can use `RuntimeDebug` custom derive to hide details of the types
 			// in WASM. The `sp-api` crate also provides a feature `disable-logging` to disable
@@ -980,7 +985,7 @@
 		#[pallet::weight({<span class="number">0</span>})]
 		</span><span class="kw">pub fn </span>submit_price_unsigned(
 			origin: OriginFor&lt;T&gt;,
-			_block_number: T::BlockNumber,
+			_block_number: BlockNumberFor&lt;T&gt;,
 			price: u32,
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="comment">// This ensures that the function can only be called via unsigned transaction.
@@ -997,7 +1002,7 @@
 		#[pallet::weight({<span class="number">0</span>})]
 		</span><span class="kw">pub fn </span>submit_price_unsigned_with_signed_payload(
 			origin: OriginFor&lt;T&gt;,
-			price_payload: PricePayload&lt;T::Public, T::BlockNumber&gt;,
+			price_payload: PricePayload&lt;T::Public, BlockNumberFor&lt;T&gt;&gt;,
 			_signature: T::Signature,
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="comment">// This ensures that the function can only be called via unsigned transaction.
@@ -1063,7 +1068,7 @@
 	/// This storage entry defines when new transaction is going to be accepted.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>next_unsigned_at)]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>NextUnsignedAt&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, T::BlockNumber, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>NextUnsignedAt&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, BlockNumberFor&lt;T&gt;, ValueQuery&gt;;
 }
 
 <span class="doccomment">/// Payload used by this example crate to hold price
@@ -1075,7 +1080,7 @@
 	public: Public,
 }
 
-<span class="kw">impl</span>&lt;T: SigningTypes&gt; SignedPayload&lt;T&gt; <span class="kw">for </span>PricePayload&lt;T::Public, T::BlockNumber&gt; {
+<span class="kw">impl</span>&lt;T: SigningTypes&gt; SignedPayload&lt;T&gt; <span class="kw">for </span>PricePayload&lt;T::Public, BlockNumberFor&lt;T&gt;&gt; {
 	<span class="kw">fn </span>public(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; T::Public {
 		<span class="self">self</span>.public.clone()
 	}
@@ -1096,7 +1101,7 @@
 	/// and local storage usage.
 	///
 	/// Returns a type of transaction that should be produced in current run.
-	</span><span class="kw">fn </span>choose_transaction_type(block_number: T::BlockNumber) -&gt; TransactionType {
+	</span><span class="kw">fn </span>choose_transaction_type(block_number: BlockNumberFor&lt;T&gt;) -&gt; TransactionType {
 		<span class="doccomment">/// A friendlier name for the error that is going to be returned in case we are in the grace
 		/// period.
 		</span><span class="kw">const </span>RECENTLY_SENT: () = ();
@@ -1111,16 +1116,17 @@
 		// low-level method of local storage API, which means that only one worker
 		// will be able to &quot;acquire a lock&quot; and send a transaction if multiple workers
 		// happen to be executed concurrently.
-		</span><span class="kw">let </span>res = val.mutate(|last_send: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;, StorageRetrievalError&gt;| {
-			<span class="kw">match </span>last_send {
-				<span class="comment">// If we already have a value in storage and the block number is recent enough
-				// we avoid sending another transaction at this time.
-				</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(block)) <span class="kw">if </span>block_number &lt; block + T::GracePeriod::get() =&gt;
-					<span class="prelude-val">Err</span>(RECENTLY_SENT),
-				<span class="comment">// In every other case we attempt to acquire the lock and send a transaction.
-				</span><span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(block_number),
-			}
-		});
+		</span><span class="kw">let </span>res =
+			val.mutate(|last_send: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;, StorageRetrievalError&gt;| {
+				<span class="kw">match </span>last_send {
+					<span class="comment">// If we already have a value in storage and the block number is recent enough
+					// we avoid sending another transaction at this time.
+					</span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(block)) <span class="kw">if </span>block_number &lt; block + T::GracePeriod::get() =&gt;
+						<span class="prelude-val">Err</span>(RECENTLY_SENT),
+					<span class="comment">// In every other case we attempt to acquire the lock and send a transaction.
+					</span><span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(block_number),
+				}
+			});
 
 		<span class="comment">// The result of `mutate` call will give us a nested `Result` type.
 		// The first one matches the return of the closure passed to `mutate`, i.e.
@@ -1141,9 +1147,9 @@
 				</span><span class="kw">let </span>transaction_type = block_number % <span class="number">4u32</span>.into();
 				<span class="kw">if </span>transaction_type == Zero::zero() {
 					TransactionType::Signed
-				} <span class="kw">else if </span>transaction_type == T::BlockNumber::from(<span class="number">1u32</span>) {
+				} <span class="kw">else if </span>transaction_type == BlockNumberFor::&lt;T&gt;::from(<span class="number">1u32</span>) {
 					TransactionType::UnsignedForAny
-				} <span class="kw">else if </span>transaction_type == T::BlockNumber::from(<span class="number">2u32</span>) {
+				} <span class="kw">else if </span>transaction_type == BlockNumberFor::&lt;T&gt;::from(<span class="number">2u32</span>) {
 					TransactionType::UnsignedForAll
 				} <span class="kw">else </span>{
 					TransactionType::Raw
@@ -1194,7 +1200,9 @@
 	}
 
 	<span class="doccomment">/// A helper function to fetch the price and send a raw unsigned transaction.
-	</span><span class="kw">fn </span>fetch_price_and_send_raw_unsigned(block_number: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+	</span><span class="kw">fn </span>fetch_price_and_send_raw_unsigned(
+		block_number: BlockNumberFor&lt;T&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="comment">// Make sure we don&#39;t fetch the price if unsigned transaction is going to be rejected
 		// anyway.
 		</span><span class="kw">let </span>next_unsigned_at = &lt;NextUnsignedAt&lt;T&gt;&gt;::get();
@@ -1227,7 +1235,7 @@
 
 	<span class="doccomment">/// A helper function to fetch the price, sign payload and send an unsigned transaction
 	</span><span class="kw">fn </span>fetch_price_and_send_unsigned_for_any_account(
-		block_number: T::BlockNumber,
+		block_number: BlockNumberFor&lt;T&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="comment">// Make sure we don&#39;t fetch the price if unsigned transaction is going to be rejected
 		// anyway.
@@ -1257,7 +1265,7 @@
 
 	<span class="doccomment">/// A helper function to fetch the price, sign payload and send an unsigned transaction
 	</span><span class="kw">fn </span>fetch_price_and_send_unsigned_for_all_accounts(
-		block_number: T::BlockNumber,
+		block_number: BlockNumberFor&lt;T&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
 		<span class="comment">// Make sure we don&#39;t fetch the price if unsigned transaction is going to be rejected
 		// anyway.
@@ -1391,7 +1399,7 @@
 	}
 
 	<span class="kw">fn </span>validate_transaction_parameters(
-		block_number: <span class="kw-2">&amp;</span>T::BlockNumber,
+		block_number: <span class="kw-2">&amp;</span>BlockNumberFor&lt;T&gt;,
 		new_price: <span class="kw-2">&amp;</span>u32,
 	) -&gt; TransactionValidity {
 		<span class="comment">// Now let&#39;s check if the transaction has any chance to succeed.

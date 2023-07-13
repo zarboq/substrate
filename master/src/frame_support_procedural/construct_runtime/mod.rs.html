@@ -821,6 +821,13 @@
 <a href="#821" id="821">821</a>
 <a href="#822" id="822">822</a>
 <a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1039,10 +1046,7 @@
 	generate_crate_access, generate_crate_access_2018, generate_hidden_includes,
 };
 <span class="kw">use </span>itertools::Itertools;
-<span class="kw">use </span>parse::{
-	ExplicitRuntimeDeclaration, ImplicitRuntimeDeclaration, Pallet, RuntimeDeclaration,
-	WhereSection,
-};
+<span class="kw">use </span>parse::{ExplicitRuntimeDeclaration, ImplicitRuntimeDeclaration, Pallet, RuntimeDeclaration};
 <span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>proc_macro2::TokenStream <span class="kw">as </span>TokenStream2;
 <span class="kw">use </span>quote::quote;
@@ -1160,19 +1164,14 @@
 </span><span class="kw">fn </span>construct_runtime_final_expansion(
 	definition: ExplicitRuntimeDeclaration,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream2&gt; {
-	<span class="kw">let </span>ExplicitRuntimeDeclaration {
-		name,
-		where_section: WhereSection { block, node_block, unchecked_extrinsic },
-		pallets,
-		pallets_token,
-	} = definition;
+	<span class="kw">let </span>ExplicitRuntimeDeclaration { name, pallets, pallets_token, where_section } = definition;
 
 	<span class="kw">let </span>system_pallet =
 		pallets.iter().find(|decl| decl.name == SYSTEM_PALLET_NAME).ok_or_else(|| {
 			syn::Error::new(
 				pallets_token.span.join(),
 				<span class="string">&quot;`System` pallet declaration is missing. \
-			 Please add this line: `System: frame_system::{Pallet, Call, Storage, Config, Event&lt;T&gt;},`&quot;</span>,
+			 Please add this line: `System: frame_system::{Pallet, Call, Storage, Config&lt;T&gt;, Event&lt;T&gt;},`&quot;</span>,
 			)
 		})<span class="question-mark">?</span>;
 	<span class="kw">if </span>!system_pallet.cfg_pattern.is_empty() {
@@ -1202,6 +1201,10 @@
 	<span class="kw">let </span>scrate = generate_crate_access(hidden_crate_name, <span class="string">&quot;frame-support&quot;</span>);
 	<span class="kw">let </span>scrate_decl = generate_hidden_includes(hidden_crate_name, <span class="string">&quot;frame-support&quot;</span>);
 
+	<span class="kw">let </span>frame_system = generate_crate_access_2018(<span class="string">&quot;frame-system&quot;</span>)<span class="question-mark">?</span>;
+	<span class="kw">let </span>block = <span class="macro">quote!</span>(&lt;#name <span class="kw">as </span>#frame_system::Config&gt;::Block);
+	<span class="kw">let </span>unchecked_extrinsic = <span class="macro">quote!</span>(&lt;#block <span class="kw">as </span>#scrate::sp_runtime::traits::Block&gt;::Extrinsic);
+
 	<span class="kw">let </span>outer_event =
 		expand::expand_outer_enum(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>pallets, <span class="kw-2">&amp;</span>scrate, expand::OuterEnumType::Event)<span class="question-mark">?</span>;
 	<span class="kw">let </span>outer_error =
@@ -1230,7 +1233,21 @@
 	<span class="kw">let </span>integrity_test = decl_integrity_test(<span class="kw-2">&amp;</span>scrate);
 	<span class="kw">let </span>static_assertions = decl_static_assertions(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>pallets, <span class="kw-2">&amp;</span>scrate);
 
+	<span class="kw">let </span>warning =
+		where_section.map_or(<span class="prelude-val">None</span>, |where_section| {
+			<span class="prelude-val">Some</span>(proc_macro_warning::Warning::new_deprecated(<span class="string">&quot;WhereSection&quot;</span>)
+			.old(<span class="string">&quot;use a `where` clause in `construct_runtime`&quot;</span>)
+			.new(<span class="string">&quot;use `frame_system::Config` to set the `Block` type and delete this clause. 
+				It is planned to be removed in December 2023&quot;</span>)
+			.help_links(<span class="kw-2">&amp;</span>[<span class="string">&quot;https://github.com/paritytech/substrate/pull/14437&quot;</span>])
+			.span(where_section.span)
+			.build(),
+		)
+		});
+
 	<span class="kw">let </span>res = <span class="macro">quote!</span>(
+		#warning
+
 		#scrate_decl
 
 		<span class="comment">// Prevent UncheckedExtrinsic to print unused warning.
@@ -1244,9 +1261,6 @@
 			#scrate::scale_info::TypeInfo
 		)]
 		</span><span class="kw">pub struct </span>#name;
-		<span class="kw">impl </span>#scrate::sp_runtime::traits::GetNodeBlockType <span class="kw">for </span>#name {
-			<span class="kw">type </span>NodeBlock = #node_block;
-		}
 		<span class="kw">impl </span>#scrate::sp_runtime::traits::GetRuntimeBlockType <span class="kw">for </span>#name {
 			<span class="kw">type </span>RuntimeBlock = #block;
 		}

@@ -612,6 +612,7 @@
 <a href="#612" id="612">612</a>
 <a href="#613" id="613">613</a>
 <a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -656,6 +657,7 @@
 	weights::Weight,
 	WeakBoundedVec,
 };
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_consensus_grandpa::{
 	ConsensusLog, EquivocationProof, ScheduledChange, SetId, GRANDPA_AUTHORITIES_KEY,
@@ -727,13 +729,13 @@
 		/// (from an offchain context).
 		</span><span class="kw">type </span>EquivocationReportSystem: OffenceReportSystem&lt;
 			<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::AccountId&gt;,
-			(EquivocationProof&lt;<span class="self">Self</span>::Hash, <span class="self">Self</span>::BlockNumber&gt;, <span class="self">Self</span>::KeyOwnerProof),
+			(EquivocationProof&lt;<span class="self">Self</span>::Hash, BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;, <span class="self">Self</span>::KeyOwnerProof),
 		&gt;;
 	}
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>on_finalize(block_number: T::BlockNumber) {
+		<span class="kw">fn </span>on_finalize(block_number: BlockNumberFor&lt;T&gt;) {
 			<span class="comment">// check for scheduled pending authority set changes
 			</span><span class="kw">if let </span><span class="prelude-val">Some</span>(pending_change) = &lt;PendingChange&lt;T&gt;&gt;::get() {
 				<span class="comment">// emit signal if we&#39;re at the block that scheduled the change
@@ -805,7 +807,7 @@
 		#[pallet::weight(T::WeightInfo::report_equivocation(key_owner_proof.validator_count()))]
 		</span><span class="kw">pub fn </span>report_equivocation(
 			origin: OriginFor&lt;T&gt;,
-			equivocation_proof: Box&lt;EquivocationProof&lt;T::Hash, T::BlockNumber&gt;&gt;,
+			equivocation_proof: Box&lt;EquivocationProof&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt;&gt;,
 			key_owner_proof: T::KeyOwnerProof,
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="kw">let </span>reporter = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -831,7 +833,7 @@
 		#[pallet::weight(T::WeightInfo::report_equivocation(key_owner_proof.validator_count()))]
 		</span><span class="kw">pub fn </span>report_equivocation_unsigned(
 			origin: OriginFor&lt;T&gt;,
-			equivocation_proof: Box&lt;EquivocationProof&lt;T::Hash, T::BlockNumber&gt;&gt;,
+			equivocation_proof: Box&lt;EquivocationProof&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt;&gt;,
 			key_owner_proof: T::KeyOwnerProof,
 		) -&gt; DispatchResultWithPostInfo {
 			ensure_none(origin)<span class="question-mark">?</span>;
@@ -859,8 +861,8 @@
 		#[pallet::weight(T::WeightInfo::note_stalled())]
 		</span><span class="kw">pub fn </span>note_stalled(
 			origin: OriginFor&lt;T&gt;,
-			delay: T::BlockNumber,
-			best_finalized_block_number: T::BlockNumber,
+			delay: BlockNumberFor&lt;T&gt;,
+			best_finalized_block_number: BlockNumberFor&lt;T&gt;,
 		) -&gt; DispatchResult {
 			ensure_root(origin)<span class="question-mark">?</span>;
 
@@ -901,7 +903,7 @@
 	}
 
 	<span class="attr">#[pallet::type_value]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>DefaultForState&lt;T: Config&gt;() -&gt; StoredState&lt;T::BlockNumber&gt; {
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>DefaultForState&lt;T: Config&gt;() -&gt; StoredState&lt;BlockNumberFor&lt;T&gt;&gt; {
 		StoredState::Live
 	}
 
@@ -909,23 +911,23 @@
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>state)]
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>State&lt;T: Config&gt; =
-		StorageValue&lt;<span class="kw">_</span>, StoredState&lt;T::BlockNumber&gt;, ValueQuery, DefaultForState&lt;T&gt;&gt;;
+		StorageValue&lt;<span class="kw">_</span>, StoredState&lt;BlockNumberFor&lt;T&gt;&gt;, ValueQuery, DefaultForState&lt;T&gt;&gt;;
 
 	<span class="doccomment">/// Pending change: (signaled at, scheduled change).
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>pending_change)]
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>PendingChange&lt;T: Config&gt; =
-		StorageValue&lt;<span class="kw">_</span>, StoredPendingChange&lt;T::BlockNumber, T::MaxAuthorities&gt;&gt;;
+		StorageValue&lt;<span class="kw">_</span>, StoredPendingChange&lt;BlockNumberFor&lt;T&gt;, T::MaxAuthorities&gt;&gt;;
 
 	<span class="doccomment">/// next block number where we can force a change.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>next_forced)]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>NextForced&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, T::BlockNumber&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>NextForced&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, BlockNumberFor&lt;T&gt;&gt;;
 
 	<span class="doccomment">/// `true` if we are currently stalled.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>stalled)]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>Stalled&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, (T::BlockNumber, T::BlockNumber)&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>Stalled&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, (BlockNumberFor&lt;T&gt;, BlockNumberFor&lt;T&gt;)&gt;;
 
 	<span class="doccomment">/// The number of changes (both in terms of keys and underlying economic responsibilities)
 	/// in the &quot;set&quot; of Grandpa validators from genesis.
@@ -1043,7 +1045,7 @@
 
 	<span class="doccomment">/// Schedule GRANDPA to pause starting in the given number of blocks.
 	/// Cannot be done when already paused.
-	</span><span class="kw">pub fn </span>schedule_pause(in_blocks: T::BlockNumber) -&gt; DispatchResult {
+	</span><span class="kw">pub fn </span>schedule_pause(in_blocks: BlockNumberFor&lt;T&gt;) -&gt; DispatchResult {
 		<span class="kw">if let </span>StoredState::Live = &lt;State&lt;T&gt;&gt;::get() {
 			<span class="kw">let </span>scheduled_at = &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number();
 			&lt;State&lt;T&gt;&gt;::put(StoredState::PendingPause { delay: in_blocks, scheduled_at });
@@ -1055,7 +1057,7 @@
 	}
 
 	<span class="doccomment">/// Schedule a resume of GRANDPA after pausing.
-	</span><span class="kw">pub fn </span>schedule_resume(in_blocks: T::BlockNumber) -&gt; DispatchResult {
+	</span><span class="kw">pub fn </span>schedule_resume(in_blocks: BlockNumberFor&lt;T&gt;) -&gt; DispatchResult {
 		<span class="kw">if let </span>StoredState::Paused = &lt;State&lt;T&gt;&gt;::get() {
 			<span class="kw">let </span>scheduled_at = &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number();
 			&lt;State&lt;T&gt;&gt;::put(StoredState::PendingResume { delay: in_blocks, scheduled_at });
@@ -1082,8 +1084,8 @@
 	/// an error if a change is already pending.
 	</span><span class="kw">pub fn </span>schedule_change(
 		next_authorities: AuthorityList,
-		in_blocks: T::BlockNumber,
-		forced: <span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;,
+		in_blocks: BlockNumberFor&lt;T&gt;,
+		forced: <span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;,
 	) -&gt; DispatchResult {
 		<span class="kw">if </span>!&lt;PendingChange&lt;T&gt;&gt;::exists() {
 			<span class="kw">let </span>scheduled_at = &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number();
@@ -1120,7 +1122,7 @@
 	}
 
 	<span class="doccomment">/// Deposit one of this module&#39;s logs.
-	</span><span class="kw">fn </span>deposit_log(log: ConsensusLog&lt;T::BlockNumber&gt;) {
+	</span><span class="kw">fn </span>deposit_log(log: ConsensusLog&lt;BlockNumberFor&lt;T&gt;&gt;) {
 		<span class="kw">let </span>log = DigestItem::Consensus(GRANDPA_ENGINE_ID, log.encode());
 		&lt;frame_system::Pallet&lt;T&gt;&gt;::deposit_log(log);
 	}
@@ -1144,13 +1146,13 @@
 	/// will push the transaction to the pool. Only useful in an offchain
 	/// context.
 	</span><span class="kw">pub fn </span>submit_unsigned_equivocation_report(
-		equivocation_proof: EquivocationProof&lt;T::Hash, T::BlockNumber&gt;,
+		equivocation_proof: EquivocationProof&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt;,
 		key_owner_proof: T::KeyOwnerProof,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
 		T::EquivocationReportSystem::publish_evidence((equivocation_proof, key_owner_proof)).ok()
 	}
 
-	<span class="kw">fn </span>on_stalled(further_wait: T::BlockNumber, median: T::BlockNumber) {
+	<span class="kw">fn </span>on_stalled(further_wait: BlockNumberFor&lt;T&gt;, median: BlockNumberFor&lt;T&gt;) {
 		<span class="comment">// when we record old authority sets we could try to figure out _who_
 		// failed. until then, we can&#39;t meaningfully guard against
 		// `next == last` the way that normal session changes do.

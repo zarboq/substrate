@@ -1946,7 +1946,7 @@
 	traits::{DefensiveResult, Get},
 	BoundedVec,
 };
-<span class="kw">use </span>frame_system::offchain::SubmitTransaction;
+<span class="kw">use </span>frame_system::{offchain::SubmitTransaction, pallet_prelude::BlockNumberFor};
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_npos_elections::{
 	assignment_ratio_to_staked_normalized, assignment_staked_to_ratio_normalized, ElectionResult,
@@ -2215,12 +2215,12 @@
 	///
 	/// Returns `Ok(())` if offchain worker limit is respected, `Err(reason)` otherwise. If `Ok()`
 	/// is returned, `now` is written in storage and will be used in further calls as the baseline.
-	</span><span class="kw">pub fn </span>ensure_offchain_repeat_frequency(now: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), MinerError&gt; {
+	</span><span class="kw">pub fn </span>ensure_offchain_repeat_frequency(now: BlockNumberFor&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), MinerError&gt; {
 		<span class="kw">let </span>threshold = T::OffchainRepeat::get();
 		<span class="kw">let </span>last_block = StorageValueRef::persistent(OFFCHAIN_LAST_BLOCK);
 
 		<span class="kw">let </span>mutate_stat = last_block.mutate::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw">_</span>&gt;(
-			|maybe_head: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;, <span class="kw">_</span>&gt;| {
+			|maybe_head: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;, <span class="kw">_</span>&gt;| {
 				<span class="kw">match </span>maybe_head {
 					<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(head)) <span class="kw">if </span>now &lt; head =&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;fork.&quot;</span>),
 					<span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(head)) <span class="kw">if </span>now &gt;= head &amp;&amp; now &lt;= head + threshold =&gt;

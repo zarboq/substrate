@@ -170,6 +170,7 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -194,6 +195,7 @@
 	AuthorVrfRandomness, Config, EpochStart, NextRandomness, Randomness, RANDOMNESS_LENGTH,
 };
 <span class="kw">use </span>frame_support::traits::Randomness <span class="kw">as </span>RandomnessT;
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>sp_runtime::traits::{Hash, One, Saturating};
 
 <span class="doccomment">/// Randomness usable by consensus protocols that **depend** upon finality and take action
@@ -301,8 +303,8 @@
 					 Please use `ParentBlockRandomness` instead.&quot;</span>)]
 </span><span class="kw">pub struct </span>CurrentBlockRandomness&lt;T&gt;(sp_std::marker::PhantomData&lt;T&gt;);
 
-<span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;T::Hash, T::BlockNumber&gt; <span class="kw">for </span>RandomnessFromTwoEpochsAgo&lt;T&gt; {
-	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, T::BlockNumber) {
+<span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>RandomnessFromTwoEpochsAgo&lt;T&gt; {
+	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, BlockNumberFor&lt;T&gt;) {
 		<span class="kw">let </span><span class="kw-2">mut </span>subject = subject.to_vec();
 		subject.reserve(RANDOMNESS_LENGTH);
 		subject.extend_from_slice(<span class="kw-2">&amp;</span>Randomness::&lt;T&gt;::get()[..]);
@@ -311,8 +313,8 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;T::Hash, T::BlockNumber&gt; <span class="kw">for </span>RandomnessFromOneEpochAgo&lt;T&gt; {
-	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, T::BlockNumber) {
+<span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>RandomnessFromOneEpochAgo&lt;T&gt; {
+	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (T::Hash, BlockNumberFor&lt;T&gt;) {
 		<span class="kw">let </span><span class="kw-2">mut </span>subject = subject.to_vec();
 		subject.reserve(RANDOMNESS_LENGTH);
 		subject.extend_from_slice(<span class="kw-2">&amp;</span>NextRandomness::&lt;T&gt;::get()[..]);
@@ -321,8 +323,8 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, T::BlockNumber&gt; <span class="kw">for </span>ParentBlockRandomness&lt;T&gt; {
-	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, T::BlockNumber) {
+<span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>ParentBlockRandomness&lt;T&gt; {
+	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, BlockNumberFor&lt;T&gt;) {
 		<span class="kw">let </span>random = AuthorVrfRandomness::&lt;T&gt;::get().map(|random| {
 			<span class="kw">let </span><span class="kw-2">mut </span>subject = subject.to_vec();
 			subject.reserve(RANDOMNESS_LENGTH);
@@ -336,8 +338,8 @@
 }
 
 <span class="attr">#[allow(deprecated)]
-</span><span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, T::BlockNumber&gt; <span class="kw">for </span>CurrentBlockRandomness&lt;T&gt; {
-	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, T::BlockNumber) {
+</span><span class="kw">impl</span>&lt;T: Config&gt; RandomnessT&lt;<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>CurrentBlockRandomness&lt;T&gt; {
+	<span class="kw">fn </span>random(subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (<span class="prelude-ty">Option</span>&lt;T::Hash&gt;, BlockNumberFor&lt;T&gt;) {
 		<span class="kw">let </span>(random, <span class="kw">_</span>) = ParentBlockRandomness::&lt;T&gt;::random(subject);
 		(random, &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number())
 	}

@@ -1284,6 +1284,7 @@
 <a href="#1284" id="1284">1284</a>
 <a href="#1285" id="1285">1285</a>
 <a href="#1286" id="1286">1286</a>
+<a href="#1287" id="1287">1287</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1363,6 +1364,7 @@
 	},
 	BoundedVec,
 };
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_runtime::{
 	traits::{AtLeast32BitUnsigned, Bounded, Dispatchable, One, Saturating, Zero},
@@ -1447,8 +1449,8 @@
 		<span class="doccomment">/// Weight information for extrinsics in this pallet.
 		</span><span class="kw">type </span>WeightInfo: WeightInfo;
 		<span class="doccomment">/// The Scheduler.
-		</span><span class="kw">type </span>Scheduler: ScheduleAnon&lt;<span class="self">Self</span>::BlockNumber, CallOf&lt;<span class="self">Self</span>, I&gt;, PalletsOriginOf&lt;<span class="self">Self</span>&gt;&gt;
-			+ ScheduleNamed&lt;<span class="self">Self</span>::BlockNumber, CallOf&lt;<span class="self">Self</span>, I&gt;, PalletsOriginOf&lt;<span class="self">Self</span>&gt;&gt;;
+		</span><span class="kw">type </span>Scheduler: ScheduleAnon&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;, CallOf&lt;<span class="self">Self</span>, I&gt;, PalletsOriginOf&lt;<span class="self">Self</span>&gt;&gt;
+			+ ScheduleNamed&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;, CallOf&lt;<span class="self">Self</span>, I&gt;, PalletsOriginOf&lt;<span class="self">Self</span>&gt;&gt;;
 		<span class="doccomment">/// Currency type for this pallet.
 		</span><span class="kw">type </span>Currency: ReservableCurrency&lt;<span class="self">Self</span>::AccountId&gt;;
 		<span class="comment">// Origins and unbalances.
@@ -1487,25 +1489,25 @@
 		<span class="doccomment">/// The number of blocks after submission that a referendum must begin being decided by.
 		/// Once this passes, then anyone may cancel the referendum.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>UndecidingTimeout: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>UndecidingTimeout: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// Quantization level for the referendum wakeup scheduler. A higher number will result in
 		/// fewer storage reads/writes needed for smaller voters, but also result in delays to the
 		/// automatic referendum status changes. Explicit servicing instructions are unaffected.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>AlarmInterval: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>AlarmInterval: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="comment">// The other stuff.
 		</span><span class="doccomment">/// Information concerning the different referendum tracks.
 		</span><span class="attr">#[pallet::constant]
 		</span><span class="kw">type </span>Tracks: Get&lt;
 				Vec&lt;(
-					&lt;<span class="self">Self</span>::Tracks <span class="kw">as </span>TracksInfo&lt;BalanceOf&lt;<span class="self">Self</span>, I&gt;, <span class="self">Self</span>::BlockNumber&gt;&gt;::Id,
-					TrackInfo&lt;BalanceOf&lt;<span class="self">Self</span>, I&gt;, <span class="self">Self</span>::BlockNumber&gt;,
+					&lt;<span class="self">Self</span>::Tracks <span class="kw">as </span>TracksInfo&lt;BalanceOf&lt;<span class="self">Self</span>, I&gt;, BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;&gt;::Id,
+					TrackInfo&lt;BalanceOf&lt;<span class="self">Self</span>, I&gt;, BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;,
 				)&gt;,
 			&gt; + TracksInfo&lt;
 				BalanceOf&lt;<span class="self">Self</span>, I&gt;,
-				<span class="self">Self</span>::BlockNumber,
+				BlockNumberFor&lt;<span class="self">Self</span>&gt;,
 				RuntimeOrigin = &lt;<span class="self">Self</span>::RuntimeOrigin <span class="kw">as </span>OriginTrait&gt;::PalletsOrigin,
 			&gt;;
 
@@ -1718,7 +1720,7 @@
 			origin: OriginFor&lt;T&gt;,
 			proposal_origin: Box&lt;PalletsOriginOf&lt;T&gt;&gt;,
 			proposal: BoundedCallOf&lt;T, I&gt;,
-			enactment_moment: DispatchTime&lt;T::BlockNumber&gt;,
+			enactment_moment: DispatchTime&lt;BlockNumberFor&lt;T&gt;&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>proposal_origin = <span class="kw-2">*</span>proposal_origin;
 			<span class="kw">let </span>who = T::SubmitOrigin::ensure_origin(origin, <span class="kw-2">&amp;</span>proposal_origin)<span class="question-mark">?</span>;
@@ -1990,7 +1992,7 @@
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Polling&lt;T::Tally&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
 	<span class="kw">type </span>Index = ReferendumIndex;
 	<span class="kw">type </span>Votes = VotesOf&lt;T, I&gt;;
-	<span class="kw">type </span>Moment = T::BlockNumber;
+	<span class="kw">type </span>Moment = BlockNumberFor&lt;T&gt;;
 	<span class="kw">type </span>Class = TrackIdOf&lt;T, I&gt;;
 
 	<span class="kw">fn </span>classes() -&gt; Vec&lt;<span class="self">Self</span>::Class&gt; {
@@ -1999,7 +2001,7 @@
 
 	<span class="kw">fn </span>access_poll&lt;R&gt;(
 		index: <span class="self">Self</span>::Index,
-		f: <span class="kw">impl </span>FnOnce(PollStatus&lt;<span class="kw-2">&amp;mut </span>T::Tally, T::BlockNumber, TrackIdOf&lt;T, I&gt;&gt;) -&gt; R,
+		f: <span class="kw">impl </span>FnOnce(PollStatus&lt;<span class="kw-2">&amp;mut </span>T::Tally, BlockNumberFor&lt;T&gt;, TrackIdOf&lt;T, I&gt;&gt;) -&gt; R,
 	) -&gt; R {
 		<span class="kw">match </span>ReferendumInfoFor::&lt;T, I&gt;::get(index) {
 			<span class="prelude-val">Some</span>(ReferendumInfo::Ongoing(<span class="kw-2">mut </span>status)) =&gt; {
@@ -2018,7 +2020,7 @@
 	<span class="kw">fn </span>try_access_poll&lt;R&gt;(
 		index: <span class="self">Self</span>::Index,
 		f: <span class="kw">impl </span>FnOnce(
-			PollStatus&lt;<span class="kw-2">&amp;mut </span>T::Tally, T::BlockNumber, TrackIdOf&lt;T, I&gt;&gt;,
+			PollStatus&lt;<span class="kw-2">&amp;mut </span>T::Tally, BlockNumberFor&lt;T&gt;, TrackIdOf&lt;T, I&gt;&gt;,
 		) -&gt; <span class="prelude-ty">Result</span>&lt;R, DispatchError&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;R, DispatchError&gt; {
 		<span class="kw">match </span>ReferendumInfoFor::&lt;T, I&gt;::get(index) {
@@ -2135,7 +2137,7 @@
 	</span><span class="kw">fn </span>schedule_enactment(
 		index: ReferendumIndex,
 		track: <span class="kw-2">&amp;</span>TrackInfoOf&lt;T, I&gt;,
-		desired: DispatchTime&lt;T::BlockNumber&gt;,
+		desired: DispatchTime&lt;BlockNumberFor&lt;T&gt;&gt;,
 		origin: PalletsOriginOf&lt;T&gt;,
 		call: BoundedCallOf&lt;T, I&gt;,
 	) {
@@ -2157,8 +2159,8 @@
 	<span class="doccomment">/// Set an alarm to dispatch `call` at block number `when`.
 	</span><span class="kw">fn </span>set_alarm(
 		call: BoundedCallOf&lt;T, I&gt;,
-		when: T::BlockNumber,
-	) -&gt; <span class="prelude-ty">Option</span>&lt;(T::BlockNumber, ScheduleAddressOf&lt;T, I&gt;)&gt; {
+		when: BlockNumberFor&lt;T&gt;,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;(BlockNumberFor&lt;T&gt;, ScheduleAddressOf&lt;T, I&gt;)&gt; {
 		<span class="kw">let </span>alarm_interval = T::AlarmInterval::get().max(One::one());
 		<span class="comment">// Alarm must go off no earlier than `when`.
 		// This rounds `when` upwards to the next multiple of `alarm_interval`.
@@ -2191,9 +2193,9 @@
 	</span><span class="kw">fn </span>begin_deciding(
 		status: <span class="kw-2">&amp;mut </span>ReferendumStatusOf&lt;T, I&gt;,
 		index: ReferendumIndex,
-		now: T::BlockNumber,
+		now: BlockNumberFor&lt;T&gt;,
 		track: <span class="kw-2">&amp;</span>TrackInfoOf&lt;T, I&gt;,
-	) -&gt; (<span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;, BeginDecidingBranch) {
+	) -&gt; (<span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;, BeginDecidingBranch) {
 		<span class="kw">let </span>is_passing = <span class="self">Self</span>::is_passing(
 			<span class="kw-2">&amp;</span>status.tally,
 			Zero::zero(),
@@ -2229,11 +2231,11 @@
 	///
 	/// If `None`, then it is queued and should be nudged automatically as the queue gets drained.
 	</span><span class="kw">fn </span>ready_for_deciding(
-		now: T::BlockNumber,
+		now: BlockNumberFor&lt;T&gt;,
 		track: <span class="kw-2">&amp;</span>TrackInfoOf&lt;T, I&gt;,
 		index: ReferendumIndex,
 		status: <span class="kw-2">&amp;mut </span>ReferendumStatusOf&lt;T, I&gt;,
-	) -&gt; (<span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;, ServiceBranch) {
+	) -&gt; (<span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;, ServiceBranch) {
 		<span class="kw">let </span>deciding_count = DecidingCount::&lt;T, I&gt;::get(status.track);
 		<span class="kw">if </span>deciding_count &lt; track.max_deciding {
 			<span class="comment">// Begin deciding.
@@ -2290,7 +2292,7 @@
 	</span><span class="kw">fn </span>ensure_alarm_at(
 		status: <span class="kw-2">&amp;mut </span>ReferendumStatusOf&lt;T, I&gt;,
 		index: ReferendumIndex,
-		alarm: T::BlockNumber,
+		alarm: BlockNumberFor&lt;T&gt;,
 	) -&gt; bool {
 		<span class="kw">if </span>status.alarm.as_ref().map_or(<span class="bool-val">true</span>, |<span class="kw-2">&amp;</span>(when, <span class="kw">_</span>)| when != alarm) {
 			<span class="comment">// Either no alarm or one that was different
@@ -2335,7 +2337,7 @@
 	/// `TrackQueue`. Basically this happens when a referendum is in the deciding queue and receives
 	/// a vote, or when it moves into the deciding queue.
 	</span><span class="kw">fn </span>service_referendum(
-		now: T::BlockNumber,
+		now: BlockNumberFor&lt;T&gt;,
 		index: ReferendumIndex,
 		<span class="kw-2">mut </span>status: ReferendumStatusOf&lt;T, I&gt;,
 	) -&gt; (ReferendumInfoOf&lt;T, I&gt;, bool, ServiceBranch) {
@@ -2347,7 +2349,7 @@
 		};
 		<span class="comment">// Default the alarm to the end of the world.
 		</span><span class="kw">let </span>timeout = status.submitted + T::UndecidingTimeout::get();
-		<span class="kw">let </span><span class="kw-2">mut </span>alarm = T::BlockNumber::max_value();
+		<span class="kw">let </span><span class="kw-2">mut </span>alarm = BlockNumberFor::&lt;T&gt;::max_value();
 		<span class="kw">let </span>branch;
 		<span class="kw">match </span><span class="kw-2">&amp;mut </span>status.deciding {
 			<span class="prelude-val">None </span>=&gt; {
@@ -2478,7 +2480,7 @@
 			},
 		}
 
-		<span class="kw">let </span>dirty_alarm = <span class="kw">if </span>alarm &lt; T::BlockNumber::max_value() {
+		<span class="kw">let </span>dirty_alarm = <span class="kw">if </span>alarm &lt; BlockNumberFor::&lt;T&gt;::max_value() {
 			<span class="self">Self</span>::ensure_alarm_at(<span class="kw-2">&amp;mut </span>status, index, alarm)
 		} <span class="kw">else </span>{
 			<span class="self">Self</span>::ensure_no_alarm(<span class="kw-2">&amp;mut </span>status)
@@ -2493,7 +2495,7 @@
 		tally: <span class="kw-2">&amp;</span>T::Tally,
 		track_id: TrackIdOf&lt;T, I&gt;,
 		track: <span class="kw-2">&amp;</span>TrackInfoOf&lt;T, I&gt;,
-	) -&gt; T::BlockNumber {
+	) -&gt; BlockNumberFor&lt;T&gt; {
 		deciding.confirming.unwrap_or_else(|| {
 			<span class="comment">// Set alarm to the point where the current voting would make it pass.
 			</span><span class="kw">let </span>approval = tally.approval(track_id);
@@ -2552,8 +2554,8 @@
 	/// `approval_needed`.
 	</span><span class="kw">fn </span>is_passing(
 		tally: <span class="kw-2">&amp;</span>T::Tally,
-		elapsed: T::BlockNumber,
-		period: T::BlockNumber,
+		elapsed: BlockNumberFor&lt;T&gt;,
+		period: BlockNumberFor&lt;T&gt;,
 		support_needed: <span class="kw-2">&amp;</span>Curve,
 		approval_needed: <span class="kw-2">&amp;</span>Curve,
 		id: TrackIdOf&lt;T, I&gt;,

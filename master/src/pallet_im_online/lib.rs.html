@@ -1114,7 +1114,7 @@
 	&gt;&gt;::Identification,
 );
 
-<span class="kw">type </span>OffchainResult&lt;T, A&gt; = <span class="prelude-ty">Result</span>&lt;A, OffchainErr&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber&gt;&gt;;
+<span class="kw">type </span>OffchainResult&lt;T, A&gt; = <span class="prelude-ty">Result</span>&lt;A, OffchainErr&lt;BlockNumberFor&lt;T&gt;&gt;&gt;;
 
 <span class="attr">#[frame_support::pallet]
 </span><span class="kw">pub mod </span>pallet {
@@ -1156,7 +1156,7 @@
 		/// rough time when we should start considering sending heartbeats, since the workers
 		/// avoids sending them at the very beginning of the session, assuming there is a
 		/// chance the authority will produce a block and they won&#39;t be necessary.
-		</span><span class="kw">type </span>NextSessionRotation: EstimateNextSessionRotation&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>NextSessionRotation: EstimateNextSessionRotation&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// A type that gives us the ability to submit unresponsiveness offence reports.
 		</span><span class="kw">type </span>ReportUnresponsiveness: ReportOffence&lt;
@@ -1208,7 +1208,7 @@
 	/// more accurate then the value we calculate for `HeartbeatAfter`.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>heartbeat_after)]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>HeartbeatAfter&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, T::BlockNumber, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>HeartbeatAfter&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, BlockNumberFor&lt;T&gt;, ValueQuery&gt;;
 
 	<span class="doccomment">/// The current set of keys that may issue a heartbeat.
 	</span><span class="attr">#[pallet::storage]
@@ -1262,7 +1262,7 @@
 		))]
 		</span><span class="kw">pub fn </span>heartbeat(
 			origin: OriginFor&lt;T&gt;,
-			heartbeat: Heartbeat&lt;T::BlockNumber&gt;,
+			heartbeat: Heartbeat&lt;BlockNumberFor&lt;T&gt;&gt;,
 			<span class="comment">// since signature verification is done in `validate_unsigned`
 			// we can skip doing it here again.
 			</span>_signature: &lt;T::AuthorityId <span class="kw">as </span>RuntimeAppPublic&gt;::Signature,
@@ -1374,7 +1374,7 @@
 <span class="doccomment">/// Keep track of number of authored blocks per authority, uncles are counted as
 /// well since they&#39;re a valid proof of being online.
 </span><span class="kw">impl</span>&lt;T: Config + pallet_authorship::Config&gt;
-	pallet_authorship::EventHandler&lt;ValidatorId&lt;T&gt;, T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt;
+	pallet_authorship::EventHandler&lt;ValidatorId&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt;
 {
 	<span class="kw">fn </span>note_author(author: ValidatorId&lt;T&gt;) {
 		<span class="self">Self</span>::note_authorship(author);
@@ -1420,7 +1420,7 @@
 	}
 
 	<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>send_heartbeats(
-		block_number: T::BlockNumber,
+		block_number: BlockNumberFor&lt;T&gt;,
 	) -&gt; OffchainResult&lt;T, <span class="kw">impl </span>Iterator&lt;Item = OffchainResult&lt;T, ()&gt;&gt;&gt; {
 		<span class="kw">const </span>START_HEARTBEAT_RANDOM_PERIOD: Permill = Permill::from_percent(<span class="number">10</span>);
 		<span class="kw">const </span>START_HEARTBEAT_FINAL_PERIOD: Permill = Permill::from_percent(<span class="number">80</span>);
@@ -1483,7 +1483,7 @@
 		authority_index: u32,
 		key: T::AuthorityId,
 		session_index: SessionIndex,
-		block_number: T::BlockNumber,
+		block_number: BlockNumberFor&lt;T&gt;,
 		validators_len: u32,
 	) -&gt; OffchainResult&lt;T, ()&gt; {
 		<span class="comment">// A helper function to prepare heartbeat call.
@@ -1546,7 +1546,7 @@
 	<span class="kw">fn </span>with_heartbeat_lock&lt;R&gt;(
 		authority_index: u32,
 		session_index: SessionIndex,
-		now: T::BlockNumber,
+		now: BlockNumberFor&lt;T&gt;,
 		f: <span class="kw">impl </span>FnOnce() -&gt; OffchainResult&lt;T, R&gt;,
 	) -&gt; OffchainResult&lt;T, R&gt; {
 		<span class="kw">let </span>key = {
@@ -1556,7 +1556,7 @@
 		};
 		<span class="kw">let </span>storage = StorageValueRef::persistent(<span class="kw-2">&amp;</span>key);
 		<span class="kw">let </span>res = storage.mutate(
-			|status: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;HeartbeatStatus&lt;T::BlockNumber&gt;&gt;, StorageRetrievalError&gt;| {
+			|status: <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;HeartbeatStatus&lt;BlockNumberFor&lt;T&gt;&gt;&gt;, StorageRetrievalError&gt;| {
 				<span class="comment">// Check if there is already a lock for that particular block.
 				// This means that the heartbeat has already been sent, and we are just waiting
 				// for it to be included. However if it doesn&#39;t get included for INCLUDE_THRESHOLD

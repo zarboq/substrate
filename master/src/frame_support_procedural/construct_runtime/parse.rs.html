@@ -776,6 +776,8 @@
 <a href="#776" id="776">776</a>
 <a href="#777" id="777">777</a>
 <a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -843,7 +845,7 @@
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ImplicitRuntimeDeclaration {
 	<span class="kw">pub </span>name: Ident,
-	<span class="kw">pub </span>where_section: WhereSection,
+	<span class="kw">pub </span>where_section: <span class="prelude-ty">Option</span>&lt;WhereSection&gt;,
 	<span class="kw">pub </span>pallets: Vec&lt;PalletDeclaration&gt;,
 }
 
@@ -851,7 +853,7 @@
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ExplicitRuntimeDeclaration {
 	<span class="kw">pub </span>name: Ident,
-	<span class="kw">pub </span>where_section: WhereSection,
+	<span class="kw">pub </span>where_section: <span class="prelude-ty">Option</span>&lt;WhereSection&gt;,
 	<span class="kw">pub </span>pallets: Vec&lt;Pallet&gt;,
 	<span class="kw">pub </span>pallets_token: token::Brace,
 }
@@ -868,7 +870,7 @@
 		}
 
 		<span class="kw">let </span>name = input.parse::&lt;syn::Ident&gt;()<span class="question-mark">?</span>;
-		<span class="kw">let </span>where_section = input.parse()<span class="question-mark">?</span>;
+		<span class="kw">let </span>where_section = <span class="kw">if </span>input.peek(token::Where) { <span class="prelude-val">Some</span>(input.parse()<span class="question-mark">?</span>) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 		<span class="kw">let </span>pallets =
 			input.parse::&lt;ext::Braces&lt;ext::Punctuated&lt;PalletDeclaration, <span class="macro">Token!</span>[,]&gt;&gt;&gt;()<span class="question-mark">?</span>;
 		<span class="kw">let </span>pallets_token = pallets.token;
@@ -900,6 +902,7 @@
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>WhereSection {
+	<span class="kw">pub </span>span: Span,
 	<span class="kw">pub </span>block: syn::TypePath,
 	<span class="kw">pub </span>node_block: syn::TypePath,
 	<span class="kw">pub </span>unchecked_extrinsic: syn::TypePath,
@@ -908,6 +911,7 @@
 <span class="kw">impl </span>Parse <span class="kw">for </span>WhereSection {
 	<span class="kw">fn </span>parse(input: ParseStream) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
 		input.parse::&lt;token::Where&gt;()<span class="question-mark">?</span>;
+
 		<span class="kw">let </span><span class="kw-2">mut </span>definitions = Vec::new();
 		<span class="kw">while </span>!input.peek(token::Brace) {
 			<span class="kw">let </span>definition: WhereDefinition = input.parse()<span class="question-mark">?</span>;
@@ -931,7 +935,7 @@
 			);
 			<span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(<span class="kw-2">*</span>kind_span, msg))
 		}
-		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ block, node_block, unchecked_extrinsic })
+		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ span: input.span(), block, node_block, unchecked_extrinsic })
 	}
 }
 

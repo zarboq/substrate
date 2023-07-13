@@ -3290,6 +3290,7 @@
 <a href="#3290" id="3290">3290</a>
 <a href="#3291" id="3291">3291</a>
 <a href="#3292" id="3292">3292</a>
+<a href="#3293" id="3293">3293</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3654,6 +3655,7 @@
 	},
 	DefaultNoBound, PalletError,
 };
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_core::U256;
 <span class="kw">use </span>sp_runtime::{
@@ -3964,10 +3966,10 @@
 	</span><span class="kw">pub </span>max: <span class="prelude-ty">Option</span>&lt;Perbill&gt;,
 	<span class="doccomment">/// Optional configuration around how often commission can be updated, and when the last
 	/// commission update took place.
-	</span><span class="kw">pub </span>change_rate: <span class="prelude-ty">Option</span>&lt;CommissionChangeRate&lt;T::BlockNumber&gt;&gt;,
+	</span><span class="kw">pub </span>change_rate: <span class="prelude-ty">Option</span>&lt;CommissionChangeRate&lt;BlockNumberFor&lt;T&gt;&gt;&gt;,
 	<span class="doccomment">/// The block from where throttling should be checked from. This value will be updated on all
 	/// commission updates and when setting an initial `change_rate`.
-	</span><span class="kw">pub </span>throttle_from: <span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;,
+	</span><span class="kw">pub </span>throttle_from: <span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;T: Config&gt; Commission&lt;T&gt; {
@@ -4109,7 +4111,7 @@
 	/// throttling can be checked from this block.
 	</span><span class="kw">fn </span>try_update_change_rate(
 		<span class="kw-2">&amp;mut </span><span class="self">self</span>,
-		change_rate: CommissionChangeRate&lt;T::BlockNumber&gt;,
+		change_rate: CommissionChangeRate&lt;BlockNumberFor&lt;T&gt;&gt;,
 	) -&gt; DispatchResult {
 		<span class="macro">ensure!</span>(!<span class="kw-2">&amp;</span><span class="self">self</span>.less_restrictive(<span class="kw-2">&amp;</span>change_rate), Error::&lt;T&gt;::CommissionChangeRateNotAllowed);
 
@@ -4129,7 +4131,7 @@
 	///
 	/// No change rate will always be less restrictive than some change rate, so where no
 	/// `change_rate` is currently set, `false` is returned.
-	</span><span class="kw">fn </span>less_restrictive(<span class="kw-2">&amp;</span><span class="self">self</span>, new: <span class="kw-2">&amp;</span>CommissionChangeRate&lt;T::BlockNumber&gt;) -&gt; bool {
+	</span><span class="kw">fn </span>less_restrictive(<span class="kw-2">&amp;</span><span class="self">self</span>, new: <span class="kw-2">&amp;</span>CommissionChangeRate&lt;BlockNumberFor&lt;T&gt;&gt;) -&gt; bool {
 		<span class="self">self</span>.change_rate
 			.as_ref()
 			.map(|c| new.max_increase &gt; c.max_increase || new.min_delay &lt; c.min_delay)
@@ -5057,7 +5059,7 @@
 		<span class="doccomment">/// A pool&#39;s commission `change_rate` has been changed.
 		</span>PoolCommissionChangeRateUpdated {
 			pool_id: PoolId,
-			change_rate: CommissionChangeRate&lt;T::BlockNumber&gt;,
+			change_rate: CommissionChangeRate&lt;BlockNumberFor&lt;T&gt;&gt;,
 		},
 		<span class="doccomment">/// Pool commission has been claimed.
 		</span>PoolCommissionClaimed { pool_id: PoolId, commission: BalanceOf&lt;T&gt; },
@@ -5895,7 +5897,7 @@
 		</span><span class="kw">pub fn </span>set_commission_change_rate(
 			origin: OriginFor&lt;T&gt;,
 			pool_id: PoolId,
-			change_rate: CommissionChangeRate&lt;T::BlockNumber&gt;,
+			change_rate: CommissionChangeRate&lt;BlockNumberFor&lt;T&gt;&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span><span class="kw-2">mut </span>bonded_pool = BondedPool::&lt;T&gt;::get(pool_id).ok_or(Error::&lt;T&gt;::PoolNotFound)<span class="question-mark">?</span>;

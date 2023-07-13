@@ -287,6 +287,7 @@
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -328,6 +329,7 @@
 	log,
 	traits::{Get, KeyOwnerProofSystem},
 };
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>sp_consensus_beefy::{EquivocationProof, ValidatorSetId, KEY_TYPE};
 <span class="kw">use </span>sp_runtime::{
@@ -415,7 +417,7 @@
 <span class="doccomment">/// Equivocation evidence convenience alias.
 </span><span class="kw">pub type </span>EquivocationEvidenceFor&lt;T&gt; = (
 	EquivocationProof&lt;
-		&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber,
+		BlockNumberFor&lt;T&gt;,
 		&lt;T <span class="kw">as </span>Config&gt;::BeefyId,
 		&lt;&lt;T <span class="kw">as </span>Config&gt;::BeefyId <span class="kw">as </span>RuntimeAppPublic&gt;::Signature,
 	&gt;,
@@ -429,7 +431,7 @@
 	R: ReportOffence&lt;
 		T::AccountId,
 		P::IdentificationTuple,
-		EquivocationOffence&lt;P::IdentificationTuple, T::BlockNumber&gt;,
+		EquivocationOffence&lt;P::IdentificationTuple, BlockNumberFor&lt;T&gt;&gt;,
 	&gt;,
 	P: KeyOwnerProofSystem&lt;(KeyTypeId, T::BeefyId), Proof = T::KeyOwnerProof&gt;,
 	P::IdentificationTuple: Clone,

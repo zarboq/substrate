@@ -123,6 +123,16 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -150,7 +160,10 @@
 
 <span class="kw">use crate</span>::{
 	codec::{Codec, Decode, Encode},
-	traits::{<span class="self">self</span>, Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, MaybeSerialize, Member, NumberFor},
+	traits::{
+		<span class="self">self</span>, Block <span class="kw">as </span>BlockT, Header <span class="kw">as </span>HeaderT, MaybeSerialize, MaybeSerializeDeserialize,
+		Member, NumberFor,
+	},
 	Justifications,
 };
 <span class="kw">use </span>sp_core::RuntimeDebug;
@@ -204,16 +217,23 @@
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;camelCase&quot;</span>))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(deny_unknown_fields))]
-</span><span class="kw">pub struct </span>Block&lt;Header, Extrinsic: MaybeSerialize&gt; {
+</span><span class="kw">pub struct </span>Block&lt;Header, Extrinsic&gt; {
 	<span class="doccomment">/// The block header.
 	</span><span class="kw">pub </span>header: Header,
 	<span class="doccomment">/// The accompanying extrinsics.
 	</span><span class="kw">pub </span>extrinsics: Vec&lt;Extrinsic&gt;,
 }
 
-<span class="kw">impl</span>&lt;Header, Extrinsic: MaybeSerialize&gt; traits::Block <span class="kw">for </span>Block&lt;Header, Extrinsic&gt;
+<span class="kw">impl</span>&lt;Header, Extrinsic&gt; traits::HeaderProvider <span class="kw">for </span>Block&lt;Header, Extrinsic&gt;
 <span class="kw">where
 	</span>Header: HeaderT,
+{
+	<span class="kw">type </span>HeaderT = Header;
+}
+
+<span class="kw">impl</span>&lt;Header, Extrinsic: MaybeSerialize&gt; traits::Block <span class="kw">for </span>Block&lt;Header, Extrinsic&gt;
+<span class="kw">where
+	</span>Header: HeaderT + MaybeSerializeDeserialize,
 	Extrinsic: Member + Codec + traits::Extrinsic,
 {
 	<span class="kw">type </span>Extrinsic = Extrinsic;

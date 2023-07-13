@@ -287,6 +287,7 @@
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -326,6 +327,7 @@
 
 </span><span class="kw">use </span>codec::{<span class="self">self </span><span class="kw">as </span>codec, Decode, Encode};
 <span class="kw">use </span>frame_support::traits::{Get, KeyOwnerProofSystem};
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>sp_consensus_grandpa::{AuthorityId, EquivocationProof, RoundNumber, SetId, KEY_TYPE};
 <span class="kw">use </span>sp_runtime::{
@@ -407,7 +409,7 @@
 <span class="kw">impl</span>&lt;T, R, P, L&gt;
 	OffenceReportSystem&lt;
 		<span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
-		(EquivocationProof&lt;T::Hash, T::BlockNumber&gt;, T::KeyOwnerProof),
+		(EquivocationProof&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt;, T::KeyOwnerProof),
 	&gt; <span class="kw">for </span>EquivocationReportSystem&lt;T, R, P, L&gt;
 <span class="kw">where
 	</span>T: Config + pallet_authorship::Config + frame_system::offchain::SendTransactionTypes&lt;Call&lt;T&gt;&gt;,
@@ -423,7 +425,7 @@
 	<span class="kw">type </span>Longevity = L;
 
 	<span class="kw">fn </span>publish_evidence(
-		evidence: (EquivocationProof&lt;T::Hash, T::BlockNumber&gt;, T::KeyOwnerProof),
+		evidence: (EquivocationProof&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt;, T::KeyOwnerProof),
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
 		<span class="kw">use </span>frame_system::offchain::SubmitTransaction;
 		<span class="kw">let </span>(equivocation_proof, key_owner_proof) = evidence;
@@ -441,7 +443,7 @@
 	}
 
 	<span class="kw">fn </span>check_evidence(
-		evidence: (EquivocationProof&lt;T::Hash, T::BlockNumber&gt;, T::KeyOwnerProof),
+		evidence: (EquivocationProof&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt;, T::KeyOwnerProof),
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), TransactionValidityError&gt; {
 		<span class="kw">let </span>(equivocation_proof, key_owner_proof) = evidence;
 
@@ -461,7 +463,7 @@
 
 	<span class="kw">fn </span>process_evidence(
 		reporter: <span class="prelude-ty">Option</span>&lt;T::AccountId&gt;,
-		evidence: (EquivocationProof&lt;T::Hash, T::BlockNumber&gt;, T::KeyOwnerProof),
+		evidence: (EquivocationProof&lt;T::Hash, BlockNumberFor&lt;T&gt;&gt;, T::KeyOwnerProof),
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
 		<span class="kw">let </span>(equivocation_proof, key_owner_proof) = evidence;
 		<span class="kw">let </span>reporter = reporter.or_else(|| &lt;pallet_authorship::Pallet&lt;T&gt;&gt;::author());

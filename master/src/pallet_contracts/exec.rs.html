@@ -3731,7 +3731,6 @@
 <a href="#3731" id="3731">3731</a>
 <a href="#3732" id="3732">3732</a>
 <a href="#3733" id="3733">3733</a>
-<a href="#3734" id="3734">3734</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3768,7 +3767,7 @@
 	weights::Weight,
 	Blake2_128Concat, BoundedVec, StorageHasher,
 };
-<span class="kw">use </span>frame_system::RawOrigin;
+<span class="kw">use </span>frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 <span class="kw">use </span>pallet_contracts_primitives::ExecReturnValue;
 <span class="kw">use </span>smallvec::{Array, SmallVec};
 <span class="kw">use </span>sp_core::{
@@ -3782,7 +3781,6 @@
 <span class="kw">pub type </span>AccountIdOf&lt;T&gt; = &lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId;
 <span class="kw">pub type </span>MomentOf&lt;T&gt; = &lt;&lt;T <span class="kw">as </span>Config&gt;::Time <span class="kw">as </span>Time&gt;::Moment;
 <span class="kw">pub type </span>SeedOf&lt;T&gt; = &lt;T <span class="kw">as </span>frame_system::Config&gt;::Hash;
-<span class="kw">pub type </span>BlockNumberOf&lt;T&gt; = &lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber;
 <span class="kw">pub type </span>ExecResult = <span class="prelude-ty">Result</span>&lt;ExecReturnValue, ExecError&gt;;
 
 <span class="doccomment">/// A type that represents a topic of an event. At the moment a hash is used.
@@ -3978,7 +3976,7 @@
 	</span><span class="kw">fn </span>minimum_balance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BalanceOf&lt;<span class="self">Self</span>::T&gt;;
 
 	<span class="doccomment">/// Returns a random number for the current block with the given subject.
-	</span><span class="kw">fn </span>random(<span class="kw-2">&amp;</span><span class="self">self</span>, subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (SeedOf&lt;<span class="self">Self</span>::T&gt;, BlockNumberOf&lt;<span class="self">Self</span>::T&gt;);
+	</span><span class="kw">fn </span>random(<span class="kw-2">&amp;</span><span class="self">self</span>, subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (SeedOf&lt;<span class="self">Self</span>::T&gt;, BlockNumberFor&lt;<span class="self">Self</span>::T&gt;);
 
 	<span class="doccomment">/// Deposit an event with the given topics.
 	///
@@ -3986,7 +3984,7 @@
 	</span><span class="kw">fn </span>deposit_event(<span class="kw-2">&amp;mut </span><span class="self">self</span>, topics: Vec&lt;TopicOf&lt;<span class="self">Self</span>::T&gt;&gt;, data: Vec&lt;u8&gt;);
 
 	<span class="doccomment">/// Returns the current block number.
-	</span><span class="kw">fn </span>block_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BlockNumberOf&lt;<span class="self">Self</span>::T&gt;;
+	</span><span class="kw">fn </span>block_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BlockNumberFor&lt;<span class="self">Self</span>::T&gt;;
 
 	<span class="doccomment">/// Returns the maximum allowed size of a storage item.
 	</span><span class="kw">fn </span>max_value_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32;
@@ -4134,7 +4132,7 @@
 	<span class="doccomment">/// The timestamp at the point of call stack instantiation.
 	</span>timestamp: MomentOf&lt;T&gt;,
 	<span class="doccomment">/// The block number at the time of call stack instantiation.
-	</span>block_number: T::BlockNumber,
+	</span>block_number: BlockNumberFor&lt;T&gt;,
 	<span class="doccomment">/// The nonce is cached here when accessed. It is written back when the call stack
 	/// finishes executing. Please refer to [`Nonce`] to a description of
 	/// the nonce itself.
@@ -5075,7 +5073,7 @@
 		<span class="self">self</span>.top_frame().value_transferred
 	}
 
-	<span class="kw">fn </span>random(<span class="kw-2">&amp;</span><span class="self">self</span>, subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (SeedOf&lt;T&gt;, BlockNumberOf&lt;T&gt;) {
+	<span class="kw">fn </span>random(<span class="kw-2">&amp;</span><span class="self">self</span>, subject: <span class="kw-2">&amp;</span>[u8]) -&gt; (SeedOf&lt;T&gt;, BlockNumberFor&lt;T&gt;) {
 		T::Randomness::random(subject)
 	}
 
@@ -5094,7 +5092,7 @@
 		);
 	}
 
-	<span class="kw">fn </span>block_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; T::BlockNumber {
+	<span class="kw">fn </span>block_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BlockNumberFor&lt;T&gt; {
 		<span class="self">self</span>.block_number
 	}
 

@@ -1877,10 +1877,6 @@
 <a href="#1877" id="1877">1877</a>
 <a href="#1878" id="1878">1878</a>
 <a href="#1879" id="1879">1879</a>
-<a href="#1880" id="1880">1880</a>
-<a href="#1881" id="1881">1881</a>
-<a href="#1882" id="1882">1882</a>
-<a href="#1883" id="1883">1883</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2054,7 +2050,7 @@
 
 		<span class="doccomment">/// The max duration in blocks for deadlines.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>MaxDeadlineDuration: Get&lt;&lt;<span class="self">Self </span><span class="kw">as </span>SystemConfig&gt;::BlockNumber&gt;;
+		</span><span class="kw">type </span>MaxDeadlineDuration: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The max number of attributes a user could set per call.
 		</span><span class="attr">#[pallet::constant]
@@ -2226,7 +2222,7 @@
 			T::CollectionId,
 			T::ItemId,
 			PriceWithDirection&lt;ItemPrice&lt;T, I&gt;&gt;,
-			&lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber,
+			BlockNumberFor&lt;T&gt;,
 		&gt;,
 		OptionQuery,
 	&gt;;
@@ -2297,7 +2293,7 @@
 			item: T::ItemId,
 			owner: T::AccountId,
 			delegate: T::AccountId,
-			deadline: <span class="prelude-ty">Option</span>&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber&gt;,
+			deadline: <span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;,
 		},
 		<span class="doccomment">/// An approval for a `delegate` account to transfer the `item` of an item
 		/// `collection` was cancelled by its `owner`.
@@ -2392,7 +2388,7 @@
 			desired_collection: T::CollectionId,
 			desired_item: <span class="prelude-ty">Option</span>&lt;T::ItemId&gt;,
 			price: <span class="prelude-ty">Option</span>&lt;PriceWithDirection&lt;ItemPrice&lt;T, I&gt;&gt;&gt;,
-			deadline: &lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber,
+			deadline: BlockNumberFor&lt;T&gt;,
 		},
 		<span class="doccomment">/// The swap was cancelled.
 		</span>SwapCancelled {
@@ -2401,7 +2397,7 @@
 			desired_collection: T::CollectionId,
 			desired_item: <span class="prelude-ty">Option</span>&lt;T::ItemId&gt;,
 			price: <span class="prelude-ty">Option</span>&lt;PriceWithDirection&lt;ItemPrice&lt;T, I&gt;&gt;&gt;,
-			deadline: &lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber,
+			deadline: BlockNumberFor&lt;T&gt;,
 		},
 		<span class="doccomment">/// The swap has been claimed.
 		</span>SwapClaimed {
@@ -2412,7 +2408,7 @@
 			received_item: T::ItemId,
 			received_item_owner: T::AccountId,
 			price: <span class="prelude-ty">Option</span>&lt;PriceWithDirection&lt;ItemPrice&lt;T, I&gt;&gt;&gt;,
-			deadline: &lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber,
+			deadline: BlockNumberFor&lt;T&gt;,
 		},
 		<span class="doccomment">/// New attributes have been set for an `item` of the `collection`.
 		</span>PreSignedAttributesSet {
@@ -3119,7 +3115,7 @@
 			collection: T::CollectionId,
 			item: T::ItemId,
 			delegate: AccountIdLookupOf&lt;T&gt;,
-			maybe_deadline: <span class="prelude-ty">Option</span>&lt;&lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber&gt;,
+			maybe_deadline: <span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
@@ -3542,11 +3538,7 @@
 		</span><span class="kw">pub fn </span>update_mint_settings(
 			origin: OriginFor&lt;T&gt;,
 			collection: T::CollectionId,
-			mint_settings: MintSettings&lt;
-				BalanceOf&lt;T, I&gt;,
-				&lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber,
-				T::CollectionId,
-			&gt;,
+			mint_settings: MintSettings&lt;BalanceOf&lt;T, I&gt;, BlockNumberFor&lt;T&gt;, T::CollectionId&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>maybe_check_origin = T::ForceOrigin::try_origin(origin)
 				.map(|<span class="kw">_</span>| <span class="prelude-val">None</span>)
@@ -3642,7 +3634,7 @@
 			desired_collection: T::CollectionId,
 			maybe_desired_item: <span class="prelude-ty">Option</span>&lt;T::ItemId&gt;,
 			maybe_price: <span class="prelude-ty">Option</span>&lt;PriceWithDirection&lt;ItemPrice&lt;T, I&gt;&gt;&gt;,
-			duration: &lt;T <span class="kw">as </span>SystemConfig&gt;::BlockNumber,
+			duration: BlockNumberFor&lt;T&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>origin = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_create_swap(

@@ -586,7 +586,7 @@
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
+		<span class="kw">fn </span>on_initialize(n: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			<span class="comment">// Drop obsolete roots. The proof for `obsolete` will be checked later
 			// in this block, so we drop `obsolete` - 1.
 			</span><span class="kw">let </span>period = &lt;StoragePeriod&lt;T&gt;&gt;::get();
@@ -599,7 +599,7 @@
 			</span>T::DbWeight::get().reads_writes(<span class="number">2</span>, <span class="number">4</span>)
 		}
 
-		<span class="kw">fn </span>on_finalize(n: T::BlockNumber) {
+		<span class="kw">fn </span>on_finalize(n: BlockNumberFor&lt;T&gt;) {
 			<span class="macro">assert!</span>(
 				&lt;ProofChecked&lt;T&gt;&gt;::take() || {
 					<span class="comment">// Proof is not required for early or empty blocks.
@@ -679,7 +679,7 @@
 		#[pallet::weight(T::WeightInfo::renew())]
 		</span><span class="kw">pub fn </span>renew(
 			origin: OriginFor&lt;T&gt;,
-			block: T::BlockNumber,
+			block: BlockNumberFor&lt;T&gt;,
 			index: u32,
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="kw">let </span>sender = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -783,7 +783,7 @@
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>Transactions&lt;T: Config&gt; = StorageMap&lt;
 		<span class="kw">_</span>,
 		Blake2_128Concat,
-		T::BlockNumber,
+		BlockNumberFor&lt;T&gt;,
 		BoundedVec&lt;TransactionInfo, T::MaxBlockTransactions&gt;,
 		OptionQuery,
 	&gt;;
@@ -791,7 +791,7 @@
 	<span class="doccomment">/// Count indexed chunks for each block.
 	</span><span class="attr">#[pallet::storage]
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>ChunkCount&lt;T: Config&gt; =
-		StorageMap&lt;<span class="kw">_</span>, Blake2_128Concat, T::BlockNumber, u32, ValueQuery&gt;;
+		StorageMap&lt;<span class="kw">_</span>, Blake2_128Concat, BlockNumberFor&lt;T&gt;, u32, ValueQuery&gt;;
 
 	<span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>byte_fee)]
@@ -806,7 +806,7 @@
 	<span class="doccomment">/// Storage period for data in blocks. Should match `sp_storage_proof::DEFAULT_STORAGE_PERIOD`
 	/// for block authoring.
 	</span><span class="attr">#[pallet::storage]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>StoragePeriod&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, T::BlockNumber, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>StoragePeriod&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, BlockNumberFor&lt;T&gt;, ValueQuery&gt;;
 
 	<span class="comment">// Intermediates
 	</span><span class="attr">#[pallet::storage]
@@ -821,7 +821,7 @@
 	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&gt; {
 		<span class="kw">pub </span>byte_fee: BalanceOf&lt;T&gt;,
 		<span class="kw">pub </span>entry_fee: BalanceOf&lt;T&gt;,
-		<span class="kw">pub </span>storage_period: T::BlockNumber,
+		<span class="kw">pub </span>storage_period: BlockNumberFor&lt;T&gt;,
 	}
 
 	<span class="kw">impl</span>&lt;T: Config&gt; Default <span class="kw">for </span>GenesisConfig&lt;T&gt; {

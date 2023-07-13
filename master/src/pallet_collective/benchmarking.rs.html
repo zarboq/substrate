@@ -648,6 +648,8 @@
 <a href="#648" id="648">648</a>
 <a href="#649" id="649">649</a>
 <a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -674,7 +676,9 @@
 <span class="kw">use </span>sp_std::mem::size_of;
 
 <span class="kw">use </span>frame_benchmarking::v1::{account, benchmarks_instance_pallet, whitelisted_caller};
-<span class="kw">use </span>frame_system::{Call <span class="kw">as </span>SystemCall, Pallet <span class="kw">as </span>System, RawOrigin <span class="kw">as </span>SystemOrigin};
+<span class="kw">use </span>frame_system::{
+	pallet_prelude::BlockNumberFor, Call <span class="kw">as </span>SystemCall, Pallet <span class="kw">as </span>System, RawOrigin <span class="kw">as </span>SystemOrigin,
+};
 
 <span class="kw">const </span>SEED: u32 = <span class="number">0</span>;
 
@@ -1166,7 +1170,7 @@
 			<span class="bool-val">false</span>,
 		)<span class="question-mark">?</span>;
 
-		System::&lt;T&gt;::set_block_number(T::BlockNumber::max_value());
+		System::&lt;T&gt;::set_block_number(BlockNumberFor::&lt;T&gt;::max_value());
 		<span class="macro">assert_eq!</span>(Collective::&lt;T, I&gt;::proposals().len(), p <span class="kw">as </span>usize);
 
 		<span class="comment">// Prime nay will close it as disapproved
@@ -1238,7 +1242,7 @@
 		}
 
 		<span class="comment">// caller is prime, prime already votes aye by creating the proposal
-		</span>System::&lt;T&gt;::set_block_number(T::BlockNumber::max_value());
+		</span>System::&lt;T&gt;::set_block_number(BlockNumberFor::&lt;T&gt;::max_value());
 		<span class="macro">assert_eq!</span>(Collective::&lt;T, I&gt;::proposals().len(), p <span class="kw">as </span>usize);
 
 		<span class="comment">// Prime aye will close it as approved
@@ -1287,7 +1291,7 @@
 			last_hash = T::Hashing::hash_of(<span class="kw-2">&amp;</span>proposal);
 		}
 
-		System::&lt;T&gt;::set_block_number(T::BlockNumber::max_value());
+		System::&lt;T&gt;::set_block_number(BlockNumberFor::&lt;T&gt;::max_value());
 		<span class="macro">assert_eq!</span>(Collective::&lt;T, I&gt;::proposals().len(), p <span class="kw">as </span>usize);
 
 	}: <span class="kw">_</span>(SystemOrigin::Root, last_hash)

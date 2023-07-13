@@ -2665,6 +2665,10 @@
 <a href="#2665" id="2665">2665</a>
 <a href="#2666" id="2666">2666</a>
 <a href="#2667" id="2667">2667</a>
+<a href="#2668" id="2668">2668</a>
+<a href="#2669" id="2669">2669</a>
+<a href="#2670" id="2670">2670</a>
+<a href="#2671" id="2671">2671</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2908,7 +2912,7 @@
 	weights::Weight,
 	DefaultNoBound, EqNoBound, PartialEqNoBound,
 };
-<span class="kw">use </span>frame_system::{ensure_none, offchain::SendTransactionTypes};
+<span class="kw">use </span>frame_system::{ensure_none, offchain::SendTransactionTypes, pallet_prelude::BlockNumberFor};
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_arithmetic::{
 	traits::{CheckedAdd, Zero},
@@ -3252,10 +3256,10 @@
 
 		<span class="doccomment">/// Duration of the unsigned phase.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>UnsignedPhase: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>UnsignedPhase: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 		<span class="doccomment">/// Duration of the signed phase.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>SignedPhase: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>SignedPhase: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The minimum amount of improvement to the solution score that defines a solution as
 		/// &quot;better&quot; in the Signed phase.
@@ -3272,7 +3276,7 @@
 		/// For example, if it is 5, that means that at least 5 blocks will elapse between attempts
 		/// to submit the worker&#39;s solution.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>OffchainRepeat: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>OffchainRepeat: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The priority of the unsigned transaction submitted in the unsigned-phase
 		</span><span class="attr">#[pallet::constant]
@@ -3352,13 +3356,13 @@
 		<span class="doccomment">/// Something that will provide the election data.
 		</span><span class="kw">type </span>DataProvider: ElectionDataProvider&lt;
 			AccountId = <span class="self">Self</span>::AccountId,
-			BlockNumber = <span class="self">Self</span>::BlockNumber,
+			BlockNumber = BlockNumberFor&lt;<span class="self">Self</span>&gt;,
 		&gt;;
 
 		<span class="doccomment">/// Configuration for the fallback.
 		</span><span class="kw">type </span>Fallback: InstantElectionProvider&lt;
 			AccountId = <span class="self">Self</span>::AccountId,
-			BlockNumber = <span class="self">Self</span>::BlockNumber,
+			BlockNumber = BlockNumberFor&lt;<span class="self">Self</span>&gt;,
 			DataProvider = <span class="self">Self</span>::DataProvider,
 			MaxWinners = <span class="self">Self</span>::MaxWinners,
 		&gt;;
@@ -3369,7 +3373,7 @@
 		/// BoundedExecution&lt;_&gt;` if the test-net is not expected to have thousands of nominators.
 		</span><span class="kw">type </span>GovernanceFallback: InstantElectionProvider&lt;
 			AccountId = <span class="self">Self</span>::AccountId,
-			BlockNumber = <span class="self">Self</span>::BlockNumber,
+			BlockNumber = BlockNumberFor&lt;<span class="self">Self</span>&gt;,
 			DataProvider = <span class="self">Self</span>::DataProvider,
 			MaxWinners = <span class="self">Self</span>::MaxWinners,
 		&gt;;
@@ -3414,7 +3418,7 @@
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>on_initialize(now: T::BlockNumber) -&gt; Weight {
+		<span class="kw">fn </span>on_initialize(now: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			<span class="kw">let </span>next_election = T::DataProvider::next_election_prediction(now).max(now);
 
 			<span class="kw">let </span>signed_deadline = T::SignedPhase::get() + T::UnsignedPhase::get();
@@ -3491,7 +3495,7 @@
 			}
 		}
 
-		<span class="kw">fn </span>offchain_worker(now: T::BlockNumber) {
+		<span class="kw">fn </span>offchain_worker(now: BlockNumberFor&lt;T&gt;) {
 			<span class="kw">use </span>sp_runtime::offchain::storage_lock::{BlockAndTime, StorageLock};
 
 			<span class="comment">// Create a lock with the maximum deadline of number of blocks in the unsigned phase.
@@ -3553,7 +3557,7 @@
 		}
 
 		<span class="attr">#[cfg(feature = <span class="string">&quot;try-runtime&quot;</span>)]
-		</span><span class="kw">fn </span>try_state(_n: T::BlockNumber) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
+		</span><span class="kw">fn </span>try_state(_n: BlockNumberFor&lt;T&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), TryRuntimeError&gt; {
 			<span class="self">Self</span>::do_try_state()
 		}
 	}
@@ -3822,7 +3826,11 @@
 		<span class="doccomment">/// An account has been slashed for submitting an invalid signed submission.
 		</span>Slashed { account: &lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId, value: BalanceOf&lt;T&gt; },
 		<span class="doccomment">/// There was a phase transition in a given round.
-		</span>PhaseTransitioned { from: Phase&lt;T::BlockNumber&gt;, to: Phase&lt;T::BlockNumber&gt;, round: u32 },
+		</span>PhaseTransitioned {
+			from: Phase&lt;BlockNumberFor&lt;T&gt;&gt;,
+			to: Phase&lt;BlockNumberFor&lt;T&gt;&gt;,
+			round: u32,
+		},
 	}
 
 	<span class="doccomment">/// Error of the pallet that can be returned in response to dispatches.
@@ -3924,7 +3932,7 @@
 	<span class="doccomment">/// Current phase.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>current_phase)]
-	</span><span class="kw">pub type </span>CurrentPhase&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, Phase&lt;T::BlockNumber&gt;, ValueQuery&gt;;
+	</span><span class="kw">pub type </span>CurrentPhase&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, Phase&lt;BlockNumberFor&lt;T&gt;&gt;, ValueQuery&gt;;
 
 	<span class="doccomment">/// Current best solution, signed or unsigned, queued to be returned upon `elect`.
 	///
@@ -4016,7 +4024,7 @@
 <span class="kw">impl</span>&lt;T: Config&gt; Pallet&lt;T&gt; {
 	<span class="doccomment">/// Internal logic of the offchain worker, to be executed only when the offchain lock is
 	/// acquired with success.
-	</span><span class="kw">fn </span>do_synchronized_offchain_worker(now: T::BlockNumber) {
+	</span><span class="kw">fn </span>do_synchronized_offchain_worker(now: BlockNumberFor&lt;T&gt;) {
 		<span class="kw">let </span>current_phase = <span class="self">Self</span>::current_phase();
 		<span class="macro">log!</span>(trace, <span class="string">&quot;lock for offchain worker acquired. Phase = {:?}&quot;</span>, current_phase);
 		<span class="kw">match </span>current_phase {
@@ -4042,7 +4050,7 @@
 	}
 
 	<span class="doccomment">/// Phase transition helper.
-	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>phase_transition(to: Phase&lt;T::BlockNumber&gt;) {
+	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>phase_transition(to: Phase&lt;BlockNumberFor&lt;T&gt;&gt;) {
 		<span class="macro">log!</span>(info, <span class="string">&quot;Starting phase {:?}, round {}.&quot;</span>, to, <span class="self">Self</span>::round());
 		<span class="self">Self</span>::deposit_event(Event::PhaseTransitioned {
 			from: &lt;CurrentPhase&lt;T&gt;&gt;::get(),
@@ -4339,7 +4347,7 @@
 
 <span class="kw">impl</span>&lt;T: Config&gt; ElectionProviderBase <span class="kw">for </span>Pallet&lt;T&gt; {
 	<span class="kw">type </span>AccountId = T::AccountId;
-	<span class="kw">type </span>BlockNumber = T::BlockNumber;
+	<span class="kw">type </span>BlockNumber = BlockNumberFor&lt;T&gt;;
 	<span class="kw">type </span>Error = ElectionError&lt;T&gt;;
 	<span class="kw">type </span>MaxWinners = T::MaxWinners;
 	<span class="kw">type </span>DataProvider = T::DataProvider;

@@ -2385,6 +2385,46 @@
 <a href="#2385" id="2385">2385</a>
 <a href="#2386" id="2386">2386</a>
 <a href="#2387" id="2387">2387</a>
+<a href="#2388" id="2388">2388</a>
+<a href="#2389" id="2389">2389</a>
+<a href="#2390" id="2390">2390</a>
+<a href="#2391" id="2391">2391</a>
+<a href="#2392" id="2392">2392</a>
+<a href="#2393" id="2393">2393</a>
+<a href="#2394" id="2394">2394</a>
+<a href="#2395" id="2395">2395</a>
+<a href="#2396" id="2396">2396</a>
+<a href="#2397" id="2397">2397</a>
+<a href="#2398" id="2398">2398</a>
+<a href="#2399" id="2399">2399</a>
+<a href="#2400" id="2400">2400</a>
+<a href="#2401" id="2401">2401</a>
+<a href="#2402" id="2402">2402</a>
+<a href="#2403" id="2403">2403</a>
+<a href="#2404" id="2404">2404</a>
+<a href="#2405" id="2405">2405</a>
+<a href="#2406" id="2406">2406</a>
+<a href="#2407" id="2407">2407</a>
+<a href="#2408" id="2408">2408</a>
+<a href="#2409" id="2409">2409</a>
+<a href="#2410" id="2410">2410</a>
+<a href="#2411" id="2411">2411</a>
+<a href="#2412" id="2412">2412</a>
+<a href="#2413" id="2413">2413</a>
+<a href="#2414" id="2414">2414</a>
+<a href="#2415" id="2415">2415</a>
+<a href="#2416" id="2416">2416</a>
+<a href="#2417" id="2417">2417</a>
+<a href="#2418" id="2418">2418</a>
+<a href="#2419" id="2419">2419</a>
+<a href="#2420" id="2420">2420</a>
+<a href="#2421" id="2421">2421</a>
+<a href="#2422" id="2422">2422</a>
+<a href="#2423" id="2423">2423</a>
+<a href="#2424" id="2424">2424</a>
+<a href="#2425" id="2425">2425</a>
+<a href="#2426" id="2426">2426</a>
+<a href="#2427" id="2427">2427</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2413,7 +2453,7 @@
 	},
 	DispatchResult,
 };
-<span class="kw">use </span>codec::{Codec, Decode, Encode, EncodeLike, MaxEncodedLen};
+<span class="kw">use </span>codec::{Codec, Decode, Encode, EncodeLike, FullCodec, MaxEncodedLen};
 <span class="kw">use </span>impl_trait_for_tuples::impl_for_tuples;
 <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -3541,7 +3581,9 @@
 /// `parent_hash`, as well as a `digest` and a block `number`.
 ///
 /// You can also create a `new` one from those fields.
-</span><span class="kw">pub trait </span>Header: Clone + Send + Sync + Codec + Eq + MaybeSerialize + Debug + <span class="lifetime">&#39;static </span>{
+</span><span class="kw">pub trait </span>Header:
+	Clone + Send + Sync + Codec + Eq + MaybeSerialize + Debug + TypeInfo + <span class="lifetime">&#39;static
+</span>{
 	<span class="doccomment">/// Header number.
 	</span><span class="kw">type </span>Number: Member
 		+ MaybeSerializeDeserialize
@@ -3551,7 +3593,10 @@
 		+ Copy
 		+ MaybeDisplay
 		+ AtLeast32BitUnsigned
-		+ Codec;
+		+ Default
+		+ TypeInfo
+		+ MaxEncodedLen
+		+ FullCodec;
 	<span class="doccomment">/// Header hash type
 	</span><span class="kw">type </span>Hash: HashOutput;
 	<span class="doccomment">/// Hashing algorithm
@@ -3597,15 +3642,50 @@
 	}
 }
 
+<span class="comment">// Something that provides the Header Type. Only for internal usage and should only be used
+// via `HeaderFor` or `BlockNumberFor`.
+//
+// This is needed to fix the &quot;cyclical&quot; issue in loading Header/BlockNumber as part of a
+// `pallet::call`. Essentially, `construct_runtime` aggregates all calls to create a `RuntimeCall`
+// that is then used to define `UncheckedExtrinsic`.
+// ```ignore
+// pub type UncheckedExtrinsic =
+// 	generic::UncheckedExtrinsic&lt;Address, RuntimeCall, Signature, SignedExtra&gt;;
+// ```
+// This `UncheckedExtrinsic` is supplied to the `Block`.
+// ```ignore
+// pub type Block = generic::Block&lt;Header, UncheckedExtrinsic&gt;;
+// ```
+// So, if we do not create a trait outside of `Block` that doesn&#39;t have `Extrinsic`, we go into a
+// recursive loop leading to a build error.
+//
+// Note that this is a workaround for a compiler bug and should be removed when the compiler
+// bug is fixed.
+</span><span class="attr">#[doc(hidden)]
+</span><span class="kw">pub trait </span>HeaderProvider {
+	<span class="doccomment">/// Header type.
+	</span><span class="kw">type </span>HeaderT: Header;
+}
+
 <span class="doccomment">/// Something which fulfills the abstract idea of a Substrate block. It has types for
 /// `Extrinsic` pieces of information as well as a `Header`.
 ///
 /// You can get an iterator over each of the `extrinsics` and retrieve the `header`.
-</span><span class="kw">pub trait </span>Block: Clone + Send + Sync + Codec + Eq + MaybeSerialize + Debug + <span class="lifetime">&#39;static </span>{
+</span><span class="kw">pub trait </span>Block:
+	HeaderProvider&lt;HeaderT = &lt;<span class="self">Self </span><span class="kw">as </span>Block&gt;::Header&gt;
+	+ Clone
+	+ Send
+	+ Sync
+	+ Codec
+	+ Eq
+	+ MaybeSerialize
+	+ Debug
+	+ <span class="lifetime">&#39;static
+</span>{
 	<span class="doccomment">/// Type for extrinsics.
 	</span><span class="kw">type </span>Extrinsic: Member + Codec + Extrinsic + MaybeSerialize;
 	<span class="doccomment">/// Header type.
-	</span><span class="kw">type </span>Header: Header&lt;Hash = <span class="self">Self</span>::Hash&gt;;
+	</span><span class="kw">type </span>Header: Header&lt;Hash = <span class="self">Self</span>::Hash&gt; + MaybeSerializeDeserialize;
 	<span class="doccomment">/// Block hash type.
 	</span><span class="kw">type </span>Hash: HashOutput;
 

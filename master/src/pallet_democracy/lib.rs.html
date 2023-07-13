@@ -1749,6 +1749,11 @@
 <a href="#1749" id="1749">1749</a>
 <a href="#1750" id="1750">1750</a>
 <a href="#1751" id="1751">1751</a>
+<a href="#1752" id="1752">1752</a>
+<a href="#1753" id="1753">1753</a>
+<a href="#1754" id="1754">1754</a>
+<a href="#1755" id="1755">1755</a>
+<a href="#1756" id="1756">1756</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1916,7 +1921,7 @@
 	},
 	weights::Weight,
 };
-<span class="kw">use </span>frame_system::pallet_prelude::OriginFor;
+<span class="kw">use </span>frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
 <span class="kw">use </span>sp_runtime::{
 	traits::{Bounded <span class="kw">as </span>ArithBounded, One, Saturating, StaticLookup, Zero},
 	ArithmeticError, DispatchError, DispatchResult,
@@ -1977,14 +1982,14 @@
 		<span class="kw">type </span>RuntimeEvent: From&lt;Event&lt;<span class="self">Self</span>&gt;&gt; + IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
 
 		<span class="doccomment">/// The Scheduler.
-		</span><span class="kw">type </span>Scheduler: ScheduleNamed&lt;<span class="self">Self</span>::BlockNumber, CallOf&lt;<span class="self">Self</span>&gt;, <span class="self">Self</span>::PalletsOrigin&gt;;
+		</span><span class="kw">type </span>Scheduler: ScheduleNamed&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;, CallOf&lt;<span class="self">Self</span>&gt;, <span class="self">Self</span>::PalletsOrigin&gt;;
 
 		<span class="doccomment">/// The Preimage provider.
 		</span><span class="kw">type </span>Preimages: QueryPreimage + StorePreimage;
 
 		<span class="doccomment">/// Currency type for this pallet.
 		</span><span class="kw">type </span>Currency: ReservableCurrency&lt;<span class="self">Self</span>::AccountId&gt;
-			+ LockableCurrency&lt;<span class="self">Self</span>::AccountId, Moment = <span class="self">Self</span>::BlockNumber&gt;;
+			+ LockableCurrency&lt;<span class="self">Self</span>::AccountId, Moment = BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The period between a proposal being approved and enacted.
 		///
@@ -1992,22 +1997,22 @@
 		/// voting stakers have an opportunity to remove themselves from the system in the case
 		/// where they are on the losing side of a vote.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>EnactmentPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>EnactmentPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// How often (in blocks) new public referenda are launched.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>LaunchPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>LaunchPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// How often (in blocks) to check for new votes.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>VotingPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>VotingPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The minimum period of vote locking.
 		///
 		/// It should be no shorter than enactment period to ensure that in the case of an approval,
 		/// those successful voters are locked into the consequences that their votes entail.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>VoteLockingPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>VoteLockingPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The minimum amount to be used as a deposit for a public referendum proposal.
 		</span><span class="attr">#[pallet::constant]
@@ -2021,11 +2026,11 @@
 
 		<span class="doccomment">/// Minimum voting period allowed for a fast-track referendum.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>FastTrackVotingPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>FastTrackVotingPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// Period in blocks where an external proposal may not be re-submitted after being vetoed.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>CooloffPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>CooloffPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The maximum number of votes for an account.
 		///
@@ -2138,7 +2143,7 @@
 		<span class="kw">_</span>,
 		Twox64Concat,
 		ReferendumIndex,
-		ReferendumInfo&lt;T::BlockNumber, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;,
+		ReferendumInfo&lt;BlockNumberFor&lt;T&gt;, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;,
 	&gt;;
 
 	<span class="doccomment">/// All votes for a particular voter. We store the balance for the number of votes that we
@@ -2150,7 +2155,7 @@
 		<span class="kw">_</span>,
 		Twox64Concat,
 		T::AccountId,
-		Voting&lt;BalanceOf&lt;T&gt;, T::AccountId, T::BlockNumber, T::MaxVotes&gt;,
+		Voting&lt;BalanceOf&lt;T&gt;, T::AccountId, BlockNumberFor&lt;T&gt;, T::MaxVotes&gt;,
 		ValueQuery,
 	&gt;;
 
@@ -2173,7 +2178,7 @@
 		<span class="kw">_</span>,
 		Identity,
 		H256,
-		(T::BlockNumber, BoundedVec&lt;T::AccountId, T::MaxBlacklisted&gt;),
+		(BlockNumberFor&lt;T&gt;, BoundedVec&lt;T::AccountId, T::MaxBlacklisted&gt;),
 	&gt;;
 
 	<span class="doccomment">/// Record of all proposals that have been subject to emergency cancellation.
@@ -2227,7 +2232,7 @@
 		<span class="doccomment">/// An account has cancelled a previous delegation operation.
 		</span>Undelegated { account: T::AccountId },
 		<span class="doccomment">/// An external proposal has been vetoed.
-		</span>Vetoed { who: T::AccountId, proposal_hash: H256, until: T::BlockNumber },
+		</span>Vetoed { who: T::AccountId, proposal_hash: H256, until: BlockNumberFor&lt;T&gt; },
 		<span class="doccomment">/// A proposal_hash has been blacklisted permanently.
 		</span>Blacklisted { proposal_hash: H256 },
 		<span class="doccomment">/// An account has voted in a referendum
@@ -2317,7 +2322,7 @@
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
 		<span class="doccomment">/// Weight: see `begin_block`
-		</span><span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
+		</span><span class="kw">fn </span>on_initialize(n: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			<span class="self">Self</span>::begin_block(n)
 		}
 	}
@@ -2527,8 +2532,8 @@
 		</span><span class="kw">pub fn </span>fast_track(
 			origin: OriginFor&lt;T&gt;,
 			proposal_hash: H256,
-			voting_period: T::BlockNumber,
-			delay: T::BlockNumber,
+			voting_period: BlockNumberFor&lt;T&gt;,
+			delay: BlockNumberFor&lt;T&gt;,
 		) -&gt; DispatchResult {
 			<span class="comment">// Rather complicated bit of code to ensure that either:
 			// - `voting_period` is at least `FastTrackVotingPeriod` and `origin` is
@@ -2546,7 +2551,7 @@
 				<span class="macro">ensure!</span>(T::InstantAllowed::get(), Error::&lt;T&gt;::InstantNotAllowed);
 			}
 
-			<span class="macro">ensure!</span>(voting_period &gt; T::BlockNumber::zero(), Error::&lt;T&gt;::VotingPeriodLow);
+			<span class="macro">ensure!</span>(voting_period &gt; Zero::zero(), Error::&lt;T&gt;::VotingPeriodLow);
 			<span class="kw">let </span>(ext_proposal, threshold) =
 				&lt;NextExternal&lt;T&gt;&gt;::get().ok_or(Error::&lt;T&gt;::ProposalMissing)<span class="question-mark">?</span>;
 			<span class="macro">ensure!</span>(
@@ -2799,7 +2804,8 @@
 			T::BlacklistOrigin::ensure_origin(origin)<span class="question-mark">?</span>;
 
 			<span class="comment">// Insert the proposal into the blacklist.
-			</span><span class="kw">let </span>permanent = (T::BlockNumber::max_value(), BoundedVec::&lt;T::AccountId, <span class="kw">_</span>&gt;::default());
+			</span><span class="kw">let </span>permanent =
+				(BlockNumberFor::&lt;T&gt;::max_value(), BoundedVec::&lt;T::AccountId, <span class="kw">_</span>&gt;::default());
 			Blacklist::&lt;T&gt;::insert(<span class="kw-2">&amp;</span>proposal_hash, permanent);
 
 			<span class="comment">// Remove the queued proposal, if it&#39;s there.
@@ -2952,17 +2958,19 @@
 
 	<span class="doccomment">/// Get all referenda ready for tally at block `n`.
 	</span><span class="kw">pub fn </span>maturing_referenda_at(
-		n: T::BlockNumber,
-	) -&gt; Vec&lt;(ReferendumIndex, ReferendumStatus&lt;T::BlockNumber, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;)&gt; {
+		n: BlockNumberFor&lt;T&gt;,
+	) -&gt; Vec&lt;(ReferendumIndex, ReferendumStatus&lt;BlockNumberFor&lt;T&gt;, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;)&gt;
+	{
 		<span class="kw">let </span>next = <span class="self">Self</span>::lowest_unbaked();
 		<span class="kw">let </span>last = <span class="self">Self</span>::referendum_count();
 		<span class="self">Self</span>::maturing_referenda_at_inner(n, next..last)
 	}
 
 	<span class="kw">fn </span>maturing_referenda_at_inner(
-		n: T::BlockNumber,
+		n: BlockNumberFor&lt;T&gt;,
 		range: core::ops::Range&lt;PropIndex&gt;,
-	) -&gt; Vec&lt;(ReferendumIndex, ReferendumStatus&lt;T::BlockNumber, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;)&gt; {
+	) -&gt; Vec&lt;(ReferendumIndex, ReferendumStatus&lt;BlockNumberFor&lt;T&gt;, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;)&gt;
+	{
 		range
 			.into_iter()
 			.map(|i| (i, <span class="self">Self</span>::referendum_info(i)))
@@ -2980,7 +2988,7 @@
 	</span><span class="kw">pub fn </span>internal_start_referendum(
 		proposal: BoundedCallOf&lt;T&gt;,
 		threshold: VoteThreshold,
-		delay: T::BlockNumber,
+		delay: BlockNumberFor&lt;T&gt;,
 	) -&gt; ReferendumIndex {
 		&lt;Pallet&lt;T&gt;&gt;::inject_referendum(
 			&lt;frame_system::Pallet&lt;T&gt;&gt;::block_number().saturating_add(T::VotingPeriod::get()),
@@ -3001,8 +3009,9 @@
 
 	</span><span class="doccomment">/// Ok if the given referendum is active, Err otherwise
 	</span><span class="kw">fn </span>ensure_ongoing(
-		r: ReferendumInfo&lt;T::BlockNumber, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;ReferendumStatus&lt;T::BlockNumber, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;, DispatchError&gt; {
+		r: ReferendumInfo&lt;BlockNumberFor&lt;T&gt;, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;,
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ReferendumStatus&lt;BlockNumberFor&lt;T&gt;, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;, DispatchError&gt;
+	{
 		<span class="kw">match </span>r {
 			ReferendumInfo::Ongoing(s) =&gt; <span class="prelude-val">Ok</span>(s),
 			<span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::&lt;T&gt;::ReferendumInvalid.into()),
@@ -3011,7 +3020,8 @@
 
 	<span class="kw">fn </span>referendum_status(
 		ref_index: ReferendumIndex,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;ReferendumStatus&lt;T::BlockNumber, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;, DispatchError&gt; {
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ReferendumStatus&lt;BlockNumberFor&lt;T&gt;, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;, DispatchError&gt;
+	{
 		<span class="kw">let </span>info = ReferendumInfoOf::&lt;T&gt;::get(ref_index).ok_or(Error::&lt;T&gt;::ReferendumInvalid)<span class="question-mark">?</span>;
 		<span class="self">Self</span>::ensure_ongoing(info)
 	}
@@ -3266,10 +3276,10 @@
 
 	<span class="doccomment">/// Start a referendum
 	</span><span class="kw">fn </span>inject_referendum(
-		end: T::BlockNumber,
+		end: BlockNumberFor&lt;T&gt;,
 		proposal: BoundedCallOf&lt;T&gt;,
 		threshold: VoteThreshold,
-		delay: T::BlockNumber,
+		delay: BlockNumberFor&lt;T&gt;,
 	) -&gt; ReferendumIndex {
 		<span class="kw">let </span>ref_index = <span class="self">Self</span>::referendum_count();
 		ReferendumCount::&lt;T&gt;::put(ref_index + <span class="number">1</span>);
@@ -3282,7 +3292,7 @@
 	}
 
 	<span class="doccomment">/// Table the next waiting proposal for a vote.
-	</span><span class="kw">fn </span>launch_next(now: T::BlockNumber) -&gt; DispatchResult {
+	</span><span class="kw">fn </span>launch_next(now: BlockNumberFor&lt;T&gt;) -&gt; DispatchResult {
 		<span class="kw">if </span>LastTabledWasExternal::&lt;T&gt;::take() {
 			<span class="self">Self</span>::launch_public(now).or_else(|<span class="kw">_</span>| <span class="self">Self</span>::launch_external(now))
 		} <span class="kw">else </span>{
@@ -3292,7 +3302,7 @@
 	}
 
 	<span class="doccomment">/// Table the waiting external proposal for a vote, if there is one.
-	</span><span class="kw">fn </span>launch_external(now: T::BlockNumber) -&gt; DispatchResult {
+	</span><span class="kw">fn </span>launch_external(now: BlockNumberFor&lt;T&gt;) -&gt; DispatchResult {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>((proposal, threshold)) = &lt;NextExternal&lt;T&gt;&gt;::take() {
 			LastTabledWasExternal::&lt;T&gt;::put(<span class="bool-val">true</span>);
 			<span class="self">Self</span>::deposit_event(Event::&lt;T&gt;::ExternalTabled);
@@ -3310,7 +3320,7 @@
 	}
 
 	<span class="doccomment">/// Table the waiting public proposal with the highest backing for a vote.
-	</span><span class="kw">fn </span>launch_public(now: T::BlockNumber) -&gt; DispatchResult {
+	</span><span class="kw">fn </span>launch_public(now: BlockNumberFor&lt;T&gt;) -&gt; DispatchResult {
 		<span class="kw">let </span><span class="kw-2">mut </span>public_props = <span class="self">Self</span>::public_props();
 		<span class="kw">if let </span><span class="prelude-val">Some</span>((winner_index, <span class="kw">_</span>)) = public_props.iter().enumerate().max_by_key(
 			<span class="comment">// defensive only: All current public proposals have an amount locked
@@ -3343,9 +3353,9 @@
 	}
 
 	<span class="kw">fn </span>bake_referendum(
-		now: T::BlockNumber,
+		now: BlockNumberFor&lt;T&gt;,
 		index: ReferendumIndex,
-		status: ReferendumStatus&lt;T::BlockNumber, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;,
+		status: ReferendumStatus&lt;BlockNumberFor&lt;T&gt;, BoundedCallOf&lt;T&gt;, BalanceOf&lt;T&gt;&gt;,
 	) -&gt; bool {
 		<span class="kw">let </span>total_issuance = T::Currency::total_issuance();
 		<span class="kw">let </span>approved = status.threshold.approved(status.tally, total_issuance);
@@ -3380,7 +3390,7 @@
 	/// ## Complexity:
 	/// If a referendum is launched or maturing, this will take full block weight if queue is not
 	/// empty. Otherwise, `O(R)` where `R` is the number of unbaked referenda.
-	</span><span class="kw">fn </span>begin_block(now: T::BlockNumber) -&gt; Weight {
+	</span><span class="kw">fn </span>begin_block(now: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 		<span class="kw">let </span>max_block_weight = T::BlockWeights::get().max_block;
 		<span class="kw">let </span><span class="kw-2">mut </span>weight = Weight::zero();
 

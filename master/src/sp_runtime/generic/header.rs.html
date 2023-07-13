@@ -248,6 +248,11 @@
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -276,6 +281,7 @@
 		MaybeSerializeDeserialize, Member,
 	},
 };
+<span class="kw">use </span>codec::{FullCodec, MaxEncodedLen};
 <span class="attr">#[cfg(feature = <span class="string">&quot;serde&quot;</span>)]
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>sp_core::U256;
@@ -283,6 +289,7 @@
 
 <span class="doccomment">/// Abstraction over a block header for a substrate chain.
 </span><span class="attr">#[derive(Encode, Decode, PartialEq, Eq, Clone, sp_core::RuntimeDebug, TypeInfo)]
+#[scale_info(skip_type_params(Hash))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, derive(Serialize, Deserialize))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(rename_all = <span class="string">&quot;camelCase&quot;</span>))]
 #[cfg_attr(feature = <span class="string">&quot;serde&quot;</span>, serde(deny_unknown_fields))]
@@ -331,13 +338,16 @@
 		+ MaybeSerializeDeserialize
 		+ MaybeFromStr
 		+ Debug
+		+ Default
 		+ sp_std::hash::Hash
 		+ MaybeDisplay
 		+ AtLeast32BitUnsigned
-		+ Codec
+		+ FullCodec
 		+ Copy
+		+ MaxEncodedLen
 		+ Into&lt;U256&gt;
-		+ TryFrom&lt;U256&gt;,
+		+ TryFrom&lt;U256&gt;
+		+ TypeInfo,
 	Hash: HashT,
 {
 	<span class="kw">type </span>Number = Number;

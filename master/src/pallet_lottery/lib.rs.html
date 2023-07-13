@@ -663,7 +663,7 @@
 		</span><span class="kw">type </span>Currency: ReservableCurrency&lt;<span class="self">Self</span>::AccountId&gt;;
 
 		<span class="doccomment">/// Something that provides randomness in the runtime.
-		</span><span class="kw">type </span>Randomness: Randomness&lt;<span class="self">Self</span>::Hash, <span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>Randomness: Randomness&lt;<span class="self">Self</span>::Hash, BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The overarching event type.
 		</span><span class="kw">type </span>RuntimeEvent: From&lt;Event&lt;<span class="self">Self</span>&gt;&gt; + IsType&lt;&lt;<span class="self">Self </span><span class="kw">as </span>frame_system::Config&gt;::RuntimeEvent&gt;;
@@ -729,7 +729,7 @@
 	<span class="doccomment">/// The configuration for the current lottery.
 	</span><span class="attr">#[pallet::storage]
 	</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Lottery&lt;T: Config&gt; =
-		StorageValue&lt;<span class="kw">_</span>, LotteryConfig&lt;T::BlockNumber, BalanceOf&lt;T&gt;&gt;&gt;;
+		StorageValue&lt;<span class="kw">_</span>, LotteryConfig&lt;BlockNumberFor&lt;T&gt;, BalanceOf&lt;T&gt;&gt;&gt;;
 
 	<span class="doccomment">/// Users who have purchased a ticket. (Lottery Index, Tickets Purchased)
 	</span><span class="attr">#[pallet::storage]
@@ -760,7 +760,7 @@
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
+		<span class="kw">fn </span>on_initialize(n: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			Lottery::&lt;T&gt;::mutate(|<span class="kw-2">mut </span>lottery| -&gt; Weight {
 				<span class="kw">if let </span><span class="prelude-val">Some</span>(config) = <span class="kw-2">&amp;mut </span>lottery {
 					<span class="kw">let </span>payout_block =
@@ -871,8 +871,8 @@
 		</span><span class="kw">pub fn </span>start_lottery(
 			origin: OriginFor&lt;T&gt;,
 			price: BalanceOf&lt;T&gt;,
-			length: T::BlockNumber,
-			delay: T::BlockNumber,
+			length: BlockNumberFor&lt;T&gt;,
+			delay: BlockNumberFor&lt;T&gt;,
 			repeat: bool,
 		) -&gt; DispatchResult {
 			T::ManagerOrigin::ensure_origin(origin)<span class="question-mark">?</span>;

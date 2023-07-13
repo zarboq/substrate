@@ -1048,6 +1048,11 @@
 <a href="#1048" id="1048">1048</a>
 <a href="#1049" id="1049">1049</a>
 <a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1079,6 +1084,7 @@
 	weights::Weight,
 	BoundedVec, WeakBoundedVec,
 };
+<span class="kw">use </span>frame_system::pallet_prelude::{BlockNumberFor, HeaderFor};
 <span class="kw">use </span>sp_consensus_babe::{
 	digests::{NextConfigDescriptor, NextEpochDescriptor, PreDigest},
 	AllowedSlots, BabeAuthorityWeight, BabeEpochConfiguration, ConsensusLog, Epoch,
@@ -1128,7 +1134,7 @@
 </span><span class="kw">pub trait </span>EpochChangeTrigger {
 	<span class="doccomment">/// Trigger an epoch change, if any should take place. This should be called
 	/// during every block, after initialization is done.
-	</span><span class="kw">fn </span>trigger&lt;T: Config&gt;(now: T::BlockNumber);
+	</span><span class="kw">fn </span>trigger&lt;T: Config&gt;(now: BlockNumberFor&lt;T&gt;);
 }
 
 <span class="doccomment">/// A type signifying to BABE that an external trigger
@@ -1136,7 +1142,7 @@
 </span><span class="kw">pub struct </span>ExternalTrigger;
 
 <span class="kw">impl </span>EpochChangeTrigger <span class="kw">for </span>ExternalTrigger {
-	<span class="kw">fn </span>trigger&lt;T: Config&gt;(<span class="kw">_</span>: T::BlockNumber) {} <span class="comment">// nothing - trigger is external.
+	<span class="kw">fn </span>trigger&lt;T: Config&gt;(<span class="kw">_</span>: BlockNumberFor&lt;T&gt;) {} <span class="comment">// nothing - trigger is external.
 </span>}
 
 <span class="doccomment">/// A type signifying to BABE that it should perform epoch changes
@@ -1144,7 +1150,7 @@
 </span><span class="kw">pub struct </span>SameAuthoritiesForever;
 
 <span class="kw">impl </span>EpochChangeTrigger <span class="kw">for </span>SameAuthoritiesForever {
-	<span class="kw">fn </span>trigger&lt;T: Config&gt;(now: T::BlockNumber) {
+	<span class="kw">fn </span>trigger&lt;T: Config&gt;(now: BlockNumberFor&lt;T&gt;) {
 		<span class="kw">if </span>&lt;Pallet&lt;T&gt;&gt;::should_epoch_change(now) {
 			<span class="kw">let </span>authorities = &lt;Pallet&lt;T&gt;&gt;::authorities();
 			<span class="kw">let </span>next_authorities = authorities.clone();
@@ -1212,7 +1218,7 @@
 		/// (from an offchain context).
 		</span><span class="kw">type </span>EquivocationReportSystem: OffenceReportSystem&lt;
 			<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::AccountId&gt;,
-			(EquivocationProof&lt;<span class="self">Self</span>::Header&gt;, <span class="self">Self</span>::KeyOwnerProof),
+			(EquivocationProof&lt;HeaderFor&lt;<span class="self">Self</span>&gt;&gt;, <span class="self">Self</span>::KeyOwnerProof),
 		&gt;;
 	}
 
@@ -1329,7 +1335,7 @@
 	/// slots, which may be skipped, the block numbers may not line up with the slot numbers.
 	</span><span class="attr">#[pallet::storage]
 	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>EpochStart&lt;T: Config&gt; =
-		StorageValue&lt;<span class="kw">_</span>, (T::BlockNumber, T::BlockNumber), ValueQuery&gt;;
+		StorageValue&lt;<span class="kw">_</span>, (BlockNumberFor&lt;T&gt;, BlockNumberFor&lt;T&gt;), ValueQuery&gt;;
 
 	<span class="doccomment">/// How late the current block is compared to its parent.
 	///
@@ -1338,7 +1344,7 @@
 	/// execution context should always yield zero.
 	</span><span class="attr">#[pallet::storage]
 	#[pallet::getter(<span class="kw">fn </span>lateness)]
-	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>Lateness&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, T::BlockNumber, ValueQuery&gt;;
+	</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">type </span>Lateness&lt;T: Config&gt; = StorageValue&lt;<span class="kw">_</span>, BlockNumberFor&lt;T&gt;, ValueQuery&gt;;
 
 	<span class="doccomment">/// The configuration for the current epoch. Should never be `None` as it is initialized in
 	/// genesis.
@@ -1459,7 +1465,7 @@
 		))]
 		</span><span class="kw">pub fn </span>report_equivocation(
 			origin: OriginFor&lt;T&gt;,
-			equivocation_proof: Box&lt;EquivocationProof&lt;T::Header&gt;&gt;,
+			equivocation_proof: Box&lt;EquivocationProof&lt;HeaderFor&lt;T&gt;&gt;&gt;,
 			key_owner_proof: T::KeyOwnerProof,
 		) -&gt; DispatchResultWithPostInfo {
 			<span class="kw">let </span>reporter = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -1485,7 +1491,7 @@
 		))]
 		</span><span class="kw">pub fn </span>report_equivocation_unsigned(
 			origin: OriginFor&lt;T&gt;,
-			equivocation_proof: Box&lt;EquivocationProof&lt;T::Header&gt;&gt;,
+			equivocation_proof: Box&lt;EquivocationProof&lt;HeaderFor&lt;T&gt;&gt;&gt;,
 			key_owner_proof: T::KeyOwnerProof,
 		) -&gt; DispatchResultWithPostInfo {
 			ensure_none(origin)<span class="question-mark">?</span>;
@@ -1555,8 +1561,8 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; pallet_session::ShouldEndSession&lt;T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-	<span class="kw">fn </span>should_end_session(now: T::BlockNumber) -&gt; bool {
+<span class="kw">impl</span>&lt;T: Config&gt; pallet_session::ShouldEndSession&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+	<span class="kw">fn </span>should_end_session(now: BlockNumberFor&lt;T&gt;) -&gt; bool {
 		<span class="comment">// it might be (and it is in current implementation) that session module is calling
 		// `should_end_session` from it&#39;s own `on_initialize` handler, in which case it&#39;s
 		// possible that babe&#39;s own `on_initialize` has not run yet, so let&#39;s ensure that we
@@ -1576,7 +1582,7 @@
 
 	<span class="doccomment">/// Determine whether an epoch change should take place at this block.
 	/// Assumes that initialization has already taken place.
-	</span><span class="kw">pub fn </span>should_epoch_change(now: T::BlockNumber) -&gt; bool {
+	</span><span class="kw">pub fn </span>should_epoch_change(now: BlockNumberFor&lt;T&gt;) -&gt; bool {
 		<span class="comment">// The epoch has technically ended during the passage of time
 		// between this block and the last, but we have to &quot;end&quot; the epoch now,
 		// since there is no earlier possible block we could have done it.
@@ -1606,11 +1612,11 @@
 	//
 	// WEIGHT NOTE: This function is tied to the weight of `EstimateNextSessionRotation`. If you
 	// update this function, you must also update the corresponding weight.
-	</span><span class="kw">pub fn </span>next_expected_epoch_change(now: T::BlockNumber) -&gt; <span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt; {
+	</span><span class="kw">pub fn </span>next_expected_epoch_change(now: BlockNumberFor&lt;T&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt; {
 		<span class="kw">let </span>next_slot = <span class="self">Self</span>::current_epoch_start().saturating_add(T::EpochDuration::get());
 		next_slot.checked_sub(<span class="kw-2">*</span>CurrentSlot::&lt;T&gt;::get()).map(|slots_remaining| {
 			<span class="comment">// This is a best effort guess. Drifts in the slot/block ratio will cause errors here.
-			</span><span class="kw">let </span>blocks_remaining: T::BlockNumber = slots_remaining.saturated_into();
+			</span><span class="kw">let </span>blocks_remaining: BlockNumberFor&lt;T&gt; = slots_remaining.saturated_into();
 			now.saturating_add(blocks_remaining)
 		})
 	}
@@ -1828,7 +1834,7 @@
 		<span class="self">Self</span>::deposit_consensus(ConsensusLog::NextEpochData(next));
 	}
 
-	<span class="kw">fn </span>initialize(now: T::BlockNumber) {
+	<span class="kw">fn </span>initialize(now: BlockNumberFor&lt;T&gt;) {
 		<span class="comment">// since `initialize` can be called twice (e.g. if session module is present)
 		// let&#39;s ensure that we only do the initialization once per block
 		</span><span class="kw">let </span>initialized = <span class="self">Self</span>::initialized().is_some();
@@ -1863,7 +1869,7 @@
 
 			<span class="comment">// how many slots were skipped between current and last block
 			</span><span class="kw">let </span>lateness = current_slot.saturating_sub(CurrentSlot::&lt;T&gt;::get() + <span class="number">1</span>);
-			<span class="kw">let </span>lateness = T::BlockNumber::from(<span class="kw-2">*</span>lateness <span class="kw">as </span>u32);
+			<span class="kw">let </span>lateness = BlockNumberFor::&lt;T&gt;::from(<span class="kw-2">*</span>lateness <span class="kw">as </span>u32);
 
 			Lateness::&lt;T&gt;::put(lateness);
 			CurrentSlot::&lt;T&gt;::put(current_slot);
@@ -1929,7 +1935,7 @@
 	/// will push the transaction to the pool. Only useful in an offchain
 	/// context.
 	</span><span class="kw">pub fn </span>submit_unsigned_equivocation_report(
-		equivocation_proof: EquivocationProof&lt;T::Header&gt;,
+		equivocation_proof: EquivocationProof&lt;HeaderFor&lt;T&gt;&gt;,
 		key_owner_proof: T::KeyOwnerProof,
 	) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
 		T::EquivocationReportSystem::publish_evidence((equivocation_proof, key_owner_proof)).ok()
@@ -1951,12 +1957,14 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; frame_support::traits::EstimateNextSessionRotation&lt;T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-	<span class="kw">fn </span>average_session_length() -&gt; T::BlockNumber {
+<span class="kw">impl</span>&lt;T: Config&gt; frame_support::traits::EstimateNextSessionRotation&lt;BlockNumberFor&lt;T&gt;&gt;
+	<span class="kw">for </span>Pallet&lt;T&gt;
+{
+	<span class="kw">fn </span>average_session_length() -&gt; BlockNumberFor&lt;T&gt; {
 		T::EpochDuration::get().saturated_into()
 	}
 
-	<span class="kw">fn </span>estimate_current_session_progress(_now: T::BlockNumber) -&gt; (<span class="prelude-ty">Option</span>&lt;Permill&gt;, Weight) {
+	<span class="kw">fn </span>estimate_current_session_progress(_now: BlockNumberFor&lt;T&gt;) -&gt; (<span class="prelude-ty">Option</span>&lt;Permill&gt;, Weight) {
 		<span class="kw">let </span>elapsed = CurrentSlot::&lt;T&gt;::get().saturating_sub(<span class="self">Self</span>::current_epoch_start()) + <span class="number">1</span>;
 
 		(
@@ -1966,7 +1974,9 @@
 		)
 	}
 
-	<span class="kw">fn </span>estimate_next_session_rotation(now: T::BlockNumber) -&gt; (<span class="prelude-ty">Option</span>&lt;T::BlockNumber&gt;, Weight) {
+	<span class="kw">fn </span>estimate_next_session_rotation(
+		now: BlockNumberFor&lt;T&gt;,
+	) -&gt; (<span class="prelude-ty">Option</span>&lt;BlockNumberFor&lt;T&gt;&gt;, Weight) {
 		(
 			<span class="self">Self</span>::next_expected_epoch_change(now),
 			<span class="comment">// Read: Current Slot, Epoch Index, Genesis Slot
@@ -1975,8 +1985,8 @@
 	}
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; frame_support::traits::Lateness&lt;T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-	<span class="kw">fn </span>lateness(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; T::BlockNumber {
+<span class="kw">impl</span>&lt;T: Config&gt; frame_support::traits::Lateness&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+	<span class="kw">fn </span>lateness(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BlockNumberFor&lt;T&gt; {
 		<span class="self">Self</span>::lateness()
 	}
 }

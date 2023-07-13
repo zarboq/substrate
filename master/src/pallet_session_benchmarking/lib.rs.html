@@ -200,7 +200,7 @@
 	codec::Decode,
 	traits::{Get, KeyOwnerProofSystem, OnInitialize},
 };
-<span class="kw">use </span>frame_system::RawOrigin;
+<span class="kw">use </span>frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 <span class="kw">use </span>pallet_session::{historical::Pallet <span class="kw">as </span>Historical, Pallet <span class="kw">as </span>Session, <span class="kw-2">*</span>};
 <span class="kw">use </span>pallet_staking::{
 	benchmarking::create_validator_with_nominators, testing_utils::create_validators,
@@ -215,8 +215,8 @@
 {
 }
 
-<span class="kw">impl</span>&lt;T: Config&gt; OnInitialize&lt;T::BlockNumber&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-	<span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; frame_support::weights::Weight {
+<span class="kw">impl</span>&lt;T: Config&gt; OnInitialize&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
+	<span class="kw">fn </span>on_initialize(n: BlockNumberFor&lt;T&gt;) -&gt; frame_support::weights::Weight {
 		pallet_session::Pallet::&lt;T&gt;::on_initialize(n)
 	}
 }
@@ -325,7 +325,7 @@
 		Session::&lt;T&gt;::set_keys(RawOrigin::Signed(controller).into(), keys, proof).unwrap();
 	}
 
-	Pallet::&lt;T&gt;::on_initialize(T::BlockNumber::one());
+	Pallet::&lt;T&gt;::on_initialize(frame_system::pallet_prelude::BlockNumberFor::&lt;T&gt;::one());
 
 	<span class="comment">// skip sessions until the new validator set is enacted
 	</span><span class="kw">while </span>Session::&lt;T&gt;::validators().len() &lt; n <span class="kw">as </span>usize {

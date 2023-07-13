@@ -740,6 +740,7 @@
 <a href="#740" id="740">740</a>
 <a href="#741" id="741">741</a>
 <a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -809,6 +810,7 @@
 	},
 	weights::Weight,
 };
+<span class="kw">use </span>frame_system::pallet_prelude::BlockNumberFor;
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_runtime::{
 	traits::{
@@ -869,8 +871,8 @@
 	<span class="doccomment">/// Pick the schedules that this action dictates should continue vesting undisturbed.
 	</span><span class="kw">fn </span>pick_schedules&lt;T: Config&gt;(
 		<span class="kw-2">&amp;</span><span class="self">self</span>,
-		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt;,
-	) -&gt; <span class="kw">impl </span>Iterator&lt;Item = VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt; + <span class="lifetime">&#39;_ </span>{
+		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt;,
+	) -&gt; <span class="kw">impl </span>Iterator&lt;Item = VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt; + <span class="lifetime">&#39;_ </span>{
 		schedules.into_iter().enumerate().filter_map(<span class="kw">move </span>|(index, schedule)| {
 			<span class="kw">if </span><span class="self">self</span>.should_remove(index) {
 				<span class="prelude-val">None
@@ -904,7 +906,7 @@
 		</span><span class="kw">type </span>Currency: LockableCurrency&lt;<span class="self">Self</span>::AccountId&gt;;
 
 		<span class="doccomment">/// Convert the block number into a balance.
-		</span><span class="kw">type </span>BlockNumberToBalance: Convert&lt;<span class="self">Self</span>::BlockNumber, BalanceOf&lt;<span class="self">Self</span>&gt;&gt;;
+		</span><span class="kw">type </span>BlockNumberToBalance: Convert&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;, BalanceOf&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The minimum amount transferred to call `vested_transfer`.
 		</span><span class="attr">#[pallet::constant]
@@ -943,7 +945,7 @@
 		<span class="kw">_</span>,
 		Blake2_128Concat,
 		T::AccountId,
-		BoundedVec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;, MaxVestingSchedulesGet&lt;T&gt;&gt;,
+		BoundedVec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;, MaxVestingSchedulesGet&lt;T&gt;&gt;,
 	&gt;;
 
 	<span class="doccomment">/// Storage version of the pallet.
@@ -958,7 +960,7 @@
 	<span class="attr">#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	</span><span class="kw">pub struct </span>GenesisConfig&lt;T: Config&gt; {
-		<span class="kw">pub </span>vesting: Vec&lt;(T::AccountId, T::BlockNumber, T::BlockNumber, BalanceOf&lt;T&gt;)&gt;,
+		<span class="kw">pub </span>vesting: Vec&lt;(T::AccountId, BlockNumberFor&lt;T&gt;, BlockNumberFor&lt;T&gt;, BalanceOf&lt;T&gt;)&gt;,
 	}
 
 	<span class="attr">#[pallet::genesis_build]
@@ -1084,7 +1086,7 @@
 		</span><span class="kw">pub fn </span>vested_transfer(
 			origin: OriginFor&lt;T&gt;,
 			target: AccountIdLookupOf&lt;T&gt;,
-			schedule: VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;,
+			schedule: VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>transactor = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>transactor = &lt;T::Lookup <span class="kw">as </span>StaticLookup&gt;::unlookup(transactor);
@@ -1113,7 +1115,7 @@
 			origin: OriginFor&lt;T&gt;,
 			source: AccountIdLookupOf&lt;T&gt;,
 			target: AccountIdLookupOf&lt;T&gt;,
-			schedule: VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;,
+			schedule: VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;,
 		) -&gt; DispatchResult {
 			ensure_root(origin)<span class="question-mark">?</span>;
 			<span class="self">Self</span>::do_vested_transfer(source, target, schedule)
@@ -1175,10 +1177,10 @@
 	<span class="comment">// Create a new `VestingInfo`, based off of two other `VestingInfo`s.
 	// NOTE: We assume both schedules have had funds unlocked up through the current block.
 	</span><span class="kw">fn </span>merge_vesting_info(
-		now: T::BlockNumber,
-		schedule1: VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;,
-		schedule2: VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;,
-	) -&gt; <span class="prelude-ty">Option</span>&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt; {
+		now: BlockNumberFor&lt;T&gt;,
+		schedule1: VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;,
+		schedule2: VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;,
+	) -&gt; <span class="prelude-ty">Option</span>&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt; {
 		<span class="kw">let </span>schedule1_ending_block = schedule1.ending_block_as_balance::&lt;T::BlockNumberToBalance&gt;();
 		<span class="kw">let </span>schedule2_ending_block = schedule2.ending_block_as_balance::&lt;T::BlockNumberToBalance&gt;();
 		<span class="kw">let </span>now_as_balance = T::BlockNumberToBalance::convert(now);
@@ -1225,7 +1227,7 @@
 	</span><span class="kw">fn </span>do_vested_transfer(
 		source: AccountIdLookupOf&lt;T&gt;,
 		target: AccountIdLookupOf&lt;T&gt;,
-		schedule: VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;,
+		schedule: VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;,
 	) -&gt; DispatchResult {
 		<span class="comment">// Validate user inputs.
 		</span><span class="macro">ensure!</span>(schedule.locked() &gt;= T::MinVestedTransfer::get(), Error::&lt;T&gt;::AmountLow);
@@ -1273,9 +1275,9 @@
 	///
 	/// NOTE: the amount locked does not include any schedules that are filtered out via `action`.
 	</span><span class="kw">fn </span>report_schedule_updates(
-		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt;,
+		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt;,
 		action: VestingAction,
-	) -&gt; (Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt;, BalanceOf&lt;T&gt;) {
+	) -&gt; (Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt;, BalanceOf&lt;T&gt;) {
 		<span class="kw">let </span>now = &lt;frame_system::Pallet&lt;T&gt;&gt;::block_number();
 
 		<span class="kw">let </span><span class="kw-2">mut </span>total_locked_now: BalanceOf&lt;T&gt; = Zero::zero();
@@ -1312,10 +1314,10 @@
 	<span class="doccomment">/// Write an accounts updated vesting schedules to storage.
 	</span><span class="kw">fn </span>write_vesting(
 		who: <span class="kw-2">&amp;</span>T::AccountId,
-		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt;,
+		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;(), DispatchError&gt; {
 		<span class="kw">let </span>schedules: BoundedVec&lt;
-			VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;,
+			VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;,
 			MaxVestingSchedulesGet&lt;T&gt;,
 		&gt; = schedules.try_into().map_err(|<span class="kw">_</span>| Error::&lt;T&gt;::AtMaxVestingSchedules)<span class="question-mark">?</span>;
 
@@ -1344,9 +1346,9 @@
 	<span class="doccomment">/// Execute a `VestingAction` against the given `schedules`. Returns the updated schedules
 	/// and locked amount.
 	</span><span class="kw">fn </span>exec_action(
-		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt;,
+		schedules: Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt;,
 		action: VestingAction,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, T::BlockNumber&gt;&gt;, BalanceOf&lt;T&gt;), DispatchError&gt; {
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;VestingInfo&lt;BalanceOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;&gt;, BalanceOf&lt;T&gt;), DispatchError&gt; {
 		<span class="kw">let </span>(schedules, locked_now) = <span class="kw">match </span>action {
 			VestingAction::Merge { index1: idx1, index2: idx2 } =&gt; {
 				<span class="comment">// The schedule index is based off of the schedule ordering prior to filtering out
@@ -1391,7 +1393,7 @@
 	</span>BalanceOf&lt;T&gt;: MaybeSerializeDeserialize + Debug,
 {
 	<span class="kw">type </span>Currency = T::Currency;
-	<span class="kw">type </span>Moment = T::BlockNumber;
+	<span class="kw">type </span>Moment = BlockNumberFor&lt;T&gt;;
 
 	<span class="doccomment">/// Get the amount that is currently being vested and cannot be transferred out of this account.
 	</span><span class="kw">fn </span>vesting_balance(who: <span class="kw-2">&amp;</span>T::AccountId) -&gt; <span class="prelude-ty">Option</span>&lt;BalanceOf&lt;T&gt;&gt; {
@@ -1422,7 +1424,7 @@
 		who: <span class="kw-2">&amp;</span>T::AccountId,
 		locked: BalanceOf&lt;T&gt;,
 		per_block: BalanceOf&lt;T&gt;,
-		starting_block: T::BlockNumber,
+		starting_block: BlockNumberFor&lt;T&gt;,
 	) -&gt; DispatchResult {
 		<span class="kw">if </span>locked.is_zero() {
 			<span class="kw">return </span><span class="prelude-val">Ok</span>(())
@@ -1455,7 +1457,7 @@
 		who: <span class="kw-2">&amp;</span>T::AccountId,
 		locked: BalanceOf&lt;T&gt;,
 		per_block: BalanceOf&lt;T&gt;,
-		starting_block: T::BlockNumber,
+		starting_block: BlockNumberFor&lt;T&gt;,
 	) -&gt; DispatchResult {
 		<span class="comment">// Check for `per_block` or `locked` of 0.
 		</span><span class="kw">if </span>!VestingInfo::new(locked, per_block, starting_block).is_valid() {

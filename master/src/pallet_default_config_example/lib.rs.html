@@ -202,6 +202,7 @@
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -311,17 +312,14 @@
 </span><span class="kw">pub mod </span>tests {
 	<span class="kw">use super</span>::<span class="kw-2">*</span>;
 	<span class="kw">use </span>frame_support::derive_impl;
+	<span class="kw">use </span>sp_runtime::traits::ConstU64;
 
 	<span class="kw">use </span><span class="kw">super</span>::pallet <span class="kw">as </span>pallet_default_config_example;
 
-	<span class="kw">type </span>UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic&lt;Test&gt;;
 	<span class="kw">type </span>Block = frame_system::mocking::MockBlock&lt;Test&gt;;
 
 	<span class="macro">frame_support::construct_runtime!</span>(
-		<span class="kw">pub enum </span>Test <span class="kw">where
-			</span>Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
+		<span class="kw">pub enum </span>Test
 		{
 			System: frame_system,
 			DefaultPallet: pallet_default_config_example,
@@ -333,7 +331,9 @@
 		<span class="comment">// these items are defined by frame-system as `no_default`, so we must specify them here.
 		// Note that these are types that actually rely on the outer runtime, and can&#39;t sensibly
 		// have an _independent_ default.
-		</span><span class="kw">type </span>BaseCallFilter = frame_support::traits::Everything;
+		</span><span class="kw">type </span>Block = Block;
+		<span class="kw">type </span>BlockHashCount = ConstU64&lt;<span class="number">10</span>&gt;;
+		<span class="kw">type </span>BaseCallFilter = frame_support::traits::Everything;
 		<span class="kw">type </span>RuntimeOrigin = RuntimeOrigin;
 		<span class="kw">type </span>RuntimeCall = RuntimeCall;
 		<span class="kw">type </span>RuntimeEvent = RuntimeEvent;
@@ -344,7 +344,9 @@
 
 		// type Index = u32;
 		// type BlockNumber = u32;
-		// type Header = sp_runtime::generic::Header&lt;Self::BlockNumber, Self::Hashing&gt;;
+		// type Header =
+		// sp_runtime::generic::Header&lt;frame_system::pallet_prelude::BlockNumberFor&lt;Self&gt;,
+		// Self::Hashing&gt;;
 		// type Hash = sp_core::hash::H256;
 		// type Hashing = sp_runtime::traits::BlakeTwo256;
 		// type AccountId = u64;

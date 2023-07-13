@@ -737,7 +737,7 @@
 	weights::Weight,
 	BoundedVec, RuntimeDebug,
 };
-<span class="kw">use </span>frame_system::{<span class="self">self </span><span class="kw">as </span>system, RawOrigin};
+<span class="kw">use </span>frame_system::{<span class="self">self </span><span class="kw">as </span>system, pallet_prelude::BlockNumberFor, RawOrigin};
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_io::hashing::blake2_256;
 <span class="kw">use </span>sp_runtime::{
@@ -861,7 +861,7 @@
 		T::AccountId,
 		Blake2_128Concat,
 		[u8; <span class="number">32</span>],
-		Multisig&lt;T::BlockNumber, BalanceOf&lt;T&gt;, T::AccountId, T::MaxSignatories&gt;,
+		Multisig&lt;BlockNumberFor&lt;T&gt;, BalanceOf&lt;T&gt;, T::AccountId, T::MaxSignatories&gt;,
 	&gt;;
 
 	<span class="attr">#[pallet::error]
@@ -904,14 +904,14 @@
 		<span class="doccomment">/// A multisig operation has been approved by someone.
 		</span>MultisigApproval {
 			approving: T::AccountId,
-			timepoint: Timepoint&lt;T::BlockNumber&gt;,
+			timepoint: Timepoint&lt;BlockNumberFor&lt;T&gt;&gt;,
 			multisig: T::AccountId,
 			call_hash: CallHash,
 		},
 		<span class="doccomment">/// A multisig operation has been executed.
 		</span>MultisigExecuted {
 			approving: T::AccountId,
-			timepoint: Timepoint&lt;T::BlockNumber&gt;,
+			timepoint: Timepoint&lt;BlockNumberFor&lt;T&gt;&gt;,
 			multisig: T::AccountId,
 			call_hash: CallHash,
 			result: DispatchResult,
@@ -919,7 +919,7 @@
 		<span class="doccomment">/// A multisig operation has been cancelled.
 		</span>MultisigCancelled {
 			cancelling: T::AccountId,
-			timepoint: Timepoint&lt;T::BlockNumber&gt;,
+			timepoint: Timepoint&lt;BlockNumberFor&lt;T&gt;&gt;,
 			multisig: T::AccountId,
 			call_hash: CallHash,
 		},
@@ -1044,7 +1044,7 @@
 			origin: OriginFor&lt;T&gt;,
 			threshold: u16,
 			other_signatories: Vec&lt;T::AccountId&gt;,
-			maybe_timepoint: <span class="prelude-ty">Option</span>&lt;Timepoint&lt;T::BlockNumber&gt;&gt;,
+			maybe_timepoint: <span class="prelude-ty">Option</span>&lt;Timepoint&lt;BlockNumberFor&lt;T&gt;&gt;&gt;,
 			call: Box&lt;&lt;T <span class="kw">as </span>Config&gt;::RuntimeCall&gt;,
 			max_weight: Weight,
 		) -&gt; DispatchResultWithPostInfo {
@@ -1101,7 +1101,7 @@
 			origin: OriginFor&lt;T&gt;,
 			threshold: u16,
 			other_signatories: Vec&lt;T::AccountId&gt;,
-			maybe_timepoint: <span class="prelude-ty">Option</span>&lt;Timepoint&lt;T::BlockNumber&gt;&gt;,
+			maybe_timepoint: <span class="prelude-ty">Option</span>&lt;Timepoint&lt;BlockNumberFor&lt;T&gt;&gt;&gt;,
 			call_hash: [u8; <span class="number">32</span>],
 			max_weight: Weight,
 		) -&gt; DispatchResultWithPostInfo {
@@ -1143,7 +1143,7 @@
 			origin: OriginFor&lt;T&gt;,
 			threshold: u16,
 			other_signatories: Vec&lt;T::AccountId&gt;,
-			timepoint: Timepoint&lt;T::BlockNumber&gt;,
+			timepoint: Timepoint&lt;BlockNumberFor&lt;T&gt;&gt;,
 			call_hash: [u8; <span class="number">32</span>],
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -1189,7 +1189,7 @@
 		who: T::AccountId,
 		threshold: u16,
 		other_signatories: Vec&lt;T::AccountId&gt;,
-		maybe_timepoint: <span class="prelude-ty">Option</span>&lt;Timepoint&lt;T::BlockNumber&gt;&gt;,
+		maybe_timepoint: <span class="prelude-ty">Option</span>&lt;Timepoint&lt;BlockNumberFor&lt;T&gt;&gt;&gt;,
 		call_or_hash: CallOrHash&lt;T&gt;,
 		max_weight: Weight,
 	) -&gt; DispatchResultWithPostInfo {
@@ -1315,7 +1315,7 @@
 	}
 
 	<span class="doccomment">/// The current `Timepoint`.
-	</span><span class="kw">pub fn </span>timepoint() -&gt; Timepoint&lt;T::BlockNumber&gt; {
+	</span><span class="kw">pub fn </span>timepoint() -&gt; Timepoint&lt;BlockNumberFor&lt;T&gt;&gt; {
 		Timepoint {
 			height: &lt;system::Pallet&lt;T&gt;&gt;::block_number(),
 			index: &lt;system::Pallet&lt;T&gt;&gt;::extrinsic_index().unwrap_or_default(),

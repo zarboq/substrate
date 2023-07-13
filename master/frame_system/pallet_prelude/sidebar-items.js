@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"type":["BlockNumberFor","OriginFor"]};
+window.SIDEBAR_ITEMS = {"type":["BlockNumberFor","HeaderFor","OriginFor"]};

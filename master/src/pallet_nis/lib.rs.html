@@ -1145,9 +1145,6 @@
 <a href="#1145" id="1145">1145</a>
 <a href="#1146" id="1146">1146</a>
 <a href="#1147" id="1147">1147</a>
-<a href="#1148" id="1148">1148</a>
-<a href="#1149" id="1149">1149</a>
-<a href="#1150" id="1150">1150</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1336,13 +1333,10 @@
 		&lt;&lt;T <span class="kw">as </span>Config&gt;::Currency <span class="kw">as </span>FunInspect&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;&gt;::Balance;
 	<span class="kw">type </span>DebtOf&lt;T&gt; =
 		fungible::Debt&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId, &lt;T <span class="kw">as </span>Config&gt;::Currency&gt;;
-	<span class="kw">type </span>ReceiptRecordOf&lt;T&gt; = ReceiptRecord&lt;
-		&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId,
-		&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber,
-		BalanceOf&lt;T&gt;,
-	&gt;;
+	<span class="kw">type </span>ReceiptRecordOf&lt;T&gt; =
+		ReceiptRecord&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId, BlockNumberFor&lt;T&gt;, BalanceOf&lt;T&gt;&gt;;
 	<span class="kw">type </span>IssuanceInfoOf&lt;T&gt; = IssuanceInfo&lt;BalanceOf&lt;T&gt;&gt;;
-	<span class="kw">type </span>SummaryRecordOf&lt;T&gt; = SummaryRecord&lt;&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber, BalanceOf&lt;T&gt;&gt;;
+	<span class="kw">type </span>SummaryRecordOf&lt;T&gt; = SummaryRecord&lt;BlockNumberFor&lt;T&gt;, BalanceOf&lt;T&gt;&gt;;
 	<span class="kw">type </span>BidOf&lt;T&gt; = Bid&lt;BalanceOf&lt;T&gt;, &lt;T <span class="kw">as </span>frame_system::Config&gt;::AccountId&gt;;
 	<span class="kw">type </span>QueueTotalsTypeOf&lt;T&gt; = BoundedVec&lt;(u32, BalanceOf&lt;T&gt;), &lt;T <span class="kw">as </span>Config&gt;::QueueCount&gt;;
 
@@ -1425,7 +1419,7 @@
 		<span class="doccomment">/// The base period for the duration queues. This is the common multiple across all
 		/// supported freezing durations that can be bid upon.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>BasePeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>BasePeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The minimum amount of funds that may be placed in a bid. Note that this
 		/// does not actually limit the amount which may be represented in a receipt since bids may
@@ -1446,7 +1440,7 @@
 		/// A larger value results in fewer storage hits each block, but a slower period to get to
 		/// the target.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>IntakePeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>IntakePeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The maximum amount of bids that can consolidated into receipts in a single intake. A
 		/// larger value here means less of the block available for transactions should there be a
@@ -1456,7 +1450,7 @@
 
 		<span class="doccomment">/// The maximum proportion which may be thawed and the period over which it is reset.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>ThawThrottle: Get&lt;(Perquintill, <span class="self">Self</span>::BlockNumber)&gt;;
+		</span><span class="kw">type </span>ThawThrottle: Get&lt;(Perquintill, BlockNumberFor&lt;<span class="self">Self</span>&gt;)&gt;;
 	}
 
 	<span class="attr">#[pallet::pallet]
@@ -1563,7 +1557,7 @@
 			<span class="doccomment">/// The identity of the receipt.
 			</span>index: ReceiptIndex,
 			<span class="doccomment">/// The block number at which the receipt may be thawed.
-			</span>expiry: T::BlockNumber,
+			</span>expiry: BlockNumberFor&lt;T&gt;,
 			<span class="doccomment">/// The owner of the receipt.
 			</span>who: T::AccountId,
 			<span class="doccomment">/// The proportion of the effective total issuance which the receipt represents.
@@ -1658,7 +1652,7 @@
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T&gt; {
-		<span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
+		<span class="kw">fn </span>on_initialize(n: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			<span class="kw">let </span><span class="kw-2">mut </span>weight_counter =
 				WeightCounter { used: Weight::zero(), limit: T::MaxIntakeWeight::get() };
 			<span class="kw">if </span>T::IntakePeriod::get().is_zero() || (n % T::IntakePeriod::get()).is_zero() {
@@ -2212,7 +2206,7 @@
 
 		<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_queue(
 			duration: u32,
-			now: T::BlockNumber,
+			now: BlockNumberFor&lt;T&gt;,
 			our_account: <span class="kw-2">&amp;</span>T::AccountId,
 			issuance: <span class="kw-2">&amp;</span>IssuanceInfo&lt;BalanceOf&lt;T&gt;&gt;,
 			max_bids: u32,
@@ -2256,7 +2250,7 @@
 
 		<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_bid(
 			<span class="kw-2">mut </span>bid: BidOf&lt;T&gt;,
-			expiry: T::BlockNumber,
+			expiry: BlockNumberFor&lt;T&gt;,
 			_our_account: <span class="kw-2">&amp;</span>T::AccountId,
 			issuance: <span class="kw-2">&amp;</span>IssuanceInfo&lt;BalanceOf&lt;T&gt;&gt;,
 			remaining: <span class="kw-2">&amp;mut </span>BalanceOf&lt;T&gt;,

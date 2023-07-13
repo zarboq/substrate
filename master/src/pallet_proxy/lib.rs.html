@@ -806,6 +806,9 @@
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
 <a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -848,7 +851,7 @@
 	traits::{Currency, Get, InstanceFilter, IsSubType, IsType, OriginTrait, ReservableCurrency},
 	RuntimeDebug,
 };
-<span class="kw">use </span>frame_system::{<span class="self">self </span><span class="kw">as </span>system, ensure_signed};
+<span class="kw">use </span>frame_system::{<span class="self">self </span><span class="kw">as </span>system, ensure_signed, pallet_prelude::BlockNumberFor};
 <span class="kw">pub use </span>pallet::<span class="kw-2">*</span>;
 <span class="kw">use </span>scale_info::TypeInfo;
 <span class="kw">use </span>sp_io::hashing::blake2_256;
@@ -1035,7 +1038,7 @@
 			origin: OriginFor&lt;T&gt;,
 			delegate: AccountIdLookupOf&lt;T&gt;,
 			proxy_type: T::ProxyType,
-			delay: T::BlockNumber,
+			delay: BlockNumberFor&lt;T&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>delegate = T::Lookup::lookup(delegate)<span class="question-mark">?</span>;
@@ -1055,7 +1058,7 @@
 			origin: OriginFor&lt;T&gt;,
 			delegate: AccountIdLookupOf&lt;T&gt;,
 			proxy_type: T::ProxyType,
-			delay: T::BlockNumber,
+			delay: BlockNumberFor&lt;T&gt;,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
 			<span class="kw">let </span>delegate = T::Lookup::lookup(delegate)<span class="question-mark">?</span>;
@@ -1099,7 +1102,7 @@
 		</span><span class="kw">pub fn </span>create_pure(
 			origin: OriginFor&lt;T&gt;,
 			proxy_type: T::ProxyType,
-			delay: T::BlockNumber,
+			delay: BlockNumberFor&lt;T&gt;,
 			index: u16,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -1149,7 +1152,7 @@
 			spawner: AccountIdLookupOf&lt;T&gt;,
 			proxy_type: T::ProxyType,
 			index: u16,
-			<span class="attr">#[pallet::compact] </span>height: T::BlockNumber,
+			<span class="attr">#[pallet::compact] </span>height: BlockNumberFor&lt;T&gt;,
 			<span class="attr">#[pallet::compact] </span>ext_index: u32,
 		) -&gt; DispatchResult {
 			<span class="kw">let </span>who = ensure_signed(origin)<span class="question-mark">?</span>;
@@ -1343,14 +1346,14 @@
 			delegator: T::AccountId,
 			delegatee: T::AccountId,
 			proxy_type: T::ProxyType,
-			delay: T::BlockNumber,
+			delay: BlockNumberFor&lt;T&gt;,
 		},
 		<span class="doccomment">/// A proxy was removed.
 		</span>ProxyRemoved {
 			delegator: T::AccountId,
 			delegatee: T::AccountId,
 			proxy_type: T::ProxyType,
-			delay: T::BlockNumber,
+			delay: BlockNumberFor&lt;T&gt;,
 		},
 	}
 
@@ -1383,7 +1386,10 @@
 		Twox64Concat,
 		T::AccountId,
 		(
-			BoundedVec&lt;ProxyDefinition&lt;T::AccountId, T::ProxyType, T::BlockNumber&gt;, T::MaxProxies&gt;,
+			BoundedVec&lt;
+				ProxyDefinition&lt;T::AccountId, T::ProxyType, BlockNumberFor&lt;T&gt;&gt;,
+				T::MaxProxies,
+			&gt;,
 			BalanceOf&lt;T&gt;,
 		),
 		ValueQuery,
@@ -1397,7 +1403,7 @@
 		Twox64Concat,
 		T::AccountId,
 		(
-			BoundedVec&lt;Announcement&lt;T::AccountId, CallHashOf&lt;T&gt;, T::BlockNumber&gt;, T::MaxPending&gt;,
+			BoundedVec&lt;Announcement&lt;T::AccountId, CallHashOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;, T::MaxPending&gt;,
 			BalanceOf&lt;T&gt;,
 		),
 		ValueQuery,
@@ -1420,7 +1426,7 @@
 		who: <span class="kw-2">&amp;</span>T::AccountId,
 		proxy_type: <span class="kw-2">&amp;</span>T::ProxyType,
 		index: u16,
-		maybe_when: <span class="prelude-ty">Option</span>&lt;(T::BlockNumber, u32)&gt;,
+		maybe_when: <span class="prelude-ty">Option</span>&lt;(BlockNumberFor&lt;T&gt;, u32)&gt;,
 	) -&gt; T::AccountId {
 		<span class="kw">let </span>(height, ext_index) = maybe_when.unwrap_or_else(|| {
 			(
@@ -1446,7 +1452,7 @@
 		delegator: <span class="kw-2">&amp;</span>T::AccountId,
 		delegatee: T::AccountId,
 		proxy_type: T::ProxyType,
-		delay: T::BlockNumber,
+		delay: BlockNumberFor&lt;T&gt;,
 	) -&gt; DispatchResult {
 		<span class="macro">ensure!</span>(delegator != <span class="kw-2">&amp;</span>delegatee, Error::&lt;T&gt;::NoSelfProxy);
 		Proxies::&lt;T&gt;::try_mutate(delegator, |(<span class="kw-2">ref mut </span>proxies, <span class="kw-2">ref mut </span>deposit)| {
@@ -1486,7 +1492,7 @@
 		delegator: <span class="kw-2">&amp;</span>T::AccountId,
 		delegatee: T::AccountId,
 		proxy_type: T::ProxyType,
-		delay: T::BlockNumber,
+		delay: BlockNumberFor&lt;T&gt;,
 	) -&gt; DispatchResult {
 		Proxies::&lt;T&gt;::try_mutate_exists(delegator, |x| {
 			<span class="kw">let </span>(<span class="kw-2">mut </span>proxies, old_deposit) = x.take().ok_or(Error::&lt;T&gt;::NotFound)<span class="question-mark">?</span>;
@@ -1542,7 +1548,7 @@
 	}
 
 	<span class="kw">fn </span>edit_announcements&lt;
-		F: FnMut(<span class="kw-2">&amp;</span>Announcement&lt;T::AccountId, CallHashOf&lt;T&gt;, T::BlockNumber&gt;) -&gt; bool,
+		F: FnMut(<span class="kw-2">&amp;</span>Announcement&lt;T::AccountId, CallHashOf&lt;T&gt;, BlockNumberFor&lt;T&gt;&gt;) -&gt; bool,
 	&gt;(
 		delegate: <span class="kw-2">&amp;</span>T::AccountId,
 		f: F,
@@ -1568,8 +1574,8 @@
 		real: <span class="kw-2">&amp;</span>T::AccountId,
 		delegate: <span class="kw-2">&amp;</span>T::AccountId,
 		force_proxy_type: <span class="prelude-ty">Option</span>&lt;T::ProxyType&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;ProxyDefinition&lt;T::AccountId, T::ProxyType, T::BlockNumber&gt;, DispatchError&gt; {
-		<span class="kw">let </span>f = |x: <span class="kw-2">&amp;</span>ProxyDefinition&lt;T::AccountId, T::ProxyType, T::BlockNumber&gt;| -&gt; bool {
+	) -&gt; <span class="prelude-ty">Result</span>&lt;ProxyDefinition&lt;T::AccountId, T::ProxyType, BlockNumberFor&lt;T&gt;&gt;, DispatchError&gt; {
+		<span class="kw">let </span>f = |x: <span class="kw-2">&amp;</span>ProxyDefinition&lt;T::AccountId, T::ProxyType, BlockNumberFor&lt;T&gt;&gt;| -&gt; bool {
 			<span class="kw-2">&amp;</span>x.delegate == delegate &amp;&amp;
 				force_proxy_type.as_ref().map_or(<span class="bool-val">true</span>, |y| <span class="kw-2">&amp;</span>x.proxy_type == y)
 		};
@@ -1577,7 +1583,7 @@
 	}
 
 	<span class="kw">fn </span>do_proxy(
-		def: ProxyDefinition&lt;T::AccountId, T::ProxyType, T::BlockNumber&gt;,
+		def: ProxyDefinition&lt;T::AccountId, T::ProxyType, BlockNumberFor&lt;T&gt;&gt;,
 		real: T::AccountId,
 		call: &lt;T <span class="kw">as </span>Config&gt;::RuntimeCall,
 	) {

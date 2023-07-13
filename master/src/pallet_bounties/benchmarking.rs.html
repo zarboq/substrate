@@ -259,7 +259,7 @@
 <span class="kw">use </span>frame_benchmarking::v1::{
 	account, benchmarks_instance_pallet, whitelisted_caller, BenchmarkError,
 };
-<span class="kw">use </span>frame_system::RawOrigin;
+<span class="kw">use </span>frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 <span class="kw">use </span>sp_runtime::traits::Bounded;
 
 <span class="kw">use </span><span class="kw">crate</span>::Pallet <span class="kw">as </span>Bounties;
@@ -312,7 +312,7 @@
 	<span class="kw">let </span>approve_origin =
 		T::SpendOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 	Bounties::&lt;T, I&gt;::approve_bounty(approve_origin.clone(), bounty_id)<span class="question-mark">?</span>;
-	Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+	Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 	Bounties::&lt;T, I&gt;::propose_curator(approve_origin, bounty_id, curator_lookup.clone(), fee)<span class="question-mark">?</span>;
 	Bounties::&lt;T, I&gt;::accept_curator(RawOrigin::Signed(curator).into(), bounty_id)<span class="question-mark">?</span>;
 	<span class="prelude-val">Ok</span>((curator_lookup, bounty_id))
@@ -350,14 +350,14 @@
 		<span class="kw">let </span>bounty_id = BountyCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
 		<span class="kw">let </span>approve_origin = T::SpendOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		Bounties::&lt;T, I&gt;::approve_bounty(approve_origin.clone(), bounty_id)<span class="question-mark">?</span>;
-		Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 	}: <span class="kw">_</span>&lt;T::RuntimeOrigin&gt;(approve_origin, bounty_id, curator_lookup, fee)
 
 	<span class="comment">// Worst case when curator is inactive and any sender unassigns the curator.
 	</span>unassign_curator {
 		setup_pot_account::&lt;T, I&gt;();
 		<span class="kw">let </span>(curator_lookup, bounty_id) = create_bounty::&lt;T, I&gt;()<span class="question-mark">?</span>;
-		Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 		<span class="kw">let </span>bounty_id = BountyCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
 		frame_system::Pallet::&lt;T&gt;::set_block_number(T::BountyUpdatePeriod::get() + <span class="number">2u32</span>.into());
 		<span class="kw">let </span>caller = whitelisted_caller();
@@ -371,14 +371,14 @@
 		<span class="kw">let </span>bounty_id = BountyCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
 		<span class="kw">let </span>approve_origin = T::SpendOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
 		Bounties::&lt;T, I&gt;::approve_bounty(approve_origin.clone(), bounty_id)<span class="question-mark">?</span>;
-		Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 		Bounties::&lt;T, I&gt;::propose_curator(approve_origin, bounty_id, curator_lookup, fee)<span class="question-mark">?</span>;
 	}: <span class="kw">_</span>(RawOrigin::Signed(curator), bounty_id)
 
 	award_bounty {
 		setup_pot_account::&lt;T, I&gt;();
 		<span class="kw">let </span>(curator_lookup, bounty_id) = create_bounty::&lt;T, I&gt;()<span class="question-mark">?</span>;
-		Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 
 		<span class="kw">let </span>bounty_id = BountyCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
 		<span class="kw">let </span>curator = T::Lookup::lookup(curator_lookup).map_err(&lt;<span class="kw-2">&amp;</span>str&gt;::from)<span class="question-mark">?</span>;
@@ -389,7 +389,7 @@
 	claim_bounty {
 		setup_pot_account::&lt;T, I&gt;();
 		<span class="kw">let </span>(curator_lookup, bounty_id) = create_bounty::&lt;T, I&gt;()<span class="question-mark">?</span>;
-		Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 
 		<span class="kw">let </span>bounty_id = BountyCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
 		<span class="kw">let </span>curator = T::Lookup::lookup(curator_lookup).map_err(&lt;<span class="kw-2">&amp;</span>str&gt;::from)<span class="question-mark">?</span>;
@@ -418,7 +418,7 @@
 	close_bounty_active {
 		setup_pot_account::&lt;T, I&gt;();
 		<span class="kw">let </span>(curator_lookup, bounty_id) = create_bounty::&lt;T, I&gt;()<span class="question-mark">?</span>;
-		Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 		<span class="kw">let </span>bounty_id = BountyCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
 		<span class="kw">let </span>approve_origin =
 			T::ApproveOrigin::try_successful_origin().map_err(|<span class="kw">_</span>| BenchmarkError::Weightless)<span class="question-mark">?</span>;
@@ -430,7 +430,7 @@
 	extend_bounty_expiry {
 		setup_pot_account::&lt;T, I&gt;();
 		<span class="kw">let </span>(curator_lookup, bounty_id) = create_bounty::&lt;T, I&gt;()<span class="question-mark">?</span>;
-		Treasury::&lt;T, I&gt;::on_initialize(T::BlockNumber::zero());
+		Treasury::&lt;T, I&gt;::on_initialize(BlockNumberFor::&lt;T&gt;::zero());
 
 		<span class="kw">let </span>bounty_id = BountyCount::&lt;T, I&gt;::get() - <span class="number">1</span>;
 		<span class="kw">let </span>curator = T::Lookup::lookup(curator_lookup).map_err(&lt;<span class="kw-2">&amp;</span>str&gt;::from)<span class="question-mark">?</span>;

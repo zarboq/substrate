@@ -2033,11 +2033,6 @@
 <a href="#2033" id="2033">2033</a>
 <a href="#2034" id="2034">2034</a>
 <a href="#2035" id="2035">2035</a>
-<a href="#2036" id="2036">2036</a>
-<a href="#2037" id="2037">2037</a>
-<a href="#2038" id="2038">2038</a>
-<a href="#2039" id="2039">2039</a>
-<a href="#2040" id="2040">2040</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -2456,10 +2451,8 @@
 	}
 }
 
-<span class="kw">pub type </span>PayoutsFor&lt;T, I&gt; = BoundedVec&lt;
-	(&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber, BalanceOf&lt;T, I&gt;),
-	&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::MaxPayouts,
-&gt;;
+<span class="kw">pub type </span>PayoutsFor&lt;T, I&gt; =
+	BoundedVec&lt;(BlockNumberFor&lt;T&gt;, BalanceOf&lt;T, I&gt;), &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::MaxPayouts&gt;;
 
 <span class="doccomment">/// Information concerning a member.
 </span><span class="attr">#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
@@ -2479,10 +2472,7 @@
 
 <span class="kw">pub type </span>PayoutRecordFor&lt;T, I&gt; = PayoutRecord&lt;
 	BalanceOf&lt;T, I&gt;,
-	BoundedVec&lt;
-		(&lt;T <span class="kw">as </span>frame_system::Config&gt;::BlockNumber, BalanceOf&lt;T, I&gt;),
-		&lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::MaxPayouts,
-	&gt;,
+	BoundedVec&lt;(BlockNumberFor&lt;T&gt;, BalanceOf&lt;T, I&gt;), &lt;T <span class="kw">as </span>Config&lt;I&gt;&gt;::MaxPayouts&gt;,
 &gt;;
 
 <span class="doccomment">/// Record for an individual new member who was elevated from a candidate recently.
@@ -2531,7 +2521,7 @@
 		</span><span class="kw">type </span>Currency: ReservableCurrency&lt;<span class="self">Self</span>::AccountId&gt;;
 
 		<span class="doccomment">/// Something that provides randomness in the runtime.
-		</span><span class="kw">type </span>Randomness: Randomness&lt;<span class="self">Self</span>::Hash, <span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>Randomness: Randomness&lt;<span class="self">Self</span>::Hash, BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The maximum number of strikes before a member gets funds slashed.
 		</span><span class="attr">#[pallet::constant]
@@ -2544,23 +2534,23 @@
 		<span class="doccomment">/// The number of blocks on which new candidates should be voted on. Together with
 		/// `ClaimPeriod`, this sums to the number of blocks between candidate intake periods.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>VotingPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>VotingPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The number of blocks on which new candidates can claim their membership and be the
 		/// named head.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>ClaimPeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>ClaimPeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The maximum duration of the payout lock.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>MaxLockDuration: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>MaxLockDuration: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The origin that is allowed to call `found`.
 		</span><span class="kw">type </span>FounderSetOrigin: EnsureOrigin&lt;<span class="self">Self</span>::RuntimeOrigin&gt;;
 
 		<span class="doccomment">/// The number of blocks between membership challenges.
 		</span><span class="attr">#[pallet::constant]
-		</span><span class="kw">type </span>ChallengePeriod: Get&lt;<span class="self">Self</span>::BlockNumber&gt;;
+		</span><span class="kw">type </span>ChallengePeriod: Get&lt;BlockNumberFor&lt;<span class="self">Self</span>&gt;&gt;;
 
 		<span class="doccomment">/// The maximum number of payouts a member may have waiting unclaimed.
 		</span><span class="attr">#[pallet::constant]
@@ -2798,7 +2788,7 @@
 
 	<span class="attr">#[pallet::hooks]
 	</span><span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Hooks&lt;BlockNumberFor&lt;T&gt;&gt; <span class="kw">for </span>Pallet&lt;T, I&gt; {
-		<span class="kw">fn </span>on_initialize(n: T::BlockNumber) -&gt; Weight {
+		<span class="kw">fn </span>on_initialize(n: BlockNumberFor&lt;T&gt;) -&gt; Weight {
 			<span class="kw">let </span><span class="kw-2">mut </span>weight = Weight::zero();
 			<span class="kw">let </span>weights = T::BlockWeights::get();
 
@@ -3449,7 +3439,7 @@
 
 <span class="kw">impl</span>&lt;T: Config&lt;I&gt;, I: <span class="lifetime">&#39;static</span>&gt; Pallet&lt;T, I&gt; {
 	<span class="doccomment">/// Get the period we are currently in.
-	</span><span class="kw">fn </span>period() -&gt; Period&lt;T::BlockNumber&gt; {
+	</span><span class="kw">fn </span>period() -&gt; Period&lt;BlockNumberFor&lt;T&gt;&gt; {
 		<span class="kw">let </span>claim_period = T::ClaimPeriod::get();
 		<span class="kw">let </span>voting_period = T::VotingPeriod::get();
 		<span class="kw">let </span>rotation_period = voting_period + claim_period;
@@ -3942,7 +3932,7 @@
 		candidate: <span class="kw-2">&amp;</span>T::AccountId,
 		value: BalanceOf&lt;T, I&gt;,
 		kind: BidKind&lt;T::AccountId, BalanceOf&lt;T, I&gt;&gt;,
-		maturity: T::BlockNumber,
+		maturity: BlockNumberFor&lt;T&gt;,
 	) {
 		<span class="kw">let </span>value = <span class="kw">match </span>kind {
 			BidKind::Deposit(deposit) =&gt; {
@@ -3979,7 +3969,7 @@
 	///
 	/// It is the caller&#39;s duty to ensure that `who` is already a member. This does nothing if `who`
 	/// is not a member or if `value` is zero.
-	</span><span class="kw">fn </span>bump_payout(who: <span class="kw-2">&amp;</span>T::AccountId, when: T::BlockNumber, value: BalanceOf&lt;T, I&gt;) {
+	</span><span class="kw">fn </span>bump_payout(who: <span class="kw-2">&amp;</span>T::AccountId, when: BlockNumberFor&lt;T&gt;, value: BalanceOf&lt;T, I&gt;) {
 		<span class="kw">if </span>value.is_zero() {
 			<span class="kw">return
 		</span>}
@@ -4062,7 +4052,7 @@
 	///
 	/// This is a rather opaque calculation based on the formula here:
 	/// https://www.desmos.com/calculator/9itkal1tce
-	</span><span class="kw">fn </span>lock_duration(x: u32) -&gt; T::BlockNumber {
+	</span><span class="kw">fn </span>lock_duration(x: u32) -&gt; BlockNumberFor&lt;T&gt; {
 		<span class="kw">let </span>lock_pc = <span class="number">100 </span>- <span class="number">50_000 </span>/ (x + <span class="number">500</span>);
 		Percent::from_percent(lock_pc <span class="kw">as </span>u8) * T::MaxLockDuration::get()
 	}

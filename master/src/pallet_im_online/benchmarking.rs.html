@@ -92,6 +92,9 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -130,7 +133,10 @@
 <span class="kw">pub fn </span>create_heartbeat&lt;T: Config&gt;(
 	k: u32,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;
-	(<span class="kw">crate</span>::Heartbeat&lt;T::BlockNumber&gt;, &lt;T::AuthorityId <span class="kw">as </span>RuntimeAppPublic&gt;::Signature),
+	(
+		<span class="kw">crate</span>::Heartbeat&lt;frame_system::pallet_prelude::BlockNumberFor&lt;T&gt;&gt;,
+		&lt;T::AuthorityId <span class="kw">as </span>RuntimeAppPublic&gt;::Signature,
+	),
 	<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 &gt; {
 	<span class="kw">let </span><span class="kw-2">mut </span>keys = Vec::new();
@@ -142,7 +148,7 @@
 	Keys::&lt;T&gt;::put(bounded_keys);
 
 	<span class="kw">let </span>input_heartbeat = Heartbeat {
-		block_number: T::BlockNumber::zero(),
+		block_number: frame_system::pallet_prelude::BlockNumberFor::&lt;T&gt;::zero(),
 		session_index: <span class="number">0</span>,
 		authority_index: k - <span class="number">1</span>,
 		validators_len: keys.len() <span class="kw">as </span>u32,
