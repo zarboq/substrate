@@ -505,6 +505,12 @@
 <a href="#505" id="505">505</a>
 <a href="#506" id="506">506</a>
 <a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -911,7 +917,7 @@
 		<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Node name should not contain invalid chars such as &#39;.&#39; and &#39;@&#39;&quot;</span>)
 	}
 
-	<span class="kw">let </span>invalid_patterns = <span class="string">r&quot;(https?:\\/+)?(www)+&quot;</span>;
+	<span class="kw">let </span>invalid_patterns = <span class="string">r&quot;^https?:\/\/&quot;</span>;
 	<span class="kw">let </span>re = Regex::new(invalid_patterns).unwrap();
 	<span class="kw">if </span>re.is_match(<span class="kw-2">&amp;</span>name) {
 		<span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Node name should not contain urls&quot;</span>)
@@ -997,6 +1003,10 @@
 	<span class="attr">#[test]
 	</span><span class="kw">fn </span>tests_node_name_good() {
 		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;short name&quot;</span>).is_ok());
+		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;www&quot;</span>).is_ok());
+		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;aawww&quot;</span>).is_ok());
+		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;wwwaa&quot;</span>).is_ok());
+		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;www aa&quot;</span>).is_ok());
 	}
 
 	<span class="attr">#[test]
@@ -1009,6 +1019,8 @@
 		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;http://visit.me&quot;</span>).is_err());
 		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;https://visit.me&quot;</span>).is_err());
 		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;www.visit.me&quot;</span>).is_err());
+		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;www.visit&quot;</span>).is_err());
+		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;visit.www&quot;</span>).is_err());
 		<span class="macro">assert!</span>(is_node_name_valid(<span class="string">&quot;email@domain&quot;</span>).is_err());
 	}
 }
