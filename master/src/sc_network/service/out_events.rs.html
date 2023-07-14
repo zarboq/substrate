@@ -320,6 +320,31 @@
 <a href="#320" id="320">320</a>
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -356,17 +381,18 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::event::Event;
 
 <span class="kw">use </span>futures::{prelude::<span class="kw-2">*</span>, ready, stream::FusedStream};
-<span class="kw">use </span>log::error;
-<span class="kw">use </span>parking_lot::Mutex;
+<span class="kw">use </span>log::{debug, error};
 <span class="kw">use </span>prometheus_endpoint::{register, CounterVec, GaugeVec, Opts, PrometheusError, Registry, U64};
 <span class="kw">use </span>std::{
 	backtrace::Backtrace,
 	cell::RefCell,
 	fmt,
 	pin::Pin,
-	sync::Arc,
 	task::{Context, Poll},
 };
+
+<span class="doccomment">/// Log target for this file.
+</span><span class="kw">pub const </span>LOG_TARGET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;sub-libp2p::out_events&quot;</span>;
 
 <span class="doccomment">/// Creates a new channel that can be associated to a [`OutChannels`].
 ///
@@ -374,17 +400,27 @@
 /// to warn if there are too many unprocessed events in the channel.
 </span><span class="kw">pub fn </span>channel(name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, queue_size_warning: usize) -&gt; (Sender, Receiver) {
 	<span class="kw">let </span>(tx, rx) = async_channel::unbounded();
-	<span class="kw">let </span>metrics = Arc::new(Mutex::new(<span class="prelude-val">None</span>));
 	<span class="kw">let </span>tx = Sender {
 		inner: tx,
 		name,
 		queue_size_warning,
-		warning_fired: <span class="bool-val">false</span>,
+		warning_fired: SenderWarningState::NotFired,
 		creation_backtrace: Backtrace::force_capture(),
-		metrics: metrics.clone(),
+		metrics: <span class="prelude-val">None</span>,
 	};
-	<span class="kw">let </span>rx = Receiver { inner: rx, name, metrics };
+	<span class="kw">let </span>rx = Receiver { inner: rx, name, metrics: <span class="prelude-val">None </span>};
 	(tx, rx)
+}
+
+<span class="doccomment">/// A state of a sender warning that is used to avoid spamming the logs.
+</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+</span><span class="kw">enum </span>SenderWarningState {
+	<span class="doccomment">/// The warning has not been fired yet.
+	</span>NotFired,
+	<span class="doccomment">/// The warning has been fired, and the channel is full
+	</span>FiredFull,
+	<span class="doccomment">/// The warning has been fired and the channel is not full anymore.
+	</span>FiredFree,
 }
 
 <span class="doccomment">/// Sending side of a channel.
@@ -400,13 +436,14 @@
 	</span>name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 	<span class="doccomment">/// Threshold queue size to generate an error message in the logs.
 	</span>queue_size_warning: usize,
-	<span class="doccomment">/// We generate the error message only once to not spam the logs.
-	</span>warning_fired: bool,
+	<span class="doccomment">/// We generate the error message only once to not spam the logs after the first error.
+	/// Subsequently we indicate channel fullness on debug level.
+	</span>warning_fired: SenderWarningState,
 	<span class="doccomment">/// Backtrace of a place where the channel was created.
 	</span>creation_backtrace: Backtrace,
 	<span class="doccomment">/// Clone of [`Receiver::metrics`]. Will be initialized when [`Sender`] is added to
 	/// [`OutChannels`] with `OutChannels::push()`.
-	</span>metrics: Arc&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="prelude-ty">Option</span>&lt;Metrics&gt;&gt;&gt;&gt;&gt;,
+	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Sender {
@@ -417,8 +454,7 @@
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>Sender {
 	<span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-		<span class="kw">let </span>metrics = <span class="self">self</span>.metrics.lock();
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(metrics)) = metrics.as_ref().map(|m| <span class="kw-2">&amp;**</span>m) {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="self">self</span>.metrics.as_ref() {
 			metrics.num_channels.with_label_values(<span class="kw-2">&amp;</span>[<span class="self">self</span>.name]).dec();
 		}
 	}
@@ -430,7 +466,7 @@
 	name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 	<span class="doccomment">/// Initially contains `None`, and will be set to a value once the corresponding [`Sender`]
 	/// is assigned to an instance of [`OutChannels`].
-	</span>metrics: Arc&lt;Mutex&lt;<span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="prelude-ty">Option</span>&lt;Metrics&gt;&gt;&gt;&gt;&gt;,
+	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 }
 
 <span class="kw">impl </span>Stream <span class="kw">for </span>Receiver {
@@ -438,13 +474,8 @@
 
 	<span class="kw">fn </span>poll_next(<span class="kw-2">mut </span><span class="self">self</span>: Pin&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt;, cx: <span class="kw-2">&amp;mut </span>Context) -&gt; Poll&lt;<span class="prelude-ty">Option</span>&lt;Event&gt;&gt; {
 		<span class="kw">if let </span><span class="prelude-val">Some</span>(ev) = <span class="macro">ready!</span>(Pin::new(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner).poll_next(cx)) {
-			<span class="kw">let </span>metrics = <span class="self">self</span>.metrics.lock().clone();
-			<span class="kw">match </span>metrics.as_ref().map(|m| m.as_ref()) {
-				<span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(metrics)) =&gt; metrics.event_out(<span class="kw-2">&amp;</span>ev, <span class="self">self</span>.name),
-				<span class="prelude-val">Some</span>(<span class="prelude-val">None</span>) =&gt; (), <span class="comment">// no registry
-				</span><span class="prelude-val">None </span>=&gt; <span class="macro">log::warn!</span>(
-					<span class="string">&quot;Inconsistency in out_events: event happened before sender associated&quot;
-				</span>),
+			<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="kw-2">&amp;</span><span class="self">self</span>.metrics {
+				metrics.event_out(<span class="kw-2">&amp;</span>ev, <span class="self">self</span>.name);
 			}
 			Poll::Ready(<span class="prelude-val">Some</span>(ev))
 		} <span class="kw">else </span>{
@@ -473,7 +504,7 @@
 	event_streams: Vec&lt;Sender&gt;,
 	<span class="doccomment">/// The metrics we collect. A clone of this is sent to each [`Receiver`] associated with this
 	/// object.
-	</span>metrics: Arc&lt;<span class="prelude-ty">Option</span>&lt;Metrics&gt;&gt;,
+	</span>metrics: <span class="prelude-ty">Option</span>&lt;Metrics&gt;,
 }
 
 <span class="kw">impl </span>OutChannels {
@@ -482,17 +513,15 @@
 		<span class="kw">let </span>metrics =
 			<span class="kw">if let </span><span class="prelude-val">Some</span>(registry) = registry { <span class="prelude-val">Some</span>(Metrics::register(registry)<span class="question-mark">?</span>) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
 
-		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ event_streams: Vec::new(), metrics: Arc::new(metrics) })
+		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ event_streams: Vec::new(), metrics })
 	}
 
 	<span class="doccomment">/// Adds a new [`Sender`] to the collection.
-	</span><span class="kw">pub fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, sender: Sender) {
-		<span class="kw">let </span><span class="kw-2">mut </span>metrics = sender.metrics.lock();
-		<span class="macro">debug_assert!</span>(metrics.is_none());
-		<span class="kw-2">*</span>metrics = <span class="prelude-val">Some</span>(<span class="self">self</span>.metrics.clone());
-		drop(metrics);
+	</span><span class="kw">pub fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>sender: Sender) {
+		<span class="macro">debug_assert!</span>(sender.metrics.is_none());
+		sender.metrics = <span class="self">self</span>.metrics.clone();
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="kw-2">&amp;*</span><span class="self">self</span>.metrics {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="kw-2">&amp;</span><span class="self">self</span>.metrics {
 			metrics.num_channels.with_label_values(<span class="kw-2">&amp;</span>[sender.name]).inc();
 		}
 
@@ -502,22 +531,42 @@
 	<span class="doccomment">/// Sends an event.
 	</span><span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, event: Event) {
 		<span class="self">self</span>.event_streams.retain_mut(|sender| {
-			<span class="kw">if </span>sender.inner.len() &gt;= sender.queue_size_warning &amp;&amp; !sender.warning_fired {
-				sender.warning_fired = <span class="bool-val">true</span>;
-				<span class="macro">error!</span>(
-					<span class="string">&quot;The number of unprocessed events in channel `{}` exceeded {}.\n\
-					 The channel was created at:\n{:}\n
-					 The last event was sent from:\n{:}&quot;</span>,
-					sender.name,
-					sender.queue_size_warning,
-					sender.creation_backtrace,
-					Backtrace::force_capture(),
+			<span class="kw">let </span>current_pending = sender.inner.len();
+			<span class="kw">if </span>current_pending &gt;= sender.queue_size_warning {
+				<span class="kw">if </span>sender.warning_fired == SenderWarningState::NotFired {
+					<span class="macro">error!</span>(
+						<span class="string">&quot;The number of unprocessed events in channel `{}` exceeded {}.\n\
+						 The channel was created at:\n{:}\n
+						 The last event was sent from:\n{:}&quot;</span>,
+						sender.name,
+						sender.queue_size_warning,
+						sender.creation_backtrace,
+						Backtrace::force_capture(),
+					);
+				} <span class="kw">else if </span>sender.warning_fired == SenderWarningState::FiredFree {
+					<span class="comment">// We don&#39;t want to spam the logs, so we only log on debug level
+					</span><span class="macro">debug!</span>(
+						target: LOG_TARGET,
+						<span class="string">&quot;Channel `{}` is overflowed again. Number of events: {}&quot;</span>,
+						sender.name, current_pending
+					);
+				}
+				sender.warning_fired = SenderWarningState::FiredFull;
+			} <span class="kw">else if </span>sender.warning_fired == SenderWarningState::FiredFull &amp;&amp;
+				current_pending &lt; sender.queue_size_warning.wrapping_div(<span class="number">2</span>)
+			{
+				sender.warning_fired = SenderWarningState::FiredFree;
+				<span class="macro">debug!</span>(
+					target: LOG_TARGET,
+					<span class="string">&quot;Channel `{}` is no longer overflowed. Number of events: {}&quot;</span>,
+					sender.name, current_pending
 				);
 			}
+
 			sender.inner.try_send(event.clone()).is_ok()
 		});
 
-		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="kw-2">&amp;*</span><span class="self">self</span>.metrics {
+		<span class="kw">if let </span><span class="prelude-val">Some</span>(metrics) = <span class="kw-2">&amp;</span><span class="self">self</span>.metrics {
 			<span class="kw">for </span>ev <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.event_streams {
 				metrics.event_in(<span class="kw-2">&amp;</span>event, ev.name);
 			}
@@ -533,7 +582,8 @@
 	}
 }
 
-<span class="kw">struct </span>Metrics {
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">struct </span>Metrics {
 	<span class="comment">// This list is ordered alphabetically
 	</span>events_total: CounterVec&lt;U64&gt;,
 	notifications_sizes: CounterVec&lt;U64&gt;,
