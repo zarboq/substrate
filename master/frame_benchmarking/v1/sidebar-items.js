@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["show_benchmark_debug_info"],"macro":["add_benchmark","benchmarks","benchmarks_instance","benchmarks_instance_pallet","cb_add_benchmarks","cb_list_benchmarks","define_benchmarks","impl_benchmark_test_suite","list_benchmark","whitelist"]};
+window.SIDEBAR_ITEMS = {"fn":["show_benchmark_debug_info"],"macro":["add_benchmark","benchmarks","benchmarks_instance","benchmarks_instance_pallet","define_benchmarks","impl_benchmark_test_suite","list_benchmark","whitelist"]};

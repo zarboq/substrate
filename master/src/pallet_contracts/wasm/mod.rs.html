@@ -3318,14 +3318,6 @@
 <a href="#3318" id="3318">3318</a>
 <a href="#3319" id="3319">3319</a>
 <a href="#3320" id="3320">3320</a>
-<a href="#3321" id="3321">3321</a>
-<a href="#3322" id="3322">3322</a>
-<a href="#3323" id="3323">3323</a>
-<a href="#3324" id="3324">3324</a>
-<a href="#3325" id="3325">3325</a>
-<a href="#3326" id="3326">3326</a>
-<a href="#3327" id="3327">3327</a>
-<a href="#3328" id="3328">3328</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -3420,6 +3412,8 @@
 	/// to be run on-chain. Specifically, such a code can never be instantiated into a contract
 	/// and can just be used through a delegate call.
 	</span>determinism: Determinism,
+	<span class="doccomment">/// length of the code in bytes.
+	</span>code_len: u32,
 }
 
 <span class="doccomment">/// Defines the required determinism level of a wasm blob when either running or uploading code.
@@ -3596,15 +3590,11 @@
 	</span><span class="kw">fn </span>load_code(
 		code_hash: CodeHash&lt;T&gt;,
 		gas_meter: <span class="kw-2">&amp;mut </span>GasMeter&lt;T&gt;,
-	) -&gt; <span class="prelude-ty">Result</span>&lt;CodeVec&lt;T&gt;, DispatchError&gt; {
-		<span class="kw">let </span>max_code_len = T::MaxCodeLen::get();
-		<span class="kw">let </span>charged = gas_meter.charge(CodeLoadToken(max_code_len))<span class="question-mark">?</span>;
-
+	) -&gt; <span class="prelude-ty">Result</span>&lt;(CodeVec&lt;T&gt;, CodeInfo&lt;T&gt;), DispatchError&gt; {
+		<span class="kw">let </span>code_info = &lt;CodeInfoOf&lt;T&gt;&gt;::get(code_hash).ok_or(Error::&lt;T&gt;::CodeNotFound)<span class="question-mark">?</span>;
+		gas_meter.charge(CodeLoadToken(code_info.code_len))<span class="question-mark">?</span>;
 		<span class="kw">let </span>code = &lt;PristineCode&lt;T&gt;&gt;::get(code_hash).ok_or(Error::&lt;T&gt;::CodeNotFound)<span class="question-mark">?</span>;
-		<span class="kw">let </span>code_len = code.len() <span class="kw">as </span>u32;
-		gas_meter.adjust_gas(charged, CodeLoadToken(code_len));
-
-		<span class="prelude-val">Ok</span>(code)
+		<span class="prelude-val">Ok</span>((code, code_info))
 	}
 
 	<span class="doccomment">/// Create the module without checking the passed code.
@@ -3637,13 +3627,7 @@
 		code_hash: CodeHash&lt;T&gt;,
 		gas_meter: <span class="kw-2">&amp;mut </span>GasMeter&lt;T&gt;,
 	) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, DispatchError&gt; {
-		<span class="kw">let </span>code = <span class="self">Self</span>::load_code(code_hash, gas_meter)<span class="question-mark">?</span>;
-		<span class="comment">// We store `code_info` at the same time as contract code,
-		// therefore this query shouldn&#39;t really fail.
-		// We consider its failure equal to `CodeNotFound`, as contract code without
-		// `code_info` is unusable in this pallet.
-		</span><span class="kw">let </span>code_info = &lt;CodeInfoOf&lt;T&gt;&gt;::get(code_hash).ok_or(Error::&lt;T&gt;::CodeNotFound)<span class="question-mark">?</span>;
-
+		<span class="kw">let </span>(code, code_info) = <span class="self">Self</span>::load_code(code_hash, gas_meter)<span class="question-mark">?</span>;
 		<span class="prelude-val">Ok</span>(<span class="self">Self </span>{ code, code_info, code_hash })
 	}
 

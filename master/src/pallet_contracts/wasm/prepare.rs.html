@@ -804,6 +804,8 @@
 <a href="#804" id="804">804</a>
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1092,11 +1094,12 @@
 	validate::&lt;E, T&gt;(code.as_ref(), schedule, determinism)<span class="question-mark">?</span>;
 
 	<span class="comment">// Calculate deposit for storing contract code and `code_info` in two different storage items.
-	</span><span class="kw">let </span>bytes_added = code.len().saturating_add(&lt;CodeInfo&lt;T&gt;&gt;::max_encoded_len()) <span class="kw">as </span>u32;
+	</span><span class="kw">let </span>code_len = code.len() <span class="kw">as </span>u32;
+	<span class="kw">let </span>bytes_added = code_len.saturating_add(&lt;CodeInfo&lt;T&gt;&gt;::max_encoded_len() <span class="kw">as </span>u32);
 	<span class="kw">let </span>deposit = Diff { bytes_added, items_added: <span class="number">2</span>, ..Default::default() }
 		.update_contract::&lt;T&gt;(<span class="prelude-val">None</span>)
 		.charge_or_zero();
-	<span class="kw">let </span>code_info = CodeInfo { owner, deposit, determinism, refcount: <span class="number">0 </span>};
+	<span class="kw">let </span>code_info = CodeInfo { owner, deposit, determinism, refcount: <span class="number">0</span>, code_len };
 	<span class="kw">let </span>code_hash = T::Hashing::hash(<span class="kw-2">&amp;</span>code);
 
 	<span class="prelude-val">Ok</span>(WasmBlob { code, code_info, code_hash })
@@ -1126,6 +1129,7 @@
 			<span class="comment">// this is a helper function for benchmarking which skips deposit collection
 			</span>deposit: Default::default(),
 			refcount: <span class="number">0</span>,
+			code_len: code.len() <span class="kw">as </span>u32,
 			determinism,
 		};
 		<span class="kw">let </span>code_hash = T::Hashing::hash(<span class="kw-2">&amp;</span>code);
