@@ -1799,7 +1799,6 @@
 <a href="#1799" id="1799">1799</a>
 <a href="#1800" id="1800">1800</a>
 <a href="#1801" id="1801">1801</a>
-<a href="#1802" id="1802">1802</a>
 </pre></div><pre class="rust"><code><span class="comment">// This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -1852,7 +1851,7 @@
 //!   - [`CheckWeight`]: Checks the weight and length of the block and ensure that it does not
 //!     exceed the limits.
 //!   - [`CheckNonce`]: Checks the nonce of the transaction. Contains a single payload of type
-//!     `T::Index`.
+//!     `T::Nonce`.
 //!   - [`CheckEra`]: Checks the era of the transaction. Contains a single payload of type `Era`.
 //!   - [`CheckGenesis`]: Checks the provided genesis hash of the transaction. Must be a part of the
 //!     signed payload of the transaction.
@@ -2019,7 +2018,7 @@
 
 		<span class="attr">#[frame_support::register_default_impl(TestDefaultConfig)]
 		</span><span class="kw">impl </span>DefaultConfig <span class="kw">for </span>TestDefaultConfig {
-			<span class="kw">type </span>Index = u32;
+			<span class="kw">type </span>Nonce = u32;
 			<span class="kw">type </span>Hash = sp_core::hash::H256;
 			<span class="kw">type </span>Hashing = sp_runtime::traits::BlakeTwo256;
 			<span class="kw">type </span>AccountId = u64;
@@ -2075,9 +2074,8 @@
 			+ Debug
 			+ From&lt;Call&lt;<span class="self">Self</span>&gt;&gt;;
 
-		<span class="doccomment">/// Account index (aka nonce) type. This stores the number of previous transactions
-		/// associated with a sender account.
-		</span><span class="kw">type </span>Index: Parameter
+		<span class="doccomment">/// This stores the number of previous transactions associated with a sender account.
+		</span><span class="kw">type </span>Nonce: Parameter
 			+ Member
 			+ MaybeSerializeDeserialize
 			+ Debug
@@ -2356,7 +2354,7 @@
 		<span class="kw">_</span>,
 		Blake2_128Concat,
 		T::AccountId,
-		AccountInfo&lt;T::Index, T::AccountData&gt;,
+		AccountInfo&lt;T::Nonce, T::AccountData&gt;,
 		ValueQuery,
 	&gt;;
 
@@ -2534,9 +2532,9 @@
 
 <span class="doccomment">/// Information of an account.
 </span><span class="attr">#[derive(Clone, Eq, PartialEq, Default, RuntimeDebug, Encode, Decode, TypeInfo, MaxEncodedLen)]
-</span><span class="kw">pub struct </span>AccountInfo&lt;Index, AccountData&gt; {
+</span><span class="kw">pub struct </span>AccountInfo&lt;Nonce, AccountData&gt; {
 	<span class="doccomment">/// The number of transactions this account has sent.
-	</span><span class="kw">pub </span>nonce: Index,
+	</span><span class="kw">pub </span>nonce: Nonce,
 	<span class="doccomment">/// The number of other modules that currently depend on this account&#39;s existence. The account
 	/// cannot be reaped until this is zero.
 	</span><span class="kw">pub </span>consumers: RefCount,
@@ -3372,13 +3370,13 @@
 	}
 
 	<span class="doccomment">/// Retrieve the account transaction counter from storage.
-	</span><span class="kw">pub fn </span>account_nonce(who: <span class="kw">impl </span>EncodeLike&lt;T::AccountId&gt;) -&gt; T::Index {
+	</span><span class="kw">pub fn </span>account_nonce(who: <span class="kw">impl </span>EncodeLike&lt;T::AccountId&gt;) -&gt; T::Nonce {
 		Account::&lt;T&gt;::get(who).nonce
 	}
 
 	<span class="doccomment">/// Increment a particular account&#39;s nonce by 1.
 	</span><span class="kw">pub fn </span>inc_account_nonce(who: <span class="kw">impl </span>EncodeLike&lt;T::AccountId&gt;) {
-		Account::&lt;T&gt;::mutate(who, |a| a.nonce += T::Index::one());
+		Account::&lt;T&gt;::mutate(who, |a| a.nonce += T::Nonce::one());
 	}
 
 	<span class="doccomment">/// Note what the extrinsic data of the current extrinsic index is.
@@ -3434,7 +3432,7 @@
 	}
 
 	<span class="doccomment">/// An account is being created.
-	</span><span class="kw">pub fn </span>on_created_account(who: T::AccountId, _a: <span class="kw-2">&amp;mut </span>AccountInfo&lt;T::Index, T::AccountData&gt;) {
+	</span><span class="kw">pub fn </span>on_created_account(who: T::AccountId, _a: <span class="kw-2">&amp;mut </span>AccountInfo&lt;T::Nonce, T::AccountData&gt;) {
 		T::OnNewAccount::on_new_account(<span class="kw-2">&amp;</span>who);
 		<span class="self">Self</span>::deposit_event(Event::NewAccount { account: who });
 	}

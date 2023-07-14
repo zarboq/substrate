@@ -153,8 +153,8 @@
 
 <span class="doccomment">/// Information of an account.
 </span><span class="attr">#[derive(Clone, Eq, PartialEq, Default, RuntimeDebug, Encode, Decode)]
-</span><span class="kw">struct </span>AccountInfo&lt;Index, AccountData&gt; {
-	nonce: Index,
+</span><span class="kw">struct </span>AccountInfo&lt;Nonce, AccountData&gt; {
+	nonce: Nonce,
 	consumers: RefCount,
 	providers: RefCount,
 	sufficients: RefCount,
@@ -169,8 +169,8 @@
 	<span class="doccomment">/// System config account id
 	</span><span class="kw">type </span>AccountId: <span class="lifetime">&#39;static </span>+ FullCodec;
 
-	<span class="doccomment">/// System config index
-	</span><span class="kw">type </span>Index: <span class="lifetime">&#39;static </span>+ FullCodec + Copy;
+	<span class="doccomment">/// System config nonce
+	</span><span class="kw">type </span>Nonce: <span class="lifetime">&#39;static </span>+ FullCodec + Copy;
 
 	<span class="doccomment">/// System config account data
 	</span><span class="kw">type </span>AccountData: <span class="lifetime">&#39;static </span>+ FullCodec;
@@ -187,13 +187,13 @@
 	Pallet&lt;T&gt;,
 	Blake2_128Concat,
 	&lt;V <span class="kw">as </span>V2ToV3&gt;::AccountId,
-	AccountInfo&lt;&lt;V <span class="kw">as </span>V2ToV3&gt;::Index, &lt;V <span class="kw">as </span>V2ToV3&gt;::AccountData&gt;,
+	AccountInfo&lt;&lt;V <span class="kw">as </span>V2ToV3&gt;::Nonce, &lt;V <span class="kw">as </span>V2ToV3&gt;::AccountData&gt;,
 &gt;;
 
 <span class="doccomment">/// Migrate from unique `u8` reference counting to triple `u32` reference counting.
 </span><span class="kw">pub fn </span>migrate_from_single_u8_to_triple_ref_count&lt;V: V2ToV3, T: Config&gt;() -&gt; Weight {
 	<span class="kw">let </span><span class="kw-2">mut </span>translated: usize = <span class="number">0</span>;
-	&lt;Account&lt;V, T&gt;&gt;::translate::&lt;(V::Index, u8, V::AccountData), <span class="kw">_</span>&gt;(|_key, (nonce, rc, data)| {
+	&lt;Account&lt;V, T&gt;&gt;::translate::&lt;(V::Nonce, u8, V::AccountData), <span class="kw">_</span>&gt;(|_key, (nonce, rc, data)| {
 		translated += <span class="number">1</span>;
 		<span class="prelude-val">Some</span>(AccountInfo { nonce, consumers: rc <span class="kw">as </span>RefCount, providers: <span class="number">1</span>, sufficients: <span class="number">0</span>, data })
 	});
@@ -210,7 +210,7 @@
 <span class="doccomment">/// Migrate from unique `u32` reference counting to triple `u32` reference counting.
 </span><span class="kw">pub fn </span>migrate_from_single_to_triple_ref_count&lt;V: V2ToV3, T: Config&gt;() -&gt; Weight {
 	<span class="kw">let </span><span class="kw-2">mut </span>translated: usize = <span class="number">0</span>;
-	&lt;Account&lt;V, T&gt;&gt;::translate::&lt;(V::Index, RefCount, V::AccountData), <span class="kw">_</span>&gt;(
+	&lt;Account&lt;V, T&gt;&gt;::translate::&lt;(V::Nonce, RefCount, V::AccountData), <span class="kw">_</span>&gt;(
 		|_key, (nonce, consumers, data)| {
 			translated += <span class="number">1</span>;
 			<span class="prelude-val">Some</span>(AccountInfo { nonce, consumers, providers: <span class="number">1</span>, sufficients: <span class="number">0</span>, data })
@@ -228,7 +228,7 @@
 <span class="doccomment">/// Migrate from dual `u32` reference counting to triple `u32` reference counting.
 </span><span class="kw">pub fn </span>migrate_from_dual_to_triple_ref_count&lt;V: V2ToV3, T: Config&gt;() -&gt; Weight {
 	<span class="kw">let </span><span class="kw-2">mut </span>translated: usize = <span class="number">0</span>;
-	&lt;Account&lt;V, T&gt;&gt;::translate::&lt;(V::Index, RefCount, RefCount, V::AccountData), <span class="kw">_</span>&gt;(
+	&lt;Account&lt;V, T&gt;&gt;::translate::&lt;(V::Nonce, RefCount, RefCount, V::AccountData), <span class="kw">_</span>&gt;(
 		|_key, (nonce, consumers, providers, data)| {
 			translated += <span class="number">1</span>;
 			<span class="prelude-val">Some</span>(AccountInfo { nonce, consumers, providers, sufficients: <span class="number">0</span>, data })

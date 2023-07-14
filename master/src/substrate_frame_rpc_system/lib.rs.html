@@ -375,14 +375,14 @@
 
 <span class="doccomment">/// System RPC methods.
 </span><span class="attr">#[rpc(client, server)]
-</span><span class="kw">pub trait </span>SystemApi&lt;BlockHash, AccountId, Index&gt; {
+</span><span class="kw">pub trait </span>SystemApi&lt;BlockHash, AccountId, Nonce&gt; {
 	<span class="doccomment">/// Returns the next valid index (aka nonce) for given account.
 	///
 	/// This method takes into consideration all pending transactions
 	/// currently in the pool and if no transactions are found in the pool
 	/// it fallbacks to query the index from the runtime (aka. state nonce).
 	</span><span class="attr">#[method(name = <span class="string">&quot;system_accountNextIndex&quot;</span>, aliases = [<span class="string">&quot;account_nextIndex&quot;</span>]</span>)]
-	<span class="kw">async fn </span>nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, account: AccountId) -&gt; RpcResult&lt;Index&gt;;
+	<span class="kw">async fn </span>nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, account: AccountId) -&gt; RpcResult&lt;Nonce&gt;;
 
 	<span class="doccomment">/// Dry run an extrinsic at a given block. Return SCALE encoded ApplyExtrinsicResult.
 	</span><span class="attr">#[method(name = <span class="string">&quot;system_dryRun&quot;</span>, aliases = [<span class="string">&quot;system_dryRunAt&quot;</span>]</span>)]
@@ -422,20 +422,20 @@
 }
 
 <span class="attr">#[async_trait]
-</span><span class="kw">impl</span>&lt;P, C, Block, AccountId, Index&gt;
-	SystemApiServer&lt;&lt;Block <span class="kw">as </span>traits::Block&gt;::Hash, AccountId, Index&gt; <span class="kw">for </span>System&lt;P, C, Block&gt;
+</span><span class="kw">impl</span>&lt;P, C, Block, AccountId, Nonce&gt;
+	SystemApiServer&lt;&lt;Block <span class="kw">as </span>traits::Block&gt;::Hash, AccountId, Nonce&gt; <span class="kw">for </span>System&lt;P, C, Block&gt;
 <span class="kw">where
 	</span>C: sp_api::ProvideRuntimeApi&lt;Block&gt;,
 	C: HeaderBackend&lt;Block&gt;,
 	C: Send + Sync + <span class="lifetime">&#39;static</span>,
-	C::Api: AccountNonceApi&lt;Block, AccountId, Index&gt;,
+	C::Api: AccountNonceApi&lt;Block, AccountId, Nonce&gt;,
 	C::Api: BlockBuilder&lt;Block&gt;,
 	P: TransactionPool + <span class="lifetime">&#39;static</span>,
 	Block: traits::Block,
 	AccountId: Clone + Display + Codec + Send + <span class="lifetime">&#39;static</span>,
-	Index: Clone + Display + Codec + Send + traits::AtLeast32Bit + <span class="lifetime">&#39;static</span>,
+	Nonce: Clone + Display + Codec + Send + traits::AtLeast32Bit + <span class="lifetime">&#39;static</span>,
 {
-	<span class="kw">async fn </span>nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, account: AccountId) -&gt; RpcResult&lt;Index&gt; {
+	<span class="kw">async fn </span>nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, account: AccountId) -&gt; RpcResult&lt;Nonce&gt; {
 		<span class="kw">let </span>api = <span class="self">self</span>.client.runtime_api();
 		<span class="kw">let </span>best = <span class="self">self</span>.client.info().best_hash;
 
@@ -513,11 +513,11 @@
 
 <span class="doccomment">/// Adjust account nonce from state, so that tx with the nonce will be
 /// placed after all ready txpool transactions.
-</span><span class="kw">fn </span>adjust_nonce&lt;P, AccountId, Index&gt;(pool: <span class="kw-2">&amp;</span>P, account: AccountId, nonce: Index) -&gt; Index
+</span><span class="kw">fn </span>adjust_nonce&lt;P, AccountId, Nonce&gt;(pool: <span class="kw-2">&amp;</span>P, account: AccountId, nonce: Nonce) -&gt; Nonce
 <span class="kw">where
 	</span>P: TransactionPool,
 	AccountId: Clone + std::fmt::Display + Encode,
-	Index: Clone + std::fmt::Display + Encode + traits::AtLeast32Bit + <span class="lifetime">&#39;static</span>,
+	Nonce: Clone + std::fmt::Display + Encode + traits::AtLeast32Bit + <span class="lifetime">&#39;static</span>,
 {
 	<span class="macro">log::debug!</span>(target: <span class="string">&quot;rpc&quot;</span>, <span class="string">&quot;State nonce for {}: {}&quot;</span>, account, nonce);
 	<span class="comment">// Now we need to query the transaction pool
