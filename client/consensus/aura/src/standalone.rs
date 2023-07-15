@@ -295,7 +295,7 @@ where
 	P::Public: Codec + PartialEq + Clone,
 {
 	let seal = header.digest_mut().pop().ok_or(SealVerificationError::Unsealed)?;
-	println!("DIGEST ITEM IS THIS: {:?}", seal);
+	log::info!("DIGEST ITEM IS THIS: {:?}", seal);
 	let sig = seal.as_aura_seal().ok_or(SealVerificationError::BadSeal)?;
 
 	let slot = find_pre_digest::<B, P::Signature>(&header)
