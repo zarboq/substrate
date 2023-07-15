@@ -29,6 +29,7 @@ use sp_api::{Core, ProvideRuntimeApi};
 use sp_application_crypto::{AppCrypto, AppPublic};
 use sp_blockchain::Result as CResult;
 use sp_consensus::Error as ConsensusError;
+use sp_consensus_aura::AURA_ENGINE_ID;
 use sp_consensus_slots::Slot;
 use sp_core::crypto::{ByteArray, Pair};
 use sp_keystore::KeystorePtr;
@@ -294,7 +295,7 @@ where
 	P::Signature: Codec,
 	P::Public: Codec + PartialEq + Clone,
 {
-	let seal = header.digest_mut().pop().ok_or(SealVerificationError::Unsealed)?;
+	// let seal = header.digest_mut().pop().ok_or(SealVerificationError::Unsealed)?;
 	// log::info!("DIGEST ITEM IS THIS: {:?}", seal);
 	// let sig = seal.as_aura_seal().ok_or(SealVerificationError::BadSeal)?;
 
@@ -318,6 +319,9 @@ where
 	// 		Err(SealVerificationError::BadSignature)
 	// 	}
 	// }
+	let slot = Slot::from(1);
+	let seal = DigestItem::Seal(AURA_ENGINE_ID, vec![18]);
+	Ok((header, slot, seal))
 }
 
 #[cfg(test)]

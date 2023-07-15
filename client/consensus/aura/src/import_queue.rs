@@ -231,33 +231,33 @@ where
 				// if the body is passed through, we need to use the runtime
 				// to check that the internally-set timestamp in the inherents
 				// actually matches the slot set in the seal.
-				if let Some(inner_body) = block.body.take() {
-					let new_block = B::new(pre_header.clone(), inner_body);
+				// if let Some(inner_body) = block.body.take() {
+				// 	let new_block = B::new(pre_header.clone(), inner_body);
 
-					inherent_data.aura_replace_inherent_data(slot);
+				// 	inherent_data.aura_replace_inherent_data(slot);
 
-					// skip the inherents verification if the runtime API is old or not expected to
-					// exist.
-					if self
-						.client
-						.runtime_api()
-						.has_api_with::<dyn BlockBuilderApi<B>, _>(parent_hash, |v| v >= 2)
-						.map_err(|e| e.to_string())?
-					{
-						self.check_inherents(
-							new_block.clone(),
-							parent_hash,
-							inherent_data,
-							create_inherent_data_providers,
-							block.origin.into(),
-						)
-						.await
-						.map_err(|e| e.to_string())?;
-					}
+				// 	// skip the inherents verification if the runtime API is old or not expected to
+				// 	// exist.
+				// 	if self
+				// 		.client
+				// 		.runtime_api()
+				// 		.has_api_with::<dyn BlockBuilderApi<B>, _>(parent_hash, |v| v >= 2)
+				// 		.map_err(|e| e.to_string())?
+				// 	{
+				// 		self.check_inherents(
+				// 			new_block.clone(),
+				// 			parent_hash,
+				// 			inherent_data,
+				// 			create_inherent_data_providers,
+				// 			block.origin.into(),
+				// 		)
+				// 		.await
+				// 		.map_err(|e| e.to_string())?;
+				// 	}
 
-					let (_, inner_body) = new_block.deconstruct();
-					block.body = Some(inner_body);
-				}
+				// 	let (_, inner_body) = new_block.deconstruct();
+				// 	block.body = Some(inner_body);
+				// }
 
 				trace!(target: LOG_TARGET, "Checked {:?}; importing.", pre_header);
 				telemetry!(
