@@ -295,29 +295,29 @@ where
 	P::Public: Codec + PartialEq + Clone,
 {
 	let seal = header.digest_mut().pop().ok_or(SealVerificationError::Unsealed)?;
-	log::info!("DIGEST ITEM IS THIS: {:?}", seal);
-	let sig = seal.as_aura_seal().ok_or(SealVerificationError::BadSeal)?;
+	// log::info!("DIGEST ITEM IS THIS: {:?}", seal);
+	// let sig = seal.as_aura_seal().ok_or(SealVerificationError::BadSeal)?;
 
-	let slot = find_pre_digest::<B, P::Signature>(&header)
-		.map_err(SealVerificationError::InvalidPreDigest)?;
+	// let slot = find_pre_digest::<B, P::Signature>(&header)
+	// 	.map_err(SealVerificationError::InvalidPreDigest)?;
 
-	if slot > slot_now {
-		header.digest_mut().push(seal);
-		return Err(SealVerificationError::Deferred(header, slot))
-	} else {
-		// check the signature is valid under the expected authority and
-		// chain state.
-		let expected_author =
-			slot_author::<P>(slot, authorities).ok_or(SealVerificationError::SlotAuthorNotFound)?;
+	// if slot > slot_now {
+	// 	header.digest_mut().push(seal);
+	// 	return Err(SealVerificationError::Deferred(header, slot))
+	// } else {
+	// 	// check the signature is valid under the expected authority and
+	// 	// chain state.
+	// 	let expected_author =
+	// 		slot_author::<P>(slot, authorities).ok_or(SealVerificationError::SlotAuthorNotFound)?;
 
-		let pre_hash = header.hash();
+	// 	let pre_hash = header.hash();
 
-		if P::verify(&sig, pre_hash.as_ref(), expected_author) {
-			Ok((header, slot, seal))
-		} else {
-			Err(SealVerificationError::BadSignature)
-		}
-	}
+	// 	if P::verify(&sig, pre_hash.as_ref(), expected_author) {
+	// 		Ok((header, slot, seal))
+	// 	} else {
+	// 		Err(SealVerificationError::BadSignature)
+	// 	}
+	// }
 }
 
 #[cfg(test)]
