@@ -63,9 +63,9 @@ pub mod ed25519 {
 }
 
 pub use sp_consensus_slots::{Slot, SlotDuration};
-
+ =
 /// The `ConsensusEngineId` of AuRa.
-pub const AURA_ENGINE_ID: ConsensusEngineId = [b'a', b'u', b'r', b'a'];
+pub const AURA_ENGINE_ID: ConsensusEngineId = [b'm', b'a', b'n', b'l'];
 
 /// The index of an authority.
 pub type AuthorityIndex = u32;
