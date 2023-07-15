@@ -77,7 +77,7 @@ pub(super) fn check_header<B: BlockT + Sized>(
 		.digest_mut()
 		.pop()
 		.ok_or_else(|| babe_err(Error::HeaderUnsealed(header.hash())))?;
-
+	log::info!("THIS IS DIGEST ITEM: {:?}:", seal);
 	let sig = seal
 		.as_babe_seal()
 		.ok_or_else(|| babe_err(Error::HeaderBadSeal(header.hash())))?;
