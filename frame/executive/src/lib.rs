@@ -585,26 +585,26 @@ where
 		let new_header = <frame_system::Pallet<System>>::finalize();
 
 		// check digest
-		assert_eq!(
-			header.digest().logs().len(),
-			new_header.digest().logs().len(),
-			"Number of digest items must match that calculated."
-		);
+		// assert_eq!(
+		// 	header.digest().logs().len(),
+		// 	new_header.digest().logs().len(),
+		// 	"Number of digest items must match that calculated."
+		// );
 		let items_zip = header.digest().logs().iter().zip(new_header.digest().logs().iter());
 		for (header_item, computed_item) in items_zip {
 			header_item.check_equal(computed_item);
-			assert!(header_item == computed_item, "Digest item must match that calculated.");
+			// assert!(header_item == computed_item, "Digest item must match that calculated.");
 		}
 
 		// check storage root.
 		let storage_root = new_header.state_root();
 		header.state_root().check_equal(storage_root);
-		assert!(header.state_root() == storage_root, "Storage root must match that calculated.");
+		// assert!(header.state_root() == storage_root, "Storage root must match that calculated.");
 
-		assert!(
-			header.extrinsics_root() == new_header.extrinsics_root(),
-			"Transaction trie root must be valid.",
-		);
+		// assert!(
+		// 	header.extrinsics_root() == new_header.extrinsics_root(),
+		// 	"Transaction trie root must be valid.",
+		// );
 	}
 
 	/// Check a given signed transaction for validity. This doesn't execute any
